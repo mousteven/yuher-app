@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>羽禾服務紀錄</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#15616d">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="羽禾">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+:root{
+  --brand:#15616d; --brand-d:#0f4a54; --ink:#152023; --ink2:#42555b; --ink3:#7d8e94;
+  --bg:#f2f6f6; --card:#fff; --line:#dbe4e5;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--brand);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC",
+    "Microsoft JhengHei",sans-serif;-webkit-text-size-adjust:100%}
+
+/* 狀態列那條由外殼撐出來，底色跟系統的頂欄同一個青色，接起來才不會有一條白邊 */
+#app{position:fixed;inset:0;padding-top:env(safe-area-inset-top);background:var(--brand)}
+#frame{width:100%;height:100%;border:0;display:block;background:var(--bg)}
+
+/* ── 安裝說明 ───────────────────────────────────────
+   同事拿到的是一條連結，不是安裝檔。這一頁要在三秒內
+   讓他知道「在自己這支手機上」要按哪裡。 */
+#gate{position:fixed;inset:0;z-index:9;background:var(--bg);color:var(--ink);
+  overflow-y:auto;padding:calc(env(safe-area-inset-top) + 34px) 22px
+    calc(env(safe-area-inset-bottom) + 30px)}
+#gate.hide{display:none}
+.wrap{max-width:420px;margin:0 auto}
+.mark{display:flex;align-items:center;gap:13px;margin-bottom:26px}
+.mark img{width:58px;height:58px;border-radius:14px;display:block;
+  box-shadow:0 6px 18px rgba(21,97,109,.22)}
+.mark h1{margin:0;font-size:21px;letter-spacing:.04em}
+.mark p{margin:3px 0 0;font-size:13px;color:var(--ink3)}
+
+.lead{font-size:15px;line-height:1.75;color:var(--ink2);margin:0 0 22px}
+.lead b{color:var(--ink)}
+
+.plat{display:flex;gap:7px;margin-bottom:18px}
+.plat button{flex:1;padding:9px;border-radius:99px;border:1px solid var(--line);
+  background:var(--card);font-family:inherit;font-size:13.5px;color:var(--ink2);cursor:pointer}
+.plat button.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
+
+ol{list-style:none;counter-reset:s;margin:0 0 22px;padding:0}
+ol li{counter-increment:s;position:relative;padding:0 0 18px 42px;font-size:15px;
+  line-height:1.65;color:var(--ink2)}
+ol li::before{content:counter(s);position:absolute;left:0;top:-1px;width:27px;height:27px;
+  border-radius:50%;background:var(--brand);color:#fff;font-size:13px;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+ol li::after{content:"";position:absolute;left:13px;top:29px;bottom:4px;width:1px;
+  background:var(--line)}
+ol li:last-child{padding-bottom:0}
+ol li:last-child::after{display:none}
+ol li b{color:var(--ink)}
+.ic{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;
+  padding:0 6px;border:1px solid var(--line);border-radius:7px;background:var(--card);
+  font-size:14px;vertical-align:-6px;margin:0 2px}
+
+.note{font-size:13px;line-height:1.7;color:var(--ink3);border-left:2px solid var(--line);
+  padding-left:12px;margin:0 0 24px}
+
+.acts{display:flex;flex-direction:column;gap:9px}
+.acts button{width:100%;padding:14px;border-radius:12px;font-family:inherit;font-size:15px;
+  cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink2)}
+.acts button.p{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
+#installBtn{display:none}
+
+/* 嵌不進來的時候要講話，不要只留一片空白 */
+#fallback{position:fixed;left:0;right:0;bottom:0;z-index:8;display:none;
+  background:var(--card);border-top:1px solid var(--line);
+  padding:13px 16px calc(env(safe-area-inset-bottom) + 13px);
+  font-size:13.5px;line-height:1.6;color:var(--ink2)}
+#fallback a{color:var(--brand);font-weight:700}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <iframe id="frame" title="羽禾服務紀錄"
+          allow="clipboard-write; camera"
+          src="https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec?page=svc"></iframe>
+</div>
+
+<div id="fallback">
+  這裡打不開的話，
+  <a id="direct" href="https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec?page=svc"
+     target="_blank" rel="noopener">用瀏覽器直接開啟</a>，功能一模一樣。
+</div>
+
+<div id="gate" class="hide">
+  <div class="wrap">
+    <div class="mark">
+      <img src="icon-192.png" alt="">
+      <div>
+        <h1>羽禾服務紀錄</h1>
+        <p>羽禾人力仲介 · 內部使用</p>
+      </div>
+    </div>
+
+    <p class="lead">裝到手機桌面之後，開起來<b>沒有網址列</b>，跟一般 App 一樣。
+      不用去商店下載，也<b>不用重新安裝就會自動更新</b>。</p>
+
+    <div class="plat">
+      <button type="button" data-p="ios">iPhone</button>
+      <button type="button" data-p="and">Android</button>
+    </div>
+
+    <ol id="steps"></ol>
+
+    <p class="note" id="note"></p>
+
+    <div class="acts">
+      <button type="button" class="p" id="installBtn">直接安裝</button>
+      <button type="button" id="skip">先不裝，直接使用</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var ua = navigator.userAgent;
+  var isIOS = /iPad|iPhone|iPod/.test(ua) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var standalone = window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone === true;
+
+  var STEPS = {
+    ios: [
+      '這一頁要用 <b>Safari</b> 打開。如果是從 LINE 點進來的，先按右下角的 '+
+        '<span class="ic">⋯</span> 選「<b>用預設瀏覽器開啟</b>」。',
+      '按畫面<b>最下面中間</b>的分享鍵 <span class="ic">↑</span>（一個方框往上的箭頭）。',
+      '往下滑，找到「<b>加入主畫面</b>」。',
+      '右上角按「<b>新增</b>」。桌面就會出現羽禾的圖示。'
+    ],
+    and: [
+      '這一頁要用 <b>Chrome</b> 打開。從 LINE 點進來的話，先按右上角 '+
+        '<span class="ic">⋮</span> 選「<b>用其他瀏覽器開啟</b>」。',
+      '通常畫面下方會自己跳出「<b>安裝應用程式</b>」，點它就好。',
+      '沒跳出來的話，按右上角 <span class="ic">⋮</span> → 「<b>安裝應用程式</b>」'+
+        '（有些手機寫「加到主畫面」）。',
+      '按「<b>安裝</b>」。App 列表跟桌面都會出現羽禾。'
+    ]
+  };
+  var NOTE = {
+    ios: 'iPhone 一定要用 Safari，Chrome 或 LINE 內建的瀏覽器沒有「加入主畫面」這個選項。',
+    and: '裝好之後，它在多工切換裡會跟一般 App 長得一樣，不會出現在瀏覽器分頁裡。'
+  };
+
+  function show(p){
+    $('steps').innerHTML = STEPS[p].map(function(t){ return '<li>'+t+'</li>'; }).join('');
+    $('note').innerHTML = NOTE[p];
+    [].forEach.call(document.querySelectorAll('.plat button'), function(b){
+      b.className = (b.dataset.p === p) ? 'on' : '';
+    });
+  }
+  [].forEach.call(document.querySelectorAll('.plat button'), function(b){
+    b.addEventListener('click', function(){ show(b.dataset.p); });
+  });
+  show(isIOS ? 'ios' : 'and');
+
+  // 裝過了、或者已經按過「先不裝」就不要再擋路
+  var skipped = false;
+  try { skipped = localStorage.getItem('yuher.skip') === '1'; } catch(e){}
+  if(!standalone && !skipped) $('gate').classList.remove('hide');
+
+  $('skip').addEventListener('click', function(){
+    try { localStorage.setItem('yuher.skip','1'); } catch(e){}
+    $('gate').classList.add('hide');
+  });
+
+  // Android 的 Chrome 會把安裝提示交給我們自己觸發，那就給一顆按鈕
+  var deferred = null;
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault(); deferred = e;
+    $('installBtn').style.display = '';
+  });
+  $('installBtn').addEventListener('click', function(){
+    if(!deferred) return;
+    deferred.prompt();
+    deferred.userChoice.then(function(){ deferred = null;
+      $('installBtn').style.display = 'none'; });
+  });
+  window.addEventListener('appinstalled', function(){
+    try { localStorage.setItem('yuher.skip','1'); } catch(e){}
+    $('gate').classList.add('hide');
+  });
+
+  // 嵌不進來（被瀏覽器擋掉）的話，十秒後給一條退路，不要留一片空白
+  var loaded = false;
+  $('frame').addEventListener('load', function(){ loaded = true; });
+  setTimeout(function(){ if(!loaded) $('fallback').style.display = 'block'; }, 10000);
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
+  }
+})();
+</script>
+</body>
+</html>
