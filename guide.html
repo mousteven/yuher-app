@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>羽禾服務紀錄 · 新手上路</title>
+<meta name="theme-color" content="#15616d">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+/* ─────────────────────────────────────────────────────────
+   系統字優先：iPhone 上就是 SF Pro + 蘋方，字距與視覺尺寸
+   都已經調過，硬換 webfont 反而比較差，也省一次網路請求。
+   ───────────────────────────────────────────────────────── */
+:root{
+  --bg:#F2F4F4; --group:#FFFFFF; --sep:rgba(60,80,84,.13);
+  --ink:#0F1719; --ink2:#4A5C61; --ink3:#8A9A9E;
+  --tint:#15616d; --tint-soft:rgba(21,97,109,.10);
+  --amber:#B4761E; --amber-soft:rgba(180,118,30,.12);
+  --blue:#2E6DA4;  --blue-soft:rgba(46,109,164,.12);
+  --green:#12805C; --red:#C0392B;
+  --chrome:rgba(242,244,244,.72);
+  --radius:15px;
+  --sp:16px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B1113; --group:#161E20; --sep:rgba(255,255,255,.10);
+  --ink:#EDF3F2; --ink2:#AFC0C3; --ink3:#77888C;
+  --tint:#5FBECB; --tint-soft:rgba(95,190,203,.14);
+  --amber:#E0AE63; --amber-soft:rgba(224,174,99,.14);
+  --blue:#7FB2E0;  --blue-soft:rgba(127,178,224,.14);
+  --green:#3FBF92; --red:#E77C6E;
+  --chrome:rgba(11,17,19,.72);
+}}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font:100%/1.5 -apple-system,BlinkMacSystemFont,"SF Pro TC","PingFang TC",
+  "Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-size:1.0625rem;line-height:1.62;letter-spacing:0;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+
+.wrap{max-width:44rem;margin:0 auto;padding:0 var(--sp)
+  calc(env(safe-area-inset-bottom) + 4rem)}
+
+/* ── 頂欄：半透明材質，內容從底下捲過去 ─────────────────── */
+.bar{position:sticky;top:0;z-index:20;
+  background:var(--chrome);backdrop-filter:blur(22px) saturate(180%);
+  -webkit-backdrop-filter:blur(22px) saturate(180%);
+  padding:calc(env(safe-area-inset-top) + .55rem) var(--sp) .55rem}
+.bar .in{max-width:44rem;margin:0 auto;display:flex;align-items:center;gap:.6rem}
+.bar .ic{width:1.75rem;height:1.75rem;border-radius:.5rem;flex:none;
+  background:var(--tint);color:#fff;display:grid;place-items:center;
+  font-size:.7rem;font-weight:700;letter-spacing:.02em}
+.bar b{font-size:1rem;font-weight:600;letter-spacing:-.01em}
+.bar a{margin-left:auto;font-size:.9375rem;color:var(--tint);
+  text-decoration:none;font-weight:500}
+/* 硬分隔線改成一小段漸層，只在內容真的滑到底下時出現 */
+.bar::after{content:"";position:absolute;left:0;right:0;bottom:-14px;height:14px;
+  background:linear-gradient(var(--chrome),rgba(0,0,0,0));pointer-events:none}
+
+/* ── 開場 ──────────────────────────────────────────────── */
+header{padding:2.6rem 0 1.9rem}
+.kicker{font-size:.75rem;font-weight:600;letter-spacing:.14em;
+  color:var(--tint);margin-bottom:.5rem}
+h1{margin:0;font-size:clamp(2rem,7.5vw,2.9rem);line-height:1.08;
+  letter-spacing:-.028em;font-weight:700;text-wrap:balance}
+.lede{margin:.85rem 0 0;font-size:1.125rem;line-height:1.6;color:var(--ink2);
+  letter-spacing:-.004em;max-width:32ch}
+
+/* ── 分段控制：iOS 的那種，指示器用彈簧移動 ──────────────── */
+.roles{position:sticky;top:3.35rem;z-index:15;margin:1.4rem 0 1.9rem;
+  padding:.5rem 0 .35rem;background:var(--chrome);
+  backdrop-filter:blur(22px) saturate(180%);
+  -webkit-backdrop-filter:blur(22px) saturate(180%)}
+.seg{position:relative;display:grid;grid-template-columns:repeat(3,1fr);
+  gap:0;background:var(--tint-soft);border-radius:11px;padding:3px}
+.seg .knob{position:absolute;top:3px;bottom:3px;left:3px;border-radius:8px;
+  background:var(--group);box-shadow:0 1px 3px rgba(15,23,25,.14),
+  0 0 0 .5px rgba(15,23,25,.05);will-change:transform,width}
+.seg button{position:relative;z-index:1;appearance:none;border:0;background:none;
+  font:inherit;font-size:.9375rem;font-weight:500;color:var(--ink2);
+  padding:.5rem .25rem;min-height:2.25rem;cursor:pointer;border-radius:8px;
+  letter-spacing:0;transition:color .18s ease,transform .1s ease-out}
+.seg button[aria-selected="true"]{color:var(--ink);font-weight:600}
+.seg button:active{transform:scale(.96)}
+
+/* ── 群組卡片：iOS 設定頁的做法 ────────────────────────── */
+.gtitle{font-size:.75rem;font-weight:600;letter-spacing:.1em;color:var(--ink3);
+  margin:1.9rem 0 .5rem;padding:0 .25rem}
+.group{background:var(--group);border-radius:var(--radius);overflow:hidden;
+  box-shadow:0 .5px 0 var(--sep) inset,0 1px 2px rgba(15,23,25,.04)}
+.row{display:grid;grid-template-columns:1.9rem 1fr;gap:.85rem;
+  padding:.95rem 1rem;position:relative}
+.row + .row::before{content:"";position:absolute;left:3.75rem;right:0;top:0;
+  height:.5px;background:var(--sep)}
+.num{width:1.9rem;height:1.9rem;border-radius:50%;background:var(--tint);
+  color:#fff;display:grid;place-items:center;font-size:.875rem;font-weight:600;
+  font-variant-numeric:tabular-nums;margin-top:.1rem}
+.row h3{margin:0;font-size:1.0625rem;font-weight:600;letter-spacing:-.01em;
+  line-height:1.35}
+.row p{margin:.3rem 0 0;font-size:.9688rem;line-height:1.6;color:var(--ink2)}
+.row p + p{margin-top:.45rem}
+.row em{font-style:normal;color:var(--ink);font-weight:600}
+
+.note{background:var(--group);border-radius:var(--radius);padding:.95rem 1rem;
+  font-size:.9375rem;line-height:1.65;color:var(--ink2);
+  border-left:3px solid var(--amber)}
+.note b{color:var(--ink)}
+.note.warn{border-left-color:var(--red)}
+
+/* ── 畫面示意：直接用 CSS 畫出他們會看到的東西 ─────────── */
+.shot{margin:.75rem 0 .1rem;background:var(--bg);border-radius:11px;
+  padding:.8rem .85rem;border:.5px solid var(--sep)}
+.shot .cap{font-size:.75rem;color:var(--ink3);margin-bottom:.55rem;
+  letter-spacing:.04em}
+
+.prog{display:flex;gap:4px}
+.prog .s{flex:1}
+.prog i{display:block;height:4px;border-radius:99px;background:var(--sep)}
+.prog em{display:block;font-style:normal;font-size:.625rem;margin-top:.3rem;
+  color:var(--ink3);letter-spacing:.02em;line-height:1.3}
+.prog .s.done i{background:var(--tint)} .prog .s.done em{color:var(--ink2)}
+.prog .s.now i{background:var(--amber)} .prog .s.now em{color:var(--amber);font-weight:600}
+.prog .s.back i{background:var(--red)}  .prog .s.back em{color:var(--red);font-weight:600}
+.prog .s.todo i{background:repeating-linear-gradient(90deg,
+  var(--amber) 0 5px,transparent 5px 10px)}
+.prog .s.todo em{color:var(--amber);font-weight:600}
+.prog.all i{background:var(--green)} .prog.all em{color:var(--green);font-weight:600}
+
+.card{background:var(--group);border-radius:10px;padding:.7rem .8rem;
+  display:flex;gap:.6rem;align-items:flex-start}
+.card .bar4{width:3px;border-radius:99px;background:var(--tint);align-self:stretch}
+.card .b{flex:1;min-width:0}
+.card .t{font-size:.75rem;color:var(--ink3)}
+.card .n{font-size:.9375rem;font-weight:600;margin-top:.05rem}
+.card .m{font-size:.75rem;color:var(--ink2);margin-top:.05rem}
+.card .acts{display:flex;flex-direction:column;gap:.3rem}
+.card .acts span{font-size:.6875rem;border:.5px solid var(--sep);border-radius:6px;
+  padding:.2rem .5rem;color:var(--ink2);white-space:nowrap}
+
+.chips{display:flex;gap:.35rem;flex-wrap:wrap}
+.chips span{font-size:.75rem;border:.5px solid var(--sep);border-radius:99px;
+  padding:.25rem .6rem;color:var(--ink2);display:inline-flex;align-items:center;gap:.3rem}
+.chips span.on{background:var(--tint);border-color:var(--tint);color:#fff;font-weight:600}
+.chips i{width:.5rem;height:.5rem;border-radius:2px;display:block}
+
+.kbd{display:inline-block;border:.5px solid var(--sep);border-radius:5px;
+  padding:0 .35rem;font-size:.875rem;background:var(--group);color:var(--ink)}
+
+/* 角色切換：淡入＋一點點位移，方向跟切換方向一致 */
+.pane{display:none}
+.pane.on{display:block;animation:in .34s cubic-bezier(.32,.72,0,1) both}
+@keyframes in{from{opacity:0;transform:translate3d(var(--from,10px),0,0)}
+              to{opacity:1;transform:none}}
+
+footer{margin-top:2.6rem;padding-top:1.4rem;border-top:.5px solid var(--sep);
+  font-size:.875rem;line-height:1.7;color:var(--ink3)}
+footer b{color:var(--ink2)}
+footer a{color:var(--tint)}
+
+@media (prefers-reduced-motion:reduce){
+  .pane.on{animation:fade .2s ease both}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .seg .knob{transition:none!important}
+  .seg button:active{transform:none}
+}
+@media (prefers-reduced-transparency:reduce){
+  .bar,.roles{background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}
+}
+@media (prefers-contrast:more){
+  :root{--sep:rgba(60,80,84,.4)}
+  .group{outline:.5px solid var(--sep)}
+}
+</style>
+</head>
+<body>
+
+<div class="bar"><div class="in">
+  <span class="ic">羽禾</span><b>新手上路</b>
+  <a href="./">開啟 App</a>
+</div></div>
+
+<div class="wrap">
+
+<header>
+  <div class="kicker">羽禾人力仲介 · 服務紀錄</div>
+  <h1>五分鐘<br>學會這個 App</h1>
+  <p class="lede">以前是紙本服務表跑一趟、回公司補打、交給副理蓋章。現在整段在手機上完成，雇主當場簽名，副理在自己的手機上批。</p>
+</header>
+
+<div class="roles">
+  <div class="seg" id="seg">
+    <span class="knob" id="knob"></span>
+    <button type="button" role="tab" aria-selected="true"  data-r="crew">翻譯人員</button>
+    <button type="button" role="tab" aria-selected="false" data-r="mgr">副理</button>
+    <button type="button" role="tab" aria-selected="false" data-r="boss">總經理</button>
+  </div>
+</div>
+
+<!-- ══════════════ 翻譯人員 ══════════════ -->
+<section class="pane on" data-p="crew">
+
+  <p class="gtitle">開始之前</p>
+  <div class="group">
+    <div class="row"><span class="num">1</span><div>
+      <h3>把它裝到手機桌面</h3>
+      <p><em>iPhone</em>：一定要用 Safari 打開連結，按最下面中間的分享鍵 <span class="kbd">↑</span>，往下滑找到「加入主畫面」。從 LINE 點進來的話，先按右下角 <span class="kbd">⋯</span> 選「用預設瀏覽器開啟」。</p>
+      <p><em>Android</em>：用 Chrome 打開，通常會自己跳出「安裝應用程式」。沒跳出來就按右上角 <span class="kbd">⋮</span> 選「安裝應用程式」。</p>
+      <p>裝好之後開起來沒有網址列，跟一般 App 一樣。之後系統更新不用重裝。</p>
+    </div></div>
+    <div class="row"><span class="num">2</span><div>
+      <h3>用四位數登入碼登入</h3>
+      <p>每個人有自己的碼，跟佑彬拿。輸入一次之後這台手機就記住了，不用每次打。</p>
+      <p>換手機或借別人用完，點右上角自己的名字可以登出。</p>
+    </div></div>
+  </div>
+
+  <p class="gtitle">每天怎麼用</p>
+  <div class="group">
+    <div class="row"><span class="num">3</span><div>
+      <h3>行事曆：今天要跑哪幾家</h3>
+      <p>一進來就是行事曆。上面可以切<em>月／週／日</em>，下面列出當天的行程，分成「待處理」和「已完成」。</p>
+      <p>長按行程可以直接<em>拖到別的日期</em>改期，不用刪掉重排。</p>
+      <div class="shot">
+        <div class="cap">當天的一筆行程</div>
+        <div class="card">
+          <span class="bar4"></span>
+          <span class="b">
+            <span class="t">上午　你的名字</span>
+            <span class="n">友秀</span>
+            <span class="m">到廠溝通 ／ 工作問題溝通　·　阮氏芳玲</span>
+          </span>
+          <span class="acts"><span>開始填寫</span><span>取消</span></span>
+        </div>
+      </div>
+    </div></div>
+    <div class="row"><span class="num">4</span><div>
+      <h3>到現場，按「開始填寫」</h3>
+      <p>工廠、雇主、移工姓名、這家固定對應的翻譯，全部自動帶進去，不用手打。</p>
+      <p>服務項目和處理經過都是<em>勾選</em>的，勾完再補一兩句就好。同一家有好幾位移工時，按「同上」可以整段複製，只改名字。</p>
+    </div></div>
+    <div class="row"><span class="num">5</span><div>
+      <h3>給移工看母語版本，再請他簽名</h3>
+      <p>按「預覽」會把服務項目、處理經過、處理結果翻成移工的母語（越／泰／印／英），跟中文一起顯示。</p>
+      <p><em>他看得懂自己簽的是什麼，這一步不要跳過。</em>簽名是全螢幕的，手指直接寫，寫壞了可以清除重寫。</p>
+      <p>你自己的簽名可以存起來，下次按一下就貼上。</p>
+    </div></div>
+    <div class="row"><span class="num">6</span><div>
+      <h3>存檔，需要的話輸出 PDF 給雇主</h3>
+      <p>存完會問要不要產生 PDF。檔名是<em>訪談日期＋工廠名前兩字＋工人名字</em>，可以直接分享到 LINE 給雇主。</p>
+      <p>行事曆上那一趟會自動從「待處理」移到「已完成」。</p>
+    </div></div>
+  </div>
+
+  <p class="gtitle">送審</p>
+  <div class="group">
+    <div class="row"><span class="num">7</span><div>
+      <h3>確認過內容再送出</h3>
+      <p>行事曆上已完成的行程，<em>點卡片內文</em>就會打開整張服務紀錄表，看過沒問題再按「送審」。右邊也有 PDF 按鈕可以看正式表的樣子。</p>
+      <p>或者到「送審」分頁，那裡列出你所有還沒送出去的。</p>
+    </div></div>
+    <div class="row"><span class="num">8</span><div>
+      <h3>看那條進度條就知道走到哪</h3>
+      <p>每一筆都有四格。走到哪亮到哪，被退回時第二格會變紅。</p>
+      <div class="shot">
+        <div class="cap">還沒送出去</div>
+        <div class="prog">
+          <span class="s todo"><i></i><em>送審</em></span>
+          <span class="s"><i></i><em>副理</em></span>
+          <span class="s"><i></i><em>總經理</em></span>
+          <span class="s"><i></i><em>歸檔</em></span>
+        </div>
+        <div class="cap" style="margin-top:.85rem">送出去了，在副理手上</div>
+        <div class="prog">
+          <span class="s done"><i></i><em>送審</em></span>
+          <span class="s now"><i></i><em>副理</em></span>
+          <span class="s"><i></i><em>總經理</em></span>
+          <span class="s"><i></i><em>歸檔</em></span>
+        </div>
+        <div class="cap" style="margin-top:.85rem">被退回，要補資料</div>
+        <div class="prog">
+          <span class="s done"><i></i><em>送審</em></span>
+          <span class="s back"><i></i><em>退回</em></span>
+          <span class="s"><i></i><em>總經理</em></span>
+          <span class="s"><i></i><em>歸檔</em></span>
+        </div>
+        <div class="cap" style="margin-top:.85rem">全部走完</div>
+        <div class="prog all">
+          <span class="s"><i></i><em>送審</em></span>
+          <span class="s"><i></i><em>副理</em></span>
+          <span class="s"><i></i><em>總經理</em></span>
+          <span class="s"><i></i><em>歸檔</em></span>
+        </div>
+      </div>
+    </div></div>
+    <div class="row"><span class="num">9</span><div>
+      <h3>被退回了怎麼辦</h3>
+      <p>退回的那一筆會出現在你「送審」分頁最上面，<em>紅色那段字就是副理要你補什麼</em>。改完重新送審就好，不用重填一張。</p>
+    </div></div>
+  </div>
+
+  <p class="gtitle">別漏掉的兩件事</p>
+  <div class="group">
+    <div class="row"><span class="num">·</span><div>
+      <h3>巡迴訪視提醒</h3>
+      <p>行事曆最上面會列出<em>快滿兩個月</em>和<em>已超過兩個月</em>沒去的客戶。點名字就直接幫你排行程。</p>
+      <div class="shot">
+        <div class="cap">狀態篩選</div>
+        <div class="chips">
+          <span class="on">全部 2</span><span>已超過兩個月 1</span><span>快滿兩個月 1</span>
+        </div>
+      </div>
+    </div></div>
+    <div class="row"><span class="num">·</span><div>
+      <h3>行事曆上的狀態篩選</h3>
+      <p>要找「哪些還沒送審」「哪些被退回要補資料」，按上面那排就篩出來了。顏色跟進度條是同一套。</p>
+      <div class="shot">
+        <div class="chips">
+          <span class="on">全部</span>
+          <span><i style="background:#9AA5AA"></i>未完成</span>
+          <span><i style="background:#C99A3E"></i>待送審</span>
+          <span><i style="background:#2E6DA4"></i>審核中</span>
+          <span><i style="background:#C0392B"></i>已退回</span>
+          <span><i style="background:#1E9E72"></i>審核通過</span>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ══════════════ 副理 ══════════════ -->
+<section class="pane" data-p="mgr">
+  <p class="gtitle">你的畫面跟翻譯不一樣</p>
+  <div class="group">
+    <div class="row"><span class="num">1</span><div>
+      <h3>登入之後看「送審」分頁</h3>
+      <p>那裡只會列<em>輪到你審的</em>，不用在一堆紀錄裡找。分頁上的紅色數字就是還有幾筆等你。</p>
+    </div></div>
+    <div class="row"><span class="num">2</span><div>
+      <h3>點進去看的是內容，不是 PDF</h3>
+      <p>一天要看十幾張，縮成 A4 大小在手機上根本看不清楚。所以點進去是<em>攤開的欄位</em>：服務日期、雇主、每位移工的服務項目／處理經過／處理結果／簽名。</p>
+      <p>真的要看紙本的樣子，右上角有「正式表」可以切過去。</p>
+    </div></div>
+    <div class="row"><span class="num">3</span><div>
+      <h3>你改不了任何欄位，這是刻意的</h3>
+      <p>內容有問題只能<em>退回補正</em>，讓翻譯自己改。這樣責任歸屬才清楚，也留得下軌跡。</p>
+      <p>退回<em>一定要寫原因</em>，翻譯在自己的清單就看得到要補什麼。</p>
+    </div></div>
+    <div class="row"><span class="num">4</span><div>
+      <h3>批示會印進歸檔的 PDF</h3>
+      <p>你勾「不需追蹤」或「需追蹤後續」，加上說明文字，會直接印在最後歸檔的那張表上——不是只存在系統裡。紙本時代要手寫，字跡還常常看不懂。</p>
+    </div></div>
+    <div class="row"><span class="num">5</span><div>
+      <h3>一次批一疊</h3>
+      <p>沒問題的可以<em>全選 → 批次核准</em>，不用一張一張點。這是數位化最直接省時間的地方。</p>
+    </div></div>
+  </div>
+
+  <p class="gtitle">退回去的不會消失</p>
+  <div class="group">
+    <div class="row"><span class="num">·</span><div>
+      <h3>「已退回，等翻譯人員補正」</h3>
+      <p>送審頁有獨立一區列這些。紙本退回去就從桌上不見了，你只能等；現在你看得到<em>退了什麼、回來了沒</em>。</p>
+    </div></div>
+    <div class="row"><span class="num">·</span><div>
+      <h3>上面那排可以只看某一種狀態</h3>
+      <p>尚未送審／待副理審核／待總經理核准／審核通過／已退回，各自帶數字。</p>
+    </div></div>
+  </div>
+
+  <div class="note" style="margin-top:1.4rem">
+    <b>評鑑要看的就是軌跡。</b>每一關都留時間戳——誰在什麼時候看過、批了什麼、為什麼退回，全部在系統裡調得出來。這是紙本做不到的。
+  </div>
+</section>
+
+<!-- ══════════════ 總經理 ══════════════ -->
+<section class="pane" data-p="boss">
+  <p class="gtitle">你只需要做一件事</p>
+  <div class="group">
+    <div class="row"><span class="num">1</span><div>
+      <h3>「送審」分頁 → 待我核准</h3>
+      <p>只會出現<em>副理已經批示過</em>的。副理的批示就印在那張表上，你看的是最終版本。</p>
+    </div></div>
+    <div class="row"><span class="num">2</span><div>
+      <h3>核准，或退回</h3>
+      <p>沒問題按「核准並歸檔」。有問題一樣可以退回補正——退回會直接回到翻譯手上，不用再經過副理。</p>
+      <p>一次要處理很多筆的話，<em>全選 → 批次核准</em>。</p>
+    </div></div>
+    <div class="row"><span class="num">3</span><div>
+      <h3>核准之後系統自己歸檔</h3>
+      <p>系統會重新產生一份<em>含完整簽核的 PDF</em>，自動放進雲端硬碟的
+        <span class="kbd">服務紀錄PDF ／ 已歸檔 ／ 年-月</span>，依訪視月份分資料夾。</p>
+      <p>不需要有人另外整理，也不會有人忘記歸檔。</p>
+    </div></div>
+  </div>
+
+  <p class="gtitle">想看整體狀況</p>
+  <div class="group">
+    <div class="row"><span class="num">·</span><div>
+      <h3>統計分頁</h3>
+      <p>每位翻譯這段期間跑了幾家、服務類別的分布、到場與電話的比例。</p>
+    </div></div>
+    <div class="row"><span class="num">·</span><div>
+      <h3>行事曆的狀態篩選</h3>
+      <p>切到「審核中」就知道現在卡在誰手上，切到「已退回」就知道哪些還沒補回來。</p>
+    </div></div>
+  </div>
+</section>
+
+<!-- ══════════════ 共通 ══════════════ -->
+<p class="gtitle">常見問題</p>
+<div class="group">
+  <div class="row"><span class="num">Q</span><div>
+    <h3>從 LINE 點連結，畫面怪怪的</h3>
+    <p>LINE 內建的瀏覽器不支援安裝。<em>iPhone</em> 按右下角 <span class="kbd">⋯</span> →「用預設瀏覽器開啟」；<em>Android</em> 按右上角 <span class="kbd">⋮</span> →「用其他瀏覽器開啟」。</p>
+  </div></div>
+  <div class="row"><span class="num">Q</span><div>
+    <h3>忘記登入碼</h3>
+    <p>跟佑彬拿。登入碼不會放在這一頁上。</p>
+  </div></div>
+  <div class="row"><span class="num">Q</span><div>
+    <h3>在工廠裡沒訊號可以填嗎</h3>
+    <p><em>不行。</em>存檔、翻譯、簽名都要連線。訊號不穩的廠區，建議在車上或門口先填好再進去請人簽名。</p>
+  </div></div>
+  <div class="row"><span class="num">Q</span><div>
+    <h3>臨時代跑別人的行程</h3>
+    <p>填寫頁有「代理人員」欄位。表上仍然印<em>這家固定對應的翻譯</em>，代跑只記在後台備註，不會印在給雇主的表上。</p>
+  </div></div>
+  <div class="row"><span class="num">Q</span><div>
+    <h3>已經送審了才發現填錯</h3>
+    <p>請副理退回給你，改完重新送審。已經歸檔的不能再改——那份是給評鑑看的正式文件。</p>
+  </div></div>
+</div>
+
+<div class="note warn" style="margin-top:1.4rem">
+  <b>這裡面有雇主與移工的個資。</b>登入碼不要給公司以外的人，手機不要借人的時候停在這一頁。離開座位記得鎖螢幕。
+</div>
+
+<footer>
+  <b>羽禾人力仲介 · 服務紀錄系統</b><br>
+  這一頁隨時可以回來看：把它加到書籤，或從 App 首頁點「新手教學」。<br>
+  用起來卡住、覺得哪裡怪怪的，直接跟佑彬說。<br>
+  <a href="./">← 回到 App</a>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  var seg = document.getElementById('seg');
+  var knob = document.getElementById('knob');
+  var btns = [].slice.call(seg.querySelectorAll('button'));
+  var panes = [].slice.call(document.querySelectorAll('.pane'));
+  var cur = 0;
+
+  /* 指示器用彈簧移動，不是固定時間的 transition——
+     連按兩下時它會從「目前畫面上的位置」接著跑，不會跳一下。
+     damping 1.0（不回彈）、response 0.34s，就是 Apple 的預設手感。 */
+  var spring = { x:0, v:0, target:0, raf:0, guard:0 };
+  function snap(){
+    if(spring.raf) cancelAnimationFrame(spring.raf);
+    spring.raf = 0; spring.v = 0; spring.x = spring.target;
+    knob.style.transform = 'translate3d(' + spring.x + 'px,0,0)';
+  }
+  function tick(){
+    var k = 1 / 0.34, dt = 1/60;
+    // 臨界阻尼彈簧：a = -2ζω·v - ω²·(x - target)
+    var a = -2 * k * spring.v - k * k * (spring.x - spring.target);
+    spring.v += a * dt;
+    spring.x += spring.v * dt;
+    knob.style.transform = 'translate3d(' + spring.x + 'px,0,0)';
+    if(Math.abs(spring.x - spring.target) > 0.2 || Math.abs(spring.v) > 0.2){
+      spring.raf = requestAnimationFrame(tick);
+    } else {
+      spring.x = spring.target; spring.v = 0;
+      knob.style.transform = 'translate3d(' + spring.x + 'px,0,0)';
+      spring.raf = 0;
+    }
+  }
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+  function place(i, animate){
+    var b = btns[i];
+    knob.style.width = b.offsetWidth + 'px';
+    spring.target = b.offsetLeft - 3;
+    if(!animate || reduce.matches){ snap(); return; }
+    if(!spring.raf) spring.raf = requestAnimationFrame(tick);
+    // requestAnimationFrame 在背景分頁、某些 App 內建瀏覽器裡不會執行，
+    // 指示器就會停在原地。時間到了還沒到位就直接就位——
+    // 動畫可以沒有，位置不能是錯的。
+    clearTimeout(spring.guard);
+    spring.guard = setTimeout(function(){
+      if(Math.abs(spring.x - spring.target) > 0.5) snap();
+    }, 700);
+  }
+
+  function select(i){
+    if(i === cur) return;
+    var dir = i > cur ? 18 : -18;      // 內容從切換的方向進來，路徑跟手勢一致
+    cur = i;
+    btns.forEach(function(b,j){ b.setAttribute('aria-selected', j===i ? 'true':'false'); });
+    panes.forEach(function(p,j){
+      p.classList.toggle('on', j===i);
+      if(j===i) p.style.setProperty('--from', dir + 'px');
+    });
+    place(i, true);
+    window.scrollTo({ top: Math.min(window.scrollY, seg.getBoundingClientRect().top +
+      window.scrollY - 60), behavior: reduce.matches ? 'auto' : 'smooth' });
+  }
+
+  btns.forEach(function(b,i){
+    // 按下去就有反應，不等放開
+    b.addEventListener('pointerdown', function(){ b.style.transform = 'scale(.96)'; });
+    ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
+      b.addEventListener(ev, function(){ b.style.transform = ''; });
+    });
+    b.addEventListener('click', function(){ select(i); });
+  });
+
+  place(0, false);
+  addEventListener('resize', function(){ place(cur, false); });
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden) place(cur, false);
+  });
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ place(cur,false); });
+})();
+</script>
+</body>
+</html>
