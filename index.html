@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>羽禾服務紀錄</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#15616d">
+<meta name="theme-color" content="#1B3B6F">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <style>
 :root{
-  --brand:#15616d; --brand-d:#0f4a54; --ink:#152023; --ink2:#42555b; --ink3:#7d8e94;
-  --bg:#f2f6f6; --card:#fff; --line:#dbe4e5;
+  --brand:#1B3B6F; --brand-d:#132B52; --ink:#131A26; --ink2:#41506B; --ink3:#7F8CA3;
+  --bg:#F4F6FA; --card:#fff; --line:#DDE3EC;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--brand);
@@ -200,6 +200,18 @@ ol li b{color:var(--ink)}
   var loaded = false;
   $('frame').addEventListener('load', function(){ loaded = true; });
   setTimeout(function(){ if(!loaded) $('fallback').style.display = 'block'; }, 10000);
+
+  /* 系統裡按「重新整理」時，由外殼來重載那個 iframe。
+     裡面自己 location.reload() 重載的是 Apps Script 的沙箱網址，
+     常常重載不回來變空白。網址後面加時間戳是為了繞過瀏覽器快取——
+     不加的話按了等於沒按，還是拿到同一份舊畫面。 */
+  var BASE = $('frame').getAttribute('src');
+  window.addEventListener('message', function(ev){
+    var d = ev.data;
+    if(d && d.yuher === 'reload'){
+      $('frame').src = BASE + '&t=' + Date.now();
+    }
+  });
 
   if('serviceWorker' in navigator){
     window.addEventListener('load', function(){

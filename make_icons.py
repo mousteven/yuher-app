@@ -7,7 +7,7 @@ manifest 不用動。
 import os
 from PIL import Image, ImageDraw, ImageFont
 
-BRAND = (21, 97, 109)          # --brand #15616d
+BRAND = (27, 59, 111)          # --brand #1B3B6F（海軍藍）
 OUT = os.path.dirname(os.path.abspath(__file__))
 
 # Windows 內建的黑體，字重夠、中文不會缺字
