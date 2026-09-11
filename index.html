@@ -24,6 +24,11 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--brand);
 /* 狀態列那條由外殼撐出來，底色跟系統的頂欄同一個青色，接起來才不會有一條白邊 */
 #app{position:fixed;inset:0;padding-top:env(safe-area-inset-top);background:var(--brand)}
 #frame{width:100%;height:100%;border:0;display:block;background:var(--bg)}
+/* 安全區域那一條由外殼塗色，顏色由系統告訴我們（見下面的 ready 訊息）。
+   墊在 #app 底下，z-index 比它低，只有那一條會露出來。 */
+#pad{position:fixed;left:0;right:0;bottom:0;z-index:0;background:#fff;
+  height:calc(env(safe-area-inset-bottom,0px) + 1px)}
+#app{z-index:1}
 
 /* ── 安裝說明 ───────────────────────────────────────
    同事拿到的是一條連結，不是安裝檔。這一頁要在三秒內
@@ -81,6 +86,7 @@ ol li b{color:var(--ink)}
 </head>
 <body>
 
+<div id="pad"></div>
 <div id="app">
   <iframe id="frame" title="羽禾服務紀錄"
           allow="clipboard-write; camera"
@@ -208,10 +214,38 @@ ol li b{color:var(--ink)}
   var BASE = $('frame').getAttribute('src');
   window.addEventListener('message', function(ev){
     var d = ev.data;
-    if(d && d.yuher === 'reload'){
+    if(!d || !d.yuher) return;
+    if(d.yuher === 'reload'){
       $('frame').src = BASE + '&t=' + Date.now();
+    } else if(d.yuher === 'ready'){
+      // 系統告訴我們它的頂欄與底欄該是什麼顏色，外殼照著塗，
+      // 這樣安全區域那一條才不會露出跟畫面不搭的底色
+      if(d.top) $('app').style.background = d.top;
+      if(d.bottom) $('pad').style.background = d.bottom;
+      sendInsets();
     }
   });
+
+  /* iPhone 底部那條 home 指示線的高度，iframe 裡面讀不到
+     （env(safe-area-inset-*) 只有最外層的頁面拿得到）。
+     結果就是系統的底部選單停在指示線上方，外殼的底色從下面露出來——
+     原生 App 不會這樣，因為它的選單會一路鋪到螢幕最底下。
+     這裡由外殼量好再傳進去，系統才有辦法把選單墊到底。 */
+  function sendInsets(){
+    var probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;left:0;bottom:0;width:0;' +
+      'height:env(safe-area-inset-bottom,0px)';
+    document.body.appendChild(probe);
+    var bottom = probe.offsetHeight;
+    probe.remove();
+    try {
+      $('frame').contentWindow.postMessage(
+        { yuher: 'insets', bottom: bottom }, '*');
+    } catch(e){}
+  }
+  $('frame').addEventListener('load', function(){ setTimeout(sendInsets, 400); });
+  addEventListener('resize', sendInsets);
+  addEventListener('orientationchange', function(){ setTimeout(sendInsets, 300); });
 
   if('serviceWorker' in navigator){
     window.addEventListener('load', function(){
