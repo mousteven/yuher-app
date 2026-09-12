@@ -1,7 +1,9 @@
 /* 羽禾 移工服務平台 — 前端程式
-   由 migrant-worker-platform/src/Service.html 拆出來的。
-   要改請改那邊再重新拆，不要直接改這個檔。
-   PRESET_CODE 與 BUILD 由 Apps Script 的樣板在頁面上先宣告。 */
+   2026-09-12 從 src/Service.html 拆出來之後，**這個檔就是正本**。
+   Service.html 只剩 16KB 的骨架（HTML 結構 ＋ 兩個伺服器端變數），
+   前端程式已經不在那裡了，要改就是改這裡。
+   改完 push 到 GitHub Pages，並在 Apps Script 重新部署換掉 ?v= 的版本戳記，
+   否則同事的瀏覽器會繼續吃舊快取。 */
 // 網址帶了登入碼就以它為準，沒帶才回頭找上次記住的
 var CODE = PRESET_CODE || localStorage.getItem('svc.code') || '';
 var TAX = null;
@@ -1669,6 +1671,105 @@ $('workers').addEventListener('click', function(e){
   }
 });
 
+/* ── 修改被退回的紀錄 ──────────────────────────────────────────
+   副理或總經理退回之後，翻譯要能真的改內容再送一次。
+   原本這裡只有「送審給副理」一個按鈕，等於只能把一模一樣的東西再送一次。
+
+   做法是把整筆載回原本的填寫表單，不另外做編輯畫面——
+   服務細項連動、處理經過選項那些都是現成的，再做一份會變成維護兩套。 */
+
+var EDIT_CODE = null;          // 不是 null 就代表「正在改這一筆」
+
+function fireChange(el){
+  if(el) el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+/* 值在下拉選單裡就選它，不在就切到「其他」並填進輸入框 */
+function setSelOrOther(sel, inp, v){
+  if(!sel) return;
+  v = (v || '').toString();
+  var hit = [].some.call(sel.options, function(o){ return o.value === v; });
+  if(hit){ sel.value = v; if(inp){ inp.value = ''; inp.style.display = 'none'; } }
+  else if(inp){ sel.value = OTHER_; inp.value = v; inp.style.display = ''; }
+  fireChange(sel);
+}
+
+function checkThese(card, sel, vals){
+  var want = vals || [];
+  [].forEach.call(card.querySelectorAll(sel + ' input'), function(i){
+    i.checked = want.indexOf(i.value) !== -1;
+  });
+}
+
+function fillFormFrom(d){
+  resetForm();                           // 也會把 EDIT_CODE 清掉，所以先清再設
+  $('date').value = d.trip.date || '';
+  $('target').value = d.trip.target || '工廠';
+  fireChange($('target'));
+  var md = document.querySelector('input[name=md][value="' + (d.trip.mode || '到場') + '"]');
+  if(md){ md.checked = true; }
+  try { syncMode(); } catch(e){}
+  setSelOrOther($('client'), $('clientOther'), d.trip.client);
+  try { applyPreset(); } catch(e2){}     // 移工姓名選單要先長出來
+  if($('crew') && d.trip.crew) $('crew').value = d.trip.crew;
+  if($('crewOwner')) $('crewOwner').value = d.trip.crewOwner || '';
+
+  $('workers').innerHTML = '';
+  d.workers.forEach(function(w){
+    addWorker();
+    var card = $('workers').lastElementChild;
+    setSelOrOther(card.querySelector('[data-k=name]'),
+                  card.querySelector('[data-k=nameOther]'), w.name);
+    (w.lang || '').split('、').filter(String).forEach(function(l){
+      var r = card.querySelector('input[name^=lg_][value="' + l + '"]');
+      if(r) r.checked = true;
+    });
+    var bg = card.querySelector('[data-k=big]');
+    if(bg){ bg.value = w.big; fireChange(bg); }
+    var sb = card.querySelector('[data-k=sub]');
+    if(sb){ sb.value = w.sub; }
+    try { fillOpts(card, w.big, w.sub); } catch(e3){}
+    checkThese(card, '[data-do]', w.did);
+    checkThese(card, '[data-res]', w.res);
+    ['dnote','rnote','fee','memo','follow'].forEach(function(k){
+      var el = card.querySelector('[data-k=' + k + ']');
+      if(el) el.value = w[k] || '';
+    });
+  });
+}
+
+function startEdit(recCode){
+  google.script.run
+    .withSuccessHandler(function(d){
+      if(!d.canEdit){ toast('這一筆現在不能修改（' + d.status + '）', true); return; }
+      fillFormFrom(d);
+      EDIT_CODE = recCode;
+      $('ebCode').textContent = recCode;
+      $('ebWhy').textContent = d.reject || '';
+      $('ebWhy').style.display = d.reject ? '' : 'none';
+      $('editBar').style.display = '';
+      $('save').textContent = '儲存修改';
+      try { closeReview(); } catch(e){}
+      document.querySelector('.tabs button[data-t=new]').click();
+      window.scrollTo(0, 0);
+      toast('已載入，改完按「儲存修改」');
+    })
+    .withFailureHandler(function(e){ toast(e.message, true); })
+    .getServiceLogForEdit(CODE, recCode);
+}
+
+function endEdit(){
+  EDIT_CODE = null;
+  $('editBar').style.display = 'none';
+  $('save').textContent = '儲存';
+}
+$('ebCancel').addEventListener('click', function(){
+  endEdit();
+  resetForm();
+  document.querySelector('.tabs button[data-t=follow]').click();
+});
+
+
 /* ── 儲存 ─────────────────────────────── */
 $('save').addEventListener('click', function(){
   var trip = {
@@ -1696,7 +1797,29 @@ $('save').addEventListener('click', function(){
     });
   });
   if(!workers.length){ toast('每位移工都要選服務類別與細項', true); return; }
-  var b=$('save'); b.disabled=true; toast('儲存中…');
+  var b=$('save'); b.disabled=true;
+
+  /* 修改模式：覆寫既有那幾列，不要新增一筆。
+     這裡走錯分支的後果是同一趟服務在表上出現兩次，統計與評鑑都會多算。 */
+  if(EDIT_CODE){
+    var editing = EDIT_CODE;
+    toast('儲存修改中…');
+    google.script.run
+      .withSuccessHandler(function(r){
+        b.disabled=false;
+        endEdit();
+        resetForm();
+        calBust();
+        toast(r.changed ? ('已修改 '+r.changed+' 處，記得再送審') : '內容沒有變動');
+        document.querySelector('.tabs button[data-t=follow]').click();
+        loadReview();
+      })
+      .withFailureHandler(function(e){ b.disabled=false; toast(e.message, true); })
+      .updateServiceLog(CODE, editing, trip, workers);
+    return;
+  }
+
+  toast('儲存中…');
   google.script.run
     .withSuccessHandler(function(r){
       b.disabled=false;
@@ -1982,6 +2105,13 @@ $('pvSign').addEventListener('click', function(){
 });
 
 function resetForm(){
+  /* 清空表單等於放棄這次修改。少了這一行，按「清除」之後填的新內容
+     會被當成修改、覆寫掉原本那一筆。 */
+  if(typeof EDIT_CODE !== 'undefined' && EDIT_CODE){
+    EDIT_CODE = null;
+    var eb = $('editBar'); if(eb) eb.style.display='none';
+    $('save').textContent = '儲存';
+  }
   $('pvModal').style.display='none';
   $('client').value=''; $('clientOther').value=''; $('clientOther').style.display='none';
   if(CREW.indexOf(STAFF_NAME) !== -1) $('crew').value = STAFF_NAME;
@@ -2537,7 +2667,14 @@ function drawReviewActions(r){
   var role = STAFF_ROLE || (REV && REV.role) || '翻譯';
   var h = '';
   if(role === '翻譯' && (r.status === '未送審' || r.status === '退回補正')){
-    h = '<div class="rvform"><button type="button" class="act p" id="rvSubmit" '+
+    /* 被退回的一定要能改，不然退回等於沒有作用。
+       「修改內容」放在送審上面——被退回時該做的是先改，不是再送一次。 */
+    h = '<div class="rvform">'+
+        '<button type="button" class="act" id="rvEdit" '+
+        'style="width:100%;padding:13px;border-radius:11px;border:1px solid var(--line);'+
+        'background:var(--card);color:var(--ink);font-size:15px;font-weight:700;'+
+        'font-family:inherit;margin-bottom:8px">修改內容</button>'+
+        '<button type="button" class="act p" id="rvSubmit" '+
         'style="width:100%;padding:14px;border-radius:11px;border:1px solid var(--brand);'+
         'background:var(--brand);color:#fff;font-size:15px;font-weight:700;'+
         'font-family:inherit">送審給副理</button></div>';
@@ -2574,6 +2711,8 @@ function drawReviewActions(r){
   }
   $('rvAct').innerHTML = h;
 
+  var eb = $('rvEdit');
+  if(eb) eb.addEventListener('click', function(){ startEdit(RV_CODE); });
   var sb = $('rvSubmit');
   if(sb) sb.addEventListener('click', function(){
     sb.disabled = true;

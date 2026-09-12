@@ -1,6 +1,9 @@
 /* 羽禾 移工服務平台 — 版面樣式
-   由 migrant-worker-platform/src/Service.html 拆出來的。
-   要改請改那邊再重新拆，不要直接改這個檔。 */
+   2026-09-12 從 src/Service.html 拆出來之後，**這個檔就是正本**。
+   Service.html 只剩 16KB 的骨架（HTML 結構 ＋ 兩個伺服器端變數），
+   版面樣式已經不在那裡了，要改就是改這裡。
+   改完 push 到 GitHub Pages，並在 Apps Script 重新部署換掉 ?v= 的版本戳記，
+   否則同事的瀏覽器會繼續吃舊快取。 */
 /* 翻譯人員站在工廠裡用手機填，所以：目標鍵大、固定白底好讀、少打字。 */
 :root{
   --brand:#1B3B6F; --brand-d:#132B52; --brand-soft:#E7EDF6; --brand2:var(--info-ink);
@@ -692,6 +695,19 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .prow select{width:100%;margin-top:5px;padding:7px 9px;border:1px solid var(--line);
   border-radius:9px;font-family:inherit;font-size:0.82rem;background:var(--card);
   color:var(--ink)}
+
+/* ── 修改中的橫幅 ──────────────────────────────────
+   用退回那個紅色系，跟「這是被退回來要補的」對得起來。 */
+.editbar{border:1px solid var(--warn-line,#D9A8B4);background:var(--warn-bg,#FBEFF2);
+  border-radius:12px;padding:11px 12px;margin-bottom:12px}
+.eb-h{display:flex;align-items:center;gap:8px;font-size:0.9rem}
+.eb-h b{color:var(--bad-ink,#9E3B52)}
+.eb-h span{font-family:ui-monospace,monospace;font-size:0.8rem;color:var(--ink2)}
+.eb-h button{margin-left:auto;border:1px solid var(--line);background:var(--card);
+  color:var(--ink2);border-radius:8px;padding:5px 11px;font-family:inherit;
+  font-size:0.8rem;cursor:pointer}
+.eb-why{font-size:0.85rem;color:var(--bad-ink,#9E3B52);margin-top:6px;line-height:1.6}
+.eb-note{font-size:0.78rem;color:var(--ink3);margin-top:5px}
 
 /* ── 評鑑進度 ──────────────────────────────────────
    評鑑委員核對的就是「這個人、這幾個月、有沒有表」。
