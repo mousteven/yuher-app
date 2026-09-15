@@ -88,9 +88,10 @@ ol li b{color:var(--ink)}
 
 <div id="pad"></div>
 <div id="app">
+  <!-- src 由下面的 script 組出來：網址帶 ?code= 時會一起傳進去，
+       讓每個人用自己的專屬連結，不必把全公司的碼印在同一份手冊裡。 -->
   <iframe id="frame" title="羽禾服務紀錄"
-          allow="clipboard-write; camera"
-          src="https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec?page=svc"></iframe>
+          allow="clipboard-write; camera"></iframe>
 </div>
 
 <div id="fallback">
@@ -251,6 +252,35 @@ ol li b{color:var(--ink)}
     window.addEventListener('load', function(){
       navigator.serviceWorker.register('sw.js').catch(function(){});
     });
+  }
+})();
+</script>
+<script>
+/* 個人專屬連結：https://mousteven.github.io/yuher-app/?code=1234
+   把 code 往下傳給 Apps Script，App 會直接用它登入，同事不用手動輸入。
+
+   兩個細節：
+   · 只收 4–40 個英數與連字號，其他一律忽略——不要讓網址參數變成注入點
+   · 帶進去之後把它從網址列拿掉（replaceState），
+     免得同事把「含自己登入碼的網址」截圖轉給別人 */
+(function () {
+  var BASE = 'https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec?page=svc';
+  var code = '';
+  try {
+    var m = /[?&]code=([A-Za-z0-9-]{1,40})/.exec(location.search);
+    if (m) code = m[1];
+  } catch (e) {}
+
+  var url = BASE + (code ? ('&code=' + encodeURIComponent(code)) : '');
+  var f = document.getElementById('frame');
+  if (f) f.src = url;
+  var d = document.getElementById('direct');
+  if (d) d.href = url;
+
+  if (code) {
+    try {
+      history.replaceState(null, '', location.pathname);
+    } catch (e2) {}
   }
 })();
 </script>
