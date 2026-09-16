@@ -52,7 +52,6 @@ function login(code){
       STAFF_NAME = r.staff || '';
       STAFF_ROLE = r.role || '';
       CREW = r.crew || [];
-      MYSIG = r.mysig || '';
 
       if(r.clients){
         PRESETS = r.clients;
@@ -90,7 +89,6 @@ function login(code){
       }
       $('crewOwner').value = ''; PICKED_ = []; PICK_LG = ''; SCHED_ID = '';
       [].forEach.call($('workers').children, fillWorkerNames);
-      applyMySig();
 
       var bd = $('revBadge');
       if(r.reviewCount){ bd.textContent = r.reviewCount; bd.style.display=''; }
@@ -109,6 +107,7 @@ function loginFail(e){
   $('login').style.display=''; $('app').style.display='none';
   document.body.classList.add('lgon');
   var msg = (e && e.message) || '登入失敗';
+  lgBusy(false);
   LG = ''; lgDraw(true);
   lgMsg(msg.indexOf('過多') !== -1 ? msg : '登入碼不正確，再試一次', true);
   try { localStorage.removeItem('svc.code'); } catch(err){}
@@ -132,6 +131,18 @@ function lgDraw(bad){
   d.className = 'lg-dots' + (bad ? ' bad' : '');
   if(bad) setTimeout(function(){ d.className = 'lg-dots'; }, 460);
 }
+/* 等待狀態。四個點開始呼吸、鍵盤退到背景、文字換成安靜的短句——
+   「登入中…」那個刪節號是在製造焦慮，動態本身已經表達了「還在跑」。 */
+function lgBusy(on){
+  var d = $('lgDots'), p = $('lgPad'), m = $('lgMsg');
+  if(d) d.className = 'lg-dots' + (on ? ' busy' : '');
+  if(p) p.className = 'lg-pad' + (on ? ' busy' : '');
+  if(m){
+    m.textContent = on ? '正在登入' : '輸入登入碼';
+    m.className = 'lg-msg' + (on ? ' busy' : '');
+  }
+}
+
 function lgMsg(t, bad){
   var m = $('lgMsg');
   m.textContent = t;
@@ -146,7 +157,7 @@ function lgTap(k){
   lgDraw();
   try { if(navigator.vibrate) navigator.vibrate(8); } catch(e){}
   if(LG.length === 4){
-    lgMsg('登入中…');
+    lgBusy(true);
     $('code').value = LG;
     login(LG);
   }
@@ -442,6 +453,18 @@ function saveMySig(u){
     .withFailureHandler(function(e){ toast(e.message, true); })
     .saveStaffSignature(CODE, u);
 }
+/* 簽名要用才抓，抓過就留著。登入時不拿——Drive 呼叫是最慢的一種，
+   而這張圖只有按「簽名」的時候才用得到。 */
+var MYSIG_ASKED = false;
+function ensureMySig(then){
+  if(MYSIG || MYSIG_ASKED){ if(then) then(); return; }
+  MYSIG_ASKED = true;
+  google.script.run
+    .withSuccessHandler(function(u){ MYSIG = u || ''; if(then) then(); })
+    .withFailureHandler(function(){ if(then) then(); })
+    .getMySignature(CODE);
+}
+
 function applyMySig(){
   var box = document.querySelector('[data-sig=staff]');
   if(box && box.__sig && MYSIG && !box.__sig.signed()) box.__sig.set(MYSIG);
@@ -1478,6 +1501,10 @@ function openSig(box){
   // 只有翻譯人員自己的簽名值得存起來重複用；移工與雇主每次都是不同人
   $('smMine').style.display = isStaff ? '' : 'none';
   $('smUse').style.display = MYSIG ? '' : 'none';
+  /* 還沒抓過就抓，抓到再把「沿用上次簽名」的按鈕打開 */
+  ensureMySig(function(){
+    var u = $('smUse'); if(u) u.style.display = MYSIG ? '' : 'none';
+  });
   $('smHint').textContent = isStaff
     ? '簽完按「存為我的簽名」，以後開表就會自動帶上去，不用每次重畫。'
     : '用手指在下面的白框裡簽，簽完按「完成」。';
@@ -1812,7 +1839,7 @@ $('save').addEventListener('click', function(){
         b.disabled=false;
         endEdit();
         resetForm();
-        calBust();
+        calBust(); revBust();
         toast(r.changed ? ('已修改 '+r.changed+' 處，記得再送審') : '內容沒有變動');
         document.querySelector('.tabs button[data-t=follow]').click();
         loadReview();
@@ -1826,7 +1853,7 @@ $('save').addEventListener('click', function(){
   google.script.run
     .withSuccessHandler(function(r){
       b.disabled=false;
-      calBust();                  // 那一趟會從「待處理」變「已完成」
+      calBust(); revBust();       // 那一趟會從「待處理」變「已完成」，送審清單也多一筆
       try{ openDone(r.code, r.count); }
       catch(err){ toast('已存檔（'+r.code+'），但面板打不開：'+err.message, true); }
     })
@@ -2057,7 +2084,7 @@ $('dnClose').addEventListener('click', function(){
 $('dnSubmit').addEventListener('click', function(){
   var b = $('dnSubmit'); b.disabled = true;
   google.script.run
-    .withSuccessHandler(function(){ b.textContent='已送審'; toast('已送給副理審閱'); })
+    .withSuccessHandler(function(){ b.textContent='已送審'; toast('已送給副理審閱'); revBust(); })
     .withFailureHandler(function(e){ b.disabled=false; toast(e.message, true); })
     .submitForReview(CODE, DONE_CODE_);
 });
@@ -2473,12 +2500,23 @@ var REV_ST_DEF = [
   { k:'退回補正',     t:'已退回',     c:'#9E3B52' }
 ];
 
-function loadFollow(){
-  $('p-follow').innerHTML = '<div class="mid">載入中…</div>';
+/* 送審頁的快取。原本每次點頁籤都重掃整張服務紀錄與審核表，
+   來回一趟在工廠的 4G 上要好幾秒。行事曆早就有快取了，這裡照同一套：
+   三分鐘內直接用手上這份，送審／退回／存檔時主動作廢。 */
+var REV_AT = 0;
+var REV_TTL = 3 * 60 * 1000;
+function revBust(){ REV = null; REV_AT = 0; }
+
+function loadFollow(force){
+  if(!force && REV && (Date.now() - REV_AT) < REV_TTL){
+    REV_PICK = []; drawReview();
+    return;
+  }
+  if(!REV) $('p-follow').innerHTML = '<div class="mid">載入中…</div>';
   google.script.run
-    .withSuccessHandler(function(r){ REV = r; REV_PICK = []; drawReview(); })
+    .withSuccessHandler(function(r){ REV = r; REV_AT = Date.now(); REV_PICK = []; drawReview(); })
     .withFailureHandler(function(e){
-      $('p-follow').innerHTML = '<div class="mid">'+esc(e.message)+'</div>'; })
+      if(!REV) $('p-follow').innerHTML = '<div class="mid">'+esc(e.message)+'</div>'; })
     .listReviewQueue(CODE);
 }
 
@@ -2607,7 +2645,7 @@ function bindReview(){
       .withSuccessHandler(function(res){
         bt.disabled=false;
         toast('已核准 '+res.ok+' 筆'+(res.fail.length?('，'+res.fail.length+' 筆失敗'):''));
-        loadFollow();
+        revBust(); loadFollow(true);
       })
       .withFailureHandler(function(e){ bt.disabled=false; toast(e.message,true); })
       .reviewBatch(CODE, REV_PICK, REV.role==='總經理'?'boss':'manager', '不需追蹤', '');
@@ -2847,7 +2885,7 @@ function drawReviewActions(r){
   if(sb) sb.addEventListener('click', function(){
     sb.disabled = true;
     google.script.run
-      .withSuccessHandler(function(){ toast('已送審'); closeReview(); })
+      .withSuccessHandler(function(){ toast('已送審'); revBust(); closeReview(); })
       .withFailureHandler(function(e){ sb.disabled=false; toast(e.message,true); })
       .submitForReview(CODE, r.code);
   });
@@ -2857,7 +2895,7 @@ function drawReviewActions(r){
     ok.disabled = true;
     var note = $('rvNote') ? $('rvNote').value.trim() : '';
     var f = (document.querySelector('input[name=rvf]:checked')||{}).value || '不需追蹤';
-    var done = function(){ toast('已完成'); closeReview(); };
+    var done = function(){ toast('已完成'); revBust(); closeReview(); };
     var fail = function(e){ ok.disabled=false; toast(e.message,true); };
     if(role === '副理'){
       google.script.run.withSuccessHandler(done).withFailureHandler(fail)
@@ -2875,7 +2913,7 @@ function drawReviewActions(r){
     if(!why) return;
     rj.disabled = true;
     google.script.run
-      .withSuccessHandler(function(){ toast('已退回'); closeReview(); })
+      .withSuccessHandler(function(){ toast('已退回'); revBust(); closeReview(); })
       .withFailureHandler(function(e){ rj.disabled=false; toast(e.message,true); })
       .reviewReject(CODE, r.code, why);
   });
@@ -3065,5 +3103,5 @@ $('statGo').addEventListener('click', function(){
 });
 
 /* 記得上次的登入碼，直接進去 */
-if(CODE){ $('code').value = CODE; login(CODE); }
+if(CODE){ $('code').value = CODE; lgBusy(true); login(CODE); }
 else { $('login').style.display=''; document.body.classList.add('lgon'); }   // 沒碼才需要登入畫面

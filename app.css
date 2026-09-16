@@ -1087,6 +1087,30 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .lg-dots.bad i,.lg-dots.bad i.on{background:var(--bad-ink);
   box-shadow:inset 0 0 0 1.5px var(--bad-ink);transform:none}
 .lg-dots.bad{animation:lgshake .42s cubic-bezier(.36,.07,.19,.97)}
+
+/* ── 登入中 ────────────────────────────────────────
+   動態長在已經有的元件上：四個點本來就是輸入指示器，
+   等待時讓它們依序呼吸，不要另外生一個轉盤出來——轉圈圈是舊時代的語彙。
+   **保留四個點原本的語別顏色**（越／泰／印／英），只動透明度與大小，
+   那四個顏色是這支 App 的識別，不該在等待時被洗掉。
+   1.4 秒一輪、每點差 0.16 秒，接近呼吸的節奏；
+   閃爍會讓人盯著看，呼吸會讓人放鬆等。 */
+.lg-dots.busy i{animation:lgbreathe 1.4s ease-in-out infinite}
+.lg-dots.busy i:nth-child(1){background:#2E7D8A;box-shadow:inset 0 0 0 1.5px #2E7D8A}
+.lg-dots.busy i:nth-child(2){background:#B4632A;box-shadow:inset 0 0 0 1.5px #B4632A;animation-delay:.16s}
+.lg-dots.busy i:nth-child(3){background:#4B6B2F;box-shadow:inset 0 0 0 1.5px #4B6B2F;animation-delay:.32s}
+.lg-dots.busy i:nth-child(4){background:#7A4E9E;box-shadow:inset 0 0 0 1.5px #7A4E9E;animation-delay:.48s}
+@keyframes lgbreathe{
+  0%,100%{opacity:.26;transform:scale(.86)}
+  45%{opacity:1;transform:scale(1.14)}
+}
+/* 鍵盤退到背景：既表示「現在按也沒用」，也把注意力留給上面那四個點 */
+.lg-pad.busy{opacity:.32;pointer-events:none;transition:opacity .3s ease}
+.lg-msg.busy{color:var(--brand)}
+
+@media (prefers-reduced-motion:reduce){
+  .lg-dots.busy i{animation:none;opacity:.55}
+}
 @keyframes lgshake{
   10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(4px)}
   30%,50%,70%{transform:translateX(-8px)} 40%,60%{transform:translateX(8px)}}
