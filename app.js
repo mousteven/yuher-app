@@ -2270,6 +2270,63 @@ function makePaste(){
     .createFromPaste(CODE, picked);
 }
 
+
+/* ── 操作說明 ──────────────────────────────────────────────
+   「點進去出不來」要從三個方向一起堵：
+     · 左上角的返回鍵
+     · Android 的實體返回鍵、iPhone 的邊緣返回手勢（靠 history）
+     · Esc（桌機）
+   三條路都走 closeHelp()，行為完全一致。
+
+   掛 history 的作法：開啟時 pushState，返回鍵一律呼叫 history.back()，
+   真正關閉的動作放在 popstate。這樣不管使用者按哪一個，
+   歷史紀錄都不會亂掉——不會出現「按了系統返回鍵卻退出整個 App」。 */
+function openHelp(){
+  var h = $('help');
+  if(!h || h.classList.contains('on')) return;
+  drawHelpMe();
+  h.classList.add('on');
+  h.setAttribute('aria-hidden', 'false');
+  try { history.pushState({ help: 1 }, ''); } catch(e){}
+  try { $('hpBack').focus(); } catch(e2){}
+}
+function closeHelp(){
+  var h = $('help');
+  if(!h || !h.classList.contains('on')) return;
+  h.classList.remove('on');
+  h.setAttribute('aria-hidden', 'true');
+}
+/* 自己的登入資訊。換手機、重灌的時候第一個要找的就是這個，
+   所以放在說明的最上面，而且附一個複製鈕——
+   在工廠裡要同事手抄一串網址是不切實際的。 */
+function drawHelpMe(){
+  var box = $('hpMe');
+  if(!box) return;
+  var link = 'https://mousteven.github.io/yuher-app/?code=' + encodeURIComponent(CODE || '');
+  box.innerHTML =
+    '<b>' + esc(STAFF_NAME || '你') + '　你的專屬連結</b>' +
+    '<p>換手機或重灌之後，用這條連結就直接登入，不用再輸入登入碼。' +
+    '也可以傳給自己的另一支手機。</p>' +
+    (CODE ? '<button type="button" id="hpCopy">複製我的專屬連結</button>' : '');
+  var b = $('hpCopy');
+  if(b) b.addEventListener('click', function(){
+    try {
+      navigator.clipboard.writeText(link);
+      toast('已複製，貼到 LINE 給自己就好');
+    } catch(e){ toast('複製失敗，請截圖或手動記下', true); }
+  });
+}
+$('guideBtn').addEventListener('click', openHelp);
+$('hpBack').addEventListener('click', function(){
+  /* 一律走 history.back()，讓按鈕跟系統返回鍵是同一條路徑 */
+  if(history.state && history.state.help) history.back();
+  else closeHelp();
+});
+window.addEventListener('popstate', function(){ closeHelp(); });
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape') closeHelp();
+});
+
 /* ── 查詢 ─────────────────────────────── */
 function recHtml(r){
   return '<div class="rec">'+

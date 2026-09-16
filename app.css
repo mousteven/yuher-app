@@ -709,6 +709,69 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .eb-why{font-size:0.85rem;color:var(--bad-ink,#9E3B52);margin-top:6px;line-height:1.6}
 .eb-note{font-size:0.78rem;color:var(--ink3);margin-top:5px}
 
+
+/* ── 操作說明 ──────────────────────────────────────
+   整頁蓋上來，從右邊推進、返回時推回去——進出走同一條路，
+   使用者才知道自己在哪裡、怎麼回去。
+   全部用 App 既有的 token，夜間模式與字級調整自動跟著走，
+   不用維護第二套樣式。 */
+#help{position:fixed;inset:0;z-index:60;background:var(--bg);
+  display:flex;flex-direction:column;
+  transform:translateX(100%);visibility:hidden;
+  transition:transform .28s cubic-bezier(.32,.72,0,1),visibility .28s}
+#help.on{transform:translateX(0);visibility:visible}
+
+.hp-bar{flex:none;display:flex;align-items:center;gap:6px;
+  background:var(--chrome-bg);color:var(--chrome-ink);
+  padding:calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px}
+.hp-bar b{font-size:1rem;letter-spacing:.02em}
+.hp-bar button{display:inline-flex;align-items:center;gap:2px;
+  background:none;border:0;color:var(--chrome-ink);font-family:inherit;
+  font-size:0.95rem;padding:6px 8px 6px 2px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+.hp-bar button svg{width:1.4rem;height:1.4rem}
+.hp-bar button:active{opacity:.55}
+
+.hp-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:16px 15px calc(env(safe-area-inset-bottom, 0px) + 40px)}
+.hp-lead{margin:0 0 16px;color:var(--ink2);font-size:0.925rem;line-height:1.85}
+
+/* 自己的登入資訊。放最上面——換手機、重灌的時候第一個要找的就是它。 */
+.hp-me{background:var(--brand-soft);border:1px solid var(--line);
+  border-radius:13px;padding:13px 14px;margin-bottom:20px;font-size:0.9rem}
+.hp-me b{display:block;color:var(--brand);margin-bottom:6px;font-size:0.95rem}
+.hp-me p{margin:0;color:var(--ink2);line-height:1.8}
+.hp-me code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  background:var(--card);border:1px solid var(--line);border-radius:6px;
+  padding:1px 7px;color:var(--ink);letter-spacing:.08em}
+.hp-me button{margin-top:9px;width:100%;padding:9px;border-radius:9px;
+  border:1px solid var(--brand);background:var(--card);color:var(--brand);
+  font-family:inherit;font-size:0.875rem;font-weight:700;cursor:pointer}
+.hp-me button:active{background:var(--brand-soft)}
+
+.hp-s{margin-bottom:24px}
+.hp-s h3{display:flex;align-items:center;gap:9px;margin:0 0 9px;
+  font-size:1.0625rem;letter-spacing:.02em}
+.hp-s h3 i{flex:none;width:1.55rem;height:1.55rem;border-radius:50%;
+  background:var(--brand);color:#fff;font-style:normal;font-weight:700;
+  font-size:0.8125rem;display:inline-grid;place-items:center}
+.hp-s > p{margin:0 0 9px;color:var(--ink2);font-size:0.9rem;line-height:1.85}
+.hp-s ul{margin:0;padding-left:1.15rem;display:grid;gap:7px}
+.hp-s li{color:var(--ink2);font-size:0.9rem;line-height:1.8}
+.hp-s b{color:var(--ink);font-weight:600}
+
+.hp-q{margin:0}
+.hp-q dt{font-size:0.9rem;font-weight:700;color:var(--ink);margin-top:13px}
+.hp-q dt:first-child{margin-top:0}
+.hp-q dd{margin:3px 0 0;color:var(--ink2);font-size:0.885rem;line-height:1.8}
+
+.hp-end{margin:26px 0 0;padding-top:16px;border-top:1px solid var(--line2);
+  color:var(--ink3);font-size:0.85rem;text-align:center}
+
+@media (prefers-reduced-motion:reduce){
+  #help{transition:visibility .01s}
+}
+
 /* ── 評鑑進度 ──────────────────────────────────────
    評鑑委員核對的就是「這個人、這幾個月、有沒有表」。
    所以畫面直接做成移工 × 月份的核對表，一格一個月。 */
