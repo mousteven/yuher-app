@@ -1,0 +1,273 @@
+/* 常用回覆（罐頭訊息）
+   ─────────────────────────────────────────────────────────
+   這一頁是拿在手上、在對話中間用的：找到那句話 → 複製 → 貼到 LINE。
+   所以目標鍵要大、深色模式要能看、第二次開要秒開。
+
+   版面照「儀表板與後台設計」規範（Modern Clean SaaS Dashboard）：
+   · 灰底白卡，卡片靠 1px 細框浮起來，不用厚陰影
+   · 間距一律 8 的倍數（8 / 16 / 24），不出現 13px 18px 這種
+   · 每張卡左上角一個深色小方塊放線性圖示——這套的簽名式手法
+   · 強調色只用專案原本的海軍藍，不為了像參考圖改成綠的
+
+   住在 GitHub Pages：改這個檔推上去約十分鐘生效，
+   不用重新部署 Apps Script，也不吃 200 個版本的額度。
+   ───────────────────────────────────────────────────────── */
+
+:root{
+  --brand:#1B3B6F; --brand-d:#132B52; --brand-soft:#E8EEF7;
+  --ink:#16222a; --ink2:#4a565e; --ink3:#7b878e;
+  --bg:#f3f6f6; --card:#fff; --line:#dce4e5; --line2:#eef2f3;
+  --warn:#b7791f; --warn-bg:#FDF4E6;
+  --danger:#9E3B52; --danger-bg:#FBEEF1;
+  --ok:#1c6b3f; --ok-bg:#ECF5F0;
+  --tile:#1C1C1E;                       /* 圖示方塊：近黑 */
+  --tile-ink:#fff;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --brand:#5fb3c0; --brand-d:#8fd0da; --brand-soft:#12313a;
+    --ink:#e8eded; --ink2:#aab6bb; --ink3:#7c898f;
+    --bg:#10171a; --card:#182126; --line:#2b3940; --line2:#222d33;
+    --warn:#e0ab5c; --warn-bg:#2A2218;
+    --danger:#e08b84; --danger-bg:#2C1C1E;
+    --ok:#6cc292; --ok-bg:#16241E;
+    --tile:#E8EDED; --tile-ink:#10171a;   /* 夜間反過來，才看得見 */
+  }
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",
+    "Microsoft JhengHei",sans-serif;
+  font-size:15px;line-height:1.6;padding-bottom:88px;
+  -webkit-text-size-adjust:100%;
+}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+
+/* 圖示方塊：28×28、圓角 8、深底白線
+   規範的簽名式手法。不要用彩色圓形，也不要用 emoji。 */
+.tile{
+  flex:none;width:28px;height:28px;border-radius:8px;
+  background:var(--tile);color:var(--tile-ink);
+  display:grid;place-items:center;
+}
+.tile svg{width:16px;height:16px}
+.tile.sm{width:24px;height:24px;border-radius:6px}
+.tile.sm svg{width:14px;height:14px}
+
+/* ── 頁首 ──────────────────────────────────────────
+   規範：橫幅寫成一句人話，標題是事實加細節，不是分類名。
+   「常用回覆」是分類名；「43 張訊息，最常用的是體檢」才是事實。 */
+.top{
+  position:sticky;top:0;z-index:20;background:var(--bg);
+  padding:16px 16px 8px;
+  border-bottom:1px solid var(--line2);
+}
+.lead{
+  display:flex;gap:12px;align-items:flex-start;
+  background:var(--card);border:1px solid var(--line2);border-radius:12px;
+  padding:16px;margin-bottom:16px;
+}
+.lead .tx{flex:1;min-width:0}
+.lead b{
+  display:block;font-size:0.9375rem;line-height:1.5;font-weight:600;
+  color:var(--ink);letter-spacing:-.01em;
+}
+.lead em{
+  display:block;font-style:normal;font-size:0.8125rem;line-height:1.7;
+  color:var(--ink2);margin-top:4px;
+}
+
+.row1{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+#q{
+  flex:1;min-width:0;padding:10px 14px;border-radius:10px;
+  border:1px solid var(--line);background:var(--card);
+  font-size:15px;-webkit-appearance:none;
+}
+#q:focus{outline:2px solid var(--brand);outline-offset:-1px;border-color:transparent}
+
+/* 語言切換 */
+.langs{display:flex;flex:none;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.langs button{
+  border:0;background:var(--card);padding:10px 12px;
+  font-size:13px;font-weight:600;color:var(--ink3);
+}
+.langs button + button{border-left:1px solid var(--line)}
+.langs button.on{background:var(--brand);color:#fff}
+@media (prefers-color-scheme:dark){ .langs button.on{color:#10171a} }
+
+/* 資料夾：兩層。第二層是子分類，選到有子層的才出現。 */
+.folders{display:flex;gap:8px;overflow-x:auto;padding:8px 0 0;scrollbar-width:none}
+.folders::-webkit-scrollbar{display:none}
+.folders button{
+  flex:0 0 auto;border:1px solid var(--line);background:var(--card);
+  padding:8px 16px;border-radius:999px;font-size:13px;font-weight:600;
+  color:var(--ink2);white-space:nowrap;
+  transition:background .12s,border-color .12s;
+}
+.folders button:hover{background:var(--line2)}
+.folders button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+@media (prefers-color-scheme:dark){ .folders button.on{color:#10171a} }
+.folders button .n{opacity:.6;font-weight:500;margin-left:4px}
+
+.folders.subs{padding:8px 0 0}
+.folders.subs button{
+  padding:6px 12px;font-size:12px;font-weight:500;
+  background:transparent;border-color:transparent;color:var(--ink3);
+}
+.folders.subs button:hover{background:var(--line2)}
+.folders.subs button.on{
+  background:var(--brand-soft);border-color:var(--brand);color:var(--brand);
+}
+
+/* ── 卡片 ──────────────────────────────────────────
+   純白卡片浮在灰底上，1px 細框，圓角 12。不用陰影。 */
+.grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));
+  gap:16px;padding:16px;
+}
+@media (max-width:520px){ .grid{grid-template-columns:1fr 1fr;gap:8px;padding:8px} }
+
+.card{
+  background:var(--card);border:1px solid var(--line2);border-radius:12px;
+  display:flex;flex-direction:column;overflow:hidden;
+  transition:border-color .12s,transform .08s;
+}
+.card:hover{border-color:var(--line)}
+.card:active{transform:scale(.99)}
+
+.card .hd{display:flex;gap:8px;align-items:center;padding:16px 16px 0}
+.card .kind{
+  font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink3);
+}
+.card .uses{
+  margin-left:auto;font-size:11px;color:var(--ink3);white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+
+.card .bd{padding:8px 16px 16px;flex:1;min-width:0}
+.card .t{
+  font-weight:600;font-size:14px;line-height:1.45;color:var(--ink);
+  margin-bottom:4px;letter-spacing:-.01em;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.card .p{
+  font-size:12.5px;line-height:1.6;color:var(--ink2);white-space:pre-wrap;
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
+}
+/* 這個語言沒有內容時，不要只寫「還沒有中文」就算了——
+   直接顯示有的那個語言，標一個小籤，人才用得下去。 */
+.card .alt{margin-top:4px}
+.card .altbadge{
+  display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;
+  padding:1px 6px;border-radius:4px;margin-bottom:4px;
+  background:var(--warn-bg);color:var(--warn);
+}
+
+.card .th{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:var(--line2)}
+.card .filebox{
+  display:flex;gap:8px;align-items:center;padding:16px;
+  background:var(--line2);font-size:12px;color:var(--ink2);
+  word-break:break-all;
+}
+
+.card .ft{display:flex;border-top:1px solid var(--line2)}
+.card .ft button{
+  border:0;background:transparent;padding:12px 8px;
+  font-size:13px;font-weight:600;color:var(--brand);
+  transition:background .12s;
+}
+.card .ft button:hover{background:var(--line2)}
+.card .ft .go{flex:1;min-width:0}
+.card .ft .more{flex:none;width:48px;color:var(--ink3);border-left:1px solid var(--line2)}
+
+/* ── 空狀態與載入 ───────────────────────────────── */
+.empty,.spin{padding:64px 24px;text-align:center;color:var(--ink3);font-size:14px;line-height:1.8}
+.empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:8px}
+
+.skel{background:var(--card);border:1px solid var(--line2);border-radius:12px;height:168px}
+.skel i{
+  display:block;height:100%;border-radius:12px;
+  background:linear-gradient(90deg,transparent,var(--line2),transparent);
+  background-size:200% 100%;animation:sk 1.2s infinite;
+}
+@keyframes sk{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){ .skel i{animation:none} }
+
+/* ── 新增鈕 ────────────────────────────────────── */
+.fab{
+  position:fixed;right:16px;bottom:24px;z-index:30;
+  border:0;border-radius:999px;background:var(--brand);color:#fff;
+  padding:16px 24px;font-size:15px;font-weight:600;
+  box-shadow:0 4px 16px rgba(27,59,111,.24);
+}
+@media (prefers-color-scheme:dark){ .fab{color:#10171a} }
+
+/* ── 浮出的面板 ─────────────────────────────────── */
+.sheet{
+  position:fixed;inset:0;z-index:40;background:rgba(10,18,22,.45);
+  display:none;align-items:flex-end;justify-content:center;
+}
+.sheet.on{display:flex}
+.sheet .panel{
+  width:100%;max-width:560px;max-height:88vh;overflow-y:auto;
+  background:var(--bg);border-radius:16px 16px 0 0;
+  padding:24px 16px calc(env(safe-area-inset-bottom,0px) + 24px);
+  animation:up .26s cubic-bezier(.32,.72,0,1);
+}
+@keyframes up{from{transform:translateY(24px);opacity:0}}
+@media (prefers-reduced-motion:reduce){ .sheet .panel{animation:none} }
+.sheet h3{margin:0 0 16px;font-size:17px;font-weight:600;letter-spacing:-.01em}
+
+.act{
+  display:block;width:100%;text-align:left;margin-bottom:8px;
+  background:var(--card);border:1px solid var(--line2);border-radius:10px;
+  padding:16px;font-size:14px;font-weight:500;color:var(--ink);
+}
+.act:hover{border-color:var(--line)}
+.act small{display:block;font-size:12px;color:var(--ink3);font-weight:400;margin-top:2px}
+.act.bad{color:var(--danger)}
+
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:8px}
+.field input,.field textarea{
+  width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);font-size:15px;
+}
+.field textarea{min-height:96px;resize:vertical;line-height:1.6}
+.field input:focus,.field textarea:focus{
+  outline:2px solid var(--brand);outline-offset:-1px;border-color:transparent;
+}
+.hint{font-size:12px;color:var(--ink3);line-height:1.6;margin-top:8px}
+
+.typegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px}
+.typegrid button{
+  background:var(--card);border:1px solid var(--line2);border-radius:10px;
+  padding:12px 4px;font-size:12px;font-weight:600;color:var(--ink2);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.typegrid button.on{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
+
+.btns{display:flex;gap:8px;margin-top:24px}
+.btns button{
+  flex:1;padding:16px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);font-size:15px;font-weight:600;color:var(--ink2);
+}
+.btns button.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+@media (prefers-color-scheme:dark){ .btns button.primary{color:#10171a} }
+.btns button[disabled]{opacity:.5}
+
+/* ── 提示 ──────────────────────────────────────── */
+#toast{
+  position:fixed;left:50%;bottom:96px;transform:translate(-50%,16px);
+  z-index:50;background:var(--tile);color:var(--tile-ink);
+  padding:12px 16px;border-radius:10px;font-size:14px;font-weight:500;
+  max-width:88vw;text-align:center;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast.bad{background:var(--danger);color:#fff}
