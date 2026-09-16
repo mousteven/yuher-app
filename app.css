@@ -723,23 +723,33 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   transition:transform .28s cubic-bezier(.32,.72,0,1),visibility .28s}
 #help.on{transform:translateX(0);visibility:visible}
 
-/* 標題列薄一點，內容才是主角。標題置中、返回鍵在左——
-   跟 iOS 的導覽列同一套，使用者不用學。 */
-.hp-bar{flex:none;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+/* 標題列跟 App 上面那條同一個高度（padding 11px），不要另外加 safe-area——
+   這支跑在 Apps Script 的 iframe 裡，外層 Google 的頁面已經讓開了
+   瀏海／動態島的高度，這裡再加一次等於加兩次，藍色那塊才會那麼厚。
+
+   而且它是浮在內容上面（absolute）：往下滑收起來、往上滑再出現，
+   說明內容就能占滿整個螢幕，不會一直被一條藍色壓著。 */
+.hp-bar{position:absolute;top:0;left:0;right:0;z-index:2;
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
   background:var(--chrome-bg);color:var(--chrome-ink);
-  padding:calc(env(safe-area-inset-top, 0px) + 9px) 8px 9px}
+  padding:11px 8px;
+  transition:transform .26s cubic-bezier(.32,.72,0,1)}
+#help.hpdn .hp-bar{transform:translateY(-101%)}
 .hp-bar b{grid-column:2;font-size:1rem;font-weight:600;letter-spacing:.02em}
 .hp-bar button{display:inline-flex;align-items:center;gap:2px;
   background:none;border:0;color:var(--chrome-ink);font-family:inherit;
-  font-size:0.95rem;padding:6px 8px 6px 2px;cursor:pointer;
+  font-size:0.95rem;padding:3px 8px 3px 2px;cursor:pointer;
   -webkit-tap-highlight-color:transparent}
-.hp-bar button svg{width:1.4rem;height:1.4rem}
+.hp-bar button svg{width:1.25rem;height:1.25rem}
 .hp-bar button:active{opacity:.55}
 
 .hp-load{padding:40px 0;text-align:center;color:var(--ink3);font-size:0.95rem;line-height:1.9}
-.hp-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+/* 內容整片鋪滿，標題列浮在上面。上緣留的高度由 JS 量出來寫進 --hpbar，
+   因為字級設定會改變標題列的高度，寫死會壓到第一行字。 */
+.hp-body{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;
-  padding:26px 20px calc(env(safe-area-inset-bottom, 0px) + 56px)}
+  padding:calc(var(--hpbar, 48px) + 14px) 20px
+          calc(env(safe-area-inset-bottom, 0px) + 32px)}
 /* 蘋果的說明頁是靠留白與字級層次撐起來的，不是框線與色塊。
    開頭一句話講完這一頁是什麼，然後大量留白，讓眼睛知道從哪裡開始。 */
 .hp-title{margin:0 0 10px;font-size:2rem;line-height:1.25;
@@ -808,6 +818,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
 @media (prefers-reduced-motion:reduce){
   #help{transition:visibility .01s}
+  .hp-bar{transition:none}
 }
 
 /* ── 評鑑進度 ──────────────────────────────────────
@@ -893,7 +904,29 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;
   height:18px;padding:0 5px;margin-left:5px;border-radius:99px;background:var(--danger);
   color:#fff;font-size:0.6875rem;font-weight:800;font-style:normal;vertical-align:1px}
-.rvhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+/* ── 送審頁的頁首 ──────────────────────────────────
+   原本是「待我審閱　5」——一個分類名加一個數字，
+   使用者還要自己想「所以我要先處理哪一筆」。
+   照 SaaS Dashboard 規範改成先講一句人話，把結論寫出來。
+
+   卡片用 1px 淺邊框不用陰影、間距走 8pt、
+   左邊一個深色小方塊放圖示（這套的簽名式手法）。 */
+.rvhead{display:flex;gap:12px;align-items:flex-start;
+  background:var(--card);border:1px solid var(--line2);border-radius:12px;
+  padding:16px;margin-bottom:8px}
+.rvhead.act{border-color:var(--bad-line);background:var(--bad-bg)}
+.rvhead .ic{flex:none;width:28px;height:28px;border-radius:8px;
+  background:var(--ink);color:var(--card);display:grid;place-items:center}
+.rvhead.act .ic{background:var(--bad-ink);color:#fff}
+.rvhead .ic svg{width:16px;height:16px}
+.rvhead .tx{flex:1;min-width:0}
+.rvhead .tx b{display:block;font-size:0.9375rem;line-height:1.5;color:var(--ink);
+  font-weight:600}
+.rvhead.act .tx b{color:var(--bad-ink)}
+.rvhead .tx em{display:block;font-style:normal;font-size:0.8125rem;line-height:1.7;
+  color:var(--ink2);margin-top:4px}
+.rvhead.act .tx em{color:var(--bad-ink);opacity:.85}
+.rvhead .who{display:block;font-size:0.75rem;color:var(--ink3);margin-top:6px}
 .rvhead b{font-size:1rem}
 .rvhead em{font-style:normal;font-size:0.7812rem;color:var(--ink3)}
 .rvbar{display:flex;gap:8px;margin-bottom:11px}

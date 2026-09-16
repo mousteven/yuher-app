@@ -2335,11 +2335,36 @@ function loadHelpBody(){
     });
 }
 
+/* 標題列的高度會跟著系統字級變，量一次寫進 CSS 變數，
+   內容的第一行才不會被壓在標題列底下。 */
+function hpFit(){
+  var h = $('help'), bar = h && h.querySelector('.hp-bar');
+  if(bar) h.style.setProperty('--hpbar', bar.offsetHeight + 'px');
+}
+
+/* 往下滑把標題列收起來、往上滑再放回來——說明內容因此占滿整個螢幕。
+   10px 是遲滯門檻：手指抖一下不會讓它一直閃。
+   捲到最上面一定放回來，所以「找不到返回鍵」不會發生。 */
+var HP_LASTY = 0;
+function hpScroll(){
+  var h = $('help'), b = $('hpBody');
+  if(!h || !b) return;
+  var y = b.scrollTop;
+  if(y < 6){ h.classList.remove('hpdn'); HP_LASTY = y; return; }
+  var d = y - HP_LASTY;
+  if(d > 10){ h.classList.add('hpdn'); HP_LASTY = y; }
+  else if(d < -10){ h.classList.remove('hpdn'); HP_LASTY = y; }
+}
+
 function openHelp(){
   var h = $('help');
   if(!h || h.classList.contains('on')) return;
   loadHelpBody();
   h.classList.add('on');
+  h.classList.remove('hpdn');
+  HP_LASTY = 0;
+  try { $('hpBody').scrollTop = 0; } catch(e0){}
+  hpFit();
   h.setAttribute('aria-hidden', 'false');
   try { history.pushState({ help: 1 }, ''); } catch(e){}
   try { $('hpBack').focus(); } catch(e2){}
@@ -2407,6 +2432,8 @@ function drawHelpDir(r){
   });
 }
 $('guideBtn').addEventListener('click', openHelp);
+$('hpBody').addEventListener('scroll', hpScroll, { passive: true });
+window.addEventListener('resize', hpFit);
 $('hpBack').addEventListener('click', function(){
   /* 一律走 history.back()，讓按鈕跟系統返回鍵是同一條路徑 */
   if(history.state && history.state.help) history.back();
@@ -2545,6 +2572,65 @@ function revCard(r, pickable){
   '</div>';
 }
 
+/* 深色小方塊配線性圖示。要動作時換成警示色，一眼看得出有沒有事。 */
+function rvIcon(alert){
+  var p = alert
+    ? '<path d="M12 8v5"/><path d="M12 16.5h.01"/><circle cx="12" cy="12" r="9"/>'
+    : '<path d="M20 6 9 17l-5-5"/>';
+  return '<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg></span>';
+}
+
+/* 放最久的那一筆放了幾天。這個數字才是有用的——
+   「5 筆等你審」不會讓人動起來，「最久的放了 3 天」會。 */
+function rvOldest(list){
+  var best = null;
+  (list || []).forEach(function(x){
+    if(!x.date) return;
+    if(!best || x.date < best) best = x.date;
+  });
+  if(!best) return 0;
+  var d = new Date(best + 'T00:00:00+08:00');
+  if(isNaN(d.getTime())) return 0;
+  return Math.max(0, Math.round((Date.now() - d.getTime()) / 86400000));
+}
+
+/* 送審頁的第一句話。先講結論，不要讓使用者自己從數字推論。 */
+function rvLead(r, isMgr){
+  var nQ = (r.queue || []).length;
+  var nBack = (r.back || []).length;
+  var who = '<span class="who">' + esc(r.role) + '　' + esc(r.me) + '</span>';
+
+  if(isMgr){
+    if(!nQ){
+      return '<div class="rvhead">' + rvIcon(false) + '<span class="tx">' +
+        '<b>目前沒有要審的</b><em>翻譯送上來會出現在這裡。</em>' + who + '</span></div>';
+    }
+    var days = rvOldest(r.queue);
+    return '<div class="rvhead' + (days >= 3 ? ' act' : '') + '">' + rvIcon(days >= 3) +
+      '<span class="tx"><b>' + nQ + ' 筆等你' +
+      (r.role === '總經理' ? '核准' : '審') +
+      (days >= 1 ? ('，最久的放了 ' + days + ' 天') : '') + '</b>' +
+      '<em>點開可以直接' + (r.role === '總經理' ? '核准' : '批示') +
+      '或退回。也可以勾起來批次處理。</em>' + who + '</span></div>';
+  }
+
+  /* 翻譯人員：被退回的最重要——那是主管等著你補的。 */
+  var nTodo = nQ - nBack;
+  if(!nQ){
+    return '<div class="rvhead">' + rvIcon(false) + '<span class="tx">' +
+      '<b>沒有待處理的紀錄</b><em>填完的都送出去了。</em>' + who + '</span></div>';
+  }
+  var line = [];
+  if(nBack) line.push(nBack + ' 筆被退回要補');
+  if(nTodo > 0) line.push(nTodo + ' 筆還沒送審');
+  return '<div class="rvhead' + (nBack ? ' act' : '') + '">' + rvIcon(!!nBack) +
+    '<span class="tx"><b>' + line.join('、') + '</b><em>' +
+    (nBack ? '被退回的先改——主管寫了原因，點進去按「修改內容」。' : '') +
+    (nTodo > 0 ? (nBack ? '其他的' : '') + '點進去按「送審給副理」就好。' : '') +
+    '</em>' + who + '</span></div>';
+}
+
 function drawReview(){
   var r = REV;
   var badge = $('revBadge');
@@ -2558,9 +2644,7 @@ function drawReview(){
   all = all.filter(function(x){
     if(seenC[x.code]) return false; seenC[x.code]=1; return true; });
 
-  var html =
-    '<div class="rvhead"><b>'+esc(r.queueTitle)+'　'+r.queue.length+'</b>'+
-      '<em>'+esc(r.role)+'　'+esc(r.me)+'</em></div>' +
+  var html = rvLead(r, isMgr) +
     '<div class="evsticky"><div class="calfw"><div class="calf" id="revSt">' +
       '<button type="button" data-st="" class="'+(REV_ST?'':'on')+'">全部<b>'+
         all.length+'</b></button>' +
