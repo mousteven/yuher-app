@@ -2309,9 +2309,17 @@ function linkOf(code){
 function drawHelpMe(){
   var box = $('hpMe');
   if(!box) return;
-  box.innerHTML = '<b>' + esc(STAFF_NAME || '你') + '　你的專屬連結</b>' +
+  /* 還沒登入就不要去打後端——那一定會失敗，而畫面上跳出一行紅字
+     只會讓人以為程式壞了。沒登入時這一塊就安靜地說明它是做什麼的。 */
+  if(!CODE){
+    box.innerHTML = '<b>你的專屬連結</b>' +
+      '<p>登入之後，這裡會顯示你的專屬連結與全體同仁的登入碼。</p>';
+    return;
+  }
+  box.innerHTML =
+    '<b>' + (STAFF_NAME ? (esc(STAFF_NAME) + ' 的專屬連結') : '你的專屬連結') + '</b>' +
     '<p>換手機或重灌之後，用這條連結點一下就登入，不用再輸入登入碼。</p>' +
-    (CODE ? '<button type="button" id="hpCopy">複製我的專屬連結</button>' : '') +
+    '<button type="button" id="hpCopy">複製我的專屬連結</button>' +
     '<div id="hpDir" class="hp-dir">載入全體同仁的登入碼…</div>';
   var b = $('hpCopy');
   if(b) b.addEventListener('click', function(){
