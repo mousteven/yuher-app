@@ -44,6 +44,18 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--brand);
 .mark h1{margin:0;font-size:21px;letter-spacing:.04em}
 .mark p{margin:3px 0 0;font-size:13px;color:var(--ink3)}
 
+/* 教學入口放在最上面：第一次開這頁的人最需要的就是它。
+   白底藍字，看得出可以按，但不跟主要動作「直接安裝」（實心深藍）搶份量。 */
+.guide{display:flex;align-items:center;gap:12px;text-decoration:none;
+  padding:14px 15px;margin:0 0 20px;border-radius:13px;
+  border:1px solid var(--brand);background:var(--card);
+  box-shadow:0 1px 3px rgba(27,59,111,.10)}
+.guide span{flex:1;min-width:0}
+.guide b{display:block;font-size:15px;color:var(--brand);letter-spacing:.01em}
+.guide em{display:block;font-style:normal;font-size:12.5px;color:var(--ink3);margin-top:3px}
+.guide i{flex:none;font-size:22px;line-height:1;color:var(--brand);font-style:normal}
+.guide:active{background:#F0F4FB}
+
 .lead{font-size:15px;line-height:1.75;color:var(--ink2);margin:0 0 22px}
 .lead b{color:var(--ink)}
 
@@ -110,6 +122,14 @@ ol li b{color:var(--ink)}
       </div>
     </div>
 
+    <a class="guide" href="guide.html">
+      <span>
+        <b>第一次用？先看五分鐘教學</b>
+        <em>從登入到送審，一步一步帶著做</em>
+      </span>
+      <i aria-hidden="true">›</i>
+    </a>
+
     <p class="lead">裝到手機桌面之後，開起來<b>沒有網址列</b>，跟一般 App 一樣。
       不用去商店下載，也<b>不用重新安裝就會自動更新</b>。</p>
 
@@ -125,10 +145,6 @@ ol li b{color:var(--ink)}
     <div class="acts">
       <button type="button" class="p" id="installBtn">直接安裝</button>
       <button type="button" id="skip">先不裝，直接使用</button>
-      <a href="guide.html" style="width:100%;padding:14px;border-radius:12px;
-        font-family:inherit;font-size:15px;border:1px dashed var(--line);
-        background:none;color:var(--ink2);text-align:center;text-decoration:none;
-        display:block">第一次用？看五分鐘教學</a>
     </div>
   </div>
 </div>
