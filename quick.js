@@ -30,10 +30,24 @@
                { k: 'tl', n: 'TL', full: 'Tagalog' }];
 
   /* ── 後端 ─────────────────────────────────────────
-     google.script.run 是 callback 式的，包成 Promise 才好用。 */
+     這一頁會呼叫到的後端函式，全部列在這裡。
+
+     有兩個作用：
+     1. `scripts/check_backend_calls.js` 拿這份清單去對 `.gs` 有沒有這幾支。
+        動態呼叫（`run[name](…)`）它掃不到名字，沒有清單就等於沒在檢查，
+        打錯字會靜默上線，使用者按下去才發現。
+     2. 下面的 api() 會擋掉不在清單上的名字，當場就報錯。 */
+  var BACKEND = ['listQuickReplies', 'addQuickReply', 'updateQuickReply',
+                 'deleteQuickReply', 'bumpQuickReply', 'getQuickFileData',
+                 'translateQuickText'];
+
+  /* 後端是 callback 式的，包成 Promise 才好接。 */
   function api(name) {
     var args = [].slice.call(arguments, 1);
     return new Promise(function (ok, no) {
+      if (BACKEND.indexOf(name) === -1) {
+        no(new Error('程式錯誤：沒有宣告的後端函式 ' + name)); return;
+      }
       if (typeof google === 'undefined' || !google.script) {
         no(new Error('這一頁要從 Apps Script 的網址開啟')); return;
       }
