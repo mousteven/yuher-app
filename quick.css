@@ -59,28 +59,16 @@ button{cursor:pointer}
 .tile.sm svg{width:14px;height:14px}
 
 /* ── 頁首 ──────────────────────────────────────────
-   規範：橫幅寫成一句人話，標題是事實加細節，不是分類名。
-   「常用回覆」是分類名；「43 張訊息，最常用的是體檢」才是事實。 */
+   搜尋、語言、資料夾三排黏在畫面上方，捲動時不會跑掉。
+
+   2026-09-17 拿掉了「N 張訊息，最常用的是…」那塊說明。
+   規範要求橫幅寫一句人話，但那是給第一次看到畫面的人用的；
+   他每天用十幾次，那三行只是把卡片往下推。 */
 .top{
   position:sticky;top:0;z-index:20;background:var(--bg);
   padding:16px 16px 8px;
   border-bottom:1px solid var(--line2);
 }
-.lead{
-  display:flex;gap:12px;align-items:flex-start;
-  background:var(--card);border:1px solid var(--line2);border-radius:12px;
-  padding:16px;margin-bottom:16px;
-}
-.lead .tx{flex:1;min-width:0}
-.lead b{
-  display:block;font-size:0.9375rem;line-height:1.5;font-weight:600;
-  color:var(--ink);letter-spacing:-.01em;
-}
-.lead em{
-  display:block;font-style:normal;font-size:0.8125rem;line-height:1.7;
-  color:var(--ink2);margin-top:4px;
-}
-
 .row1{display:flex;gap:8px;align-items:center;margin-bottom:8px}
 #q{
   flex:1;min-width:0;padding:10px 14px;border-radius:10px;

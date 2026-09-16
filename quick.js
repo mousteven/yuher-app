@@ -61,9 +61,6 @@
     video: '<path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
     file:  '<path d="M14 3v5h5"/><path d="M15 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>',
     link:  '<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
-    star:  '<path d="m12 3 2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-2.9L6.7 19.6l1.1-6L3.4 9.4l6-.8z"/>',
-    search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
-    empty: '<path d="M3 7h18"/><path d="M6 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12"/>'
   };
   function Tile(p) {
     var cls = 'tile' + (p.sm ? ' sm' : '');
@@ -119,34 +116,11 @@
      元件
      ════════════════════════════════════════════════ */
 
-  /* 頁首那一句人話。規範：標題是事實加細節，不是分類名。
-     「常用回覆」是分類名；「43 張訊息，最常用的是體檢」才是事實。 */
-  function Lead(p) {
-    var items = p.items;
-    if (!items.length) {
-      return html`<div className="lead">
-        <${Tile} name="empty"/>
-        <span className="tx">
-          <b>還沒有任何罐頭訊息</b>
-          <em>把每天重複打的話存進來，之後點一下就複製。按右下角「＋ 新增」開始。</em>
-        </span>
-      </div>`;
-    }
-    var folders = {};
-    items.forEach(function (x) { folders[topOf(x.folder || '未分類')] = 1; });
-    var nf = Object.keys(folders).length;
-    var top = items.slice().sort(function (a, b) { return (b.uses || 0) - (a.uses || 0); })[0];
-    var lead = top && top.uses
-      ? items.length + ' 張訊息，最常用的是「' + (top.title || '無標題') + '」（用了 ' + top.uses + ' 次）'
-      : items.length + ' 張訊息，分成 ' + nf + ' 類';
-    return html`<div className="lead">
-      <${Tile} name=${top && top.uses ? 'star' : 'text'}/>
-      <span className="tx">
-        <b>${lead}</b>
-        <em>點卡片上的「複製」就進剪貼簿，直接貼到 LINE。圖片跟檔案按「分享」。</em>
-      </span>
-    </div>`;
-  }
+  /* 2026-09-17 拿掉了頁首那塊「N 張訊息，最常用的是…」的說明。
+     `儀表板與後台設計` 規範要求橫幅寫成一句人話，但那是給**第一次看到
+     這個畫面的人**用的。他每天用十幾次，那三行只是把卡片往下推。
+     使用者當下的話 > skill —— 他明確要求拿掉。
+     真的需要「最常用的是哪張」的話，卡片上的「用了 N 次」已經看得到。 */
 
   function FolderBar(p) {
     var raw = p.folders, cur = p.cur, counts = p.counts;
@@ -526,7 +500,6 @@
 
     return html`<${React.Fragment}>
       <div className="top">
-        <${Lead} items=${data.items || []}/>
         <div className="row1">
           <input id="q" type="search" value=${kw} placeholder="搜尋內容或標題…"
                  autoComplete="off" onChange=${function (e) { setKw(e.target.value); }}/>
