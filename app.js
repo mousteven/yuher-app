@@ -2284,10 +2284,33 @@ function makePaste(){
    掛 history 的作法：開啟時 pushState，返回鍵一律呼叫 history.back()，
    真正關閉的動作放在 popstate。這樣不管使用者按哪一個，
    歷史紀錄都不會亂掉——不會出現「按了系統返回鍵卻退出整個 App」。 */
+var HELP_HTML = null;      // 抓過一次就留著
+/* 手冊內容放在 GitHub Pages（help-content.html），開啟時才抓。
+   Service.html 因此維持輕量，而且改手冊只要 push 上 Pages 就生效，
+   不用重新部署 Apps Script。
+   Pages 有送 Access-Control-Allow-Origin: *，所以跨網域 fetch 拿得到。 */
+function loadHelpBody(){
+  var box = $('hpBody');
+  if(!box) return;
+  function done(html){
+    box.innerHTML = html +
+      '<div class="hp-me" id="hpMe"></div>';
+    drawHelpMe();
+  }
+  if(HELP_HTML){ done(HELP_HTML); return; }
+  fetch('https://mousteven.github.io/yuher-app/help-content.html?v=' + encodeURIComponent(BUILD))
+    .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(function(t){ HELP_HTML = t; done(t); })
+    .catch(function(e){
+      box.innerHTML = '<div class="hp-load">操作說明載入失敗（' + esc(e.message) + '）' +
+        '<br>檢查一下網路，或稍後再開一次。</div>';
+    });
+}
+
 function openHelp(){
   var h = $('help');
   if(!h || h.classList.contains('on')) return;
-  drawHelpMe();
+  loadHelpBody();
   h.classList.add('on');
   h.setAttribute('aria-hidden', 'false');
   try { history.pushState({ help: 1 }, ''); } catch(e){}

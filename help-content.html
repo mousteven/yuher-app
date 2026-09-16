@@ -1,0 +1,690 @@
+<!-- 羽禾服務紀錄操作手冊。由 App 的「操作說明」抓進來顯示。
+     內容與版面來自手冊原稿，只把顏色變數接到 App 的 token。
+     改這個檔 push 上 Pages 就生效，不用重新部署 Apps Script。 -->
+<style>
+#help{
+  /* 手冊原本的色票接到 App 的 token——顏色跟著程式主題走，
+     夜間模式也自動正確，不用維護第二套。 */
+  --paper:var(--bg); --surface:var(--card); --surface-2:var(--line2);
+  --ink:var(--ink); --muted:var(--ink2); --faint:var(--ink3);
+  --accent:var(--brand); --accent-soft:var(--brand-soft); --accent-line:var(--line);
+  --navy:var(--brand);
+  --warn:var(--warn-ink); --warn-soft:var(--warn-bg);
+  --danger:var(--bad-ink); --danger-soft:var(--bad-bg);
+  --line:var(--line); --line-soft:var(--line2); --shot-bd:var(--line);
+  --sans:inherit;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+#help *{box-sizing:border-box;}
+#help .hp-body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:16.5px;line-height:1.75;
+  -webkit-font-smoothing:antialiased;padding:0 20px 80px;
+}
+#help .wrap{max-width:900px;margin:0 auto;}
+#help header{padding-block:50px 30px;}
+#help .kicker{font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:0.18em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 13px;}
+#help h1{font-size:clamp(29px,6.2vw,42px);font-weight:700;letter-spacing:-0.025em;
+  line-height:1.2;margin:0;text-wrap:balance;}
+#help .lede{color:var(--muted);font-size:17px;margin:17px 0 0;max-width:56ch;}
+#help .demo-note{
+  margin-top:24px;background:var(--accent-soft);border:1px solid var(--accent-line);
+  border-radius:4px;padding:13px 16px;font-size:14.5px;color:var(--ink);line-height:1.6;
+}
+#help .demo-note b{color:var(--accent);}
+#help .step{
+  padding-block:40px;border-top:1px solid var(--line);
+  display:grid;grid-template-columns:270px 1fr;gap:34px;align-items:start;
+}
+
+@media(max-width:700px){#help .step{grid-template-columns:1fr;gap:22px;}
+#help .shot{max-width:290px;margin:0 auto;}
+
+}
+#help .step.noshot{grid-template-columns:1fr;}
+#help figure{margin:0;}
+#help .shot{position:sticky;top:20px;}
+
+@media(max-width:700px){#help .shot{position:static;}}
+#help .shot img{
+  
+  width:100%;max-width:100%;height:auto;aspect-ratio:390/844;display:block;border-radius:14px;
+  border:1px solid var(--shot-bd);
+  box-shadow:0 1px 2px rgba(0,0,0,0.05),0 8px 24px rgba(20,40,35,0.10);
+}
+#help .shot figcaption{
+  font-family:var(--mono);font-size:11px;letter-spacing:0.08em;color:var(--faint);
+  text-align:center;margin-top:10px;text-transform:uppercase;
+}
+#help .n{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:0.1em;
+  color:var(--accent);display:block;margin-bottom:7px;}
+#help h2{font-size:24px;font-weight:700;letter-spacing:-0.018em;line-height:1.35;
+  margin:0 0 12px;text-wrap:balance;}
+#help p{margin:0 0 14px;}
+#help p.lead{color:var(--muted);}
+#help strong{font-weight:650;}
+#help ol.do{list-style:none;counter-reset:d;margin:18px 0 0;padding:0;
+  display:flex;flex-direction:column;gap:13px;}
+#help ol.do > li{counter-increment:d;position:relative;padding-left:38px;font-size:15.5px;line-height:1.7;}
+#help ol.do > li::before{
+  content:counter(d);position:absolute;left:0;top:2px;
+  width:25px;height:25px;border-radius:7px;
+  background:var(--navy);color:#fff;
+  font-family:var(--mono);font-size:12.5px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;
+}
+#help ol.do em{font-style:normal;color:var(--muted);display:block;font-size:14.5px;}
+#help .ui{
+  font-family:var(--sans);font-size:0.9em;font-weight:600;
+  background:var(--navy);color:#fff;padding:2px 8px;border-radius:4px;
+  white-space:nowrap;display:inline-block;line-height:1.5;
+}
+#help .ui.g{background:var(--accent);}
+#help code{font-family:var(--mono);font-size:0.86em;background:var(--surface-2);
+  padding:2px 6px;border-radius:3px;word-break:break-all;}
+#help .tip{
+  margin-top:18px;background:var(--surface);border:1px solid var(--line);
+  border-left:3px solid var(--accent);border-radius:4px;padding:14px 17px;
+  font-size:15px;line-height:1.7;
+}
+#help .tip b{color:var(--accent);}
+#help .tip.w{border-left-color:var(--warn);background:var(--warn-soft);}
+#help .tip.w b{color:var(--warn);}
+#help .tip.d{border-left-color:var(--danger);background:var(--danger-soft);}
+#help .tip.d b{color:var(--danger);}
+#help .tip p{margin:0;}
+#help .tip p + p{margin-top:9px;}
+#help .linkbox{
+  margin-top:18px;background:var(--surface);border:1px solid var(--line);
+  border-radius:5px;padding:14px 16px;
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+}
+#help .linkbox-l{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--faint);flex:0 0 100%;
+}
+#help .linkbox a{flex:1 1 200px;min-width:0;color:var(--accent);text-underline-offset:3px;}
+#help .linkbox code{background:none;padding:0;font-size:12.5px;line-height:1.6;}
+#help .copy{
+  -webkit-appearance:none;appearance:none;flex:none;
+  min-height:44px;padding:0 18px;border-radius:4px;cursor:pointer;
+  background:var(--accent);color:#fff;border:none;
+  font-family:var(--sans);font-size:14px;font-weight:600;
+  transition:opacity 160ms ease;
+}
+#help .copy:hover{opacity:0.88;}
+#help .copy.done{background:var(--navy);}
+#help .sheet-wrap{margin-top:24px;}
+#help .sheet-wrap img{
+  width:100%;max-width:100%;height:auto;aspect-ratio:794/1263;display:block;
+  border:1px solid var(--shot-bd);border-radius:6px;
+  box-shadow:0 1px 2px rgba(0,0,0,0.05),0 8px 24px rgba(20,40,35,0.10);
+  background:#fff;
+}
+#help .sheet-wrap figcaption{
+  font-family:var(--mono);font-size:11px;letter-spacing:0.08em;color:var(--faint);
+  text-align:center;margin-top:10px;text-transform:uppercase;
+}
+#help .sheet-wrap a{display:block;}
+#help .sheet-wrap a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+#help .parts{display:flex;flex-direction:column;gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-top:22px;}
+#help .part{background:var(--surface);padding:15px 17px;display:grid;
+  grid-template-columns:132px 1fr;gap:5px 16px;align-items:baseline;}
+
+@media(max-width:560px){#help .part{grid-template-columns:1fr;}}
+#help .part dt{font-weight:650;font-size:15px;}
+#help .part dd{margin:0;color:var(--muted);font-size:15px;line-height:1.68;}
+#help .part dd b{color:var(--ink);font-weight:650;}
+#help .tblwrap{margin-top:20px;overflow-x:auto;border:1px solid var(--line);border-radius:5px;}
+#help table.codes{width:100%;border-collapse:collapse;font-size:15px;min-width:430px;}
+#help table.codes th{
+  background:var(--surface-2);text-align:left;padding:11px 14px;
+  font-family:var(--mono);font-size:11px;letter-spacing:0.1em;
+  color:var(--faint);text-transform:uppercase;font-weight:500;
+  border-bottom:1px solid var(--line);white-space:nowrap;
+}
+#help table.codes td{padding:11px 14px;border-bottom:1px solid var(--line-soft);background:var(--surface);}
+#help table.codes tr:last-child td{border-bottom:none;}
+#help table.codes td.c{
+  font-family:var(--mono);font-size:17px;font-weight:600;letter-spacing:0.12em;
+  font-variant-numeric:tabular-nums;color:var(--ink);
+}
+#help table.codes tr.boss td{background:var(--accent-soft);}
+#help table.codes td.lk a{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:38px;padding:0 15px;border-radius:4px;white-space:nowrap;
+  background:var(--navy);color:#fff;text-decoration:none;font-size:13.5px;font-weight:600;
+}
+#help .bar{display:flex;gap:6px;margin:16px 0 8px;flex-wrap:wrap;}
+#help .bseg{flex:1 1 74px;text-align:center;}
+#help .bseg i{display:block;height:4px;border-radius:2px;background:var(--line);}
+#help .bseg.on i{background:var(--navy);}
+#help .bseg.cur i{background:var(--warn);}
+#help .bseg.bad i{background:var(--danger);}
+#help .bseg span{font-size:12px;color:var(--faint);display:block;margin-top:6px;
+  font-family:var(--mono);}
+#help .bseg.on span{color:var(--ink);}
+#help .bseg.cur span{color:var(--warn);font-weight:600;}
+#help .bseg.bad span{color:var(--danger);font-weight:600;}
+#help .roles{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:20px;
+  background:var(--line);border:1px solid var(--line);border-radius:4px;overflow:hidden;}
+
+@media(max-width:640px){#help .roles{grid-template-columns:1fr;}}
+#help .role{background:var(--surface);padding:17px 16px;}
+#help .role h3{margin:0 0 3px;font-size:16px;font-weight:700;}
+#help .role .rt{font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;
+  color:var(--accent);text-transform:uppercase;display:block;margin-bottom:9px;}
+#help .role ul{margin:0;padding-left:16px;font-size:14.5px;color:var(--muted);line-height:1.7;}
+#help .faq{margin-top:20px;border:1px solid var(--line);border-radius:5px;
+  background:var(--surface);overflow:hidden;}
+#help .q{border-top:1px solid var(--line-soft);}
+#help .q:first-child{border-top:none;}
+#help .q-btn{
+  -webkit-appearance:none;appearance:none;width:100%;display:flex;align-items:center;gap:11px;
+  min-height:52px;padding:11px 16px;background:none;border:none;text-align:left;
+  font-family:var(--sans);font-size:15.5px;font-weight:600;color:var(--ink);cursor:pointer;
+  transition:background 160ms ease;
+}
+#help .q-btn:hover{background:var(--surface-2);}
+#help .q-btn .cv{flex:none;color:var(--faint);transition:transform 250ms cubic-bezier(0.22,1,0.36,1);}
+#help .q.open .cv{transform:rotate(90deg);}
+#help .q-body{display:none;padding:0 16px 16px;font-size:15px;color:var(--muted);line-height:1.75;}
+#help .q.open .q-body{display:block;}
+#help .q-body p{margin:0 0 10px;}
+#help .q-body p:last-child{margin:0;}
+#help footer{padding-block:34px 0;border-top:1px solid var(--line);
+  font-size:14.5px;color:var(--faint);line-height:1.8;}
+#help :is(a, #help button):focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+
+@media (prefers-reduced-motion:reduce){#help *{transition:none !important;}}
+</style>
+<div class="wrap">
+
+
+
+<!-- 登入碼 -->
+<section class="step noshot" id="codes">
+  <div>
+    <span class="n">先拿這個</span>
+    <h2>你的登入碼</h2>
+    <p class="lead">
+      找到自己那一列，記住那四個數字。右邊的「開啟」點下去會<strong>直接登入</strong>，
+      不用手動輸入。
+    </p>
+    <div class="tblwrap">
+      
+    </div>
+    <div class="tip d">
+      <p><b>這一頁不要外流。</b>上面每一組碼都能看到全部客戶名單、移工資料和通訊錄。
+      只在公司內部傳，不要貼到任何對外的群組。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 1 -->
+<section class="step noshot">
+  <div>
+    <span class="n">第 1 步</span>
+    <h2>把它裝到手機桌面</h2>
+    <p class="lead">
+      裝過之後打開來沒有網址列，跟一般 App 一樣，而且之後系統更新不用重裝。
+      <strong>不要每次從 LINE 點連結進來</strong>——那樣畫面會被 LINE 的瀏覽器擠掉一截。
+    </p>
+    <div class="linkbox">
+      <span class="linkbox-l">App 網址</span>
+      <a href="https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec?page=svc" target="_blank" rel="noopener"><code>https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec?page=svc</code></a>
+      <button class="copy" type="button" data-copy="https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec?page=svc">複製</button>
+    </div>
+    <ol class="do">
+      <li><b>iPhone</b>：用 <span class="ui">Safari</span> 打開網址 → 按下面中間的分享鈕 → 往下找
+        <span class="ui">加入主畫面</span>
+        <em>如果你是從 LINE 點進來的，先按右下角 ⋯ 選「用預設瀏覽器開啟」。</em></li>
+      <li><b>Android</b>：用 <span class="ui">Chrome</span> 打開，通常會自己跳出
+        <span class="ui">安裝應用程式</span>
+        <em>沒跳出來就按右上角 ⋮ 選「安裝應用程式」。</em></li>
+    </ol>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="step">
+  <figure class="shot">
+    <img src="https://mousteven.github.io/yuher-app/shots/00-login.jpg" alt="登入畫面：四個圓點與數字鍵盤" width="390" height="844">
+    <figcaption>登入畫面</figcaption>
+  </figure>
+  <div>
+    <span class="n">第 2 步</span>
+    <h2>登入</h2>
+    <p class="lead">
+      這套系統<strong>不是用 Google 帳號登入</strong>。
+      你會拿到一條<strong>只屬於你的連結</strong>，點一下就直接進去，
+      連密碼都不用記。
+    </p>
+    <ol class="do">
+      <li><b>點上面<a href="#codes">登入碼表格</a>裡自己那一列的「開啟」</b>
+        <em>網址長得像 <code>…/yuher-app/?code=1234</code>，後面那四碼就是你的登入碼。</em></li>
+      <li><b>它會自己登入，然後把碼從網址列清掉</b>
+        <em>這樣你之後截圖轉傳，不會把自己的碼一起送出去。</em></li>
+      <li><b>照第 1 步把它裝到桌面</b>
+        <em>手機會把你的碼記起來，之後直接開 App 就是登入好的狀態，
+        那條連結只需要用第一次。</em></li>
+    </ol>
+
+    <div class="tip d">
+      <p><b>那條連結等於你本人。</b>不要轉給任何人，不要貼到群組。
+      它能看到全部客戶名單、移工資料和通訊錄。</p>
+    </div>
+
+    <h3 style="margin-top:30px;">沒有連結的時候：手動輸入</h3>
+    <p class="lead">
+      換手機、清掉資料、或是連結找不到了，就用畫面上的數字鍵盤自己打。
+    </p>
+    <ol class="do">
+      <li>直接按數字，上面四個圓點會一顆一顆亮起來，按滿四碼自動送出</li>
+      <li>按錯就按右下角 <span class="ui">⌫</span> 刪掉一碼
+        <em>碼錯的話圓點會抖一下並轉紅，不用讀字就知道錯了。</em></li>
+      <li>碼如果不是四位數，按左下角 <span class="ui">其他</span> 會出現文字輸入框</li>
+      <li>輸入一次之後，<strong>這台手機就記住了</strong>，之後開 App 直接進畫面</li>
+      <li>換手機或借別人用完，點右上角自己的名字可以登出</li>
+    </ol>
+    <div class="tip w">
+      <p><b>不要一直亂試。</b>全公司十分鐘內累積打錯八次就會鎖十分鐘——
+      <strong>不是鎖你一個人，是全公司都進不來</strong>。
+      忘記了就回到<a href="#codes">最上面的表格</a>看自己那一列。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="step">
+  <figure class="shot">
+    <img src="https://mousteven.github.io/yuher-app/shots/01-calendar.jpg" alt="行事曆畫面：月曆與當天的待處理行程" width="390" height="844">
+    <figcaption>行事曆</figcaption>
+  </figure>
+  <div>
+    <span class="n">第 3 步</span>
+    <h2>行事曆：今天要跑哪幾家</h2>
+    <p class="lead">
+      一進來就是這一頁。上面是月曆，下面是你點到那一天的行程，分成
+      <strong>待處理</strong>和<strong>已完成</strong>。
+    </p>
+    <ol class="do">
+      <li>上面可以切 <span class="ui">月</span> <span class="ui">週</span> <span class="ui">日</span>，
+        按 <span class="ui">今</span> 跳回今天</li>
+      <li>月曆上的小圓點就是那天有行程，顏色代表不同語別</li>
+      <li>那排彩色標籤可以只看某一種狀態——
+        <span class="ui">未完成</span>、<span class="ui">已退回</span> 最常用</li>
+      <li><span class="ui g">只看我的</span> 打開就只剩自己的行程，代跑別人的時候關掉才看得到</li>
+      <li>要加行程按最下面的 <span class="ui">＋ 排一筆行程</span></li>
+    </ol>
+    <div class="tip">
+      <p><b>長按行程可以拖到別的日期改期。</b>不用刪掉重排。</p>
+      <p><b>整天的行程可以用貼的。</b>按 <span class="ui">📋 從 LINE 貼上整天行程</span>，
+      把群組裡那段行程表整段複製貼進去，它會自己拆成一筆一筆。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="step">
+  <figure class="shot">
+    <img src="https://mousteven.github.io/yuher-app/shots/02-fill.jpg" alt="填寫畫面上半：日期、處理方式、服務對象、客戶名稱已自動帶入" width="390" height="844">
+    <figcaption>填寫（上半）</figcaption>
+  </figure>
+  <div>
+    <span class="n">第 4 步</span>
+    <h2>到現場，按「開始填寫」</h2>
+    <p class="lead">
+      在行事曆上那筆行程按 <span class="ui">開始填寫</span>，
+      <strong>日期、客戶、翻譯人員、移工會自己填好</strong>，你不用重打。
+    </p>
+    <ol class="do">
+      <li><b>處理方式</b>：到場，還是電話
+        <em>電話詢問也是一趟服務，一定要填。全公司今年光電話就七千多件。</em></li>
+      <li><b>工廠／雇主名稱</b>：選了之後，那家的移工名單會自己跳出來</li>
+      <li><b>移工</b>：從名單點選。一趟處理幾位就加幾位，
+        按下面的 <span class="ui">＋ 再加一位移工</span></li>
+      <li><b>代理人員</b>：代跑別人的行程才填。這欄只留在後台，不會印在表上</li>
+    </ol>
+    <div class="tip">
+      <p><b>沒事先排行程、臨時跑的怎麼辦？</b>直接按下面中間的
+      <span class="ui">＋</span> 開一張空白的填。存檔的時候系統會自動幫你補一筆
+      已完成的行程，不會因為沒排就在行事曆上消失。</p>
+    </div>
+    <div class="tip w">
+      <p><b>名單上找不到人是正常的。</b>移工名單是從今年的派工紀錄自動抓出來的，
+      只收出現兩次以上的人，新來的和離職的都不會在上面。找不到就選
+      <span class="ui">其他（自行輸入）</span> 自己打。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="step">
+  <figure class="shot">
+    <img src="https://mousteven.github.io/yuher-app/shots/03-worker.jpg" alt="填寫畫面中段：語別、服務類別、服務細項、處理經過與結果的複選框" width="390" height="844">
+    <figcaption>填寫（選項）</figcaption>
+  </figure>
+  <div>
+    <span class="n">第 5 步</span>
+    <h2>選類別，其他都用勾的</h2>
+    <p class="lead">
+      這一段是整張表的重點，但其實<strong>大部分不用打字</strong>——
+      選完類別，下面的選項會自己跳出來，勾一勾就好。
+    </p>
+    <ol class="do">
+      <li><b>語別</b>：越、泰、印、英，點一個</li>
+      <li><b>服務類別</b>：八個大類選一個</li>
+      <li><b>服務細項</b>：選了大類才會出現，總共五十六個</li>
+      <li><b>處理經過</b>：跳出來的選項<strong>可以複選</strong>，做了哪幾件就勾哪幾件
+        <em>不夠的話下面有空格可以補打，例如「亞大醫院骨科，掛號費 350 已代墊」。</em></li>
+      <li><b>結果</b>：也是複選。沒有適合的就勾
+        <span class="ui">未完成／需再處理</span></li>
+    </ol>
+    <div class="tip">
+      <p><b>這些選項不是隨便編的。</b>是從公司今年十萬多筆實際派工紀錄整理出來的，
+      所以你會碰到的狀況幾乎都找得到。真的找不到再自己打。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="step">
+  <figure class="shot">
+    <img src="https://mousteven.github.io/yuher-app/shots/04-sign.jpg" alt="簽名區：移工簽名、雇主與工廠代表、翻譯人員，下方是儲存紀錄按鈕" width="390" height="844">
+    <figcaption>簽名與存檔</figcaption>
+  </figure>
+  <div>
+    <span class="n">第 6 步</span>
+    <h2>簽名，然後存檔</h2>
+    <p class="lead">
+      三個人簽：<strong>移工</strong>（每個人簽在自己的卡片裡）、
+      <strong>雇主／工廠代表</strong>、<strong>翻譯人員</strong>。用手指直接在框裡簽。
+    </p>
+    <ol class="do">
+      <li>請移工簽之前，先按 <span class="ui">預覽給移工看</span>
+        <em>會用他的母語顯示這張表的內容。他看得懂才簽，簽名才有意義。</em></li>
+      <li>手指在框裡簽，簽壞了按右邊的 <span class="ui">清除</span> 重簽</li>
+      <li>你自己的簽名<strong>存過一次之後每張都會自動帶上</strong>，不用每次重簽</li>
+      <li>都好了按 <span class="ui">儲存紀錄</span></li>
+    </ol>
+    <div class="tip">
+      <p><b>存檔之後行程會自動變成「已完成」</b>，並且掛上這筆的紀錄代碼
+      （像 <code>SV00219</code>）。同一趟處理三位移工就是三列資料，
+      但共用同一個紀錄代碼——這樣統計才算得出趟數和人次。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="step">
+  <figure class="shot">
+    <img src="https://mousteven.github.io/yuher-app/shots/05-review.jpg" alt="送審畫面：每筆紀錄下方有四段進度條，被退回的那筆顯示紅色與退回原因" width="390" height="844">
+    <figcaption>送審</figcaption>
+  </figure>
+  <div>
+    <span class="n">第 7 步</span>
+    <h2>送審，然後看進度條</h2>
+    <p class="lead">
+      存檔<strong>不等於送出</strong>。要到 <span class="ui">送審</span> 這一頁按送審，
+      副理才看得到。下面那排小標籤右邊的數字，就是你還沒處理的筆數。
+    </p>
+    <div class="bar">
+      <div class="bseg on"><i></i><span>送審</span></div>
+      <div class="bseg cur"><i></i><span>副理</span></div>
+      <div class="bseg"><i></i><span>總經理</span></div>
+      <div class="bseg"><i></i><span>歸檔</span></div>
+    </div>
+    <p style="font-size:14.5px;color:var(--muted);margin-top:0;">
+      每筆紀錄下面都有這條，一眼就知道走到哪了。
+    </p>
+    <ol class="do">
+      <li>確認內容沒問題，按 <span class="ui">送審</span></li>
+      <li>進度條會往前走一段，變成「等副理看」</li>
+      <li>副理核准之後換總經理，總經理核准就自動歸檔</li>
+    </ol>
+
+    <div class="bar" style="margin-top:26px;">
+      <div class="bseg on"><i></i><span>送審</span></div>
+      <div class="bseg bad"><i></i><span>退回</span></div>
+      <div class="bseg"><i></i><span>總經理</span></div>
+      <div class="bseg"><i></i><span>歸檔</span></div>
+    </div>
+    <div class="tip d">
+      <p><b>被退回了怎麼辦？</b>那一筆會變紅色，
+      <strong>底下用粉紅底色寫著退回原因</strong>，例如
+      「結果沒有勾，另外費用欄請補上代墊的金額」。</p>
+      <p>照著改，改完再按一次送審就好。不用去問副理為什麼退——原因一定寫在上面。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 服務表 -->
+<section class="step noshot">
+  <div>
+    <span class="n">交出去的東西</span>
+    <h2>服務表長什麼樣子</h2>
+    <p class="lead">
+      你在手機上填的東西，最後會變成這一張<strong>客戶服務紀錄表</strong>。
+      雇主當場說「給我一份」的時候，按 <span class="ui">輸出 PDF</span> 就能直接丟 LINE 給他。
+      評鑑要調的、歸檔留存的，也都是這一張。
+    </p>
+
+    <figure class="sheet-wrap">
+      <a href="shots/06-sheet.jpg" target="_blank" rel="noopener" aria-label="開啟服務表原圖">
+      <img src="https://mousteven.github.io/yuher-app/shots/06-sheet.jpg"
+           alt="客戶服務紀錄表範例：表頭有紀錄編號、服務日期與服務方式，中間每位移工一個區塊，下方是雇主與客服人員簽名以及主管批示"
+           width="794" height="1263"></a>
+      <figcaption>客戶服務紀錄表（示範資料）・點圖看原尺寸</figcaption>
+    </figure>
+
+    <h3 style="margin-top:34px;">一張表上有什麼</h3>
+    <dl class="parts">
+      <div class="part"><dt>紀錄編號</dt>
+        <dd>右上角紅色那組（<b>SV00219</b>）。同一趟服務不管處理幾位移工，<b>共用同一個編號</b>。
+            要查哪一趟、雇主問哪一份，講這個編號最快。</dd></div>
+      <div class="part"><dt>服務方式</dt>
+        <dd><b>■到場</b> 和 <b>□電話</b> 是打勾的方框。這就是為什麼電話服務也一定要填——
+            表上有這一格，空著等於這趟沒發生過。</dd></div>
+      <div class="part"><dt>表頭三欄</dt>
+        <dd>雇主姓名、移工姓名、客服人員。移工超過一位就顯示「共 N 位」，
+            名字寫在下面各自的區塊裡。</dd></div>
+      <div class="part"><dt>移工區塊</dt>
+        <dd>一位移工一塊，左上角有編號。姓名旁邊灰色的是護照上的外文名。
+            右邊是語別和服務對象。</dd></div>
+      <div class="part"><dt>三個段落</dt>
+        <dd><b>服務項目</b>（就是你選的類別／細項）、<b>處理經過</b>、<b>處理結果</b>。
+            每一段底下那行淺色的字，是<b>自動翻成移工母語</b>的版本。</dd></div>
+      <div class="part"><dt>移工簽名</dt>
+        <dd>每位移工簽在自己的區塊裡，不是全部擠在最後。
+            誰的內容誰簽，分開才說得清楚。</dd></div>
+      <div class="part"><dt>以下空白</dt>
+        <dd>內容結束的地方會畫一條線寫「以下空白」，
+            表示後面沒有被撕掉或補寫。</dd></div>
+      <div class="part"><dt>雙簽名區</dt>
+        <dd>左邊雇主、右邊客服人員，永遠壓在頁底。</dd></div>
+      <div class="part"><dt>主管批示</dt>
+        <dd>副理在系統上批的內容會<b>直接印在這裡</b>，包含需不需要後續追蹤、
+            副理與總經理的姓名時間，以及「已核准歸檔」。</dd></div>
+      <div class="part"><dt>頁碼</dt>
+        <dd>左下角是紀錄編號、右下角是第幾頁共幾頁。多頁的話每一頁都有，
+            散掉了也拼得回來。</dd></div>
+    </dl>
+
+    <h3 style="margin-top:34px;">幾個設計上刻意這樣做的地方</h3>
+
+    <div class="tip">
+      <p><b>母語翻譯印在中文底下，不是另外一份。</b>
+      移工簽的那份跟雇主拿的那份是<strong>同一張</strong>。
+      如果翻譯版是分開的，就會出現「他簽的跟你交出去的不是同一份」這種說不清的狀況。</p>
+    </div>
+
+    <div class="tip">
+      <p><b>簽名區一定在最後一頁的頁底。</b>
+      系統會先估每個移工區塊要多高，留不下簽名區就自己換頁。
+      以前是丟給轉檔程式自己切，結果簽名被切到第二頁去。</p>
+    </div>
+
+    <div class="tip">
+      <p><b>主管批示用印的，不是手寫。</b>
+      紙本時代副理批示寫在旁邊，字跡潦草常常看不懂。
+      現在副理在系統上打字，直接印進歸檔的 PDF。</p>
+    </div>
+
+    <div class="tip w">
+      <p><b>PDF 的內容是從資料庫重讀的，不是你手機上那份。</b>
+      所以<strong>雇主拿到的，跟存檔的一定一模一樣</strong>。
+      這也表示：你改了內容之後要重新輸出，舊的那份 PDF 不會自己更新。</p>
+    </div>
+
+    <div class="tip">
+      <p><b>宣導場次會多印一份簽到表。</b>
+      一場宣導二三十人，簽名每 10 人一頁、每頁重印表頭。
+      <strong>應到但沒簽的人也會列出來並留一行空白</strong>——
+      只印有簽的人等於把缺席的藏起來，評鑑時反而更難解釋。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 角色 -->
+<section class="step noshot">
+  <div>
+    <span class="n">看你的角色</span>
+    <h2>副理和總經理看到的不一樣</h2>
+    <div class="roles">
+      <div class="role">
+        <h3>翻譯</h3><span class="rt">Interpreter</span>
+        <ul>
+          <li>排自己的行程</li>
+          <li>填自己跑的紀錄</li>
+          <li>送審、看退回原因、改完重送</li>
+          <li><strong>只看得到自己的</strong></li>
+        </ul>
+      </div>
+      <div class="role">
+        <h3>副理</h3><span class="rt">Manager</span>
+        <ul>
+          <li><span class="ui">送審</span> 分頁會多一個「待我審閱」</li>
+          <li>點進去看的是<strong>內容</strong>，不是 PDF</li>
+          <li>寫批示（會印進歸檔的 PDF）</li>
+          <li>退回一定要寫原因</li>
+          <li>可以一次批一疊</li>
+        </ul>
+      </div>
+      <div class="role">
+        <h3>總經理</h3><span class="rt">Director</span>
+        <ul>
+          <li><span class="ui">送審</span> 分頁是「待我核准」</li>
+          <li>核准之後系統自己歸檔</li>
+          <li>也可以退回</li>
+          <li>有統計分頁</li>
+        </ul>
+      </div>
+    </div>
+    <div class="tip">
+      <p><b>副理、總經理改不了任何欄位，這是刻意的。</b>
+      內容是誰跑的誰負責，主管只能核准或退回——這樣才留得住責任。</p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="step noshot">
+  <div>
+    <span class="n">常見狀況</span>
+    <h2>卡住的時候看這裡</h2>
+    <div class="faq" id="faq">
+      <div class="q">
+        <button class="q-btn" type="button" aria-expanded="false">
+          <svg class="cv" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+          在工廠裡沒訊號，可以先填嗎
+        </button>
+        <div class="q-body">
+          <p>可以填，但<strong>不要關掉 App</strong>。存檔需要連線，沒訊號按儲存會失敗。
+          走到有訊號的地方再按一次儲存就好，你填的東西還在。</p>
+          <p>比較保險的做法是：進工廠前先把行程點開，內容邊做邊填，出來再存。</p>
+        </div>
+      </div>
+      <div class="q">
+        <button class="q-btn" type="button" aria-expanded="false">
+          <svg class="cv" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+          已經送審了才發現填錯
+        </button>
+        <div class="q-body">
+          <p>跟副理說一聲請他退回，退回之後就可以改。
+          自己在送審頁是<strong>收不回來</strong>的。</p>
+        </div>
+      </div>
+      <div class="q">
+        <button class="q-btn" type="button" aria-expanded="false">
+          <svg class="cv" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+          臨時代跑別人的行程
+        </button>
+        <div class="q-body">
+          <p>行事曆上把 <span class="ui g">只看我的</span> 關掉，就看得到全部人的行程。
+          點那筆行程開始填，<strong>翻譯人員那欄留原本那個人</strong>，
+          你自己填在下面的<strong>代理人員</strong>。</p>
+          <p>代理人員只留在後台，不會印在交出去的表上。</p>
+        </div>
+      </div>
+      <div class="q">
+        <button class="q-btn" type="button" aria-expanded="false">
+          <svg class="cv" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+          從 LINE 點連結進來，畫面怪怪的
+        </button>
+        <div class="q-body">
+          <p>LINE 自己的瀏覽器會擠掉一截畫面。按右下角 ⋯ 選
+          <strong>「用預設瀏覽器開啟」</strong>，或者乾脆照第 1 步裝到桌面，之後都從桌面開。</p>
+        </div>
+      </div>
+      <div class="q">
+        <button class="q-btn" type="button" aria-expanded="false">
+          <svg class="cv" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+          忘記登入碼
+        </button>
+        <div class="q-body">
+          <p>回到這一頁<a href="#codes">最上面的登入碼表格</a>，找自己那一列，
+          點「開啟」就進去了。</p>
+          <p><strong>不要一直試</strong>——全公司十分鐘內累積錯八次會鎖十分鐘，
+          會害到其他同事。</p>
+        </div>
+      </div>
+      <div class="q">
+        <button class="q-btn" type="button" aria-expanded="false">
+          <svg class="cv" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+          系統帶出來的移工外文姓名可以直接用嗎
+        </button>
+        <div class="q-body">
+          <p><strong>不可以。</strong>系統裡有一部分外文姓名目前是示範用的假資料，
+          不是護照或居留證上的拼法。</p>
+          <p>任何要交出去的正式文件，姓名一律翻證件來看。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p style="margin:0 0 12px;"><strong>一句話版本</strong></p>
+  <p style="margin:0 0 18px;color:var(--muted);">
+    前一天排行程 → 到現場按「開始填寫」 → 選類別、勾選項 → 三方簽名 → 儲存 → 到送審頁按送審 → 看進度條。
+  </p>
+  <p style="margin:0 0 8px;"><strong>App 網址</strong></p>
+  <div class="linkbox" style="margin-top:0;margin-bottom:20px;">
+    <a href="https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec?page=svc" target="_blank" rel="noopener"><code>https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec?page=svc</code></a>
+    <button class="copy" type="button" data-copy="https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec?page=svc">複製</button>
+  </div>
+  <p style="margin:0;">
+    畫面跟這份手冊對不上的時候，以畫面為準，然後回報一聲——系統還在改，這頁要跟著改。
+  </p>
+</footer>
+
+</div>

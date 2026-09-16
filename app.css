@@ -736,6 +736,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .hp-bar button svg{width:1.4rem;height:1.4rem}
 .hp-bar button:active{opacity:.55}
 
+.hp-load{padding:40px 0;text-align:center;color:var(--ink3);font-size:0.95rem;line-height:1.9}
 .hp-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;
   padding:26px 20px calc(env(safe-area-inset-bottom, 0px) + 56px)}
