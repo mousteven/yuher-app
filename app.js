@@ -2293,8 +2293,9 @@ function loadHelpBody(){
   var box = $('hpBody');
   if(!box) return;
   function done(html){
-    box.innerHTML = html +
-      '<div class="hp-me" id="hpMe"></div>';
+    box.innerHTML = html;
+    /* hpMe 在手冊的「你的登入碼」那一節裡面（help-content.html 有留位置），
+       不掛在文末——那一節的文字就是在講這張表。 */
     drawHelpMe();
   }
   if(HELP_HTML){ done(HELP_HTML); return; }
