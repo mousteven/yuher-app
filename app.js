@@ -2665,8 +2665,13 @@ $('rvPdfTgl').addEventListener('click', function(){
 
 function drawReviewActions(r){
   var role = STAFF_ROLE || (REV && REV.role) || '翻譯';
+  /* 副理與總經理自己也跑案場、也要填紀錄。判斷該給「修改／送審」還是
+     「批示／核准」，看的不是職稱，而是「這一筆是不是我自己跑的」——
+     以前寫死 role==='翻譯'，副理填完自己的紀錄就送不出去。 */
+  var me = (REV && REV.me) || STAFF_NAME || '';
+  var isMine = !!me && r.crew === me;
   var h = '';
-  if(role === '翻譯' && (r.status === '未送審' || r.status === '退回補正')){
+  if(isMine && (r.status === '未送審' || r.status === '退回補正')){
     /* 被退回的一定要能改，不然退回等於沒有作用。
        「修改內容」放在送審上面——被退回時該做的是先改，不是再送一次。 */
     h = '<div class="rvform">'+
@@ -2680,6 +2685,9 @@ function drawReviewActions(r){
         'font-family:inherit">送審給副理</button></div>';
   } else if(role === '副理' && r.status === '待副理審'){
     h = '<div class="rvform">'+
+      /* 自己跑的自己批，稽核上說不清楚。不擋，但要看得見。 */
+      (isMine ? '<p class="hint" style="margin:0 0 9px;color:var(--warn,#b8860b)">'+
+                '⚠ 這是你自己跑的紀錄，自己批示留不下第三人的稽核軌跡。</p>' : '')+
       '<label>批示</label>'+
       '<div class="chips" id="rvFollow">'+
         '<label><input type="radio" name="rvf" value="不需追蹤" checked>不需追蹤</label>'+
@@ -2692,6 +2700,8 @@ function drawReviewActions(r){
       '</div></div>';
   } else if(role === '總經理' && r.status === '待總經理核准'){
     h = '<div class="rvform">'+
+      (isMine ? '<p class="hint" style="margin:0 0 9px;color:var(--warn,#b8860b)">'+
+                '⚠ 這是你自己跑的紀錄，自己核准留不下第三人的稽核軌跡。</p>' : '')+
       '<input id="rvNote" placeholder="核准意見（選填）">'+
       '<div class="smbtns" style="margin-top:10px">'+
         '<button type="button" id="rvReject">退回補正</button>'+
