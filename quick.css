@@ -186,7 +186,7 @@ button{cursor:pointer}
 .card .ft .more{flex:none;width:48px;color:var(--ink3);border-left:1px solid var(--line2)}
 
 /* ── 空狀態與載入 ───────────────────────────────── */
-.empty,.spin{padding:64px 24px;text-align:center;color:var(--ink3);font-size:14px;line-height:1.8}
+.empty{padding:64px 24px;text-align:center;color:var(--ink3);font-size:14px;line-height:1.8}
 .empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:8px}
 
 .skel{background:var(--card);border:1px solid var(--line2);border-radius:12px;height:168px}

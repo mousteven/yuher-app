@@ -22,12 +22,11 @@
   var h = React.createElement;
   var html = htm.bind(h);
   var useState = React.useState, useEffect = React.useEffect,
-      useMemo = React.useMemo, useRef = React.useRef, useCallback = React.useCallback;
+      useMemo = React.useMemo, useRef = React.useRef;
 
   var CACHE_KEY = 'quickReplies.v2';
-  var LANGS = [{ k: 'zh', n: '中', full: '中文' },
-               { k: 'en', n: 'EN', full: 'English' },
-               { k: 'tl', n: 'TL', full: 'Tagalog' }];
+  var LANGS = [{ k: 'zh', n: '中' }, { k: 'en', n: 'EN' }, { k: 'tl', n: 'TL' }];
+  var LANG_FULL = { zh: '中文', en: 'English', tl: 'Tagalog' };
 
   /* ── 後端 ─────────────────────────────────────────
      這一頁會呼叫到的後端函式，全部列在這裡。
@@ -93,10 +92,7 @@
     }
     return { text: '', lang: lang, fallback: false };
   }
-  function langFull(k) {
-    for (var i = 0; i < LANGS.length; i++) if (LANGS[i].k === k) return LANGS[i].full;
-    return k;
-  }
+  function langFull(k) { return LANG_FULL[k] || k; }
 
   /* ── 複製：內嵌框架裡新版剪貼簿 API 常被權限政策擋掉，
         先試新的，失敗退回 execCommand（框架裡一定能用）。 ── */
@@ -218,7 +214,6 @@
   /* ── 更多動作 ─────────────────────────────────── */
   function MoreSheet(p) {
     var it = p.it;
-    if (!it) return null;
     var isText = it.type === 'text' || it.type === 'link';
     return html`<div className="sheet on" onClick=${function (e) {
       if (e.target === e.currentTarget) p.onClose();
@@ -227,7 +222,7 @@
         <h3>${it.title || '(無標題)'}</h3>
         ${isText ? LANGS.filter(function (L) { return textOf(it, L.k); }).map(function (L) {
           return html`<button key=${L.k} className="act" onClick=${function () { p.onCopy(it, L.k); }}>
-            複製${L.full}<small>${textOf(it, L.k).slice(0, 48)}…</small>
+            複製${LANG_FULL[L.k]}<small>${textOf(it, L.k).slice(0, 48)}…</small>
           </button>`;
         }) : null}
         <button className="act" onClick=${function () { p.onEdit(it); }}>
@@ -390,16 +385,19 @@
     var [edit, setEdit] = useState(null);      // {} = 新增；{id:…} = 改
     var [msg, setMsg] = useState(null);
 
+    /* 這幾個以前包了 useCallback，是為了互相滿足 dep 陣列。
+       但沒有任何子元件包 React.memo，記憶化買不到東西——純粹是儀式。
+       掛載的 effect 依賴改成 []（它本來就只該跑一次），整串就不用記憶化了。 */
     var toastTimer = useRef(0);
-    var toast = useCallback(function (text, bad) {
+    function toast(text, bad) {
       setMsg({ text: text, bad: bad });
       clearTimeout(toastTimer.current);
       toastTimer.current = setTimeout(function () { setMsg(null); }, bad ? 3200 : 1600);
-    }, []);
+    }
 
     /* 先畫快取（秒開），再跟後端要最新的。
        Apps Script 冷啟動要一兩秒，沒有快取的話那兩秒是全白的。 */
-    var refresh = useCallback(function (quiet) {
+    function refresh(quiet) {
       if (!quiet) setLoading(true);
       return api('listQuickReplies').then(function (res) {
         setData(res); setLoading(false);
@@ -408,7 +406,7 @@
         setLoading(false);
         toast('讀不到資料：' + e.message, true);
       });
-    }, [toast]);
+    }
 
     useEffect(function () {
       try {
@@ -416,29 +414,30 @@
         if (raw) { setData(JSON.parse(raw)); setLoading(false); }
       } catch (e) {}
       refresh(true);
-    }, [refresh]);
+      // 只在掛載時跑一次。refresh 每次 render 都是新的函式，
+      // 放進依賴會變成無限迴圈——這正是當初包 useCallback 的原因。
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(function () {
       try { localStorage.setItem('quickReplies.lang', lang); } catch (e) {}
     }, [lang]);
 
-    /* 選上層時連子分類一起看到（選「保險」＝保險＋comparison＋document），
-       選子分類才只看那一層。跟他 KeyGo 的行為一致。 */
-    var inFolder = useCallback(function (f) {
-      if (folder === '全部') return true;
-      if (f === folder) return true;
-      return subOf(folder) === '' && topOf(f) === folder;
-    }, [folder]);
-
     var rows = useMemo(function () {
       var q = kw.trim().toLowerCase();
+      /* 選上層時連子分類一起看到（選「保險」＝保險＋comparison＋document），
+         選子分類才只看那一層。跟他 KeyGo 的行為一致。 */
+      function inFolder(f) {
+        if (folder === '全部' || f === folder) return true;
+        return subOf(folder) === '' && topOf(f) === folder;
+      }
       return (data.items || []).filter(function (it) {
         if (!inFolder(it.folder || '未分類')) return false;
         if (!q) return true;
         return [it.title, it.zh, it.en, it.tl, it.folder, it.fileName]
           .some(function (s) { return String(s || '').toLowerCase().indexOf(q) !== -1; });
       });
-    }, [data.items, kw, inFolder]);
+    }, [data.items, kw, folder]);
 
     var counts = useMemo(function () {
       var c = {};
@@ -546,9 +545,9 @@
 
       <button className="fab" onClick=${function () { setEdit({}); }}>＋ 新增</button>
 
-      <${MoreSheet} it=${more} onClose=${function () { setMore(null); }}
+      ${more ? html`<${MoreSheet} it=${more} onClose=${function () { setMore(null); }}
         onCopy=${doCopy} onDelete=${del}
-        onEdit=${function (it) { setMore(null); setEdit(it); }}/>
+        onEdit=${function (it) { setMore(null); setEdit(it); }}/>` : null}
 
       ${edit ? html`<${EditSheet} it=${edit.id ? edit : null} folders=${data.folders || []}
         curFolder=${folder} toast=${toast}
