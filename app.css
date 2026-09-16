@@ -50,6 +50,8 @@ body.dark .sheet{background:#fff;color:#111}
    所以預設就開「大」。所有 font-size 都是 rem，改這一個數字整套跟著變。
    標準 1 ／ 大 1.12 ／ 特大 1.25，存在各自的手機上。 */
 html{font-size:calc(16px * var(--fs, 1.12))}
+/* 登入畫面在的時候整個頁面都不捲 */
+body.lgon{overflow:hidden;overscroll-behavior:none}
 html,body{margin:0;padding:0}
 /* 整頁只上下捲。clip 不像 hidden 會另外開一個捲動容器，
    上面那排「月／週／日」的 sticky 才不會失效。 */
@@ -721,10 +723,12 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   transition:transform .28s cubic-bezier(.32,.72,0,1),visibility .28s}
 #help.on{transform:translateX(0);visibility:visible}
 
-.hp-bar{flex:none;display:flex;align-items:center;gap:6px;
+/* 標題列薄一點，內容才是主角。標題置中、返回鍵在左——
+   跟 iOS 的導覽列同一套，使用者不用學。 */
+.hp-bar{flex:none;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
   background:var(--chrome-bg);color:var(--chrome-ink);
-  padding:calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px}
-.hp-bar b{font-size:1rem;letter-spacing:.02em}
+  padding:calc(env(safe-area-inset-top, 0px) + 9px) 8px 9px}
+.hp-bar b{grid-column:2;font-size:1rem;font-weight:600;letter-spacing:.02em}
 .hp-bar button{display:inline-flex;align-items:center;gap:2px;
   background:none;border:0;color:var(--chrome-ink);font-family:inherit;
   font-size:0.95rem;padding:6px 8px 6px 2px;cursor:pointer;
@@ -733,12 +737,19 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .hp-bar button:active{opacity:.55}
 
 .hp-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding:16px 15px calc(env(safe-area-inset-bottom, 0px) + 40px)}
-.hp-lead{margin:0 0 16px;color:var(--ink2);font-size:0.925rem;line-height:1.85}
+  overscroll-behavior:contain;
+  padding:26px 20px calc(env(safe-area-inset-bottom, 0px) + 56px)}
+/* 蘋果的說明頁是靠留白與字級層次撐起來的，不是框線與色塊。
+   開頭一句話講完這一頁是什麼，然後大量留白，讓眼睛知道從哪裡開始。 */
+.hp-title{margin:0 0 10px;font-size:2rem;line-height:1.25;
+  letter-spacing:-.02em;font-weight:700}
+.hp-lead{margin:0 0 30px;color:var(--ink2);font-size:1.0625rem;line-height:1.9;
+  letter-spacing:.01em;max-width:34rem}
 
 /* 自己的登入資訊。放最上面——換手機、重灌的時候第一個要找的就是它。 */
 .hp-me{background:var(--brand-soft);border:1px solid var(--line);
-  border-radius:13px;padding:13px 14px;margin-bottom:20px;font-size:0.9rem}
+  border-radius:15px;padding:16px 17px;margin-bottom:38px;font-size:0.9375rem;
+  max-width:34rem}
 .hp-me b{display:block;color:var(--brand);margin-bottom:6px;font-size:0.95rem}
 .hp-me p{margin:0;color:var(--ink2);line-height:1.8}
 .hp-me code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -770,24 +781,29 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   background:var(--warn-bg);border:1px solid var(--warn-line);
   color:var(--warn-ink);font-size:0.865rem;line-height:1.75}
 
-.hp-s{margin-bottom:24px}
-.hp-s h3{display:flex;align-items:center;gap:9px;margin:0 0 9px;
-  font-size:1.0625rem;letter-spacing:.02em}
-.hp-s h3 i{flex:none;width:1.55rem;height:1.55rem;border-radius:50%;
-  background:var(--brand);color:#fff;font-style:normal;font-weight:700;
-  font-size:0.8125rem;display:inline-grid;place-items:center}
-.hp-s > p{margin:0 0 9px;color:var(--ink2);font-size:0.9rem;line-height:1.85}
-.hp-s ul{margin:0;padding-left:1.15rem;display:grid;gap:7px}
-.hp-s li{color:var(--ink2);font-size:0.9rem;line-height:1.8}
+/* 分節用留白，不用線也不用卡片。
+   步驟編號縮成一個小數字擺在標題上方——它是序號，不該比標題還搶眼。 */
+.hp-s{margin-bottom:40px;max-width:34rem}
+.hp-s h3{display:block;margin:0 0 12px;
+  font-size:1.375rem;line-height:1.45;letter-spacing:-.01em;font-weight:700}
+.hp-s h3 i{display:block;font-style:normal;font-weight:600;
+  font-size:0.75rem;letter-spacing:.14em;color:var(--brand);
+  margin-bottom:5px;text-transform:uppercase}
+.hp-s > p{margin:0 0 12px;color:var(--ink2);font-size:1rem;line-height:1.9}
+.hp-s ul{margin:0;padding:0;list-style:none;display:grid;gap:14px}
+.hp-s li{color:var(--ink2);font-size:1rem;line-height:1.85;
+  padding-left:1.05rem;position:relative}
+.hp-s li::before{content:"";position:absolute;left:0;top:.82em;
+  width:5px;height:5px;border-radius:50%;background:var(--ink3)}
 .hp-s b{color:var(--ink);font-weight:600}
 
 .hp-q{margin:0}
-.hp-q dt{font-size:0.9rem;font-weight:700;color:var(--ink);margin-top:13px}
+.hp-q dt{font-size:1rem;font-weight:600;color:var(--ink);margin-top:22px}
 .hp-q dt:first-child{margin-top:0}
-.hp-q dd{margin:3px 0 0;color:var(--ink2);font-size:0.885rem;line-height:1.8}
+.hp-q dd{margin:5px 0 0;color:var(--ink2);font-size:1rem;line-height:1.85}
 
-.hp-end{margin:26px 0 0;padding-top:16px;border-top:1px solid var(--line2);
-  color:var(--ink3);font-size:0.85rem;text-align:center}
+.hp-end{margin:14px 0 0;padding-top:26px;border-top:1px solid var(--line2);
+  color:var(--ink3);font-size:0.9375rem;text-align:center;letter-spacing:.01em}
 
 @media (prefers-reduced-motion:reduce){
   #help{transition:visibility .01s}
@@ -1031,7 +1047,13 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
    背景用一道很淡的品牌色暈開，讓這一頁有重量，
    但不搶走中間那四個點的注意力。 */
-.login{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;
+/* 釘住不捲。原本整頁可以上下滑，在手機上就像在看網頁而不是 App——
+   iOS 那個橡皮筋回彈更是「這是網頁」最明顯的破綻。
+   position:fixed 讓它完全貼齊視窗；overscroll-behavior:none 關掉回彈。
+   overflow-y:auto 是保險：字級調到最大時內容真的裝不下才給捲，
+   平常不會出現捲軸。 */
+.login{position:fixed;inset:0;overflow-y:auto;overscroll-behavior:none;
+  display:flex;flex-direction:column;
   align-items:center;justify-content:center;
   padding:calc(env(safe-area-inset-top) + 30px) 20px
           calc(env(safe-area-inset-bottom) + 26px)}

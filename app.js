@@ -67,6 +67,7 @@ function login(code){
       }
 
       $('login').style.display='none'; $('app').style.display='';
+  document.body.classList.remove('lgon');
       $('who').textContent = STAFF_NAME;
 
       // 簽名板要在畫面顯示之後才 init，隱藏時量到的寬度是 0
@@ -106,6 +107,7 @@ function login(code){
 function loginFail(e){
   $('btnLogin').disabled = false;
   $('login').style.display=''; $('app').style.display='none';
+  document.body.classList.add('lgon');
   var msg = (e && e.message) || '登入失敗';
   LG = ''; lgDraw(true);
   lgMsg(msg.indexOf('過多') !== -1 ? msg : '登入碼不正確，再試一次', true);
@@ -344,6 +346,7 @@ $('outGo').addEventListener('click', function(){
   $('outModal').style.display = 'none';
   $('app').style.display = 'none';
   $('login').style.display = '';
+  document.body.classList.add('lgon');
   $('btnLogin').disabled = false;
   $('code').value = '';
   LG = ''; lgDraw(); lgMsg('輸入登入碼');
@@ -3031,4 +3034,4 @@ $('statGo').addEventListener('click', function(){
 
 /* 記得上次的登入碼，直接進去 */
 if(CODE){ $('code').value = CODE; login(CODE); }
-else { $('login').style.display=''; }   // 沒碼才需要登入畫面
+else { $('login').style.display=''; document.body.classList.add('lgon'); }   // 沒碼才需要登入畫面
