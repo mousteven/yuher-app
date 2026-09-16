@@ -779,13 +779,15 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   display:flex;align-items:center;gap:3px;padding:4px 0 4px 8px;cursor:pointer}
 .top button#whoBtn i{font-style:normal;font-size:0.75rem;opacity:.8}
 
-/* 手冊：擺在名字左邊。margin-left:auto 把它和名字一起推到右側，
-   公司名維持在左邊。做成外框而不是實心，免得比名字還搶眼。 */
-.top #guideBtn{margin-left:auto;flex:none;text-decoration:none;
-  color:var(--chrome-ink);border:1px solid currentColor;border-radius:999px;
-  padding:3px 11px;font-size:0.75rem;font-weight:700;opacity:.8;
-  line-height:1.6;white-space:nowrap}
+/* 新手上路：擺在名字左邊。margin-left:auto 把它和名字一起推到右側，
+   公司名維持在左邊。用圖示不用文字——標題列已經有公司名跟人名了。
+   碰觸範圍撐到 44px（圖示本身 22px），手指在工地戴手套也點得到。 */
+.top #guideBtn{margin-left:auto;flex:none;display:inline-flex;
+  align-items:center;justify-content:center;width:44px;height:44px;
+  color:var(--chrome-ink);opacity:.82;-webkit-tap-highlight-color:transparent}
+.top #guideBtn svg{width:22px;height:22px;display:block}
 .top #guideBtn:hover,.top #guideBtn:focus-visible{opacity:1}
+.top #guideBtn:active{opacity:.6}
 
 .badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;
   height:18px;padding:0 5px;margin-left:5px;border-radius:99px;background:var(--danger);
