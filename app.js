@@ -2299,21 +2299,49 @@ function closeHelp(){
 /* 自己的登入資訊。換手機、重灌的時候第一個要找的就是這個，
    所以放在說明的最上面，而且附一個複製鈕——
    在工廠裡要同事手抄一串網址是不切實際的。 */
+var HELP_DIR = null;      // 拿過一次就不再問後端
+function linkOf(code){
+  return 'https://mousteven.github.io/yuher-app/?code=' + encodeURIComponent(code || '');
+}
 function drawHelpMe(){
   var box = $('hpMe');
   if(!box) return;
-  var link = 'https://mousteven.github.io/yuher-app/?code=' + encodeURIComponent(CODE || '');
-  box.innerHTML =
-    '<b>' + esc(STAFF_NAME || '你') + '　你的專屬連結</b>' +
-    '<p>換手機或重灌之後，用這條連結就直接登入，不用再輸入登入碼。' +
-    '也可以傳給自己的另一支手機。</p>' +
-    (CODE ? '<button type="button" id="hpCopy">複製我的專屬連結</button>' : '');
+  box.innerHTML = '<b>' + esc(STAFF_NAME || '你') + '　你的專屬連結</b>' +
+    '<p>換手機或重灌之後，用這條連結點一下就登入，不用再輸入登入碼。</p>' +
+    (CODE ? '<button type="button" id="hpCopy">複製我的專屬連結</button>' : '') +
+    '<div id="hpDir" class="hp-dir">載入全體同仁的登入碼…</div>';
   var b = $('hpCopy');
   if(b) b.addEventListener('click', function(){
-    try {
-      navigator.clipboard.writeText(link);
-      toast('已複製，貼到 LINE 給自己就好');
-    } catch(e){ toast('複製失敗，請截圖或手動記下', true); }
+    try { navigator.clipboard.writeText(linkOf(CODE)); toast('已複製，貼到 LINE 給自己就好'); }
+    catch(e){ toast('複製失敗，請截圖或手動記下', true); }
+  });
+  if(HELP_DIR) { drawHelpDir(HELP_DIR); return; }
+  /* 名單一定要從後端拿。?page=svc 不做伺服器端驗證——
+     整份 HTML 與 app.js 任何人打開網址都拿得到，
+     碼寫進前端就等於公開在網路上。helpDirectory 會過 staffAuth_。 */
+  google.script.run
+    .withSuccessHandler(function(r){ HELP_DIR = r; drawHelpDir(r); })
+    .withFailureHandler(function(){
+      var d = $('hpDir'); if(d) d.textContent = '（登入碼名單載入失敗，請下拉重新整理）'; })
+    .helpDirectory(CODE);
+}
+function drawHelpDir(r){
+  var d = $('hpDir');
+  if(!d) return;
+  if(!r || !r.rows || !r.rows.length){ d.textContent = ''; return; }
+  d.innerHTML = '<b>全體同仁的登入碼</b>' +
+    '<p class="hp-dir-note">要幫誰重新登入時用。每個人的專屬連結是同一條網址加上他的碼。</p>' +
+    '<table><tbody>' + r.rows.map(function(x){
+      return '<tr' + (x.me ? ' class="me"' : '') + '><td>' + esc(x.name) +
+             (x.me ? '<em>你</em>' : '') + '</td><td class="ro">' + esc(x.role || '翻譯') +
+             '</td><td class="cd">' + esc(x.code) + '</td>' +
+             '<td><button type="button" data-c="' + esc(x.code) + '">複製連結</button></td></tr>';
+    }).join('') + '</tbody></table>';
+  [].forEach.call(d.querySelectorAll('button[data-c]'), function(b){
+    b.addEventListener('click', function(){
+      try { navigator.clipboard.writeText(linkOf(b.dataset.c)); toast('已複製他的專屬連結'); }
+      catch(e){ toast('複製失敗', true); }
+    });
   });
 }
 $('guideBtn').addEventListener('click', openHelp);

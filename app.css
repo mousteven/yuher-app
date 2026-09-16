@@ -749,6 +749,27 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   font-family:inherit;font-size:0.875rem;font-weight:700;cursor:pointer}
 .hp-me button:active{background:var(--brand-soft)}
 
+/* 全體同仁的登入碼。名單是從後端拿的（登入後才給），
+   不在任何前端檔案裡——app.js 是公開的。 */
+.hp-dir{margin-top:13px;padding-top:12px;border-top:1px solid var(--line)}
+.hp-dir > b{display:block;color:var(--brand);margin-bottom:3px}
+.hp-dir-note{margin:0 0 8px;color:var(--ink3);font-size:0.8rem;line-height:1.7}
+.hp-dir table{width:100%;border-collapse:collapse;font-size:0.85rem}
+.hp-dir td{padding:6px 4px;border-top:1px solid var(--line2);vertical-align:middle}
+.hp-dir tr.me td{background:var(--card)}
+.hp-dir td em{font-style:normal;font-size:0.72rem;color:var(--brand);
+  background:var(--brand-soft);border-radius:4px;padding:1px 5px;margin-left:5px}
+.hp-dir .ro{color:var(--ink3);font-size:0.8rem;white-space:nowrap}
+.hp-dir .cd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.1em;color:var(--ink);white-space:nowrap}
+.hp-dir button{padding:4px 9px;border-radius:7px;border:1px solid var(--line);
+  background:var(--card);color:var(--brand);font-family:inherit;
+  font-size:0.75rem;cursor:pointer;white-space:nowrap}
+
+.hp-warn{margin:9px 0 0;padding:9px 11px;border-radius:9px;
+  background:var(--warn-bg);border:1px solid var(--warn-line);
+  color:var(--warn-ink);font-size:0.865rem;line-height:1.75}
+
 .hp-s{margin-bottom:24px}
 .hp-s h3{display:flex;align-items:center;gap:9px;margin:0 0 9px;
   font-size:1.0625rem;letter-spacing:.02em}
