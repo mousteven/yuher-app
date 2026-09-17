@@ -1131,7 +1131,11 @@ function drawDay(){
           ? '<button type="button" class="p" data-go="'+esc(r.id)+'">開始填寫</button>'+
             '<button type="button" data-cancel="'+esc(r.id)+'">取消</button>'
           : (r.recCode
-              ? '<button type="button" data-pdf="'+esc(r.recCode)+'">PDF</button>'+
+              ? '<button type="button" data-pdf="'+esc(r.recCode)+'"'+
+                  ' data-client="'+esc(r.client||'')+'"'+
+                  ' data-n="'+(r.workers?String(r.workers).split('、').length:0)+'"'+
+                  ' data-cansub="'+((r.rv==='未送審'||r.rv==='退回補正')?'1':'0')+'"'+
+                  '>PDF</button>'+
                 // 送出去之後就不該再有送審鈕，狀態標籤講得比按鈕清楚
                 ((r.rv==='未送審'||r.rv==='退回補正')
                   ? '<button type="button" data-sub="'+esc(r.recCode)+'">送審</button>' : '')
@@ -1200,7 +1204,11 @@ function drawDay(){
       google.script.run
         .withSuccessHandler(function(r){
           b.disabled=false; b.textContent='PDF';
-          openDone(b.dataset.pdf, 0);
+          openDone(b.dataset.pdf, {
+            client: b.dataset.client,
+            cnt: b.dataset.n ? +b.dataset.n : 0,
+            canSubmit: b.dataset.cansub === '1'
+          });
           $('dnOut').innerHTML =
             '<p class="hint" style="margin-bottom:8px">檔名：<b>'+esc(r.name)+'</b></p>'+
             '<div class="btns">'+
@@ -1854,7 +1862,7 @@ $('save').addEventListener('click', function(){
     .withSuccessHandler(function(r){
       b.disabled=false;
       calBust(); revBust();       // 那一趟會從「待處理」變「已完成」，送審清單也多一筆
-      try{ openDone(r.code, r.count); }
+      try{ openDone(r.code, { client: trip.client, cnt: r.count, canSubmit: true }); }
       catch(err){ toast('已存檔（'+r.code+'），但面板打不開：'+err.message, true); }
     })
     .withFailureHandler(function(e){ b.disabled=false; toast(e.message, true); })
@@ -2064,20 +2072,59 @@ $('pvBody').addEventListener('touchend', function(e){
    不用再回去查詢頁重找一次。 */
 var DONE_CODE_ = '';
 var PDF_FORCE_ = false;   // 產過的 PDF 直接沿用，不要每按一次就在硬碟多一個檔
-function openDone(code, cnt){
+/* meta：{ client, cnt, canSubmit }。
+   從行事曆的 PDF 鈕進來時這些都拿得到（卡片上本來就印著），
+   以前那裡寫死 cnt=0，所以面板會說「共 0 位移工」而檔名卻是「等 3 人」。 */
+function openDone(code, meta){
+  meta = meta || {};
   DONE_CODE_ = code;
   $('dnCode').textContent = code;
-  $('dnCnt').textContent = cnt;
+
+  /* 標題下面只講事實：哪一家、幾位移工。
+     原本那句「雇主要一份的話，可以直接輸出 PDF 分享給他」是在教學，
+     但按鈕本身就寫著「輸出 PDF 給雇主」——要靠一句話解釋的按鈕，
+     代表按鈕沒寫好，不是話沒講夠。 */
+  var facts = [];
+  if (meta.client) facts.push(meta.client);
+  if (meta.cnt > 0) facts.push(meta.cnt + ' 位移工');
+  var p = $('dnCnt').parentNode;
+  p.className = 'fct';
+  p.textContent = facts.join('　·　');
+  p.style.display = facts.length ? '' : 'none';
+
+  /* 送出去之後就不該再有送審鈕——行事曆的卡片本來就是這個規則，
+     兩個地方要一致，不然同一筆紀錄在兩個畫面看起來會像兩種狀態。 */
+  var canSub = meta.canSubmit !== false;
+  $('dnSubmit').style.display = canSub ? '' : 'none';
+  $('dnSubmit').disabled = false; $('dnSubmit').textContent = '送給副理審閱';
+
   $('dnOut').innerHTML = '';
   $('dnPdf').disabled = false;
   $('dnPdf').textContent = '輸出 PDF 給雇主';
-  $('dnSubmit').disabled = false; $('dnSubmit').textContent = '送審';
+
+  /* 一個畫面只有一個填色按鈕。有送審鈕時主要動作是送審（那才是讓案子往前走的），
+     從行事曆單純要一份 PDF 進來時，PDF 就是主要動作。 */
+  $('dnSubmit').className = canSub ? 'p' : '';
+  $('dnPdf').className = canSub ? 'sec' : 'p';
+  $('dnCal').className = 'q';
+  $('dnClose').className = 'q';
+
   PDF_FORCE_ = false;
-  $('doneModal').style.display = '';
+  var m = $('doneModal');
+  m.style.display = '';
+  requestAnimationFrame(function(){ m.classList.add('on'); });   // 下一幀才加，過場才跑得到
 }
-$('dnClose').addEventListener('click', function(){
-  $('doneModal').style.display='none'; resetForm();
-});
+/* 收起來走同一條路：往下退回去，不是原地消失 */
+function closeDone(after){
+  var m = $('doneModal');
+  m.classList.remove('on');
+  var done = false;
+  var fin = function(){ if(done) return; done = true;
+    m.style.display = 'none'; if(after) after(); };
+  m.querySelector('.smbox').addEventListener('transitionend', fin, { once:true });
+  setTimeout(fin, 380);          // 動畫被關掉時 transitionend 不會來
+}
+$('dnClose').addEventListener('click', function(){ closeDone(resetForm); });
 /* 存完直接回行事曆：那一趟會從「待處理」移到「已完成」，
    一天下來往下滑就是當天的成果。 */
 /* 跑完就送審，不要等回辦公室才想起來——紙本流程最常卡在這一步 */
@@ -2089,10 +2136,11 @@ $('dnSubmit').addEventListener('click', function(){
     .submitForReview(CODE, DONE_CODE_);
 });
 $('dnCal').addEventListener('click', function(){
-  $('doneModal').style.display='none';
-  resetForm();
-  document.querySelector('.tabs button[data-t=cal]').click();
-  window.scrollTo(0,0);
+  closeDone(function(){
+    resetForm();
+    document.querySelector('.tabs button[data-t=cal]').click();
+    window.scrollTo(0,0);
+  });
 });
 $('dnPdf').addEventListener('click', function(){
   var b = $('dnPdf'); b.disabled = true; b.textContent = '產生中…';

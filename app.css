@@ -275,6 +275,46 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   background:var(--card);font-size:0.9375rem;font-weight:700;cursor:pointer;color:var(--ink2)}
 .smbtns button.p{background:var(--brand);border-color:var(--brand);color:#fff}
 
+/* ── 存檔完成面板 ─────────────────────────────────────────
+   原本四個按鈕吃 .smbtns 的 flex:1，各佔四分之一，
+   「完成，清空表單」在手機上被折成三行；而且四個一樣大，
+   等於沒有主次，使用者得把四個都讀完才知道該按哪個。
+
+   改成一個由上而下的順序：最該做的那件事自己佔一列，
+   次要的一列，兩個「離開」的並排在最底下。
+   一個畫面只放一個填色按鈕，多了就等於沒有主次。
+   只改 #doneModal，其他對話框維持原本的 flex 排法。 */
+#doneModal .smbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#doneModal .smbtns button{flex:none;padding:14px 12px;border-radius:12px;
+  transition:transform .12s ease-out,background-color .12s ease-out,opacity .12s ease-out}
+#dnSubmit,#dnPdf{grid-column:1/-1}
+#dnSubmit{order:1} #dnPdf{order:2} #dnCal{order:3} #dnClose{order:4}
+
+/* 次要動作：只有外框，不搶主要動作的注意力 */
+#doneModal .smbtns button.sec{background:var(--card);border-color:var(--brand);
+  color:var(--brand2)}
+/* 離開用的兩顆最安靜——它們是出口，不是要你按的東西 */
+#doneModal .smbtns button.q{background:transparent;border-color:transparent;
+  color:var(--ink3);font-weight:600}
+
+/* 按下去當下就要有回饋，不能等放開才動 */
+#doneModal .smbtns button:active{transform:scale(.97)}
+#doneModal .smbtns button:disabled{opacity:.45}
+
+/* 面板要像一片真的東西滑上來，不是憑空出現。
+   用跟操作說明同一條曲線，整個 App 的動態才是一套。 */
+#doneModal .smbox{transform:translateY(16px) scale(.985);opacity:0;
+  transition:transform .34s cubic-bezier(.32,.72,0,1),opacity .2s ease-out}
+#doneModal.on .smbox{transform:none;opacity:1}
+/* 標題那一行：左邊是狀態，右邊是編號，不要擠在一起 */
+#doneModal h4{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+#doneModal .fct{margin:2px 0 12px;color:var(--ink2);font-size:0.8125rem}
+
+@media (prefers-reduced-motion:reduce){
+  #doneModal .smbox{transition:opacity .18s ease;transform:none}
+  #doneModal .smbtns button:active{transform:none}
+}
+
 /* 服務紀錄表預覽：照紙本的樣子，給移工與雇主看過再簽 */
 .pvmask{position:fixed;inset:0;background:var(--bg);z-index:65;
   display:flex;flex-direction:column}
