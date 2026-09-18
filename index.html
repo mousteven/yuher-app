@@ -43,7 +43,13 @@ html,body{margin:0;height:100%;overflow:hidden;background:#fff;
    正解是 flex：#app 撐滿畫面、上面留瀏海的位置，iframe 用 flex:1 吃掉
    剩下的全部。flex 對替換元素是可靠的，而且完全不碰百分比高度。
    min-height:0 是必要的——不寫的話 flex 項目不肯縮到內容高度以下。 */
-#app{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden;
+/* --extra：iOS 只給這個 PWA 797pt 的排版高度，螢幕其實有 858pt。
+   position:fixed 的 100% 只算到 797，所以底下那 61pt 一直是空的。
+   畫布本身是延伸過去的（html/body 的底色畫得到那裡），所以往下多撐
+   那麼多，讓 iframe 跟程式自己的底部選單真的碰到螢幕底部。
+   數值由下面的 fitBottom() 量，量不到就是 0，等於沒改。 */
+#app{position:fixed;top:0;left:0;right:0;height:calc(100% + var(--extra,0px));
+  display:flex;flex-direction:column;overflow:hidden;
   padding-top:env(safe-area-inset-top,0px);background:var(--brand)}
 #frame{flex:1 1 auto;min-height:0;width:100%;border:0;display:block;background:var(--bg)}
 /* ── 更新中的畫面 ─────────────────────────────────────
@@ -424,6 +430,16 @@ ol li b{color:var(--ink)}
      結果就是系統的底部選單停在指示線上方，外殼的底色從下面露出來——
      原生 App 不會這樣，因為它的選單會一路鋪到螢幕最底下。
      這裡由外殼量好再傳進去，系統才有辦法把選單墊到底。 */
+  /* 螢幕比排版畫布高多少。只在 10–140px 這個合理範圍內採用——
+     超出範圍多半是量錯（橫向、分割畫面、鍵盤彈出），寧可不做。 */
+  function fitBottom(){
+    var extra = (screen.height || 0) - innerHeight;
+    if (!(extra > 10 && extra < 140) || innerWidth > innerHeight) extra = 0;
+    document.documentElement.style.setProperty('--extra', extra + 'px');
+  }
+  fitBottom();
+  addEventListener('resize', fitBottom);
+
   function sendInsets(){
     var probe = document.createElement('div');
     probe.style.cssText = 'position:fixed;left:0;bottom:0;width:0;' +
