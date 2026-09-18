@@ -228,16 +228,26 @@ ol li b{color:var(--ink)}
   $('frame').addEventListener('load', function(){ loaded = true; });
   setTimeout(function(){ if(!loaded) $('fallback').style.display = 'block'; }, 10000);
 
-  /* 系統裡按「重新整理」時，由外殼來重載那個 iframe。
+  /* 系統裡按「下拉更新」或「有新版本」時，由外殼來重載那個 iframe。
      裡面自己 location.reload() 重載的是 Apps Script 的沙箱網址，
      常常重載不回來變空白。網址後面加時間戳是為了繞過瀏覽器快取——
-     不加的話按了等於沒按，還是拿到同一份舊畫面。 */
-  var BASE = $('frame').getAttribute('src');
+     不加的話按了等於沒按，還是拿到同一份舊畫面。
+
+     ⚠️ 2026-09-18 修正：原本在這裡先讀一次 getAttribute('src') 存成 BASE。
+     但 <iframe> 標籤上根本沒有 src，它是下面第二個 <script> 的 IIFE 才設的，
+     而這一段在第一個 <script> 裡——所以 BASE 一直都是 null，
+     按更新等於把 iframe 導到 https://mousteven.github.io/yuher-app/null&t=…
+     （實測 404）。**下拉更新從來沒有真正動作過**，同事只好關掉 App 重開。
+
+     改成按下去的當下才讀現在的網址，沒有先後順序的問題；
+     順便把舊的 &t= 切掉，連按幾次不會愈接愈長。 */
   window.addEventListener('message', function(ev){
     var d = ev.data;
     if(!d || !d.yuher) return;
     if(d.yuher === 'reload'){
-      $('frame').src = BASE + '&t=' + Date.now();
+      var cur = $('frame').src || '';
+      if(!cur) return;                       // 還沒載入就不要亂導
+      $('frame').src = cur.split('&t=')[0] + '&t=' + Date.now();
     } else if(d.yuher === 'ready'){
       // 系統告訴我們它的頂欄與底欄該是什麼顏色，外殼照著塗，
       // 這樣安全區域那一條才不會露出跟畫面不搭的底色
