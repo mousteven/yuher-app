@@ -1116,7 +1116,24 @@ function drawDay(){
   function card(r){
     var l = (r.lang||'').split('、')[0] || '';
     var cls = r.status==='已完成' ? 'done' : (r.status==='取消' ? 'cancel' : 'plan');
-    return '<div class="ev '+cls+'">'+
+    /* 待處理的包一層：紅色的取消壓在下面，卡片往左滑才露出來。
+       data-go 留在外層，「從填寫頁返回」要靠它把這一張找回來。 */
+    var acts = (r.status !== '預排' && r.recCode)
+      ? '<button type="button" data-pdf="'+esc(r.recCode)+'"'+
+          ' data-client="'+esc(r.client||'')+'"'+
+          ' data-n="'+(r.workers?String(r.workers).split('、').length:0)+'"'+
+          '>PDF</button>'+
+        // 送出去之後就不該再有送審鈕，狀態標籤講得比按鈕清楚
+        ((r.rv==='未送審'||r.rv==='退回補正')
+          ? '<button type="button" data-sub="'+esc(r.recCode)+'">送審</button>' : '')
+      : '';
+    var wrapA = '', wrapB = '';
+    if(r.status === '預排'){
+      wrapA = '<div class="swwrap" data-go="'+esc(r.id)+'">'+
+              '<button type="button" class="swdel">取消</button>';
+      wrapB = '</div>';
+    }
+    return wrapA + '<div class="ev '+cls+'">'+
       '<span class="bar lg-'+esc(l)+'"></span>'+
       '<span class="b"'+(r.recCode?' data-rec="'+esc(r.recCode)+'"':'')+'>'+
         '<span class="t">'+esc(r.slot||'未定時段')+'　'+esc(r.crew)+'</span>'+
@@ -1127,20 +1144,10 @@ function drawDay(){
           (r.recCode?'　<span class="code">'+esc(r.recCode)+'</span>':'')+'</span>'+
         (r.rv?progHtml(r.rv):'')+
       '</span>'+
-      '<span class="acts">'+
-        (r.status==='預排'
-          ? '<button type="button" class="p" data-go="'+esc(r.id)+'">開始填寫</button>'+
-            '<button type="button" data-cancel="'+esc(r.id)+'">取消</button>'
-          : (r.recCode
-              ? '<button type="button" data-pdf="'+esc(r.recCode)+'"'+
-                  ' data-client="'+esc(r.client||'')+'"'+
-                  ' data-n="'+(r.workers?String(r.workers).split('、').length:0)+'"'+
-                  '>PDF</button>'+
-                // 送出去之後就不該再有送審鈕，狀態標籤講得比按鈕清楚
-                ((r.rv==='未送審'||r.rv==='退回補正')
-                  ? '<button type="button" data-sub="'+esc(r.recCode)+'">送審</button>' : '')
-              : ''))+
-      '</span></div>';
+      /* 待處理的沒有按鈕了（點卡片開始填、左滑出取消），
+         所以整個 .acts 不輸出——空的 flex 子元素還是會吃掉父層 10px 的間距。 */
+      (acts ? '<span class="acts">' + acts + '</span>' : '') +
+      '</div>' + wrapB;
   }
 
   var html = '';
@@ -1165,7 +1172,7 @@ function drawDay(){
   });
   if(plan.length && CAL_VIEW !== 'day'){
     $('calDayList').insertAdjacentHTML('beforeend',
-      '<p class="draghint">長按行程可以拖到上面的日期改期</p>');
+      '<p class="draghint">點一下開始填寫　·　往左滑可以取消　·　長按可以拖到別的日期</p>');
   }
 
   // 點已完成那一趟的內文＝打開整張服務表，送審前先確認過
@@ -1175,16 +1182,10 @@ function drawDay(){
       openRecord(b.dataset.rec);
     });
   });
-  [].forEach.call($('calDayList').querySelectorAll('[data-go]'), function(b){
-    b.addEventListener('click', function(){ startFromSchedule(b.dataset.go); });
-  });
-  [].forEach.call($('calDayList').querySelectorAll('[data-cancel]'), function(b){
-    b.addEventListener('click', function(){
-      google.script.run.withSuccessHandler(function(){
-          toast('已取消'); calBust(); loadCal(); })
-        .withFailureHandler(function(e){ toast(e.message,true); })
-        .setScheduleStatus(CODE, b.dataset.cancel, '取消');
-    });
+  /* 待處理的：整張卡片可以點（開始填寫）、可以往左滑（出取消）。
+     原本那兩顆按鈕連同它們的綁定一起拿掉了。 */
+  [].forEach.call($('calDayList').querySelectorAll('.swwrap'), function(w){
+    bindSwipe(w, w.dataset.go);
   });
   [].forEach.call($('calDayList').querySelectorAll('[data-sub]'), function(b){
     b.addEventListener('click', function(){
@@ -1208,6 +1209,107 @@ function drawDay(){
     });
   });
 }
+
+/* ── 往左滑出取消 ──────────────────────────────────────
+   跟下面的長按拖曳改期共存，靠的是兩邊的門檻剛好錯開：
+   拖曳的長按計時器在手指移動超過 8px 時就自己取消了，
+   而左滑要移動超過 10px 且水平大於垂直才成立——
+   所以左滑成立的當下，長按早就放棄了，不會兩個同時發生。
+   反過來，長按已經進入拖曳（DRAG 不是 null）時這裡整段不動。
+
+   兩邊都用 touch 事件，不要一邊 pointer 一邊 touch——
+   同一個手指會產生兩套事件，判斷會互相打架。 */
+var SWIPE_OPEN_ = null;      // 一次只開一張
+var SW_W_ = 96;              // 紅色那一塊的寬度，跟 CSS 的 .swdel 一致
+
+function closeSwipe(w){
+  if(!w) return;
+  var el = w.querySelector('.ev');
+  if(el){ el.classList.add('snap'); el.style.transform = ''; }
+  w.dataset.x = '0';
+  if(SWIPE_OPEN_ === w) SWIPE_OPEN_ = null;
+}
+
+function bindSwipe(w, id){
+  var el = w.querySelector('.ev');
+  if(!el || !id) return;
+  var base = 0, sx = 0, sy = 0, mode = null, lastX = 0, lastT = 0, vel = 0, moved = false;
+  w.dataset.x = '0';
+
+  function put(x, snap){
+    el.classList.toggle('snap', !!snap);
+    el.style.transform = x ? 'translateX(' + x + 'px)' : '';
+    w.dataset.x = String(x);
+    SWIPE_OPEN_ = x ? w : (SWIPE_OPEN_ === w ? null : SWIPE_OPEN_);
+  }
+  /* 超出範圍就愈拉愈重，不要硬停——硬停讀起來像當掉，
+     漸進的阻力讀起來是「可以動，但這邊沒有東西了」。 */
+  function rubber(over){ return over * 0.32; }
+
+  el.addEventListener('touchstart', function(e){
+    if(DRAG) return;
+    if(SWIPE_OPEN_ && SWIPE_OPEN_ !== w) closeSwipe(SWIPE_OPEN_);
+    var t = e.touches[0];
+    base = parseFloat(w.dataset.x) || 0;
+    sx = t.clientX; sy = t.clientY; lastX = t.clientX; lastT = Date.now();
+    mode = null; vel = 0; moved = false;
+    el.classList.remove('snap');
+  }, {passive:true});
+
+  el.addEventListener('touchmove', function(e){
+    if(DRAG) return;                       // 長按拖曳優先
+    var t = e.touches[0];
+    var dx = t.clientX - sx, dy = t.clientY - sy;
+    if(mode === null){
+      if(Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) mode = 'swipe';
+      else if(Math.abs(dy) > 10) mode = 'scroll';
+      else return;
+    }
+    if(mode !== 'swipe') return;
+    e.preventDefault();                    // 確定是左滑了才擋捲動
+    moved = true;
+    var now = Date.now();
+    if(now > lastT){
+      vel = (t.clientX - lastX) / (now - lastT) * 1000;
+      lastX = t.clientX; lastT = now;
+    }
+    var nx = base + dx;
+    if(nx > 0) nx = rubber(nx);
+    if(nx < -SW_W_) nx = -SW_W_ + rubber(nx + SW_W_);
+    put(nx, false);
+  }, {passive:false});
+
+  el.addEventListener('touchend', function(e){
+    if(DRAG || mode !== 'swipe'){ mode = null; return; }
+    var t = (e.changedTouches && e.changedTouches[0]) || {};
+    var cur = base + ((t.clientX == null ? sx : t.clientX) - sx);
+    /* 用甩的速度投影它「要飛到哪」再決定開或關，不是看放開時停在哪。
+       這樣輕輕一甩就開得了，而滑出來又往右甩回去會關掉。 */
+    var projected = cur + (vel / 1000) * 0.998 / (1 - 0.998);
+    put(projected < -SW_W_ / 2 ? -SW_W_ : 0, true);
+    mode = null;
+  });
+  el.addEventListener('touchcancel', function(){ mode = null; put(0, true); });
+
+  /* 點一下＝開始填寫。剛剛在滑的那一下不算，開著的時候先收起來。 */
+  el.addEventListener('click', function(){
+    if(DRAG) return;
+    if(moved){ moved = false; return; }
+    if(parseFloat(w.dataset.x)){ closeSwipe(w); return; }
+    startFromSchedule(id);
+  });
+
+  w.querySelector('.swdel').addEventListener('click', function(ev){
+    ev.stopPropagation();
+    google.script.run
+      .withSuccessHandler(function(){ toast('已取消'); calBust(); loadCal(); })
+      .withFailureHandler(function(e){ toast(e.message, true); })
+      .setScheduleStatus(CODE, id, '取消');
+  });
+}
+/* 捲動就把開著的收起來：手指已經離開那一張了，紅色不該還留著 */
+addEventListener('scroll', function(){ if(SWIPE_OPEN_) closeSwipe(SWIPE_OPEN_); },
+  {passive:true});
 
 /* ── 長按拖曳改期 ──────────────────────────────
    長按 500ms 進入拖曳，手指移到哪一天就亮哪一天，放開就改期。
@@ -1346,7 +1448,9 @@ function backToCal(){
   (function find(){
     var hit = document.querySelector('#calDayList [data-go="' + m.id + '"]');
     if(!hit && m.rec) hit = document.querySelector('#calDayList [data-rec="' + m.rec + '"]');
-    var card = hit ? hit.closest('.ev') : null;
+    /* data-go 在外層的 .swwrap 上、data-rec 在卡片裡面的 .b 上，
+       所以往上往下都要找一次。 */
+    var card = hit ? (hit.closest('.ev') || hit.querySelector('.ev')) : null;
     if(!card){
       if(++tries < 20) return setTimeout(find, 100);
       window.scrollTo(0, m.y);        // 真的找不到，至少回到原本捲的位置

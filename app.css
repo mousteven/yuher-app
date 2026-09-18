@@ -275,6 +275,23 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   background:var(--card);font-size:0.9375rem;font-weight:700;cursor:pointer;color:var(--ink2)}
 .smbtns button.p{background:var(--brand);border-color:var(--brand);color:#fff}
 
+/* ── 待處理的行程卡：點一下開始填，往左滑出取消 ───────────
+   2026-09-18。原本右邊擺「開始填寫」「取消」兩顆按鈕，
+   佔掉卡片三分之一的寬度，客戶名稱與移工名字被擠到換行。
+
+   紅色壓在下面，卡片本身往左滑才露出來。破壞性的動作藏在手勢後面，
+   比擺一顆隨時按得到的「取消」安全——這一排卡片是用拇指在捲的。 */
+.swwrap{position:relative;border-radius:12px;overflow:hidden;margin-bottom:8px;
+  background:var(--danger)}
+.swwrap>.ev{margin-bottom:0;will-change:transform;touch-action:pan-y;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+.swwrap>.ev.snap{transition:transform .34s cubic-bezier(.32,.72,0,1)}
+.swdel{position:absolute;right:0;top:0;bottom:0;width:96px;border:0;
+  background:var(--danger);color:#fff;font-family:inherit;font-weight:800;
+  font-size:0.9375rem;letter-spacing:.04em;cursor:pointer}
+.swdel:active{filter:brightness(.9)}
+@media (prefers-reduced-motion:reduce){ .swwrap>.ev.snap{transition:transform .001s} }
+
 /* ── 從行事曆點進來的返回列 ───────────────────────────────
    2026-09-18。原本從行事曆按「開始填寫」進來之後沒有回頭路，
    只能用下面的分頁列跳回行事曆——而且會捲回最上面，
