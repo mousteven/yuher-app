@@ -275,6 +275,49 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   background:var(--card);font-size:0.9375rem;font-weight:700;cursor:pointer;color:var(--ink2)}
 .smbtns button.p{background:var(--brand);border-color:var(--brand);color:#fff}
 
+/* ── 存檔完成：就地換檔，不跳第二層 ───────────────────────
+   2026-09-18。原本存完會蓋一層面板，面板裡四顆按鈕；
+   而那個面板同時也服務「從行事曆調舊 PDF」那條路徑，
+   結果兩條路各有一半按鈕用不到。現在拆開：
+   填寫頁就地換這一排，行事曆走一個只有 PDF 的小面板。 */
+.svdone{margin-top:0}
+/* 常駐的確認行。toast 一秒多就消失，人在工廠低頭做別的事會錯過。
+   刻意不做成卡片——它是狀態，不是可以按的東西。 */
+.savedln{display:flex;gap:7px;align-items:baseline;margin:0 0 10px;
+  font-size:0.8125rem;color:var(--ink2);line-height:1.5}
+.savedln .tick{color:var(--ok-ink);font-weight:800;flex:none}
+.savedln b{color:var(--ink)}
+.savedln .wh{color:var(--ink3)}
+
+/* 主要動作一列、次要一列、出口並排。一個畫面只放一個填色按鈕。 */
+.stack{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stack>.full{grid-column:1/-1}
+.stack button{padding:14px 8px;border-radius:11px;border:1px solid var(--line);
+  background:var(--card);font:inherit;font-weight:700;color:var(--ink2);cursor:pointer;
+  transition:transform .12s ease-out}
+.stack button:active{transform:scale(.97)}
+.stack button:disabled{opacity:.5}
+.stack button.p{background:var(--brand);border-color:var(--brand);color:#fff}
+.stack button.sec{border-color:var(--brand);color:var(--brand2)}
+.stack button.q{background:transparent;border-color:transparent;color:var(--ink3);font-weight:600}
+
+/* PDF 那一格：還沒產生時是一顆按鈕，產生後就地變成檔案本身。
+   同一件事只佔一個位置，不要一個按鈕再配一塊結果。 */
+.pdfbox{border:1px solid var(--ok-line);background:var(--ok-bg);border-radius:11px;
+  padding:11px 13px;text-align:left}
+.pdfbox .fn{font-size:0.75rem;color:var(--ink2);word-break:break-all;line-height:1.5}
+.pdfbox .fn b{color:var(--ink)}
+.pdfbox .lks{display:flex;gap:15px;margin-top:7px;flex-wrap:wrap;align-items:baseline}
+.pdfbox .lks a{color:var(--brand2);font-size:0.875rem;font-weight:700;
+  text-decoration:underline;cursor:pointer}
+/* 重新產生是例外動作：PDF 產好了正常就是拿去用。
+   跟「開啟」「分享」一樣大等於在鼓勵多按一次，而每按一次雲端硬碟就多一個檔。 */
+.pdfbox .lks a.re{margin-left:auto;color:var(--ink3);font-weight:600;font-size:0.75rem;
+  text-decoration:none;border-bottom:1px solid var(--line)}
+.pdfbox .wait{margin:0;font-size:0.8125rem;color:var(--ink3)}
+.pdfbox .err{margin:0;font-size:0.8125rem;color:var(--danger)}
+@media (prefers-reduced-motion:reduce){ .stack button:active{transform:none} }
+
 /* ── 存檔完成面板 ─────────────────────────────────────────
    原本四個按鈕吃 .smbtns 的 flex:1，各佔四分之一，
    「完成，清空表單」在手機上被折成三行；而且四個一樣大，

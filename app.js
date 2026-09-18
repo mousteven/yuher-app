@@ -1134,7 +1134,6 @@ function drawDay(){
               ? '<button type="button" data-pdf="'+esc(r.recCode)+'"'+
                   ' data-client="'+esc(r.client||'')+'"'+
                   ' data-n="'+(r.workers?String(r.workers).split('、').length:0)+'"'+
-                  ' data-cansub="'+((r.rv==='未送審'||r.rv==='退回補正')?'1':'0')+'"'+
                   '>PDF</button>'+
                 // 送出去之後就不該再有送審鈕，狀態標籤講得比按鈕清楚
                 ((r.rv==='未送審'||r.rv==='退回補正')
@@ -1197,31 +1196,14 @@ function drawDay(){
         .submitForReview(CODE, b.dataset.sub);
     });
   });
-  // 已完成的可以直接調 PDF 出來，不用回查詢頁再找一次
+  // 已完成的可以直接調 PDF 出來，不用回查詢頁再找一次。
+  // 面板裡不再重複放送審鈕——卡片右邊本來就有一顆，同一件事只該有一個地方按。
   [].forEach.call($('calDayList').querySelectorAll('[data-pdf]'), function(b){
     b.addEventListener('click', function(){
-      b.disabled = true; b.textContent = '產生中…';
-      google.script.run
-        .withSuccessHandler(function(r){
-          b.disabled=false; b.textContent='PDF';
-          openDone(b.dataset.pdf, {
-            client: b.dataset.client,
-            cnt: b.dataset.n ? +b.dataset.n : 0,
-            canSubmit: b.dataset.cansub === '1'
-          });
-          $('dnOut').innerHTML =
-            '<p class="hint" style="margin-bottom:8px">檔名：<b>'+esc(r.name)+'</b></p>'+
-            '<div class="btns">'+
-              '<a class="lk p" href="'+esc(r.url)+'" target="_blank" rel="noopener">開啟 PDF</a>'+
-              '<a class="lk" href="https://line.me/R/msg/text/?'+
-                encodeURIComponent('服務紀錄表 '+r.name.replace(/\.pdf$/,'')+
-                                   String.fromCharCode(10)+r.url)+
-                '" target="_blank" rel="noopener">分享到 LINE</a></div>';
-        })
-        .withFailureHandler(function(e){
-          b.disabled=false; b.textContent='PDF'; toast(e.message, true);
-        })
-        .exportServiceSheetPdf(CODE, b.dataset.pdf);
+      openPdfSheet(b.dataset.pdf, {
+        client: b.dataset.client,
+        cnt: b.dataset.n ? +b.dataset.n : 0
+      });
     });
   });
 }
@@ -1862,8 +1844,8 @@ $('save').addEventListener('click', function(){
     .withSuccessHandler(function(r){
       b.disabled=false;
       calBust(); revBust();       // 那一趟會從「待處理」變「已完成」，送審清單也多一筆
-      try{ openDone(r.code, { client: trip.client, cnt: r.count, canSubmit: true }); }
-      catch(err){ toast('已存檔（'+r.code+'），但面板打不開：'+err.message, true); }
+      try{ showSaved(r.code); }
+      catch(err){ toast('已存檔（'+r.code+'），但畫面沒換過來：'+err.message, true); }
     })
     .withFailureHandler(function(e){ b.disabled=false; toast(e.message, true); })
     .saveServiceLog(CODE, trip, workers);
@@ -2067,53 +2049,154 @@ $('pvBody').addEventListener('touchend', function(e){
   else lastTap = t;
 });
 
-/* ── 存檔完成：要不要輸出 PDF 給雇主 ─────────────────────
-   雇主常常當場就說「給我一份」，所以存完直接給 PDF 與分享按鈕，
-   不用再回去查詢頁重找一次。 */
-var DONE_CODE_ = '';
-var PDF_FORCE_ = false;   // 產過的 PDF 直接沿用，不要每按一次就在硬碟多一個檔
-/* meta：{ client, cnt, canSubmit }。
-   從行事曆的 PDF 鈕進來時這些都拿得到（卡片上本來就印著），
-   以前那裡寫死 cnt=0，所以面板會說「共 0 位移工」而檔名卻是「等 3 人」。 */
-function openDone(code, meta){
-  meta = meta || {};
-  DONE_CODE_ = code;
-  $('dnCode').textContent = code;
+/* ── 存檔完成 ─────────────────────────────────────────────
+   2026-09-18 改版。原本存完會蓋一層面板，裡面四顆按鈕；而同一個面板
+   也服務「從行事曆調一份舊 PDF」那條路徑，結果兩條路各有一半按鈕用不到
+   （從行事曆進來時，送審、清空表單、回行事曆三顆都是多餘的）。
 
-  /* 標題下面只講事實：哪一家、幾位移工。
-     原本那句「雇主要一份的話，可以直接輸出 PDF 分享給他」是在教學，
-     但按鈕本身就寫著「輸出 PDF 給雇主」——要靠一句話解釋的按鈕，
-     代表按鈕沒寫好，不是話沒講夠。 */
+   拆成兩個各自單純的東西：
+     · 填寫頁存完 → 底部那一排就地換內容，不跳第二層
+     · 行事曆按 PDF → 只有 PDF 的小面板
+
+   「回行事曆」拿掉了：底部分頁列本來就有那一格，同一件事不需要兩個入口。
+   「清空」與「完成，清空表單」合併成一顆「完成」，同一個位置、同一顆按鈕。 */
+var DONE_CODE_ = '';
+
+/* PDF 的結果卡。還沒產生時那一格是一顆按鈕，產生後就地變成檔案本身——
+   不要一個按鈕再配一塊結果，那是同一件事佔兩個位置。 */
+function pdfCardHtml(r, reId){
+  var msg = '服務紀錄表 ' + r.name.replace(/\.pdf$/,'') + String.fromCharCode(10) + r.url;
+  return '<div class="pdfbox">' +
+    '<div class="fn"><b>' + esc(r.name) + '</b></div>' +
+    '<div class="lks">' +
+      '<a href="' + esc(r.url) + '" target="_blank" rel="noopener">開啟 PDF</a>' +
+      '<a href="https://line.me/R/msg/text/?' + encodeURIComponent(msg) +
+        '" target="_blank" rel="noopener">分享到 LINE</a>' +
+      '<a class="cp" data-u="' + esc(r.url) + '">複製連結</a>' +
+      (reId ? '<a class="re" id="' + reId + '">重新產生</a>' : '') +
+    '</div></div>';
+}
+
+function bindCopy(slot){
+  var c = slot.querySelector('.cp');
+  if(!c) return;
+  c.addEventListener('click', function(){
+    var t = document.createElement('textarea');
+    t.value = this.dataset.u; document.body.appendChild(t); t.select();
+    try{ document.execCommand('copy'); toast('連結已複製'); }
+    catch(e){ toast('複製失敗，請長按連結複製', true); }
+    t.remove();
+  });
+}
+
+/* 產生 PDF。兩條路徑共用，差別只在結果放進哪一個容器。
+   force=false 會沿用已經產好的那一份，不要每按一次就在雲端硬碟多一個檔。 */
+function makePdf(recCode, force, slot, reId){
+  slot.innerHTML = '<div class="pdfbox"><p class="wait">正在把紀錄轉成 PDF，約 10 秒…</p></div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      slot.innerHTML = pdfCardHtml(r, reId);
+      bindCopy(slot);
+      if(reId && $(reId)){
+        $(reId).addEventListener('click', function(){ makePdf(recCode, true, slot, reId); });
+      }
+    })
+    .withFailureHandler(function(e){
+      slot.innerHTML = '<div class="pdfbox"><p class="err">' + esc(e.message) + '</p>' +
+        '<div class="lks"><a class="rt">再試一次</a></div></div>';
+      slot.querySelector('.rt').addEventListener('click', function(){
+        makePdf(recCode, force, slot, reId);
+      });
+    })
+    .exportServiceSheetPdf(CODE, recCode, force);
+}
+
+/* ── 填寫頁：存完就地換那一排 ──────────────────────────
+   原本的三顆按鈕只是藏起來，不是砍掉重建——事件監聽器還在，不用重掛。 */
+function svDoneBox(){
+  var box = $('svDone');
+  if(box) return box;
+  box = document.createElement('div');
+  box.id = 'svDone';
+  box.className = 'svdone';
+  box.style.display = 'none';
+  box.innerHTML =
+    '<p class="savedln"><span class="tick">✓</span><span>已儲存　<b id="svCode"></b>' +
+      '<span class="wh">　·　在行事曆的今天找得到</span></span></p>' +
+    '<div class="stack">' +
+      '<button type="button" class="p full" id="svSubmit">送給副理審閱</button>' +
+      '<div class="full" id="svPdfSlot"></div>' +
+      '<button type="button" class="q full" id="svClose">完成</button>' +
+    '</div>';
+  $('save').parentNode.insertAdjacentElement('afterend', box);
+
+  $('svClose').addEventListener('click', function(){ hideSaved(); resetForm(); });
+  /* 跑完就送審，不要等回辦公室才想起來——紙本流程最常卡在這一步 */
+  $('svSubmit').addEventListener('click', function(){
+    var b = $('svSubmit'); b.disabled = true;
+    google.script.run
+      .withSuccessHandler(function(){
+        b.textContent = '已送審'; toast('已送給副理審閱'); revBust(); calBust(); refreshBadge();
+      })
+      .withFailureHandler(function(e){ b.disabled = false; toast(e.message, true); })
+      .submitForReview(CODE, DONE_CODE_);
+  });
+  return box;
+}
+
+function showSaved(code){
+  DONE_CODE_ = code;
+  var box = svDoneBox();
+  $('svCode').textContent = code;
+  $('svSubmit').disabled = false;
+  $('svSubmit').textContent = '送給副理審閱';
+  $('svPdfSlot').innerHTML =
+    '<button type="button" class="sec" id="svPdf">輸出 PDF 給雇主</button>';
+  $('svPdf').addEventListener('click', function(){
+    makePdf(code, false, $('svPdfSlot'), 'svRe');
+  });
+  $('save').parentNode.style.display = 'none';
+  box.style.display = '';
+  /* toast 給當下的回饋，上面那一行常駐字負責「之後還看得到」。
+     兩層都要：toast 會消失，人低頭處理別的事很容易錯過。 */
+  toast('已儲存　' + code);
+}
+
+function hideSaved(){
+  var box = $('svDone');
+  if(box) box.style.display = 'none';
+  $('save').parentNode.style.display = '';
+}
+
+/* ── 行事曆：只有 PDF 的小面板 ──────────────────────────
+   這條路徑是來拿檔案的，不是剛存完。沒有送審（卡片上就有那顆）、
+   沒有清空（沒有表單可清）、沒有回行事曆（人就在行事曆上）。 */
+function openPdfSheet(recCode, meta){
+  meta = meta || {};
+  var h4 = $('dnCode').parentNode;
+  if(h4.firstChild && h4.firstChild.nodeType === 3) h4.firstChild.nodeValue = '服務紀錄表　';
+  $('dnCode').textContent = recCode;
+
   var facts = [];
-  if (meta.client) facts.push(meta.client);
-  if (meta.cnt > 0) facts.push(meta.cnt + ' 位移工');
+  if(meta.client) facts.push(meta.client);
+  if(meta.cnt > 0) facts.push(meta.cnt + ' 位移工');
   var p = $('dnCnt').parentNode;
   p.className = 'fct';
   p.textContent = facts.join('　·　');
   p.style.display = facts.length ? '' : 'none';
 
-  /* 送出去之後就不該再有送審鈕——行事曆的卡片本來就是這個規則，
-     兩個地方要一致，不然同一筆紀錄在兩個畫面看起來會像兩種狀態。 */
-  var canSub = meta.canSubmit !== false;
-  $('dnSubmit').style.display = canSub ? '' : 'none';
-  $('dnSubmit').disabled = false; $('dnSubmit').textContent = '送給副理審閱';
-
-  $('dnOut').innerHTML = '';
-  $('dnPdf').disabled = false;
-  $('dnPdf').textContent = '輸出 PDF 給雇主';
-
-  /* 一個畫面只有一個填色按鈕。有送審鈕時主要動作是送審（那才是讓案子往前走的），
-     從行事曆單純要一份 PDF 進來時，PDF 就是主要動作。 */
-  $('dnSubmit').className = canSub ? 'p' : '';
-  $('dnPdf').className = canSub ? 'sec' : 'p';
-  $('dnCal').className = 'q';
+  $('dnSubmit').style.display = 'none';
+  $('dnCal').style.display = 'none';
+  $('dnPdf').style.display = 'none';
   $('dnClose').className = 'q';
+  $('dnClose').textContent = '關閉';
 
-  PDF_FORCE_ = false;
   var m = $('doneModal');
   m.style.display = '';
-  requestAnimationFrame(function(){ m.classList.add('on'); });   // 下一幀才加，過場才跑得到
+  requestAnimationFrame(function(){ m.classList.add('on'); });
+  makePdf(recCode, false, $('dnOut'), 'dnRe');
 }
+
 /* 收起來走同一條路：往下退回去，不是原地消失 */
 function closeDone(after){
   var m = $('doneModal');
@@ -2124,54 +2207,7 @@ function closeDone(after){
   m.querySelector('.smbox').addEventListener('transitionend', fin, { once:true });
   setTimeout(fin, 380);          // 動畫被關掉時 transitionend 不會來
 }
-$('dnClose').addEventListener('click', function(){ closeDone(resetForm); });
-/* 存完直接回行事曆：那一趟會從「待處理」移到「已完成」，
-   一天下來往下滑就是當天的成果。 */
-/* 跑完就送審，不要等回辦公室才想起來——紙本流程最常卡在這一步 */
-$('dnSubmit').addEventListener('click', function(){
-  var b = $('dnSubmit'); b.disabled = true;
-  google.script.run
-    .withSuccessHandler(function(){ b.textContent='已送審'; toast('已送給副理審閱'); revBust(); })
-    .withFailureHandler(function(e){ b.disabled=false; toast(e.message, true); })
-    .submitForReview(CODE, DONE_CODE_);
-});
-$('dnCal').addEventListener('click', function(){
-  closeDone(function(){
-    resetForm();
-    document.querySelector('.tabs button[data-t=cal]').click();
-    window.scrollTo(0,0);
-  });
-});
-$('dnPdf').addEventListener('click', function(){
-  var b = $('dnPdf'); b.disabled = true; b.textContent = '產生中…';
-  $('dnOut').innerHTML = '<p class="hint">正在把紀錄轉成 PDF，約 10 秒…</p>';
-  google.script.run
-    .withSuccessHandler(function(r){
-      b.textContent = '重新產生'; b.disabled = false;
-      var msg = '服務紀錄表 ' + r.name.replace(/\.pdf$/,'') + String.fromCharCode(10) + r.url;
-      $('dnOut').innerHTML =
-        '<p class="hint" style="margin-bottom:8px">檔名：<b>'+esc(r.name)+'</b></p>'+
-        '<div class="btns">'+
-          '<a class="lk p" href="'+esc(r.url)+'" target="_blank" rel="noopener">開啟 PDF</a>'+
-          '<a class="lk" href="https://line.me/R/msg/text/?'+encodeURIComponent(msg)+
-            '" target="_blank" rel="noopener">分享到 LINE</a>'+
-        '</div>'+
-        '<button type="button" class="cp" data-u="'+esc(r.url)+'">複製連結</button>';
-      $('dnOut').querySelector('.cp').addEventListener('click', function(){
-        var t = document.createElement('textarea');
-        t.value = this.dataset.u; document.body.appendChild(t); t.select();
-        try{ document.execCommand('copy'); toast('連結已複製'); }
-        catch(e){ toast('複製失敗，請長按連結複製', true); }
-        t.remove();
-      });
-    })
-    .withFailureHandler(function(e){
-      b.disabled = false; b.textContent = '再試一次';
-      $('dnOut').innerHTML = '<p class="hint" style="color:var(--danger)">'+esc(e.message)+'</p>';
-    })
-    .exportServiceSheetPdf(CODE, DONE_CODE_, PDF_FORCE_);
-  PDF_FORCE_ = true;   // 第一次用已產好的檔，之後按才是真的重新產生
-});
+$('dnClose').addEventListener('click', function(){ closeDone(); });
 
 $('pvBack').addEventListener('click', function(){ $('pvModal').style.display='none'; });
 $('pvSign').addEventListener('click', function(){
@@ -2183,6 +2219,7 @@ $('pvSign').addEventListener('click', function(){
 });
 
 function resetForm(){
+  hideSaved();                 // 存完的那一排收回去，換回原本的三顆
   /* 清空表單等於放棄這次修改。少了這一行，按「清除」之後填的新內容
      會被當成修改、覆寫掉原本那一筆。 */
   if(typeof EDIT_CODE !== 'undefined' && EDIT_CODE){

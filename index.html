@@ -25,9 +25,13 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--brand);
 #app{position:fixed;inset:0;padding-top:env(safe-area-inset-top);background:var(--brand)}
 #frame{width:100%;height:100%;border:0;display:block;background:var(--bg)}
 /* 安全區域那一條由外殼塗色，顏色由系統告訴我們（見下面的 ready 訊息）。
-   墊在 #app 底下，z-index 比它低，只有那一條會露出來。 */
-#pad{position:fixed;left:0;right:0;bottom:0;z-index:0;background:#fff;
-  height:calc(env(safe-area-inset-bottom,0px) + 1px)}
+
+   ⚠️ 2026-09-18 修正：原本寫 z-index:0「墊在 #app 底下，只有那一條會露出來」，
+   但 #app 是 position:fixed + inset:0，它蓋滿整個畫面、連最底下那一條也蓋住，
+   所以白色墊片永遠露不出來——同事看到的是 #app 的海軍藍。
+   改成蓋在 #app 上面。它只有安全區域那麼高，不會擋到畫面內容。 */
+#pad{position:fixed;left:0;right:0;bottom:0;z-index:2;background:#fff;
+  height:calc(env(safe-area-inset-bottom,0px) + 1px);pointer-events:none}
 #app{z-index:1}
 
 /* ── 安裝說明 ───────────────────────────────────────
