@@ -215,30 +215,50 @@ window.addEventListener('message', function(ev){
     fixStick();
   }
 });
+/* ⚠️ 2026-09-18：送訊息給外殼一定要用 window.top，不能用 window.parent。
+
+   Apps Script 不是把我們的 HTML 直接放進外殼的 iframe，而是自己再包一層：
+
+     外殼 (mousteven.github.io)
+      └ iframe → script.google.com/…/exec         ← Google 的包裝層
+           └ iframe → googleusercontent.com       ← 程式真正跑的地方
+
+   所以 window.parent 是「Google 的包裝層」，不是外殼。那一層收到我們的訊息
+   就丟掉，外殼從來沒收到過任何一則——下拉更新沒作用、「有新版本」按了沒反應、
+   安全區域的顏色沒傳過去、底部選單的高度沒對齊，全都是同一個原因。
+
+   postMessage 本身可以跨網域，所以直接送給 window.top 就到得了外殼。
+   （window.top.location 才會被擋，那是另一回事。） */
+function shellPost(msg){
+  try {
+    if(window.top && window.top !== window) window.top.postMessage(msg, '*');
+  } catch(e){}
+}
+
 /* 反過來告訴外殼我們的頂欄與底欄該是什麼顏色，
    安全區域那一條才不會露出不搭的底色。 */
 function tellShell(){
   try {
-    if(window.parent && window.parent !== window){
-      var cs = getComputedStyle(document.body);
-      window.parent.postMessage({
-        yuher: 'ready',
-        top: cs.getPropertyValue('--chrome-bg').trim() || '#1B3B6F',
-        bottom: cs.getPropertyValue('--card').trim() || '#ffffff'
-      }, '*');
-    }
+    var cs = getComputedStyle(document.body);
+    shellPost({
+      yuher: 'ready',
+      top: cs.getPropertyValue('--chrome-bg').trim() || '#1B3B6F',
+      bottom: cs.getPropertyValue('--card').trim() || '#ffffff'
+    });
   } catch(e){}
 }
 
 function appReload(){
-  try {
-    if(window.parent && window.parent !== window){
-      window.parent.postMessage({ yuher: 'reload' }, '*');
-      setTimeout(function(){ try{ top.location.reload(); }catch(e){} }, 700);
-      return;
-    }
-  } catch(e){}
-  try { top.location.reload(); } catch(e2){ location.reload(); }
+  shellPost({ yuher: 'reload' });
+  /* 外殼收到之後會整個換掉那個 iframe，我們的文件會被卸載，
+     下面這一行就執行不到。1.2 秒後還活著＝沒有外殼（直接開網址的情況），
+     那就自己重載。
+
+     注意不要用 top.location.reload()：top 是外殼、跨網域，一定會被擋，
+     以前那個「退路」其實從來沒有跑成功過。 */
+  setTimeout(function(){
+    try { location.reload(); } catch(e){}
+  }, 1200);
 }
 /* 日間／夜間／跟著手機。存在這台手機上。
    「自動」是跟系統走——白天在工廠亮、晚上回家暗，不用自己切。

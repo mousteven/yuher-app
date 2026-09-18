@@ -241,9 +241,15 @@ ol li b{color:var(--ink)}
 
      改成按下去的當下才讀現在的網址，沒有先後順序的問題；
      順便把舊的 &t= 切掉，連按幾次不會愈接愈長。 */
+  /* ⚠️ Apps Script 會在我們的 iframe 裡面再包一層（sandboxFrame），
+     所以 $('frame').contentWindow 是 Google 的包裝層，不是程式真正跑的地方。
+     往那裡送訊息送不到。但程式送訊息過來時，ev.source 就是它自己的視窗——
+     記下來，之後要回話就對著它講。 */
+  var APP_WIN = null;
   window.addEventListener('message', function(ev){
     var d = ev.data;
     if(!d || !d.yuher) return;
+    APP_WIN = ev.source || APP_WIN;
     if(d.yuher === 'reload'){
       var cur = $('frame').src || '';
       if(!cur) return;                       // 還沒載入就不要亂導
@@ -269,9 +275,9 @@ ol li b{color:var(--ink)}
     document.body.appendChild(probe);
     var bottom = probe.offsetHeight;
     probe.remove();
+    var w = APP_WIN || $('frame').contentWindow;   // 還沒打招呼之前只能先試包裝層
     try {
-      $('frame').contentWindow.postMessage(
-        { yuher: 'insets', bottom: bottom }, '*');
+      w.postMessage({ yuher: 'insets', bottom: bottom }, '*');
     } catch(e){}
   }
   $('frame').addEventListener('load', function(){ setTimeout(sendInsets, 400); });
