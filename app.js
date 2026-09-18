@@ -2168,6 +2168,19 @@ function hideSaved(){
   $('save').parentNode.style.display = '';
 }
 
+/* 那一行事實（客戶、幾位移工）住在 .smbox 底下的第一個 <p>。
+
+   ⚠️ 不要再用 $('dnCnt').parentNode 去拿它。原本的 HTML 是
+   `<p>共 <b id="dnCnt">0</b> 位移工…</p>`，而下面會設 p.textContent ——
+   那會把 <b id="dnCnt"> 本身一起清掉，所以只有第一次拿得到，
+   第二次 $('dnCnt') 就是 null，整個面板打不開。
+   2026-09-17 我自己寫出來的，使用者存第二筆才炸出來。
+   改成用結構位置去拿，跟那個 <b> 還在不在無關。 */
+function dnFactsEl(){
+  var m = $('doneModal');
+  return m ? m.querySelector('.smbox > p') : null;
+}
+
 /* ── 行事曆：只有 PDF 的小面板 ──────────────────────────
    這條路徑是來拿檔案的，不是剛存完。沒有送審（卡片上就有那顆）、
    沒有清空（沒有表單可清）、沒有回行事曆（人就在行事曆上）。 */
@@ -2180,10 +2193,12 @@ function openPdfSheet(recCode, meta){
   var facts = [];
   if(meta.client) facts.push(meta.client);
   if(meta.cnt > 0) facts.push(meta.cnt + ' 位移工');
-  var p = $('dnCnt').parentNode;
-  p.className = 'fct';
-  p.textContent = facts.join('　·　');
-  p.style.display = facts.length ? '' : 'none';
+  var p = dnFactsEl();
+  if(p){
+    p.className = 'fct';
+    p.textContent = facts.join('　·　');
+    p.style.display = facts.length ? '' : 'none';
+  }
 
   $('dnSubmit').style.display = 'none';
   $('dnCal').style.display = 'none';
