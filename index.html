@@ -51,11 +51,13 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--brand);
 #load .ic{width:72px;height:72px;border-radius:17px;display:block;
   box-shadow:0 14px 34px rgba(0,0,0,.34);animation:ldbrz 2.4s ease-in-out infinite}
 @keyframes ldbrz{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
-#load .bar{width:132px;height:3px;border-radius:99px;margin-top:28px;overflow:hidden;
+/* 會填滿的進度條，不是來回掃的。每一段都對應一個真的發生的事
+   （見下面的 LOAD_STEP），所以它不是裝出來的進度——
+   跑滿代表畫面真的準備好了，然後才切過去。 */
+#load .bar{width:168px;height:3px;border-radius:99px;margin-top:28px;overflow:hidden;
   background:rgba(255,255,255,.18)}
-#load .bar i{display:block;height:100%;width:38%;border-radius:99px;background:#fff;
-  animation:ldswp 1.25s cubic-bezier(.4,0,.2,1) infinite}
-@keyframes ldswp{0%{transform:translateX(-120%)}100%{transform:translateX(340%)}}
+#load .bar i{display:block;height:100%;width:0;border-radius:99px;background:#fff;
+  transition:width .45s cubic-bezier(.2,.7,.2,1)}
 #load .msg{margin:18px 0 0;font-size:14.5px;font-weight:700;letter-spacing:.03em}
 /* 第二行專門講「現在到哪了」。拖久了要說話，一直只寫「更新中」會讓人以為卡住 */
 #load .sub{margin:6px 0 0;font-size:12.5px;line-height:1.5;text-align:center;
@@ -63,7 +65,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--brand);
 @media (prefers-reduced-motion:reduce){
   #load{transition:none}
   #load .ic{animation:none}
-  #load .bar i{animation:none;width:100%;opacity:.55}
+  #load .bar i{transition:none}      /* 進度照走，只是不要滑動 */
 }
 
 /* ── 安裝說明 ───────────────────────────────────────
@@ -296,7 +298,8 @@ ol li b{color:var(--ink)}
        ready 是程式一開始跑就送的，那時候資料還沒抓、畫面還是空的，
        那時收掉遮罩，使用者會看到深藍消失之後又一片白（他回報過）。
        shown 是程式那邊確認「畫面上有東西了」才送的。 */
-    if(d.yuher === 'shown'){ hideLoad(); return; }
+    if(d.yuher === 'ready') loadStep(86);
+    if(d.yuher === 'shown'){ loadStep(100); return; }   // 跑滿之後才切
     if(d.yuher === 'reload'){
       var cur = $('frame').src || '';
       if(!cur) return;                       // 還沒載入就不要亂導
@@ -324,6 +327,40 @@ ol li b{color:var(--ink)}
     LOAD_T.forEach(clearTimeout);
     LOAD_T = [];
   }
+
+  /* ── 進度條 ──────────────────────────────────────────
+     四個里程碑都是真的發生的事，不是計時器假裝的：
+
+       0 →  30   一開始，還在等 Apps Script 回那一頁
+       →  62     iframe 載完了（那一頁到了，版面檔還在下載）
+       →  86     程式開始跑（ready）
+       → 100     畫面真的畫好了（shown）→ 跑滿，然後才切過去
+
+     每一段之間用「每 180 毫秒往上限逼近一點點」慢慢爬，
+     這樣它永遠在動、不會看起來卡住，但也永遠不會超過真實進度。
+     這是 YouTube、GitHub 那種進度條的做法——重點不是精準，
+     是「它一直在前進」這件事讓人願意等。 */
+  var LOAD_P = 0, LOAD_CAP = 30, LOAD_TICK = null;
+  function paintP(){
+    var el = document.querySelector('#load .bar i');
+    if(el) el.style.width = LOAD_P + '%';
+  }
+  function creep(){
+    if(LOAD_P < LOAD_CAP){ LOAD_P += (LOAD_CAP - LOAD_P) * 0.16; paintP(); }
+  }
+  function loadStep(cap){
+    if(cap <= LOAD_CAP && cap < 100) return;    // 只往前，不倒退
+    LOAD_CAP = cap;
+    if(cap >= 100){
+      clearInterval(LOAD_TICK); LOAD_TICK = null;
+      LOAD_P = 100; paintP();
+      /* 跑滿之後停一下再切。少了這 220 毫秒，進度條會在「看起來還沒滿」
+         的瞬間消失，讀起來像被打斷，不像完成。 */
+      setTimeout(hideLoad, 220);
+      return;
+    }
+    LOAD_P = Math.max(LOAD_P, cap * 0.55); paintP();
+  }
   function startLoadTimers(){
     clearLoadTimers();
     LOAD_T = [
@@ -341,10 +378,14 @@ ol li b{color:var(--ink)}
     $('loadSub').textContent = '';
     $('load').style.opacity = '';
     $('load').classList.add('on');
+    LOAD_P = 0; LOAD_CAP = 30; paintP();
+    clearInterval(LOAD_TICK);
+    LOAD_TICK = setInterval(creep, 180);
     startLoadTimers();
   }
   function hideLoad(){
     clearLoadTimers();
+    clearInterval(LOAD_TICK); LOAD_TICK = null;
     var el = $('load');
     if(!el || !el.classList.contains('on')) return;
     /* 淡出再拿掉，不要直接消失。底下的畫面已經畫好了，
@@ -354,11 +395,16 @@ ol li b{color:var(--ink)}
   }
 
   startLoadTimers();          // 遮罩一開始就蓋著，計時也要一開始就跑
+  LOAD_TICK = setInterval(creep, 180);
+  paintP();
 
   /* 保險一：程式出不了聲（版面檔掛了、或同事手上還是舊版不會送 shown）時，
      iframe 載完十二秒也收掉。設長一點是刻意的——正常情況下 shown 兩三秒就到，
      這條根本輪不到；設太短反而會在慢速網路下提早收掉，白畫面又冒出來。 */
-  $('frame').addEventListener('load', function(){ setTimeout(hideLoad, 12000); });
+  $('frame').addEventListener('load', function(){
+    loadStep(62);                       // 那一頁到了，版面檔還在下載
+    setTimeout(hideLoad, 12000);
+  });
   /* 保險二：不管發生什麼事，35 秒後一定拿掉。
      寧可讓他看到壞掉的畫面自己判斷，也不要把他鎖在一片深藍裡什麼都不能做。 */
   setTimeout(function(){ try{ hideLoad(); }catch(e){} }, 35000);

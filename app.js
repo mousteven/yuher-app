@@ -246,7 +246,15 @@ function shellPost(msg){
    所以另外送一則 shown：畫面上已經有東西可以看了才送。
    三個時間點：登入成功畫完行事曆、登入失敗顯示登入畫面、
    一開始就沒有登入碼直接顯示登入畫面。 */
-function appShown(){ shellPost({ yuher: 'shown' }); }
+function appShown(){
+  /* 等真的畫出來再講。原本是收完資料就立刻送，但那一刻瀏覽器還沒把新畫面
+     畫上去——外殼收掉藍色遮罩的時候，下面其實還是白的，所以他看到「白畫面
+     停留一下」。連等兩個影格：第一個是「安排這一次繪製」，第二個代表
+     「上一次繪製已經送出去了」。到這裡畫面才真的在螢幕上。 */
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){ shellPost({ yuher: 'shown' }); });
+  });
+}
 
 /* 反過來告訴外殼我們的頂欄與底欄該是什麼顏色，
    安全區域那一條才不會露出不搭的底色。 */
