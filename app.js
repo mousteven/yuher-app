@@ -764,6 +764,24 @@ function onScroll(){
 }
 window.addEventListener('scroll', onScroll, { passive: true });
 
+/* 這一份 app.js 是哪一版——從自己的 <script src> 網址讀 ?v= 出來。
+
+   用途一：同事說「我的畫面怪怪的」時，叫他下拉看一眼就知道手上是哪一版，
+           不用猜他到底更新了沒。
+   用途二：驗證下拉更新真的有通。正常開啟時是「2026-09-18 1445」這種部署戳記；
+           下拉更新之後外殼會在網址後面加時間戳，伺服器再把它接到版面檔的
+           ?v= 上，所以會變成「2026-09-18 1445-1758…」。
+           **後面多出那串數字，就代表外殼真的重載了、&t= 真的傳到伺服器了。**
+
+   document.currentScript 只在腳本本體執行時讀得到，所以這一段不能搬進函式裡。 */
+var ASSET_V = (function(){
+  try {
+    var el = document.currentScript;
+    var m = el && el.src ? /[?&]v=([^&]+)/.exec(el.src) : null;
+    return m ? decodeURIComponent(m[1]) : '';
+  } catch(e){ return ''; }
+})();
+
 /* ── 下拉更新 ───────────────────────────────────── */
 var PTR = { on:false, y0:0, d:0, armed:false, busy:false };
 var PTR_TRIG = 64;          // 拉過這個距離才算數
@@ -786,7 +804,8 @@ function ptrSet(d){
   p.style.opacity = Math.min(1, d / 40);
   p.style.transform = 'translate(-50%,' + (d - 52) + 'px)';
   p.className = PTR.armed ? 'go' : '';
-  p.querySelector('em').textContent = PTR.armed ? '放開更新' : '下拉更新';
+  p.querySelector('em').textContent = (PTR.armed ? '放開更新' : '下拉更新') +
+    (ASSET_V ? '　' + ASSET_V : '');
   if(pane) pane.style.transform = 'translateY(' + (d * 0.5) + 'px)';
 }
 
