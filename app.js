@@ -4333,7 +4333,10 @@ function pickNew(kind){
     .addCase(CODE, {
       kind: kind, client: d.client || '', workers: d.workers || '',
       lang: d.lang || '', big: d.big || '', sub: d.sub || '',
-      title: d.sub || '', recCode: d.rc || ''
+      title: d.sub || '', recCode: d.rc || '',
+      // 行程代碼一定要傳。行程要記住自己屬於哪一件，
+      // 之後從行事曆點進去填表，存檔時才掛得回來。
+      schedId: d.go || ''
     });
 }
 
