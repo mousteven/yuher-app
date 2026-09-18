@@ -4009,6 +4009,8 @@ var CK_CUR = null;
 
 function openCase(id){
   if(!$('caseModal')){ toast('要先更新 App 才有追蹤功能', true); return; }
+  // 欄位定義只抓一次，之後開任何案件都用同一份
+  loadSchema(function(){});
   $('ckBody').innerHTML = '<div class="mid" style="padding:30px">讀取中…</div>';
   $('ckAct').innerHTML = '';
   $('caseModal').style.display = '';
@@ -4055,6 +4057,8 @@ function drawCase(c){
     ['說明', c.note]
   ]) + '</div>';
 
+  h += stepsHtml(c) + detailHtml(c);
+
   if(CASE_FORM_[c.kind]){
     h += '<div class="cbox"><h4>服務紀錄　' + c.items.length + ' 筆</h4>' +
       (c.items.length ? ctlHtml(c.items)
@@ -4078,6 +4082,21 @@ function drawCase(c){
     el.addEventListener('click', function(){
       $('caseModal').style.display = 'none';
       openRecord(el.dataset.rv);
+    });
+  });
+
+  var ed = $('ckEdit');
+  if(ed) ed.addEventListener('click', function(){ openDetailForm(c); });
+  [].forEach.call($('ckBody').querySelectorAll('[data-step]'), function(b){
+    b.addEventListener('click', function(){
+      if(b.dataset.step === c.step) return;
+      google.script.run
+        .withSuccessHandler(function(){
+          toast('已改成「' + b.dataset.step + '」');
+          TK_LOADED = ''; openCase(c.id);
+        })
+        .withFailureHandler(function(e){ toast(e.message, true); })
+        .setCaseStep(CODE, c.id, b.dataset.step);
     });
   });
 
@@ -4170,6 +4189,14 @@ function drawCaseActions(c){
       (c.nextDate ? ('改' + what + '日期　' + esc(c.nextDate))
                   : ('排' + what + '日期　會進行事曆')) + '</button>';
   }
+  /* 體檢、返鄉、就醫都要傳訊息給移工。異常事件不傳——
+     那是內部處理的事，不該群發給當事人。 */
+  if(open && c.kind !== '異常事件'){
+    h += '<button type="button" class="sec full" id="ckMsg">' +
+      (c.kind === '體檢通知' ? '產生體檢通知訊息' :
+       c.kind === '返鄉休假' ? '產生返鄉提醒訊息' : '產生回診提醒訊息') +
+      '</button>';
+  }
   if(open && c.kind === '異常事件' && !c.link){
     h += '<button type="button" class="sec full" id="ckMed">' +
       '這件要就醫　→　開一筆就醫追蹤</button>';
@@ -4179,6 +4206,7 @@ function drawCaseActions(c){
 
   if($('ckNew')) $('ckNew').addEventListener('click', function(){ caseNewRecord(c); });
   if($('ckNext')) $('ckNext').addEventListener('click', function(){ caseSetNext(c); });
+  if($('ckMsg')) $('ckMsg').addEventListener('click', function(){ openMsg(c, ''); });
   if($('ckMed')) $('ckMed').addEventListener('click', function(){ caseSpawnMed(c); });
   if($('ckClose')) $('ckClose').addEventListener('click', function(){ caseClose(c); });
 }
@@ -4360,6 +4388,166 @@ function pickAttach(id){
 
 if($('pickCancel')) $('pickCancel').addEventListener('click', function(){
   $('pickModal').style.display = 'none';
+});
+
+
+/* ── 案件的詳細欄位、階段、給移工的訊息 ────────────────────
+   欄位定義在後端 CaseFields.gs，這裡照著畫。
+   ⛔ 不要在這裡再寫一份欄位清單——加欄位時只改一邊，送出去就會少東西。 */
+var CK_SCHEMA = null;
+
+function loadSchema(then){
+  if(CK_SCHEMA){ then && then(); return; }
+  google.script.run
+    .withSuccessHandler(function(r){ CK_SCHEMA = r; then && then(); })
+    .withFailureHandler(function(){ CK_SCHEMA = { fields:{}, steps:{} }; then && then(); })
+    .caseSchema(CODE);
+}
+
+/* 階段條。返鄉要追的是「人走了沒、回來了沒」，
+   體檢要追的是「通知了沒、約了沒、提醒了沒」——
+   那是一格一格往前走的東西，用狀態欄的三個值表達不了。 */
+function stepsHtml(c){
+  var list = (CK_SCHEMA && CK_SCHEMA.steps && CK_SCHEMA.steps[c.kind]) || [];
+  if(!list.length) return '';
+  var at = list.indexOf(c.step);
+  return '<div class="cbox"><h4>進度</h4><div class="steps">' +
+    list.map(function(s, i){
+      var cls = (at < 0) ? '' : (i < at ? 'done' : (i === at ? 'now' : ''));
+      return '<button type="button" class="stp ' + cls + '" data-step="' + esc(s) + '">' +
+        esc(s) + '</button>';
+    }).join('') + '</div>' +
+    '<p class="hint" style="margin:8px 0 0">點一下就換到那一格。按錯了再點回去就好。</p></div>';
+}
+
+/* 詳細欄位。沒填的不要顯示空白列——一整頁「—」看起來像壞掉。 */
+function detailHtml(c){
+  var defs = (CK_SCHEMA && CK_SCHEMA.fields && CK_SCHEMA.fields[c.kind]) || [];
+  if(!defs.length) return '';
+  var d = c.detail || {};
+  var rows = defs.filter(function(f){
+    return f.t === 'check' ? d[f.k] : (d[f.k] !== undefined && d[f.k] !== '');
+  });
+  var body = rows.length
+    ? '<dl class="ckv">' + rows.map(function(f){
+        return '<dt>' + esc(f.l) + '</dt><dd>' +
+          (f.t === 'check' ? '✓' : esc(d[f.k])) + '</dd>';
+      }).join('') + '</dl>'
+    : '<p class="hint" style="margin:0">還沒填。按下面那顆把資料補上，' +
+      (c.kind === '返鄉休假' ? '登機證' : c.kind === '體檢通知' ? '通知單' : '這一區') +
+      '才有東西。</p>';
+  return '<div class="cbox"><h4>' + esc(c.kind) + '的細節</h4>' + body +
+    '<button type="button" class="sec full" id="ckEdit" style="margin-top:10px">' +
+    (rows.length ? '修改細節' : '＋ 填寫細節') + '</button></div>';
+}
+
+/* 編輯表單。型別由後端給，這裡只負責把它畫成輸入框。 */
+function openDetailForm(c){
+  var defs = (CK_SCHEMA && CK_SCHEMA.fields && CK_SCHEMA.fields[c.kind]) || [];
+  if(!defs.length){ toast('這個類型沒有可以填的細節', true); return; }
+  var d = c.detail || {};
+  $('dfTitle').textContent = c.kind + '的細節';
+  $('dfBody').innerHTML = defs.map(function(f){
+    var v = d[f.k] === undefined ? '' : d[f.k];
+    var hint = f.hint ? '<p class="hint" style="margin:3px 0 0">' + esc(f.hint) + '</p>' : '';
+    if(f.t === 'check'){
+      return '<div class="chips" style="margin-bottom:10px"><label>' +
+        '<input type="checkbox" data-k="' + esc(f.k) + '"' + (v ? ' checked' : '') + '>' +
+        esc(f.l) + '</label></div>' + hint;
+    }
+    if(f.t === 'select'){
+      return '<div class="f"><label>' + esc(f.l) + '</label><select data-k="' + esc(f.k) + '">' +
+        '<option value="">請選擇…</option>' +
+        (f.opt || []).map(function(o){
+          return '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>';
+        }).join('') + '</select>' + hint + '</div>';
+    }
+    if(f.t === 'area'){
+      return '<div class="f"><label>' + esc(f.l) + '</label>' +
+        '<textarea data-k="' + esc(f.k) + '" rows="3">' + esc(v) + '</textarea>' + hint + '</div>';
+    }
+    var type = f.t === 'date' ? 'date' : f.t === 'time' ? 'time' : 'text';
+    return '<div class="f"><label>' + esc(f.l) + '</label>' +
+      '<input type="' + type + '" data-k="' + esc(f.k) + '" value="' + esc(v) + '">' +
+      hint + '</div>';
+  }).join('');
+  $('detailModal').style.display = '';
+  $('dfBody').scrollTop = 0;
+
+  $('dfSave').onclick = function(){
+    var patch = {};
+    [].forEach.call($('dfBody').querySelectorAll('[data-k]'), function(el){
+      patch[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value;
+    });
+    $('dfSave').disabled = true;
+    google.script.run
+      .withSuccessHandler(function(){
+        $('dfSave').disabled = false;
+        $('detailModal').style.display = 'none';
+        toast('存好了');
+        TK_LOADED = ''; openCase(c.id);
+      })
+      .withFailureHandler(function(e){ $('dfSave').disabled = false; toast(e.message, true); })
+      .setCaseDetail(CODE, c.id, patch);
+  };
+}
+if($('dfCancel')) $('dfCancel').addEventListener('click', function(){
+  $('detailModal').style.display = 'none';
+});
+
+/* 給移工的訊息。翻譯每次都要重打一遍「明天八點半在門口等車，帶居留證健保卡」，
+   還要自己翻。這裡把案件上已經有的資料塞進範本，一次產出三種語言。 */
+function openMsg(c, which){
+  $('msgBody').innerHTML = '<div class="mid" style="padding:22px">產生中…</div>';
+  $('msgModal').style.display = '';
+  google.script.run
+    .withSuccessHandler(function(r){ drawMsg(r); })
+    .withFailureHandler(function(e){
+      $('msgBody').innerHTML = '<div class="mid" style="padding:22px">' + esc(e.message) + '</div>';
+    })
+    .caseMessage(CODE, c.id, which || '');
+}
+
+function drawMsg(r){
+  /* 第三種語言照移工的語別挑。挑不到就不要硬塞一個他看不懂的，
+     直接給英文——菲籍看他加祿語，越南印尼籍目前只有英文。 */
+  var third = /菲/.test(r.lang) ? { k: 'tl', t: 'Tagalog' } : null;
+  var tabs = [{ k: 'zh', t: '中文' }, { k: 'en', t: 'English' }];
+  if(third) tabs.push(third);
+  $('msgBody').innerHTML =
+    '<div class="segs" id="msgTabs">' + tabs.map(function(t, i){
+      return '<button type="button" data-m="' + t.k + '"' + (i === 0 ? ' class="on"' : '') +
+        '>' + esc(t.t) + '</button>';
+    }).join('') + '</div>' +
+    '<textarea id="msgText" rows="12" style="width:100%">' + esc(r.zh) + '</textarea>' +
+    '<p class="hint" style="margin:8px 0 0">可以直接改。按複製之後貼到 LINE 給 ' +
+    esc(r.worker || '移工') + '。</p>';
+  [].forEach.call($('msgTabs').children, function(b){
+    b.addEventListener('click', function(){
+      [].forEach.call($('msgTabs').children, function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      $('msgText').value = r[b.dataset.m] || '';
+    });
+  });
+}
+
+if($('msgCopy')) $('msgCopy').addEventListener('click', function(){
+  var el = $('msgText');
+  if(!el) return;
+  el.select();
+  /* iOS 的 Safari 對 clipboard API 很挑，execCommand 這條老路反而穩。
+     兩條都試，哪條成了就算成了。 */
+  var done = false;
+  try { done = document.execCommand('copy'); } catch(e){}
+  if(!done && navigator.clipboard){
+    navigator.clipboard.writeText(el.value).then(function(){ toast('複製好了'); },
+      function(){ toast('複製不了，請長按選取', true); });
+    return;
+  }
+  toast(done ? '複製好了，去 LINE 貼上' : '複製不了，請長按選取', !done);
+});
+if($('msgClose')) $('msgClose').addEventListener('click', function(){
+  $('msgModal').style.display = 'none';
 });
 
 /* 切到某一個分頁。按鈕本來就綁好了，直接借用，不要再寫一次切換邏輯。 */

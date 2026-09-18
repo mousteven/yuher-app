@@ -1512,3 +1512,19 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .evtk{display:inline-flex;align-items:center;gap:3px;font-size:0.625rem;
   font-weight:800;color:var(--brand);background:var(--brand-soft);
   border-radius:99px;padding:1px 7px}
+
+/* 階段條。一格一格往前走的東西，用狀態欄的三個值表達不了。
+   點一下就換，按錯再點回去——擋住只會逼人去試算表手改，那更糟。 */
+.steps{display:flex;gap:5px;flex-wrap:wrap}
+.stp{flex:1;min-width:4.6em;padding:8px 6px;border-radius:9px;border:1px solid var(--line);
+  background:var(--card);font-family:inherit;font-size:0.75rem;color:var(--ink3);
+  cursor:pointer;white-space:nowrap}
+.stp.done{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
+.stp.now{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:800}
+.stp:active{transform:scale(.97)}
+@media (prefers-reduced-motion:reduce){ .stp:active{transform:none} }
+
+/* 訊息視窗裡那塊可以改的文字 */
+#msgText{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px;
+  font-family:inherit;font-size:0.8125rem;line-height:1.7;background:var(--bg);
+  color:var(--ink);margin-top:10px;resize:vertical}
