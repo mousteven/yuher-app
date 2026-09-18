@@ -22,18 +22,15 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--brand);
     "Microsoft JhengHei",sans-serif;-webkit-text-size-adjust:100%}
 
 /* 狀態列那條由外殼撐出來，底色跟系統的頂欄同一個青色，接起來才不會有一條白邊 */
-#app{position:fixed;inset:0;padding-top:env(safe-area-inset-top);background:var(--brand)}
-#frame{width:100%;height:100%;border:0;display:block;background:var(--bg)}
-/* 安全區域那一條由外殼塗色，顏色由系統告訴我們（見下面的 ready 訊息）。
-
-   ⚠️ 2026-09-18 修正：原本寫 z-index:0「墊在 #app 底下，只有那一條會露出來」，
-   但 #app 是 position:fixed + inset:0，它蓋滿整個畫面、連最底下那一條也蓋住，
-   所以白色墊片永遠露不出來——同事看到的是 #app 的海軍藍。
-   改成蓋在 #app 上面。它只有安全區域那麼高，不會擋到畫面內容。 */
-#pad{position:fixed;left:0;right:0;bottom:0;z-index:2;background:#fff;
-  height:calc(env(safe-area-inset-bottom,0px) + 1px);pointer-events:none}
-#app{z-index:1}
-
+#app{position:fixed;inset:0;background:var(--brand)}
+/* 2026-09-18：底下那條深藍色的空白是這裡造成的。
+   原本是 #app 加 padding-top、iframe 用 height:100%——高度百分比要看
+   容器的內容框怎麼算，實機上算出來比畫面短，所以 iframe 的底沒有碰到
+   螢幕底部，露出 #app 的深藍（實測 61px）。
+   改成用 top/bottom 兩邊撐開：不算百分比，直接釘在上下兩端，
+   不管安全區域多高都一定貼到底。 */
+#frame{position:absolute;top:env(safe-area-inset-top,0px);left:0;right:0;bottom:0;
+  width:100%;border:0;display:block;background:var(--bg)}
 /* ── 更新中的畫面 ─────────────────────────────────────
    換掉 iframe 的那三四秒裡面是一片白——那是瀏覽器在載新頁，不是當掉，
    但看起來一模一樣。這一層蓋在上面，用 App 自己的深藍當底，
@@ -136,7 +133,6 @@ ol li b{color:var(--ink)}
 </head>
 <body>
 
-<div id="pad"></div>
 
 <!-- 一開始就蓋著：第一次開啟要等 Apps Script 冷啟動＋下載版面檔，
      在 4G 上好幾秒，中間是一片空的灰色（那是空 iframe 的底色）。
@@ -306,10 +302,9 @@ ol li b{color:var(--ink)}
       showLoad();
       $('frame').src = cur.split('&t=')[0] + '&t=' + Date.now();
     } else if(d.yuher === 'ready'){
-      // 系統告訴我們它的頂欄與底欄該是什麼顏色，外殼照著塗，
-      // 這樣安全區域那一條才不會露出跟畫面不搭的底色
+      /* 頂端安全區域那一條由外殼塗色，程式告訴我們它的頂欄是什麼顏色。
+         底部不用塗了：iframe 現在自己貼到螢幕底部，底欄是程式自己畫的。 */
       if(d.top) $('app').style.background = d.top;
-      if(d.bottom) $('pad').style.background = d.bottom;
       sendInsets();
     }
   });
