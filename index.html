@@ -17,7 +17,17 @@
   --bg:#F4F6FA; --card:#fff; --line:#DDE3EC;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;overflow:hidden;background:var(--brand);
+/* 底色是白的，不是深藍——這一條是修「底部那塊深藍」用的，別改回去。
+
+   2026-09-18 實測：iOS 給這個 PWA 的畫布只有 797px 高，螢幕是 858px。
+   差的 61px 在網頁範圍之外，position:fixed 碰不到（試過 iframe 用
+   top/bottom 撐開、改 flex，量出來都還是 61px，一毫米沒動）。
+   那塊由 iOS 自己塗，用的就是這裡的底色。塗成白的，它就跟底部選單
+   連成一片，看起來像選單貼到螢幕底部。
+
+   上面狀態列那一條仍然是深藍：#app 和 #load 都是 fixed、自己帶深藍底，
+   蓋在畫布上面，碰得到。 */
+html,body{margin:0;height:100%;overflow:hidden;background:#fff;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC",
     "Microsoft JhengHei",sans-serif;-webkit-text-size-adjust:100%}
 
