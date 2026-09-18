@@ -1340,3 +1340,153 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   .lg-dots i,.lg-pad button{transition:none}
   .lg-dots.bad{animation:none}
 }
+
+/* ── 追蹤：四個要追到結束的事 ──────────────────────────
+   2026-09-18。色票、圓角、間距全部沿用上面既有的 token，
+   這一段沒有新增任何顏色——新功能不該長得像另一個 App。 */
+
+/* 右滑出來的「追蹤」壓在卡片左邊，跟右邊紅色的取消是一對。
+   .swwrap 的底色要看滑的方向換，不然滑右邊會露出紅色。 */
+.swwrap{background:var(--brand)}
+.swwrap.toleft{background:var(--danger)}
+.swtrack{position:absolute;left:0;top:0;bottom:0;width:96px;border:0;
+  background:var(--brand);color:#fff;font-family:inherit;font-weight:800;
+  font-size:0.9375rem;letter-spacing:.04em;cursor:pointer}
+.swtrack:active{filter:brightness(.92)}
+
+/* 頁籤上的計數。跟送審那顆紅點同一個 .badge，只是這裡貼在文字後面 */
+#tkKinds button{position:relative}
+#tkKinds .badge{position:static;margin-left:5px;vertical-align:1px}
+#tkKinds button.on .badge{background:rgba(255,255,255,.3)}
+
+/* 先講一句人話，再列清單 */
+.tklede{background:var(--card);border:1px solid var(--line);border-radius:13px;
+  padding:12px 13px;margin-bottom:10px}
+.tklede h3{margin:0 0 4px;font-size:0.9375rem;line-height:1.5;letter-spacing:-.01em}
+.tklede p{margin:0;font-size:0.75rem;color:var(--ink3);line-height:1.6}
+
+/* 案件卡沿用行程卡 .ev，多一條底下的統計 */
+.crecs{display:block;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);
+  font-size:0.6875rem;color:var(--ink3)}
+.crecs b{color:var(--ink2);font-variant-numeric:tabular-nums}
+.crecs em{font-style:normal;color:var(--danger);font-weight:700}
+
+/* 案件詳情。沿用 revModal 那個整頁浮層，裡面的區塊用同一種盒子 */
+.cbox{background:var(--card);border:1px solid var(--line);border-radius:13px;
+  padding:13px;margin-bottom:11px}
+.cbox h4{margin:0 0 9px;font-size:0.6875rem;font-weight:800;letter-spacing:.14em;
+  color:var(--ink3)}
+.ckv{display:grid;grid-template-columns:5.6em 1fr;gap:6px 10px;margin:0;
+  font-size:0.8125rem;line-height:1.55}
+.ckv dt{color:var(--ink3);font-size:0.75rem}
+.ckv dd{margin:0;color:var(--ink);font-weight:600}
+
+/* 連到另一件（異常同時要就醫的那條線） */
+.clink{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:12px;
+  border:1px solid var(--info-line);background:var(--info-bg);margin-bottom:11px;
+  cursor:pointer}
+.clink .k{font-size:0.625rem;letter-spacing:.12em;color:var(--info-ink);font-weight:800}
+.clink b{display:block;font-size:0.8125rem;color:var(--ink);margin-top:2px}
+.clink .go{margin-left:auto;color:var(--info-ink);font-weight:800}
+
+/* 案件的時間軸。每一筆都掛著自己的審核狀態，
+   翻譯在這裡就該看到「有一筆還沒送審」，不用切到送審頁對。 */
+.ctl{position:relative;padding-left:20px}
+.ctl::before{content:"";position:absolute;left:5px;top:5px;bottom:14px;width:1px;
+  background:var(--line)}
+.ctl .it{position:relative;padding-bottom:15px}
+.ctl .it:last-child{padding-bottom:0}
+.ctl .it::before{content:"";position:absolute;left:-19px;top:5px;width:11px;height:11px;
+  border-radius:50%;background:var(--card);border:2px solid var(--warn-bar)}
+.ctl .it.done::before{background:var(--ok-bar);border-color:var(--ok-bar)}
+.ctl .d{font-size:0.6875rem;color:var(--ink3);font-variant-numeric:tabular-nums}
+.ctl .h{font-size:0.8125rem;font-weight:700;margin:1px 0 2px}
+.ctl .h .qq{font-weight:400;font-size:0.6875rem;color:var(--ink3);margin-left:6px}
+.ctl .x{font-size:0.75rem;color:var(--ink2);line-height:1.55}
+.ctl .x b{color:var(--ink)}
+.ctl .lk{display:inline-block;margin-top:5px;font-size:0.6875rem;color:var(--brand);
+  font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums}
+
+/* ── 登機證：返鄉休假 ───────────────────────────────
+   機票長什麼樣大家都認得，不用再教一次怎麼讀。
+   中間那條剪票線兩側的圓孔是紙票的記號，有它就一眼知道在講飛機。 */
+.bp{background:var(--brand);color:#fff;border-radius:13px;overflow:hidden;
+  margin-bottom:11px}
+.bp .hd{display:flex;align-items:center;gap:8px;padding:11px 14px 0;
+  font-size:0.6875rem;letter-spacing:.14em;opacity:.78}
+.bp .hd b{margin-left:auto;letter-spacing:.04em;opacity:1;font-size:0.75rem}
+.bp .leg{display:flex;align-items:center;gap:10px;padding:8px 14px 14px}
+.bp .ap{text-align:center}
+.bp .ap b{display:block;font-size:1.5rem;font-weight:800;letter-spacing:.04em;
+  line-height:1.1;font-variant-numeric:tabular-nums}
+.bp .ap span{display:block;font-size:0.6875rem;opacity:.7;margin-top:1px}
+.bp .arw{flex:1;position:relative;height:16px}
+.bp .arw::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;
+  background:rgba(255,255,255,.34)}
+.bp .arw::after{content:"\2708";position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-52%);font-size:0.8125rem;background:var(--brand);
+  padding:0 5px}
+.bp .dt{padding:0 14px 12px;display:flex;gap:16px;font-size:0.75rem}
+.bp .dt div span{display:block;opacity:.64;font-size:0.625rem;letter-spacing:.1em;
+  margin-bottom:1px}
+.bp .dt div b{font-variant-numeric:tabular-nums;font-size:0.8125rem;font-weight:700}
+.bp .cut{position:relative;height:1px;margin:0 14px;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.4) 0 5px,transparent 5px 10px)}
+.bp .cut::before,.bp .cut::after{content:"";position:absolute;top:-8px;width:16px;
+  height:16px;border-radius:50%;background:var(--bg)}
+.bp .cut::before{left:-22px} .bp .cut::after{right:-22px}
+.bp .rt{padding:11px 14px 13px;font-size:0.75rem;opacity:.92;display:flex;
+  align-items:center;gap:8px}
+.bp .rt b{font-variant-numeric:tabular-nums}
+.bp .rt .tag{margin-left:auto;font-size:0.625rem;padding:2px 8px;border-radius:99px;
+  background:rgba(255,255,255,.18);font-weight:700}
+/* 逾期未回整張換色。這種事不該只是一行小字。 */
+.bp.late{background:var(--bad-ink)}
+.bp.late .arw::after{background:var(--bad-ink)}
+
+/* ── 掛號單：就醫追蹤與體檢通知 ────────────────────────
+   看診號是翻譯在醫院櫃檯要報的東西，所以它要最大。
+   還沒預約的時候整張變灰，一眼看得出「還沒約」。 */
+.slip{background:var(--card);border:1px solid var(--line);border-radius:13px;
+  overflow:hidden;margin-bottom:11px}
+.slip .hd{background:var(--line2);padding:10px 13px;border-bottom:1px dashed var(--line)}
+.slip .hd b{display:block;font-size:0.9375rem;letter-spacing:-.01em}
+.slip .hd span{display:block;font-size:0.75rem;color:var(--ink2);margin-top:2px}
+.slip .no{display:flex;align-items:center;gap:14px;padding:13px}
+.slip .no .big{font-size:2.25rem;font-weight:800;line-height:1;color:var(--brand);
+  font-variant-numeric:tabular-nums;min-width:2.2em;text-align:center}
+.slip .no .big em{display:block;font-style:normal;font-size:0.625rem;font-weight:700;
+  letter-spacing:.14em;color:var(--ink3);margin-top:5px}
+.slip .no .wh{flex:1;min-width:0;font-size:0.8125rem;line-height:1.7}
+.slip .no .wh b{font-variant-numeric:tabular-nums}
+.slip .no .wh span{color:var(--ink3);font-size:0.75rem}
+.slip .ft{padding:9px 13px;border-top:1px dashed var(--line);font-size:0.6875rem;
+  color:var(--ink3)}
+.slip .ft b{color:var(--ink2)}
+.slip.none .no .big{color:var(--ink3);font-size:1rem;font-weight:700}
+
+/* 右滑之後那個選單裡的選項 */
+.pk{display:block;width:100%;text-align:left;padding:12px;border:1px solid var(--line);
+  border-radius:12px;background:var(--card);font-family:inherit;cursor:pointer;
+  margin-bottom:8px}
+.pk:active{border-color:var(--brand);background:var(--brand-soft)}
+.pk b{display:block;font-size:0.875rem;color:var(--ink);margin-bottom:2px}
+.pk em{display:block;font-style:normal;font-size:0.75rem;color:var(--ink3);
+  line-height:1.5}
+.pk.ex{border-color:var(--info-line);background:var(--info-bg)}
+
+/* 前後文那一條的第三行：前幾次做了什麼。副理要判斷費用合不合理，
+   靠的就是這一行——四趟加起來的數字，單看一筆看不到。 */
+.clink .pv{display:block;font-size:0.6875rem;color:var(--ink3);margin-top:3px;
+  line-height:1.5}
+
+/* 追蹤的狀態膠囊。⚠ 不要改用 .st——那個類別只活在 .rv 底下，
+   而且修飾詞是 wait/done/back，跟這裡的五種對不起來。 */
+.cst{display:inline-flex;align-items:center;font-size:0.7188rem;border-radius:99px;
+  padding:2px 9px;white-space:nowrap;border:1px solid var(--line);
+  color:var(--ink3);font-weight:700}
+.cst.ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
+.cst.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn-ink)}
+.cst.info{background:var(--info-bg);border-color:var(--info-line);color:var(--info-ink)}
+.cst.bad{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad-ink)}
+.cst.q{opacity:.6}
