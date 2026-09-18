@@ -1490,3 +1490,9 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .cst.info{background:var(--info-bg);border-color:var(--info-line);color:var(--info-ink)}
 .cst.bad{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad-ink)}
 .cst.q{opacity:.6}
+
+/* 評鑑：已經有追蹤案件排了行程的那一格。
+   不是綠的（還沒去），也不是紅的（不算缺件）——是「已經安排了」。 */
+.evgrid span.plan{background:var(--brand-soft);color:var(--brand);
+  border:1px dashed var(--info-line);font-weight:800}
+.evw .sub.planned em{color:var(--brand);font-weight:700}

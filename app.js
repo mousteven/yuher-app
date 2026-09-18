@@ -3753,23 +3753,27 @@ function drawEval(){
     var st = evState(x);
     var startTxt = (x.kind==='入境'? '入境 ':'續聘 ') + x.start + ' 月';
     var past = x.gaps.filter(function(g){ return g < r.nowM; });
-    var gap = past.length ? ('缺 '+past.map(function(g){ return g+'月'; }).join('、'))
+    /* 已經有案件排了行程落在缺的那一格 → 講「已有安排」，不要叫人再排一趟。
+       這是追蹤案件接進評鑑最實際的那一條：省掉的是真的車資與人力。 */
+    var gap = x.plan ? ('已有安排　'+x.plan.date+'　'+x.plan.kind)
+            : past.length ? ('缺 '+past.map(function(g){ return g+'月'; }).join('、'))
             : x.gaps.length ? ('最晚 '+x.gaps[0]+' 月要去')
             : '目前正常';
-    return '<div class="evw'+(st==='miss'?' bad':'')+'">'+
+    return '<div class="evw'+(st==='miss'&&!x.plan?' bad':'')+'">'+
       '<div class="hd"><b>'+esc(x.name)+'</b>'+
         // 家庭類的移工只有原文名，中文名欄位放的就是原文名，不要印兩次
         ((x.orig && x.orig !== x.name)?'<span class="or">'+esc(x.orig)+'</span>':'')+
         '<span class="kd'+(x.kind==='續聘'?' re':'')+'">'+x.kind+' '+x.start+'月</span>'+
         '<span class="st">'+esc(x.crew||'')+'</span></div>'+
-      '<div class="sub">'+esc(x.client)+'　<em>'+esc(x.lang||'')+
+      '<div class="sub'+(x.plan?' planned':'')+'">'+esc(x.client)+'　<em>'+esc(x.lang||'')+
         (x.status!=='在職'?('　·　'+esc(x.status)+'，義務到 '+x.endM+' 月'):'')+
         '　·　'+esc(gap)+'</em></div>'+
       mon+
       '<div class="evgrid">'+
         x.cell.map(function(c,i){
           var cls = c + ((i+1)===x.start ? ' start' : '');
-          var txt = c==='ok' ? '✓' : c==='miss' ? '✕' : c==='due' ? '・' : '';
+          var txt = c==='ok' ? '✓' : c==='miss' ? '✕'
+                  : c==='plan' ? '◷' : c==='due' ? '・' : '';
           return '<span class="'+cls+'">'+txt+'</span>';
         }).join('')+
       '</div>'+
