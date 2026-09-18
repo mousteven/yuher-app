@@ -136,11 +136,13 @@ ol li b{color:var(--ink)}
 
 <div id="pad"></div>
 
-<!-- 換 iframe 的那幾秒蓋在上面，免得同事以為當掉了 -->
-<div id="load" aria-live="polite">
+<!-- 一開始就蓋著：第一次開啟要等 Apps Script 冷啟動＋下載版面檔，
+     在 4G 上好幾秒，中間是一片空的灰色（那是空 iframe 的底色）。
+     下拉更新換 iframe 時也是同一個畫面。收掉的時機見下面的 hideLoad。 -->
+<div id="load" class="on" aria-live="polite">
   <img class="ic" src="icon-192.png" alt="">
   <div class="bar"><i></i></div>
-  <p class="msg">更新中</p>
+  <p class="msg" id="loadMsg">載入中</p>
   <p class="sub" id="loadSub"></p>
 </div>
 <div id="app">
@@ -308,19 +310,23 @@ ol li b{color:var(--ink)}
     }
   });
 
-  /* 拖久了要說話。一直只寫「更新中」，人會開始懷疑是不是卡住了——
+  /* ── 載入／更新遮罩 ────────────────────────────────────
+     第一次開啟要等 Apps Script 冷啟動＋下載版面檔，在 4G 上好幾秒；
+     下拉更新換 iframe 時一樣。中間畫面是一片空的灰色（空 iframe 的底色），
+     看起來跟當掉一模一樣。所以遮罩一開始就蓋著（HTML 裡直接帶 class="on"），
+     等程式出聲才收。
+
+     拖久了要說話。一直只寫「載入中」，人會開始懷疑是不是卡住——
      講出「現在到哪了」比多一個轉圈圈有用得多。 */
   var LOAD_T = [];
   function clearLoadTimers(){
     LOAD_T.forEach(clearTimeout);
     LOAD_T = [];
   }
-  function showLoad(){
+  function startLoadTimers(){
     clearLoadTimers();
-    $('loadSub').textContent = '';
-    $('load').classList.add('on');
     LOAD_T = [
-      setTimeout(function(){ $('loadSub').textContent = '正在下載新版面…'; }, 3500),
+      setTimeout(function(){ $('loadSub').textContent = '正在下載版面…'; }, 3500),
       setTimeout(function(){ $('loadSub').textContent = '網路有點慢，再等一下'; }, 10000),
       /* 20 秒還沒回來就不要再假裝了，給一句他真的做得到的事 */
       setTimeout(function(){
@@ -328,13 +334,31 @@ ol li b{color:var(--ink)}
       }, 20000)
     ];
   }
+  /* 按更新才叫「更新中」，第一次開啟是「載入中」——講的是不同件事 */
+  function showLoad(){
+    $('loadMsg').textContent = '更新中';
+    $('loadSub').textContent = '';
+    $('load').style.opacity = '';
+    $('load').classList.add('on');
+    startLoadTimers();
+  }
   function hideLoad(){
     clearLoadTimers();
-    $('load').classList.remove('on');
+    var el = $('load');
+    if(!el || !el.classList.contains('on')) return;
+    /* 淡出再拿掉，不要直接消失。底下的畫面已經畫好了，
+       讓它從深藍後面浮出來，比硬切自然。 */
+    el.style.opacity = '0';
+    setTimeout(function(){ el.classList.remove('on'); el.style.opacity = ''; }, 240);
   }
-  /* 保險：萬一程式那邊出不了聲（例如版面檔掛了），iframe 載完兩秒後也收掉，
-     不要讓人卡在一片深藍裡什麼都不能做。 */
+
+  startLoadTimers();          // 遮罩一開始就蓋著，計時也要一開始就跑
+
+  /* 保險一：程式出不了聲（例如版面檔掛了）時，iframe 載完兩秒也收掉 */
   $('frame').addEventListener('load', function(){ setTimeout(hideLoad, 2000); });
+  /* 保險二：不管發生什麼事，35 秒後一定拿掉。
+     寧可讓他看到壞掉的畫面自己判斷，也不要把他鎖在一片深藍裡什麼都不能做。 */
+  setTimeout(function(){ try{ hideLoad(); }catch(e){} }, 35000);
 
   /* iPhone 底部那條 home 指示線的高度，iframe 裡面讀不到
      （env(safe-area-inset-*) 只有最外層的頁面拿得到）。
