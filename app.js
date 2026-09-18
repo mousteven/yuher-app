@@ -4273,44 +4273,39 @@ if($('ckClose2')) $('ckClose2').addEventListener('click', function(){
 /* ── 行程卡右滑之後：要開哪一種 ───────────────────────── */
 var PICK_D_ = null;
 
+/* ⚠ 四個選項寫死在 Service.html 裡，不是這裡產生的。
+   2026-09-18 實機上出現過「選單開了但裡面完全是空的」，
+   drawPick() 單獨在 Node 跑得出東西、CSS 也是新的，追不到確切原因。
+   會不會渲染出來是整個功能的入口，不值得賭在一段非同步流程上。
+   動態的只剩「掛到現有案件」，放在另一個 div，失敗就是少那一段，
+   四個選項照樣在。 */
 function openPick(d){
   if(!$('pickModal')){ toast('要先更新 App 才有追蹤功能', true); return; }
   PICK_D_ = d;
-  $('pickList').innerHTML = '<div class="mid" style="padding:14px">查有沒有現成的案件…</div>';
+  $('pickEx').innerHTML = '';
   $('pickModal').style.display = '';
   google.script.run
-    .withSuccessHandler(function(r){ drawPick(r.rows || []); })
-    .withFailureHandler(function(){ drawPick([]); })
+    .withSuccessHandler(function(r){ drawPickEx((r && r.rows) || []); })
+    .withFailureHandler(function(){})
     .openCasesForWorker(CODE, (d.workers || '').split('、')[0] || '', d.client || '');
 }
 
-function drawPick(existing){
-  var h = [
-    ['異常事件', '逃逸、衝突、違規、公安。要通報的也走這裡'],
-    ['就醫追蹤', '看診、回診、住院、職災。會排下次回診'],
-    ['返鄉休假', '離境到回台，追到人回來為止'],
-    ['體檢通知', '期限、預約、前一天自動再提醒一次']
-  ].map(function(k){
-    return '<button type="button" class="pk" data-k="' + esc(k[0]) + '">' +
-      '<b>' + esc(k[0]) + '</b><em>' + esc(k[1]) + '</em></button>';
-  }).join('');
-
-  if(existing.length){
-    h = existing.map(function(c){
-      return '<button type="button" class="pk ex" data-id="' + esc(c.id) + '">' +
-        '<b>掛到現有的：' + esc(c.kind) + '</b>' +
-        '<em>' + esc(c.title || c.id) + '　' + esc(c.openedAt) + '</em></button>';
-    }).join('') + '<p class="hint" style="margin:10px 0 8px">或開一件新的：</p>' + h;
-  }
-  $('pickList').innerHTML = h;
-
-  [].forEach.call($('pickList').querySelectorAll('[data-k]'), function(b){
-    b.addEventListener('click', function(){ pickNew(b.dataset.k); });
-  });
-  [].forEach.call($('pickList').querySelectorAll('[data-id]'), function(b){
+function drawPickEx(existing){
+  if(!existing.length || !$('pickEx')) return;
+  $('pickEx').innerHTML = existing.map(function(c){
+    return '<button type="button" class="pk ex" data-id="' + esc(c.id) + '">' +
+      '<b>掛到現有的：' + esc(c.kind) + '</b>' +
+      '<em>' + esc(c.title || c.id) + '　' + esc(c.openedAt) + '</em></button>';
+  }).join('') + '<p class="hint" style="margin:10px 0 8px">或開一件新的：</p>';
+  [].forEach.call($('pickEx').querySelectorAll('[data-id]'), function(b){
     b.addEventListener('click', function(){ pickAttach(b.dataset.id); });
   });
 }
+
+/* 寫死的那四顆只綁一次，不是每次開選單重綁 */
+[].forEach.call(document.querySelectorAll('#pickList [data-k]'), function(b){
+  b.addEventListener('click', function(){ pickNew(b.dataset.k); });
+});
 
 function pickNew(kind){
   var d = PICK_D_ || {};

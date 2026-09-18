@@ -294,12 +294,14 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
    紅色壓在下面，卡片本身往左滑才露出來。破壞性的動作藏在手勢後面，
    比擺一顆隨時按得到的「取消」安全——這一排卡片是用拇指在捲的。 */
-.swwrap{position:relative;border-radius:12px;overflow:hidden;margin-bottom:8px;
-  background:var(--danger)}
+.swwrap{position:relative;border-radius:12px;overflow:hidden;margin-bottom:8px}
+/* 卡片要明確壓在按鈕上面。不寫 z-index 的話，
+   絕對定位的按鈕會畫在非定位的卡片上面（CSS 的繪製順序），
+   2026-09-18 實機上就是這樣——「追蹤」兩個字蓋在客戶名稱上。 */
 .swwrap>.ev{margin-bottom:0;will-change:transform;touch-action:pan-y;cursor:pointer;
-  -webkit-tap-highlight-color:transparent}
+  position:relative;z-index:1;-webkit-tap-highlight-color:transparent}
 .swwrap>.ev.snap{transition:transform .34s cubic-bezier(.32,.72,0,1)}
-.swdel{position:absolute;right:0;top:0;bottom:0;width:96px;border:0;
+.swdel{position:absolute;right:0;top:0;bottom:0;width:96px;border:0;z-index:0;
   background:var(--danger);color:#fff;font-family:inherit;font-weight:800;
   font-size:0.9375rem;letter-spacing:.04em;cursor:pointer}
 .swdel:active{filter:brightness(.9)}
@@ -806,7 +808,10 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   padding:5px 11px;min-height:2.25rem;font-size:0.75rem;font-weight:700;
   color:var(--ink2);cursor:pointer;font-family:inherit;white-space:nowrap}
 .ev .acts button.p{background:var(--brand);border-color:var(--brand);color:#fff}
-.ev.done{background:color-mix(in oklab,var(--brand) 6%,transparent)}
+/* ⚠ 一定要跟 var(--card) 混，不可以跟 transparent 混。
+   這張卡片外面包了一層會露出取消／追蹤按鈕的容器，半透明的話
+   底下的東西會整片透出來。外觀完全一樣，差別只在不透明。 */
+.ev.done{background:color-mix(in oklab,var(--brand) 6%,var(--card))}
 .ev.plan .n{font-weight:600}
 .ev.cancel{opacity:.45}
 .ev.cancel .n{text-decoration:line-through}
@@ -1347,9 +1352,9 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
 /* 右滑出來的「追蹤」壓在卡片左邊，跟右邊紅色的取消是一對。
    .swwrap 的底色要看滑的方向換，不然滑右邊會露出紅色。 */
-.swwrap{background:var(--brand)}
-.swwrap.toleft{background:var(--danger)}
-.swtrack{position:absolute;left:0;top:0;bottom:0;width:96px;border:0;
+/* wrapper 不要有底色。顏色由按鈕自己帶，按鈕只有 96px 寬，
+   不會像整片底色那樣從半透明的卡片透出來。 */
+.swtrack{position:absolute;left:0;top:0;bottom:0;width:96px;border:0;z-index:0;
   background:var(--brand);color:#fff;font-family:inherit;font-weight:800;
   font-size:0.9375rem;letter-spacing:.04em;cursor:pointer}
 .swtrack:active{filter:brightness(.92)}
