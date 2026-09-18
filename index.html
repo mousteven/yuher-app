@@ -292,10 +292,11 @@ ol li b{color:var(--ink)}
     var d = ev.data;
     if(!d || !d.yuher) return;
     APP_WIN = ev.source || APP_WIN;
-    /* 程式只要出過聲，就代表它已經在跑了，遮罩可以收了。
-       這比 iframe 的 load 事件準：load 只表示 Apps Script 那一頁到了，
-       版面檔可能還在下載，收太早又會閃一下白的。 */
-    hideLoad();
+    /* ⚠️ 只認 shown，不要「收到任何訊息就收」。
+       ready 是程式一開始跑就送的，那時候資料還沒抓、畫面還是空的，
+       那時收掉遮罩，使用者會看到深藍消失之後又一片白（他回報過）。
+       shown 是程式那邊確認「畫面上有東西了」才送的。 */
+    if(d.yuher === 'shown'){ hideLoad(); return; }
     if(d.yuher === 'reload'){
       var cur = $('frame').src || '';
       if(!cur) return;                       // 還沒載入就不要亂導
@@ -354,8 +355,10 @@ ol li b{color:var(--ink)}
 
   startLoadTimers();          // 遮罩一開始就蓋著，計時也要一開始就跑
 
-  /* 保險一：程式出不了聲（例如版面檔掛了）時，iframe 載完兩秒也收掉 */
-  $('frame').addEventListener('load', function(){ setTimeout(hideLoad, 2000); });
+  /* 保險一：程式出不了聲（版面檔掛了、或同事手上還是舊版不會送 shown）時，
+     iframe 載完十二秒也收掉。設長一點是刻意的——正常情況下 shown 兩三秒就到，
+     這條根本輪不到；設太短反而會在慢速網路下提早收掉，白畫面又冒出來。 */
+  $('frame').addEventListener('load', function(){ setTimeout(hideLoad, 12000); });
   /* 保險二：不管發生什麼事，35 秒後一定拿掉。
      寧可讓他看到壞掉的畫面自己判斷，也不要把他鎖在一片深藍裡什麼都不能做。 */
   setTimeout(function(){ try{ hideLoad(); }catch(e){} }, 35000);

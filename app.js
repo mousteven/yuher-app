@@ -97,6 +97,7 @@ function login(code){
       // 行事曆的資料 bootstrap 已經帶回來了，不用再打一次
       if(r.sched){ CAL_YM = r.sched.ym; drawSched(r.sched); }
       else loadCal();
+      appShown();                     // 到這裡畫面已經有東西了，外殼可以收遮罩
     })
     .withFailureHandler(loginFail)
     .svcBootstrap(code, cached ? cached.v : '', ymOf(new Date()));
@@ -106,6 +107,7 @@ function loginFail(e){
   $('btnLogin').disabled = false;
   $('login').style.display=''; $('app').style.display='none';
   document.body.classList.add('lgon');
+  appShown();                         // 登入畫面也是「看得到東西」
   var msg = (e && e.message) || '登入失敗';
   lgBusy(false);
   LG = ''; lgDraw(true);
@@ -234,6 +236,17 @@ function shellPost(msg){
     if(window.top && window.top !== window) window.top.postMessage(msg, '*');
   } catch(e){}
 }
+
+/* 「畫面真的可以看了」。跟 ready 不一樣，這一點很重要：
+
+   ready 是 app.js 一開始跑就送的（第三百多行，整支三千多行），
+   那時候登入還沒驗、資料還沒抓、畫面是空的。外殼如果收到 ready 就把
+   載入遮罩拿掉，使用者會看到深藍消失之後又一片白——這正是他回報的現象。
+
+   所以另外送一則 shown：畫面上已經有東西可以看了才送。
+   三個時間點：登入成功畫完行事曆、登入失敗顯示登入畫面、
+   一開始就沒有登入碼直接顯示登入畫面。 */
+function appShown(){ shellPost({ yuher: 'shown' }); }
 
 /* 反過來告訴外殼我們的頂欄與底欄該是什麼顏色，
    安全區域那一條才不會露出不搭的底色。 */
@@ -3689,4 +3702,4 @@ $('statGo').addEventListener('click', function(){
 
 /* 記得上次的登入碼，直接進去 */
 if(CODE){ $('code').value = CODE; lgBusy(true); login(CODE); }
-else { $('login').style.display=''; document.body.classList.add('lgon'); }   // 沒碼才需要登入畫面
+else { $('login').style.display=''; document.body.classList.add('lgon'); appShown(); }
