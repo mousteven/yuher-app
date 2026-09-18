@@ -1539,11 +1539,13 @@ function initSig(box){
       pad.classList.remove('on');
     }
   }
+  /* 簽名板是畫在 canvas 上的，不會發 input 事件，所以在這裡補。
+     四個入口（雇主、翻譯、每位移工）共用這一段，一個地方就攔得到。 */
   box.__sig = {
     data:   function(){ return st.url; },
     signed: function(){ return !!st.url; },
-    clear:  function(){ st.url=''; paint(); },
-    set:    function(u){ st.url=u||''; paint(); }
+    clear:  function(){ st.url=''; paint(); markDirty(); },
+    set:    function(u){ st.url=u||''; paint(); markDirty(); }
   };
   pad.addEventListener('click', function(){ openSig(box); });
   box.querySelector('[data-clear]').addEventListener('click', function(e){
@@ -1861,7 +1863,10 @@ $('ebCancel').addEventListener('click', function(){
 
 
 /* ── 儲存 ─────────────────────────────── */
-$('save').addEventListener('click', function(){
+/* 把表單收成後端要的形狀。驗不過回 null（訊息已經 toast 出去了）。
+   抽出來是因為「儲存修改」要用同一份——兩邊各寫一次，
+   哪天改了欄位卻只改一邊，送出去的資料就會不一樣。 */
+function collectForm(){
   var trip = {
     date: $('date').value,
     mode: (document.querySelector('input[name=md]:checked')||{}).value||'到場',
@@ -1886,7 +1891,14 @@ $('save').addEventListener('click', function(){
       sig: sigOf(c.querySelector('[data-sig=worker]'))
     });
   });
-  if(!workers.length){ toast('每位移工都要選服務類別與細項', true); return; }
+  if(!workers.length){ toast('每位移工都要選服務類別與細項', true); return null; }
+  return { trip: trip, workers: workers };
+}
+
+$('save').addEventListener('click', function(){
+  var f = collectForm();
+  if(!f) return;
+  var trip = f.trip, workers = f.workers;
   var b=$('save'); b.disabled=true;
 
   /* 修改模式：覆寫既有那幾列，不要新增一筆。
@@ -2191,13 +2203,13 @@ function svDoneBox(){
   box.className = 'svdone';
   box.style.display = 'none';
   box.innerHTML =
-    '<p class="savedln"><span class="tick">✓</span><span>已儲存　<b id="svCode"></b>' +
-      '<span class="wh">　·　在行事曆的今天找得到</span></span></p>' +
+    '<p class="savedln" id="svStat"></p>' +
     '<div class="stack">' +
       '<button type="button" class="p full" id="svSubmit">送給副理審閱</button>' +
       '<div class="full" id="svPdfSlot"></div>' +
       '<button type="button" class="q full" id="svClose">完成</button>' +
-    '</div>';
+    '</div>' +
+    '<p class="note" id="svWhy" style="display:none"></p>';
   $('save').parentNode.insertAdjacentElement('afterend', box);
 
   /* 「完成」才是這一趟真正結束。單純按「清空」不收返回列——
@@ -2206,12 +2218,28 @@ function svDoneBox(){
   $('svClose').addEventListener('click', function(){
     hideSaved(); hideBack(); resetForm();
   });
-  /* 跑完就送審，不要等回辦公室才想起來——紙本流程最常卡在這一步 */
+  /* 同一顆按鈕兩種身分：內容跟存檔一致時送審，改過了就先存起來。
+     位置不變，人不用去別的地方找「再存一次」在哪。 */
   $('svSubmit').addEventListener('click', function(){
     var b = $('svSubmit'); b.disabled = true;
+    if(DIRTY_){
+      var f = collectForm();
+      if(!f){ b.disabled = false; return; }
+      toast('儲存修改中…');
+      google.script.run
+        .withSuccessHandler(function(r){
+          DIRTY_ = false; paintSaved();
+          calBust(); revBust();
+          toast(r && r.changed ? ('已存下 ' + r.changed + ' 處修改') : '已儲存');
+        })
+        .withFailureHandler(function(e){ b.disabled = false; toast(e.message, true); })
+        .updateServiceLog(CODE, DONE_CODE_, f.trip, f.workers);
+      return;
+    }
     google.script.run
       .withSuccessHandler(function(){
-        b.textContent = '已送審'; toast('已送給副理審閱'); revBust(); calBust(); refreshBadge();
+        SUBMITTED_ = true; DIRTY_ = false; paintSaved();
+        toast('已送給副理審閱'); revBust(); calBust(); refreshBadge();
       })
       .withFailureHandler(function(e){ b.disabled = false; toast(e.message, true); })
       .submitForReview(CODE, DONE_CODE_);
@@ -2219,18 +2247,74 @@ function svDoneBox(){
   return box;
 }
 
+/* 存過之後又動了東西。送審與 PDF 在這個狀態要停用——
+   不然送出去的、印出來的是舊內容，而人以為是新的。 */
+var DIRTY_ = false;
+var SUBMITTED_ = false;   // 這一筆在這個畫面按過送審了
+
+function markDirty(){
+  if(DIRTY_) return;
+  var box = $('svDone');
+  if(!box || box.style.display === 'none') return;   // 還沒存過就沒有「改了還沒存」
+  DIRTY_ = true;
+  paintSaved();
+}
+
+/* 存過之後那一區長什麼樣，完全由 DIRTY_ 決定。
+   只改文字與狀態，不重建元素——按鈕的事件監聽器是建立時掛上去的。 */
+function paintSaved(){
+  var code = DONE_CODE_;
+  /* 送出去之後就不能改了（後端的 canEdit 只認「未送審／退回補正」）。
+     與其讓人按一次「儲存修改」再吃一個錯誤訊息，這裡直接講清楚
+     為什麼不能改、以及怎麼辦。 */
+  if(SUBMITTED_){
+    $('svStat').className = 'savedln lock';
+    $('svStat').innerHTML = '<span class="tick">🔒</span><span><b>已送審，等副理審閱</b>' +
+      '<span class="wh">　·　' + esc(code) + '</span></span>';
+    $('svSubmit').className = 'full';
+    $('svSubmit').textContent = '已送審';
+    $('svSubmit').disabled = true;
+    $('svWhy').textContent = '送審之後不能修改。要改的話，請等副理退回補正。';
+    $('svWhy').style.display = '';
+    $('svClose').textContent = '完成';
+    return;
+  }
+  if(DIRTY_){
+    $('svStat').className = 'savedln warn';
+    $('svStat').innerHTML = '<span class="tick">！</span><span><b>改了還沒存</b>' +
+      '<span class="wh">　·　' + esc(code) + '　按一次「儲存修改」才算數</span></span>';
+    $('svSubmit').className = 'w full';
+    $('svSubmit').textContent = '儲存修改';
+    $('svSubmit').disabled = false;
+    $('svPdfSlot').innerHTML =
+      '<button type="button" disabled>輸出 PDF 給雇主</button>';
+    $('svWhy').textContent = '存好之前不能送審、也不能輸出 PDF——那會送出舊的內容。';
+    $('svWhy').style.display = '';
+    $('svClose').textContent = '放棄修改';
+  } else {
+    $('svStat').className = 'savedln';
+    $('svStat').innerHTML = '<span class="tick">✓</span><span>已儲存　<b>' + esc(code) +
+      '</b><span class="wh">　·　在行事曆的今天找得到</span></span>';
+    $('svSubmit').className = 'p full';
+    $('svSubmit').textContent = '送給副理審閱';
+    $('svSubmit').disabled = false;
+    $('svPdfSlot').innerHTML =
+      '<button type="button" class="sec" id="svPdf">輸出 PDF 給雇主</button>';
+    $('svPdf').addEventListener('click', function(){
+      makePdf(code, false, $('svPdfSlot'), 'svRe');
+    });
+    $('svWhy').style.display = 'none';
+    $('svClose').textContent = '完成';
+  }
+}
+
 function showSaved(code){
   DONE_CODE_ = code;
   if(BACK_) BACK_.rec = code;   // 存完卡片會掉 data-go，用紀錄編號才找得回來
+  DIRTY_ = false;
+  SUBMITTED_ = false;
   var box = svDoneBox();
-  $('svCode').textContent = code;
-  $('svSubmit').disabled = false;
-  $('svSubmit').textContent = '送給副理審閱';
-  $('svPdfSlot').innerHTML =
-    '<button type="button" class="sec" id="svPdf">輸出 PDF 給雇主</button>';
-  $('svPdf').addEventListener('click', function(){
-    makePdf(code, false, $('svPdfSlot'), 'svRe');
-  });
+  paintSaved();
   $('save').parentNode.style.display = 'none';
   box.style.display = '';
   /* toast 給當下的回饋，上面那一行常駐字負責「之後還看得到」。
@@ -2242,6 +2326,8 @@ function hideSaved(){
   var box = $('svDone');
   if(box) box.style.display = 'none';
   $('save').parentNode.style.display = '';
+  DIRTY_ = false;
+  SUBMITTED_ = false;
 }
 
 /* 那一行事實（客戶、幾位移工）住在 .smbox 底下的第一個 <p>。
@@ -2256,6 +2342,16 @@ function dnFactsEl(){
   var m = $('doneModal');
   return m ? m.querySelector('.smbox > p') : null;
 }
+
+/* 表單裡任何一個欄位動了就標記。用捕獲階段掛在整個填寫頁上，
+   新增的移工卡片不用另外再掛一次。
+   存過之前 markDirty() 是空操作，所以填寫過程不受影響。 */
+(function(){
+  var host = $('p-new');
+  if(!host) return;
+  host.addEventListener('input', markDirty, true);
+  host.addEventListener('change', markDirty, true);
+})();
 
 /* ── 行事曆：只有 PDF 的小面板 ──────────────────────────
    這條路徑是來拿檔案的，不是剛存完。沒有送審（卡片上就有那顆）、
@@ -3133,9 +3229,14 @@ function drawReviewActions(r){
       'border-radius:11px;border:1px solid var(--line);background:var(--card);'+
       'font-size:14px;font-family:inherit">退回補正</button></div>';
   } else {
+    /* 只寫「待副理審核」不夠——人會想「那我要改怎麼辦」。
+       把「怎麼辦」寫出來，才不會以為是壞掉了或自己少按了什麼。 */
     h = '<p class="hint">'+esc(RV_LABEL[r.status]||r.status)+
         (r.mgr?('　·　副理：'+esc(r.follow||'不需追蹤')):'')+
-        (r.boss?('　·　總經理 '+esc(r.boss)):'')+'</p>';
+        (r.boss?('　·　總經理 '+esc(r.boss)):'')+'</p>'+
+        (isMine && r.status !== '已歸檔'
+          ? '<p class="hint" style="margin-top:6px">送審之後不能修改。要改的話，'+
+            '請等副理退回補正。</p>' : '');
   }
   $('rvAct').innerHTML = h;
 

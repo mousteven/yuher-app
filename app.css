@@ -316,6 +316,19 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .savedln b{color:var(--ink)}
 .savedln .wh{color:var(--ink3)}
 
+/* 存過之後又改了東西：綠色的「已儲存」變成橘色的「改了還沒存」。
+   不是只換個字——整條底色變掉，滑過去的人也擋得下來。 */
+.savedln.warn{background:var(--warn-bg);border:1px solid var(--warn-line);
+  border-radius:11px;padding:9px 11px;margin-bottom:9px}
+.savedln.warn .tick{color:var(--warn-ink)}
+.svdone .note{font-size:0.75rem;color:var(--ink3);margin:7px 0 0;line-height:1.5}
+
+/* 送審之後：灰底上鎖。不是只把欄位變灰——上面要講原因與怎麼辦，
+   不然人會以為是壞掉了。 */
+.savedln.lock{background:var(--line2);border:1px solid var(--line);
+  border-radius:11px;padding:9px 11px;margin-bottom:9px}
+.savedln.lock .tick{color:var(--ink2)}
+
 /* 主要動作一列、次要一列、出口並排。一個畫面只放一個填色按鈕。 */
 .stack{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .stack>.full{grid-column:1/-1}
@@ -326,6 +339,8 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .stack button:disabled{opacity:.5}
 .stack button.p{background:var(--brand);border-color:var(--brand);color:#fff}
 .stack button.sec{border-color:var(--brand);color:var(--brand2)}
+/* 橘色＝「還沒完成的事」。跟藍色的送審分開，人一眼看得出這次要按的不一樣 */
+.stack button.w{background:var(--warn-bar);border-color:var(--warn-bar);color:#fff}
 .stack button.q{background:transparent;border-color:transparent;color:var(--ink3);font-weight:600}
 
 /* PDF 那一格：還沒產生時是一顆按鈕，產生後就地變成檔案本身。
