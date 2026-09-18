@@ -34,6 +34,38 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--brand);
   height:calc(env(safe-area-inset-bottom,0px) + 1px);pointer-events:none}
 #app{z-index:1}
 
+/* ── 更新中的畫面 ─────────────────────────────────────
+   換掉 iframe 的那三四秒裡面是一片白——那是瀏覽器在載新頁，不是當掉，
+   但看起來一模一樣。這一層蓋在上面，用 App 自己的深藍當底，
+   讀起來就是「App 正在做事」，不是「網頁掛了」。
+
+   刻意不用轉圈圈：那是「不知道要多久」的通用符號，哪個網站都長那樣。
+   App 自己的圖示配一條掃過去的細線，看起來是這個 App 的一部分。
+   圖示的呼吸很慢（2.4 秒一次）——快的動態讀起來焦慮，慢的讀起來是「在跑，別急」。 */
+#load{position:fixed;inset:0;z-index:6;display:none;flex-direction:column;
+  align-items:center;justify-content:center;background:var(--brand);color:#fff;
+  padding:calc(env(safe-area-inset-top) + 20px) 28px
+          calc(env(safe-area-inset-bottom) + 20px);
+  opacity:0;transition:opacity .22s ease}
+#load.on{display:flex;opacity:1}
+#load .ic{width:72px;height:72px;border-radius:17px;display:block;
+  box-shadow:0 14px 34px rgba(0,0,0,.34);animation:ldbrz 2.4s ease-in-out infinite}
+@keyframes ldbrz{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+#load .bar{width:132px;height:3px;border-radius:99px;margin-top:28px;overflow:hidden;
+  background:rgba(255,255,255,.18)}
+#load .bar i{display:block;height:100%;width:38%;border-radius:99px;background:#fff;
+  animation:ldswp 1.25s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes ldswp{0%{transform:translateX(-120%)}100%{transform:translateX(340%)}}
+#load .msg{margin:18px 0 0;font-size:14.5px;font-weight:700;letter-spacing:.03em}
+/* 第二行專門講「現在到哪了」。拖久了要說話，一直只寫「更新中」會讓人以為卡住 */
+#load .sub{margin:6px 0 0;font-size:12.5px;line-height:1.5;text-align:center;
+  color:rgba(255,255,255,.62);min-height:1.5em;max-width:16em}
+@media (prefers-reduced-motion:reduce){
+  #load{transition:none}
+  #load .ic{animation:none}
+  #load .bar i{animation:none;width:100%;opacity:.55}
+}
+
 /* ── 安裝說明 ───────────────────────────────────────
    同事拿到的是一條連結，不是安裝檔。這一頁要在三秒內
    讓他知道「在自己這支手機上」要按哪裡。 */
@@ -103,6 +135,14 @@ ol li b{color:var(--ink)}
 <body>
 
 <div id="pad"></div>
+
+<!-- 換 iframe 的那幾秒蓋在上面，免得同事以為當掉了 -->
+<div id="load" aria-live="polite">
+  <img class="ic" src="icon-192.png" alt="">
+  <div class="bar"><i></i></div>
+  <p class="msg">更新中</p>
+  <p class="sub" id="loadSub"></p>
+</div>
 <div id="app">
   <!-- src 由下面的 script 組出來：網址帶 ?code= 時會一起傳進去，
        讓每個人用自己的專屬連結，不必把全公司的碼印在同一份手冊裡。 -->
@@ -250,9 +290,14 @@ ol li b{color:var(--ink)}
     var d = ev.data;
     if(!d || !d.yuher) return;
     APP_WIN = ev.source || APP_WIN;
+    /* 程式只要出過聲，就代表它已經在跑了，遮罩可以收了。
+       這比 iframe 的 load 事件準：load 只表示 Apps Script 那一頁到了，
+       版面檔可能還在下載，收太早又會閃一下白的。 */
+    hideLoad();
     if(d.yuher === 'reload'){
       var cur = $('frame').src || '';
       if(!cur) return;                       // 還沒載入就不要亂導
+      showLoad();
       $('frame').src = cur.split('&t=')[0] + '&t=' + Date.now();
     } else if(d.yuher === 'ready'){
       // 系統告訴我們它的頂欄與底欄該是什麼顏色，外殼照著塗，
@@ -262,6 +307,34 @@ ol li b{color:var(--ink)}
       sendInsets();
     }
   });
+
+  /* 拖久了要說話。一直只寫「更新中」，人會開始懷疑是不是卡住了——
+     講出「現在到哪了」比多一個轉圈圈有用得多。 */
+  var LOAD_T = [];
+  function clearLoadTimers(){
+    LOAD_T.forEach(clearTimeout);
+    LOAD_T = [];
+  }
+  function showLoad(){
+    clearLoadTimers();
+    $('loadSub').textContent = '';
+    $('load').classList.add('on');
+    LOAD_T = [
+      setTimeout(function(){ $('loadSub').textContent = '正在下載新版面…'; }, 3500),
+      setTimeout(function(){ $('loadSub').textContent = '網路有點慢，再等一下'; }, 10000),
+      /* 20 秒還沒回來就不要再假裝了，給一句他真的做得到的事 */
+      setTimeout(function(){
+        $('loadSub').textContent = '還是沒回來的話，關掉 App 重開比較快';
+      }, 20000)
+    ];
+  }
+  function hideLoad(){
+    clearLoadTimers();
+    $('load').classList.remove('on');
+  }
+  /* 保險：萬一程式那邊出不了聲（例如版面檔掛了），iframe 載完兩秒後也收掉，
+     不要讓人卡在一片深藍裡什麼都不能做。 */
+  $('frame').addEventListener('load', function(){ setTimeout(hideLoad, 2000); });
 
   /* iPhone 底部那條 home 指示線的高度，iframe 裡面讀不到
      （env(safe-area-inset-*) 只有最外層的頁面拿得到）。
