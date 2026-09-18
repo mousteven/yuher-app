@@ -683,6 +683,7 @@ document.querySelectorAll('.tabs button').forEach(function(b){
     document.querySelectorAll('.tabs button').forEach(function(x){ x.className = x===b?'on':''; });
     document.querySelectorAll('.pane').forEach(function(p){ p.classList.remove('on'); });
     $('p-'+b.dataset.t).classList.add('on');
+    hideBack();          // 自己按分頁進來的不是「從某一筆點進來」，沒有回去可言
     backToTop();
     if(b.dataset.t==='cal') loadCal();
     if(b.dataset.t==='follow') loadFollow();
@@ -1295,9 +1296,76 @@ function highlightDrop(x, y){
 }
 
 /* 點「開始填寫」：把行程的資料帶進填寫頁，接著填服務內容就好 */
+/* ── 從行事曆進來的返回路徑 ──────────────────────────────
+   他的原話：「按下返回鍵之後，要能回到我當初按進去的那個行程，
+   有時候返回沒有回到那個地方，使用者會找不到當初是在哪邊點進去的。」
+
+   所以不是「回到行事曆」就好——那一頁可能有二十筆。要做三件事：
+     1. 記住進去之前捲到哪、看的是哪個月哪一天哪種檢視
+     2. 把那一張卡片捲到畫面正中間
+     3. 讓它亮一下再淡掉 ← 這一項最關鍵，眼睛會被動作吸走，不用自己找 */
+var BACK_ = null;   // { id, rec, y, view, ym, sel, label, name }
+
+function bkBar(){
+  var b = $('bkBar');
+  if(b) return b;
+  var host = $('p-new');
+  if(!host) return null;          // 這支 app.js 兩個部署共用，前台沒有填寫頁
+  b = document.createElement('div');
+  b.id = 'bkBar'; b.className = 'bkbar'; b.style.display = 'none';
+  b.innerHTML = '<span class="cv">‹</span><span>回</span><span class="to" id="bkTo"></span>';
+  host.insertAdjacentElement('afterbegin', b);
+  b.addEventListener('click', backToCal);
+  return b;
+}
+
+function showBack(meta){
+  if(!bkBar()) return;
+  BACK_ = meta;
+  $('bkTo').textContent = meta.label + (meta.name ? '　·　' + meta.name : '');
+  $('bkBar').style.display = '';
+}
+
+function hideBack(){
+  var b = $('bkBar');
+  if(b) b.style.display = 'none';
+  BACK_ = null;
+}
+
+function backToCal(){
+  var m = BACK_;
+  hideBack();
+  if(m){ CAL_VIEW = m.view; CAL_YM = m.ym; CAL_SEL = m.sel; }
+  document.querySelector('.tabs button[data-t=cal]').click();
+  if(!m) return;
+  /* 行事曆會整個重畫，所以不能記舊的節點，要用行程編號重新找。
+     重畫要等資料回來，所以用短輪詢等它出現，最多兩秒。
+     已經存過檔的那一筆會從「待處理」變「已完成」、掉了 data-go，
+     所以也用紀錄編號找一次。 */
+  var tries = 0;
+  (function find(){
+    var hit = document.querySelector('#calDayList [data-go="' + m.id + '"]');
+    if(!hit && m.rec) hit = document.querySelector('#calDayList [data-rec="' + m.rec + '"]');
+    var card = hit ? hit.closest('.ev') : null;
+    if(!card){
+      if(++tries < 20) return setTimeout(find, 100);
+      window.scrollTo(0, m.y);        // 真的找不到，至少回到原本捲的位置
+      return;
+    }
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('flash');
+    setTimeout(function(){ card.classList.remove('flash'); }, 1200);
+  })();
+}
+
 function startFromSchedule(id){
   var r = CAL_ROWS.filter(function(x){ return x.id===id; })[0];
   if(!r) return;
+  /* 切分頁之前先量，不然 backToTop() 已經把捲動位置歸零了 */
+  var back = { id: id, rec: '', y: window.scrollY,
+               view: CAL_VIEW, ym: CAL_YM, sel: CAL_SEL,
+               label: (($('calDayTitle') || {}).textContent || '').trim(),
+               name: r.client };
   SCHED_ID = id;
   $('date').value = r.date;
   $('target').value = (r.target||'工廠');
@@ -1325,6 +1393,7 @@ function startFromSchedule(id){
   });
   renumber();
   document.querySelector('.tabs button[data-t=new]').click();
+  showBack(back);                  // 要在切完分頁之後，分頁切換會把它收起來
   window.scrollTo(0,0);
   toast('已帶入行程，接著填服務內容');
 }
@@ -1723,6 +1792,7 @@ function checkThese(card, sel, vals){
 
 function fillFormFrom(d){
   resetForm();                           // 也會把 EDIT_CODE 清掉，所以先清再設
+  hideBack();                            // 換成改別筆了，原本那條返回路徑已經不相干
   $('date').value = d.trip.date || '';
   $('target').value = d.trip.target || '工廠';
   fireChange($('target'));
@@ -2130,7 +2200,12 @@ function svDoneBox(){
     '</div>';
   $('save').parentNode.insertAdjacentElement('afterend', box);
 
-  $('svClose').addEventListener('click', function(){ hideSaved(); resetForm(); });
+  /* 「完成」才是這一趟真正結束。單純按「清空」不收返回列——
+     返回列講的是「你從哪裡進來的」，清空並沒有改變這件事，
+     收掉反而讓人失去回頭路。 */
+  $('svClose').addEventListener('click', function(){
+    hideSaved(); hideBack(); resetForm();
+  });
   /* 跑完就送審，不要等回辦公室才想起來——紙本流程最常卡在這一步 */
   $('svSubmit').addEventListener('click', function(){
     var b = $('svSubmit'); b.disabled = true;
@@ -2146,6 +2221,7 @@ function svDoneBox(){
 
 function showSaved(code){
   DONE_CODE_ = code;
+  if(BACK_) BACK_.rec = code;   // 存完卡片會掉 data-go，用紀錄編號才找得回來
   var box = svDoneBox();
   $('svCode').textContent = code;
   $('svSubmit').disabled = false;
