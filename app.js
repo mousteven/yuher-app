@@ -2927,7 +2927,9 @@ var REV_ST_DEF = [
    三分鐘內直接用手上這份，送審／退回／存檔時主動作廢。 */
 var REV_AT = 0;
 var REV_TTL = 3 * 60 * 1000;
-function revBust(){ REV = null; REV_AT = 0; }
+/* 審核狀態一變（送審、退回、批示、核准、改內容），明細也跟著失效。
+   revBust 本來就是「審核相關的東西過期了」那個訊號，掛在這裡就不會漏。 */
+function revBust(){ REV = null; REV_AT = 0; RV_CACHE_ = {}; }
 
 function loadFollow(force){
   if(!force && REV && (Date.now() - REV_AT) < REV_TTL){
@@ -3149,6 +3151,47 @@ function openRecord(recCode, meta){
 
 var RV_CODE = '';
 var RV_DETAIL = null;
+
+/* 抓過的明細留著。同一筆再開就是瞬間，不用再付一次來回。
+   內容可能被別人改（副理批示、退回），所以拿快取畫完之後照樣去抓一次，
+   回來不一樣才重畫——使用者先看到東西，正確性也沒放掉。 */
+var RV_CACHE_ = {};
+
+/* 先畫已經知道的。行事曆列表上本來就有客戶、日期、翻譯、服務項目、
+   移工名單與審核狀態，那些不必等伺服器。
+   只有處理經過、結果、費用、簽名要等，那幾格畫成灰條。 */
+function drawRecordSkeleton(recCode, r){
+  /* 從「送審」那一頁開的不會有行事曆那一列，那就只能老實說在讀取。
+     有列的（從行事曆點進來的）才畫得出客戶與日期。 */
+  var names = (r && r.workers ? String(r.workers).split('、') : ['']);
+  $('rvTitle').textContent = (r && r.client)
+    ? (r.client + (r.date ? '　' + r.date : ''))
+    : '讀取中…';
+  $('rvSub').textContent = recCode + (r && r.crew ? '　' + r.crew : '') +
+    (r && r.rv ? '　' + (RV_LABEL[r.rv] || r.rv) : '');
+
+  var sk = function(w){ return '<span class="sk ' + w + '"></span>'; };
+  var h = '<div class="rvmeta">' +
+    '<div><span>服務日期</span><b>' + esc((r && r.date) || '') + '</b></div>' +
+    '<div><span>服務方式</span><b>' + sk('w1') + '</b></div>' +
+    '<div><span>雇主</span><b>' + esc((r && r.client) || '') + '</b></div>' +
+    '<div><span>客服人員</span><b>' + esc((r && r.crew) || '') + '</b></div>' +
+  '</div>';
+
+  names.forEach(function(nm, i){
+    h += '<div class="rvw">' +
+      '<div class="hd"><i>' + (i + 1) + '</i><b>' + esc(nm || '') + '</b></div>' +
+      '<div class="rvf"><span>服務項目</span><b>' +
+        esc(r && r.big && r.sub ? (r.big + ' ／ ' + r.sub) : ((r && r.topic) || '')) +
+      '</b></div>' +
+      '<div class="rvf"><span>處理經過</span><b>' + sk('w3') + '</b></div>' +
+      '<div class="rvf"><span>處理結果</span><b>' + sk('w2') + '</b></div>' +
+      '<div class="sg"><span>移工簽名</span>' + sk('w1') + '</div>' +
+    '</div>';
+  });
+  $('rvBody').innerHTML = h;
+  $('rvAct').innerHTML = '';
+}
 var RV_PDF_SRC = '';   // 不能用 iframe.src 判斷有沒有產生過，理由見下面的切換鈕
 
 function showReviewModal(recCode, after){
@@ -3163,14 +3206,29 @@ function showReviewModal(recCode, after){
   $('rvBody').style.display = '';
   $('rvPdfTgl').textContent = '正式表';
   $('rvPdfTgl').disabled = false;
-  $('rvBody').innerHTML = '<div class="mid" style="padding:30px">讀取中…</div>';
-  $('rvAct').innerHTML = '';
+  /* 不要再整片空白等 2–3 秒。有快取就直接畫完整的，
+     沒有就先畫已經知道的那一半，剩下的用灰條佔位。 */
+  var cached = RV_CACHE_[recCode];
+  if(cached){
+    RV_DETAIL = cached;
+    drawRecordBody(cached);
+    drawReviewActions(cached.trip);
+  } else {
+    drawRecordSkeleton(recCode,
+      (typeof CAL_ROWS !== 'undefined' ? CAL_ROWS : []).filter(function(x){
+        return x.recCode === recCode;
+      })[0]);
+  }
   $('revModal').style.display = '';
   $('rvBody').scrollTop = 0;
 
   google.script.run
     .withSuccessHandler(function(d){
+      if(RV_CODE !== recCode) return;          // 使用者已經開別筆了，不要蓋掉
+      var same = RV_DETAIL && JSON.stringify(RV_DETAIL) === JSON.stringify(d);
+      RV_CACHE_[recCode] = d;
       RV_DETAIL = d;
+      if(same) return;                          // 跟畫面上的一樣就不要重畫，免得閃一下
       drawRecordBody(d);
       drawReviewActions(d.trip);
     })

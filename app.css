@@ -275,6 +275,19 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   background:var(--card);font-size:0.9375rem;font-weight:700;cursor:pointer;color:var(--ink2)}
 .smbtns button.p{background:var(--brand);border-color:var(--brand);color:#fff}
 
+/* ── 骨架：還沒回來的那幾格 ───────────────────────────────
+   2026-09-18。原本點已完成的行程是整片空白配「讀取中…」，等 2–3 秒。
+   但客戶、日期、翻譯、服務項目、移工名單、審核狀態本來就在列表上，
+   立刻畫得出來；真正要等的只有處理經過、結果、費用與簽名。
+   那幾格畫成灰條，讓人知道「這裡還在補」，而不是「這裡是空的」。 */
+.sk{display:inline-block;height:0.9em;border-radius:5px;vertical-align:-1px;
+  background:linear-gradient(90deg,var(--line2) 0%,var(--line) 50%,var(--line2) 100%);
+  background-size:200% 100%;animation:skw 1.1s ease-in-out infinite}
+.sk.w1{width:4.5em} .sk.w2{width:8em} .sk.w3{width:12em}
+@keyframes skw{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* 會動的灰條在「減少動態」時就只是一條灰的，不要一直閃 */
+@media (prefers-reduced-motion:reduce){ .sk{animation:none} }
+
 /* ── 待處理的行程卡：點一下開始填，往左滑出取消 ───────────
    2026-09-18。原本右邊擺「開始填寫」「取消」兩顆按鈕，
    佔掉卡片三分之一的寬度，客戶名稱與移工名字被擠到換行。
