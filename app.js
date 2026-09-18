@@ -1217,17 +1217,21 @@ function drawDay(){
       (r.id ? ' data-go="'+esc(r.id)+'"' : '') +
       (r.recCode ? ' data-rc="'+esc(r.recCode)+'"' : '') +
       ' data-plan="'+(plan ? '1' : '')+'"' +
+      (r.caseId ? ' data-case="'+esc(r.caseId)+'"' : '') +
       ' data-client="'+esc(r.client||'')+'"' +
       ' data-workers="'+esc(r.workers||'')+'"' +
       ' data-lang="'+esc(r.lang||'')+'"' +
       ' data-big="'+esc(r.big||'')+'" data-sub="'+esc(r.sub||'')+'">' +
-      '<button type="button" class="swtrack" aria-label="追蹤">追蹤</button>' +
+      '<button type="button" class="swtrack" aria-label="追蹤">' +
+        (r.caseId ? '看追蹤' : '追蹤') + '</button>' +
       (plan ? '<button type="button" class="swdel">取消</button>' : '');
     var wrapB = '</div>';
     return wrapA + '<div class="ev '+cls+'">'+
       '<span class="bar lg-'+esc(l)+'"></span>'+
       '<span class="b"'+(r.recCode?' data-rec="'+esc(r.recCode)+'"':'')+'>'+
-        '<span class="t">'+esc(r.slot||'未定時段')+'　'+esc(r.crew)+'</span>'+
+        '<span class="t">'+esc(r.slot||'未定時段')+'　'+esc(r.crew)+
+          (r.caseId ? '　<span class="evtk">◷ '+esc(r.caseKind)+'</span>' : '')+
+        '</span>'+
         '<span class="n">'+esc(r.client)+
           (r.target&&r.target.indexOf('工廠')!==0?'　'+esc(r.target):'')+'</span>'+
         '<span class="m">'+esc(r.topic||'—')+
@@ -1421,6 +1425,9 @@ function bindSwipe(w){
   w.querySelector('.swtrack').addEventListener('click', function(ev){
     ev.stopPropagation();
     closeSwipe(w);
+    /* 已經在追蹤的就直接開那一件。再問一次「要開哪一種」，
+       人就會又開一件——他實機上一口氣開出三件一樣的就是這樣來的。 */
+    if(w.dataset.case){ goTab('track'); openCase(w.dataset.case); return; }
     openPick(w.dataset);
   });
 }
@@ -4155,8 +4162,13 @@ function drawCaseActions(c){
     h += '<button type="button" class="p full" id="ckNew">＋ 新增一筆服務紀錄</button>';
   }
   if(open){
+    /* 「排下一次」四個字看不出在排什麼。照案件類型講白話，
+       而且要講出「會排進行事曆」——那才是人真正在意的事。 */
+    var NEXT_T = { '就醫追蹤': '回診', '體檢通知': '體檢', '返鄉休假': '回台' };
+    var what = NEXT_T[c.kind] || '下一次';
     h += '<button type="button" class="sec full" id="ckNext">' +
-      (c.nextDate ? '改下一次的日期' : '排下一次') + '</button>';
+      (c.nextDate ? ('改' + what + '日期　' + esc(c.nextDate))
+                  : ('排' + what + '日期　會進行事曆')) + '</button>';
   }
   if(open && c.kind === '異常事件' && !c.link){
     h += '<button type="button" class="sec full" id="ckMed">' +

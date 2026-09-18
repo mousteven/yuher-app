@@ -1501,3 +1501,14 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .evgrid span.plan{background:var(--brand-soft);color:var(--brand);
   border:1px dashed var(--info-line);font-weight:800}
 .evw .sub.planned em{color:var(--brand);font-weight:700}
+
+/* 案件詳情是 .rvfull（z-index:75），一般的小視窗 .smask 只有 70——
+   從案件裡開日期視窗會被壓在後面，看起來就是「按了沒反應」。
+   2026-09-18 實機上「排下一次」「改下一次的日期」都按不動就是這個。 */
+#dateModal{z-index:80}
+
+/* 行事曆卡片上的追蹤標記。已經在追蹤的那一趟要看得出來，
+   不然人會以為沒開過，又開一件。 */
+.evtk{display:inline-flex;align-items:center;gap:3px;font-size:0.625rem;
+  font-weight:800;color:var(--brand);background:var(--brand-soft);
+  border-radius:99px;padding:1px 7px}
