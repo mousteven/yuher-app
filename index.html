@@ -431,6 +431,11 @@ ol li b{color:var(--ink)}
     document.body.appendChild(probe);
     var bottom = probe.offsetHeight;
     probe.remove();
+    /* 畫布比螢幕矮的時候，底部那條橫線（home indicator）根本在畫布外面，
+       程式不需要再自己留一份空間——留了就是白白多一條空白。
+       2026-09-18 實測他的手機：螢幕 858、畫布 797，差 61。
+       畫布有到底的手機差值是 0，那時候照樣回報真正的安全區域。 */
+    if (screen.height - innerHeight > 20) bottom = 0;
     var w = APP_WIN || $('frame').contentWindow;   // 還沒打招呼之前只能先試包裝層
     try {
       w.postMessage({ yuher: 'insets', bottom: bottom }, '*');
