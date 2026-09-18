@@ -307,6 +307,8 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   border-bottom:1px solid var(--line);cursor:pointer;
   font-weight:700;color:var(--brand2);-webkit-tap-highlight-color:transparent}
 .bkbar:active{background:var(--brand-soft)}
+/* 全螢幕的服務紀錄視窗裡：它本來就在最上面，不用黏、也沒有 .pane 的內距要抵銷 */
+.bkbar.plain{position:static;margin:0;border-radius:0;flex:none}
 .bkbar .cv{font-size:1.25rem;line-height:1;margin-top:-2px;flex:none}
 .bkbar .to{color:var(--ink2);font-weight:600;font-size:0.875rem;min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

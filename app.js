@@ -1179,7 +1179,13 @@ function drawDay(){
   [].forEach.call($('calDayList').querySelectorAll('[data-rec]'), function(b){
     b.addEventListener('click', function(){
       if(DRAG) return;                 // 拖曳中不要誤觸
-      openRecord(b.dataset.rec);
+      var nm = b.querySelector('.n');
+      openRecord(b.dataset.rec, {
+        id: '', rec: b.dataset.rec, y: window.scrollY,
+        view: CAL_VIEW, ym: CAL_YM, sel: CAL_SEL,
+        label: (($('calDayTitle') || {}).textContent || '').trim(),
+        name: nm ? nm.textContent.trim() : ''
+      });
     });
   });
   /* 待處理的：整張卡片可以點（開始填寫）、可以往左滑（出取消）。
@@ -1408,35 +1414,46 @@ function highlightDrop(x, y){
      3. 讓它亮一下再淡掉 ← 這一項最關鍵，眼睛會被動作吸走，不用自己找 */
 var BACK_ = null;   // { id, rec, y, view, ym, sel, label, name }
 
-function bkBar(){
-  var b = $('bkBar');
+/* 同一條返回列會長在兩個地方：填寫頁最上面，以及服務紀錄那個全螢幕視窗最上面。
+   兩邊行為完全一樣，所以共用同一段程式，不要各寫一份。 */
+function bkBar(id, hostId, plain){
+  var b = $(id);
   if(b) return b;
-  var host = $('p-new');
-  if(!host) return null;          // 這支 app.js 兩個部署共用，前台沒有填寫頁
+  var host = $(hostId);
+  if(!host) return null;          // 這支 app.js 兩個部署共用，前台沒有這些容器
   b = document.createElement('div');
-  b.id = 'bkBar'; b.className = 'bkbar'; b.style.display = 'none';
-  b.innerHTML = '<span class="cv">‹</span><span>回</span><span class="to" id="bkTo"></span>';
+  b.id = id;
+  b.className = 'bkbar' + (plain ? ' plain' : '');
+  b.style.display = 'none';
+  b.innerHTML = '<span class="cv">‹</span><span>回</span><span class="to"></span>';
   host.insertAdjacentElement('afterbegin', b);
   b.addEventListener('click', backToCal);
   return b;
 }
 
-function showBack(meta){
-  if(!bkBar()) return;
+/* where：'form' = 填寫頁、'rec' = 服務紀錄視窗 */
+function showBack(meta, where){
+  var id = (where === 'rec') ? 'rvBk' : 'bkBar';
+  var b = bkBar(id, (where === 'rec') ? 'revModal' : 'p-new', where === 'rec');
+  if(!b) return;
   BACK_ = meta;
-  $('bkTo').textContent = meta.label + (meta.name ? '　·　' + meta.name : '');
-  $('bkBar').style.display = '';
+  b.querySelector('.to').textContent = meta.label + (meta.name ? '　·　' + meta.name : '');
+  b.style.display = '';
 }
 
 function hideBack(){
-  var b = $('bkBar');
-  if(b) b.style.display = 'none';
+  ['bkBar', 'rvBk'].forEach(function(id){
+    var b = $(id);
+    if(b) b.style.display = 'none';
+  });
   BACK_ = null;
 }
 
 function backToCal(){
   var m = BACK_;
   hideBack();
+  var rm = $('revModal');          // 從服務紀錄視窗返回的話，先把那一層收掉
+  if(rm && rm.style.display !== 'none') rm.style.display = 'none';
   if(m){ CAL_VIEW = m.view; CAL_YM = m.ym; CAL_SEL = m.sel; }
   document.querySelector('.tabs button[data-t=cal]').click();
   if(!m) return;
@@ -1446,7 +1463,9 @@ function backToCal(){
      所以也用紀錄編號找一次。 */
   var tries = 0;
   (function find(){
-    var hit = document.querySelector('#calDayList [data-go="' + m.id + '"]');
+    /* 從已完成的卡片進來時沒有行程編號（m.id 是空的），
+       空字串拿去查會比對到 data-go="" 之類的東西，所以要先擋掉。 */
+    var hit = m.id ? document.querySelector('#calDayList [data-go="' + m.id + '"]') : null;
     if(!hit && m.rec) hit = document.querySelector('#calDayList [data-rec="' + m.rec + '"]');
     /* data-go 在外層的 .swwrap 上、data-rec 在卡片裡面的 .b 上，
        所以往上往下都要找一次。 */
@@ -1497,7 +1516,7 @@ function startFromSchedule(id){
   });
   renumber();
   document.querySelector('.tabs button[data-t=new]').click();
-  showBack(back);                  // 要在切完分頁之後，分頁切換會把它收起來
+  showBack(back, 'form');          // 要在切完分頁之後，分頁切換會把它收起來
   window.scrollTo(0,0);
   toast('已帶入行程，接著填服務內容');
 }
@@ -3121,8 +3140,11 @@ function openReview(recCode){
 
 /* 從行事曆點已完成的那一趟：送審前先看過內容再決定
    （以前是印出來翻一遍，現在直接在手機上看） */
-function openRecord(recCode){
+/* meta 帶進來的話，視窗最上面會出現返回列，按了回到行事曆的那一張卡片。
+   從「送審」那一頁開的不帶——清單就在後面，關閉就回去了。 */
+function openRecord(recCode, meta){
   showReviewModal(recCode, function(){ calBust(); loadCal(); refreshBadge(); });
+  if(meta) showBack(meta, 'rec'); else hideBack();
 }
 
 var RV_CODE = '';
@@ -3399,6 +3421,7 @@ $('rvClose').addEventListener('click', function(){
   $('revModal').style.display='none';
   $('rvFrame').removeAttribute('src'); RV_PDF_SRC = '';
   REV_AFTER = null;
+  hideBack();        // 不收的話，下次從別的地方開會留著上一筆的返回文字
 });
 
 
