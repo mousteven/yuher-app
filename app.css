@@ -1694,3 +1694,159 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   font-weight:800;cursor:pointer;border:1px solid var(--line);background:var(--card);
   color:var(--ink2)}
 .mggo button.p{background:var(--brand);border-color:var(--brand);color:#fff}
+
+/* ── 紀錄詳情的追蹤區塊 c5（2026-09-19，他挑的 A）──────────────
+   一句人話 → 一條進度 → 代碼縮到最小放最後。
+   ⚠ 前綴一律 c5。這個檔案裡 .st .wk .rvw .eye .cnt 都已經有人用了，
+   2026-09-19 早上才因為撞名排版全爛過一次。 */
+.c5{display:block;background:var(--card);border:1px solid var(--line);
+  border-top:3px solid var(--brand);border-radius:12px;
+  padding:12px 13px 11px;margin-bottom:10px;cursor:pointer}
+.c5:active{background:var(--line2)}
+.c5line{margin:0 0 11px;font-size:0.875rem;letter-spacing:-.005em}
+.c5line b{color:var(--brand)}
+.c5k{display:inline-block;font-weight:800;color:var(--brand);
+  background:var(--brand-soft);border-radius:99px;padding:1px 8px;
+  font-size:0.75rem;margin-right:6px}
+/* 進度：一格一次服務，最後補一格「下一次」 */
+.c5rail{display:flex;align-items:flex-start;gap:0}
+.c5stp{flex:1;min-width:0;position:relative;padding-top:15px;text-align:center}
+.c5stp::before{content:'';position:absolute;top:5px;left:0;right:0;height:2px;
+  background:var(--line)}
+.c5stp:first-child::before{left:50%}
+.c5stp:last-child::before{right:50%}
+.c5stp.done::before,.c5stp.now::before{background:var(--brand)}
+.c5stp i{position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:12px;height:12px;border-radius:99px;background:var(--line);
+  border:2px solid var(--card);box-shadow:0 0 0 1px var(--line)}
+.c5stp.done i{background:var(--brand);box-shadow:0 0 0 1px var(--brand)}
+.c5stp.now i{background:var(--brand);box-shadow:0 0 0 1px var(--brand),
+  0 0 0 5px var(--brand-soft)}
+.c5stp em{display:block;font-style:normal;font-size:0.625rem;color:var(--ink3);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.c5stp span{display:block;font-size:0.6875rem;color:var(--ink2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c5stp.now em,.c5stp.now span{color:var(--brand);font-weight:700}
+.c5foot{display:flex;align-items:center;gap:8px;margin-top:11px;padding-top:9px;
+  border-top:1px solid var(--line2);font-size:0.75rem;color:var(--ink2)}
+.c5id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.625rem;
+  color:var(--ink3);border:1px solid var(--line);border-radius:5px;padding:0 5px}
+.c5go{margin-left:auto;font-weight:700;color:var(--brand);white-space:nowrap}
+
+/* ── 追蹤案件頁 c6（2026-09-19，他挑的 C）─────────────────────
+   整件事就是一條線：開案 → 每一次服務 → 下一次 → 結案。
+   動作掛在對應的那一格旁邊，底下只留一顆主要按鈕。 */
+.c6sum{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  border-top:3px solid var(--brand);padding:13px;margin-bottom:10px}
+.c6who{font-size:1.0625rem;font-weight:800;letter-spacing:-.01em;line-height:1.3}
+.c6at{font-size:0.8125rem;color:var(--ink2);margin-top:1px}
+.c6seg{display:flex;gap:7px;margin-top:10px}
+.c6st{flex:1;border:1px solid var(--line);background:none;border-radius:9px;
+  padding:8px 2px;font-family:inherit;font-size:0.8125rem;color:var(--ink2);
+  cursor:pointer}
+.c6st.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
+.c6meta{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:9px;
+  font-size:0.75rem;color:var(--ink3)}
+.c6meta b{color:var(--ink2);font-weight:600}
+.c6link{display:flex;align-items:center;gap:8px;background:var(--brand-soft);
+  border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:0.8125rem;
+  color:var(--ink2);cursor:pointer}
+.c6link .go{margin-left:auto;color:var(--ink3)}
+.c6det{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:11px 13px;margin-bottom:10px}
+.c6dh{margin:0 0 7px;font-size:0.75rem;font-weight:800;color:var(--ink3);
+  display:flex;align-items:center}
+.c6edit{margin-left:auto;border:1px solid var(--line);background:none;
+  border-radius:8px;padding:2px 10px;font-family:inherit;font-size:0.6875rem;
+  font-weight:700;color:var(--brand);cursor:pointer}
+
+.c6line{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:11px 13px}
+.c6i{display:flex;gap:10px;padding:9px 0;position:relative}
+.c6i:not(:last-child)::after{content:'';position:absolute;left:6px;top:28px;
+  bottom:-4px;width:2px;background:var(--line)}
+.c6i .d{width:14px;height:14px;border-radius:99px;flex:none;margin-top:4px;
+  display:grid;place-items:center;font-size:0.5rem;font-weight:700;color:#fff;
+  background:var(--line)}
+.c6i.ok .d{background:var(--ok-ink)}
+.c6i.now .d{background:var(--brand)}
+.c6i.next .d{background:var(--warn-ink)}
+.c6i .c{flex:1;min-width:0}
+.c6i .c em{font-style:normal;font-size:0.625rem;color:var(--ink3);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em}
+.c6i .c b{display:block;font-size:0.875rem;letter-spacing:-.005em}
+.c6i .c p{margin:1px 0 0;font-size:0.75rem;color:var(--ink2);word-break:break-word}
+.c6a{margin-top:7px;display:flex;gap:6px;flex-wrap:wrap}
+.c6a a{font-size:0.6875rem;font-weight:700;color:var(--brand);
+  border:1px solid var(--line);border-radius:8px;padding:4px 10px;cursor:pointer}
+.c6a a:active{background:var(--line2)}
+.c6a a.rm{color:var(--danger);border-color:var(--bad-bg);background:var(--bad-bg)}
+
+.c6sug{display:flex;align-items:center;gap:11px;background:var(--warn-bg);
+  border-radius:11px;padding:10px 12px;margin-top:10px;cursor:pointer}
+.c6sug .ic{width:28px;height:28px;border-radius:9px;background:rgba(0,0,0,.06);
+  display:grid;place-items:center;flex:none;color:var(--warn-ink)}
+.c6sug .c{flex:1;min-width:0}
+.c6sug .c b{display:block;font-size:0.8125rem;color:var(--warn-ink)}
+.c6sug .c span{display:block;font-size:0.75rem;color:var(--ink2)}
+.c6sug .go{font-size:0.75rem;font-weight:800;color:var(--warn-ink);flex:none}
+
+/* ── 挑選還沒歸案的服務 lp（2026-09-19）───────────────────── */
+.lptally{display:flex;flex-wrap:wrap;gap:3px 12px;margin:0 0 10px;
+  font-size:0.75rem;color:var(--ink3);background:var(--card);
+  border:1px solid var(--line);border-radius:10px;padding:8px 11px}
+.lptally b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.lptally .hi b{color:var(--brand)}
+.lpsr{margin-bottom:10px}
+.lpsr input{width:100%;border:1px solid var(--line);border-radius:10px;
+  padding:9px 12px;font-family:inherit;font-size:0.875rem;background:var(--card);
+  color:var(--ink)}
+.lpgrp{display:flex;align-items:baseline;gap:8px;margin:14px 0 6px}
+.lpgrp b{font-size:0.75rem;font-weight:800;color:var(--brand)}
+.lpgrp span{font-size:0.6875rem;color:var(--ink3)}
+.lpgrp::after{content:'';flex:1;height:1px;background:var(--line)}
+.lprw{display:flex;gap:10px;border:1px solid var(--line);border-radius:11px;
+  padding:10px 12px;background:var(--card);margin-bottom:8px;cursor:pointer}
+.lprw.on{border-color:var(--brand);background:var(--brand-soft)}
+.lprw.lock{opacity:.62;background:var(--line2);cursor:default}
+.lprw .ck{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);
+  flex:none;display:grid;place-items:center;font-size:0.6875rem;color:#fff;
+  margin-top:2px}
+.lprw.on .ck{background:var(--brand);border-color:var(--brand)}
+.lprw.lock .ck{border-style:dashed}
+.lprw .c{flex:1;min-width:0;display:block}
+.lprw .r1{display:flex;align-items:baseline;gap:8px}
+.lprw .r1 b{font-size:0.875rem;letter-spacing:-.005em;flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lprw .r1 em{font-style:normal;font-size:0.6875rem;color:var(--brand);
+  font-weight:600;flex:none;white-space:nowrap}
+.lprw .r2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;font-size:0.75rem;color:var(--ink2);margin-top:1px}
+.lprw .r3{display:flex;flex-wrap:wrap;gap:3px 9px;margin-top:4px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.625rem;
+  color:var(--ink3)}
+.lprw .r3 i{font-style:normal}
+.lprw .r3 .pill{font-family:inherit;font-weight:700;border-radius:99px;
+  padding:0 7px;background:var(--line2);color:var(--ink2)}
+.lprw .r3 .pill.lk{background:var(--ok-bg);color:var(--ok-ink)}
+.lpmore{width:100%;text-align:center;font-size:0.8125rem;font-weight:700;
+  color:var(--brand);border:1px dashed var(--line);border-radius:10px;
+  padding:10px;background:var(--card);font-family:inherit;cursor:pointer}
+.lpbar{display:flex;align-items:center;gap:10px}
+.lpn{font-size:0.8125rem;color:var(--ink2)}
+.lpbar .p{margin-left:auto}
+.lppv{border:1px solid var(--line);border-radius:11px;overflow:hidden;
+  background:var(--card)}
+.lppv .pvi{display:flex;align-items:center;gap:10px;padding:9px 12px;
+  font-size:0.8125rem;border-bottom:1px solid var(--line2)}
+.lppv .pvi:last-child{border-bottom:0}
+.lppv .k{width:22px;height:22px;border-radius:99px;background:var(--line2);
+  display:grid;place-items:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:0.6875rem;font-weight:600;color:var(--ink2);flex:none}
+.lppv .pvi.add .k{background:var(--brand);color:#fff}
+.lppv .pvi .c{flex:1;min-width:0}
+.lppv .pvi .c b{display:block;font-weight:600}
+.lppv .pvi .c span{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:0.625rem;color:var(--ink3)}
+.lppv .t{font-size:0.625rem;font-weight:800;border-radius:99px;padding:1px 8px;
+  flex:none;background:var(--brand-soft);color:var(--brand)}

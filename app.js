@@ -1293,19 +1293,11 @@ function drawDay(){
       '往左推：追蹤 → 改期 → 取消　·　長按之後拖動可以改期</p>');
   }
 
-  // 點已完成那一趟的內文＝打開整張服務表，送審前先確認過
-  [].forEach.call($('calDayList').querySelectorAll('[data-rec]'), function(b){
-    b.addEventListener('click', function(){
-      if(DRAG) return;                 // 拖曳中不要誤觸
-      var nm = b.querySelector('.n');
-      openRecord(b.dataset.rec, {
-        id: '', rec: b.dataset.rec, y: window.scrollY,
-        view: CAL_VIEW, ym: CAL_YM, sel: CAL_SEL,
-        label: (($('calDayTitle') || {}).textContent || '').trim(),
-        name: nm ? nm.textContent.trim() : ''
-      });
-    });
-  });
+  /* ⛔ 這裡以前是 querySelectorAll('[data-rec]') 逐個綁 click，
+     而 data-rec 在卡片「中間那塊文字」上——左邊的色條與四周的內距
+     全都是死區，拇指落在邊上就沒反應。他回報的「點進去有時候沒反應」
+     就是這個。現在交給 bindSwipe 的 click（綁在整張 .ev 上，
+     而且手上有整筆 r），不要兩套。 */
   /* 每一張卡片：點一下（預排＝開始填寫、已完成＝看紀錄）、
      由右往左推出四段選單（有哪幾格看這張卡的狀態）。 */
   var si = 0;
@@ -1746,8 +1738,17 @@ function bindSwipe(w, r){
   el.addEventListener('click', function(ev){
     if(DRAG) return;
     if(moved){ ev.stopPropagation(); ev.preventDefault(); moved = false; return; }
-    // 預排的點一下開始填寫；已完成的交給裡面的 data-rec，這裡不要攔
-    if(r.status === '預排' && r.id){ ev.stopPropagation(); startFromSchedule(r.id); }
+    ev.stopPropagation();
+    // 預排的點一下開始填寫，已完成的打開那張服務表。整張卡都算數。
+    if(r.status === '預排'){ if(r.id) startFromSchedule(r.id); return; }
+    if(r.recCode){
+      openRecord(r.recCode, {
+        id: '', rec: r.recCode, y: window.scrollY,
+        view: CAL_VIEW, ym: CAL_YM, sel: CAL_SEL,
+        label: (($('calDayTitle') || {}).textContent || '').trim(),
+        name: r.client || ''
+      });
+    }
   }, true);
 }
 
@@ -3795,27 +3796,34 @@ function rvField(k, v){
 
 /* 把整趟服務攤開成手機看得舒服的欄位。
    全部是印出來的字，主管改不了——要改只能退回給翻譯人員重填。 */
-/* 送審頁與紀錄詳情的「前後文」列。掛在畫面最上面，點了跳到那個案件。
-   查不到就整條不出現——沒掛案件的紀錄佔大多數，不要留一條空的。 */
+/* 送審頁與紀錄詳情的「前後文」列：這一筆屬於哪一串追蹤、走到第幾步。
+   查不到就整條不出現——沒掛案件的紀錄佔大多數，不要留一條空的。
+
+   2026-09-19 改版（他挑的 A）。原本最大的字是案件代碼 M260918-E34B，
+   對人沒有意義卻排在最顯眼的地方；而「2026-09-16 帶工人就醫」看起來
+   像這一筆的日期，其實是上一筆的。現在：
+     一句人話（這是第幾次） → 一條走到哪的進度 → 代碼縮到最小放最後
+
+   ⚠ 這支是非同步的。同一筆被畫兩次的時候，第二次的 remove 會在
+   第一次的 insert 之前跑完，於是插出兩條——他實機上看到的就是這個。
+   用序號擋：回來的時候不是最新那次就整個丟掉。 */
+var CTX_SEQ_ = 0;
+
 function caseCtx(recCode){
   var box = $('rvCtx');
   if(box) box.remove();
   if(!recCode) return;
+  var seq = ++CTX_SEQ_;
   google.script.run
     .withSuccessHandler(function(r){
-      if(!r || !r.has) return;
-      if(!$('rvBody')) return;
-      var prev = r.list.filter(function(x){ return x.rec !== recCode; })
-        .map(function(x){ return x.date + ' ' + (x.sub || ''); }).join('　→　');
+      if(seq !== CTX_SEQ_) return;        // 已經有更新的一次在跑了
+      if(!r || !r.has || !$('rvBody')) return;
+      var old = $('rvCtx');
+      if(old) old.remove();               // 兩道防線：非同步就是會這樣
       var el = document.createElement('div');
       el.id = 'rvCtx';
-      el.className = 'clink';
-      el.innerHTML =
-        '<span><span class="k">' + esc(r.kind) + '　第 ' + r.n + ' 筆／共 ' +
-          r.total + ' 筆</span><b>' + esc(r.id) +
-          (r.title ? '　' + esc(r.title) : '') + '</b>' +
-          (prev ? '<span class="pv">' + esc(prev) + '</span>' : '') + '</span>' +
-        '<span class="go">›</span>';
+      el.className = 'c5';
+      el.innerHTML = ctxHtml(r);
       el.addEventListener('click', function(){
         $('revModal').style.display = 'none';
         goTab('track');
@@ -3825,6 +3833,35 @@ function caseCtx(recCode){
     })
     .withFailureHandler(function(){})
     .caseContextOf(CODE, recCode);
+}
+
+/* 進度條上的一格。日期寫成 9/16 這種短的，項目截斷不換行——
+   三格塞在 360px 寬的螢幕上，每格只有一百出頭。 */
+function ctxStep(cls, when, what){
+  return '<span class="c5stp ' + cls + '"><i></i>' +
+    '<em>' + esc(when) + '</em><span>' + esc(what) + '</span></span>';
+}
+function shortDate_(d){
+  var p = String(d || '').split('-');
+  return p.length === 3 ? (+p[1] + '/' + +p[2]) : (d || '');
+}
+
+function ctxHtml(r){
+  var done = r.status !== '進行中';
+  var steps = r.list.map(function(x, i){
+    var cls = i + 1 < r.n ? 'done' : (i + 1 === r.n ? 'now' : '');
+    return ctxStep(cls, shortDate_(x.date), x.sub || '服務');
+  });
+  /* 最後補一格「下一次」。已結案就不補——那一格會變成永遠亮不起來的幽靈。 */
+  if(!done){
+    steps.push(ctxStep('', r.nextDate ? shortDate_(r.nextDate) : '未排', '下一次'));
+  }
+  return '<p class="c5line"><span class="c5k">◷ ' + esc(r.kind) + '</span>' +
+      '這是<b>第 ' + r.n + ' 次服務</b>，目前共 ' + r.total + ' 次</p>' +
+    '<span class="c5rail">' + steps.join('') + '</span>' +
+    '<span class="c5foot"><span class="c5id">' + esc(r.id) + '</span>' +
+      (done ? '已結案' : '還沒結案') +
+      '<span class="c5go">看整串 ›</span></span>';
 }
 
 function drawRecordBody(d){
@@ -4413,65 +4450,171 @@ function openCase(id){
 
 function drawCase(c){
   $('ckTitle').textContent = c.kind;
-  $('ckSub').textContent = c.id + '　' + c.state.text;
+  $('ckSub').textContent = (c.workers || c.client || '') + '　' + c.state.text;
+  $('ckBody').innerHTML = caseSummary(c) + caseLine(c);
+  drawCaseActions(c);
+  bindCase(c);
+  caseLooseHint(c);
+}
 
-  var h = '';
+/* 摘要：第一眼要回答「誰、什麼事、現在到哪一步」。
+   移工的名字放最大——以前它埋在第二張卡的第一列。 */
+function caseSummary(c){
+  var open = c.status === '進行中';
+  var steps = (CK_SCHEMA && CK_SCHEMA.steps && CK_SCHEMA.steps[c.kind]) || [];
+  var at = steps.indexOf(c.step);
+  var h = '<div class="c6sum">' +
+    '<div class="c6who">' + esc(c.workers || '（未填移工）') + '</div>' +
+    '<div class="c6at">' + esc(c.client) +
+      (c.sub ? '　·　' + esc(c.sub) : '') + '</div>';
 
-  /* 排程型把最重要的那張「票」放最上面：
-     返鄉是登機證、體檢是掛號單。機票跟掛號單長什麼樣大家都認得，
-     不用再教一次怎麼讀。 */
-  if(c.kind === '返鄉休假') h += bpHtml(c);
-  if(c.kind === '體檢通知' || c.kind === '就醫追蹤') h += slipHtml(c);
+  if(steps.length && open){
+    h += '<div class="c6seg">' + steps.map(function(x, i){
+      return '<button type="button" class="c6st' +
+        (i === at ? ' on' : '') + '" data-step="' + esc(x) + '">' +
+        esc(x) + '</button>';
+    }).join('') + '</div>';
+  }
+
+  /* 一行 meta。空的欄位不要留「—」，一整排破折號看起來像壞掉。 */
+  var m = [];
+  if(c.crew) m.push('負責 <b>' + esc(c.crew) + '</b>');
+  if(c.openedAt) m.push('開案 <b>' + esc(shortDate_(c.openedAt)) + '</b>');
+  m.push('已服務 <b>' + c.items.length + ' 次</b>');
+  if(!open) m.push('<b>' + esc(c.status) + '</b>');
+  h += '<div class="c6meta">' + m.map(function(x){
+    return '<span>' + x + '</span>'; }).join('') + '</div>';
+
+  /* 登機證與掛號單只在「真的有東西」的時候畫。
+     ⛔ 以前只要有 nextDate 就畫，結果畫出一張「尚未指定醫院」的空單——
+     那個日期現在在時間軸的「下一次」那一格，這裡不用重複。 */
+  h += '</div>';
+  var d = c.detail || {};
+  if(c.kind === '返鄉休假' && (d.out || d.air)) h += bpHtml(c);
+  if((c.kind === '體檢通知' || c.kind === '就醫追蹤') && (d.hos || d.no)) h += slipHtml(c);
 
   if(c.link){
-    h += '<div class="clink" data-go="' + esc(c.link.id) + '">' +
-      '<span><span class="k">相關案件</span><b>' + esc(c.link.kind) + '　' +
-      esc(c.link.id) + '　' + esc(c.link.status) + '</b></span>' +
-      '<span class="go">›</span></div>';
+    h += '<div class="c6link" data-go="' + esc(c.link.id) + '">' +
+      '<span>相關案件　<b>' + esc(c.link.kind) + '　' + esc(c.link.id) + '</b>　' +
+      esc(c.link.status) + '</span><span class="go">›</span></div>';
   }
 
-  h += '<div class="cbox"><h4>基本</h4>' + kvHtml([
-    ['移工', c.workers],
-    ['雇主／工廠', c.client],
-    ['服務類別', c.big && c.sub ? (c.big + ' ／ ' + c.sub) : (c.sub || '')],
-    ['負責翻譯', c.crew],
-    ['開案', c.openedAt + (c.by ? '　' + c.by : '')],
-    ['結案', c.closedAt],
-    ['結案結果', c.result],
-    ['說明', c.note]
-  ]) + '</div>';
+  /* 填好的細節才顯示。沒填的走時間軸最後那一格的「填細節」。 */
+  var defs = (CK_SCHEMA && CK_SCHEMA.fields && CK_SCHEMA.fields[c.kind]) || [];
+  var rows = defs.filter(function(f){
+    return f.t === 'check' ? d[f.k] : (d[f.k] !== undefined && d[f.k] !== '');
+  });
+  if(rows.length){
+    h += '<div class="c6det"><p class="c6dh">' + esc(c.kind) + '的細節' +
+      '<button type="button" class="c6edit" id="ckEdit">修改</button></p>' +
+      '<dl class="ckv">' + rows.map(function(f){
+        return '<dt>' + esc(f.l) + '</dt><dd>' +
+          (f.t === 'check' ? '✓' : esc(d[f.k])) + '</dd>';
+      }).join('') + '</dl></div>';
+  }
+  return h;
+}
 
-  h += stepsHtml(c) + detailHtml(c);
+/* 整件事就是一條線：開案 → 每一次服務 → 下一次 → 結案。
+   動作掛在對應的那一格旁邊，不要全部堆到螢幕最底下——
+   「改回診日期」放在「要回診」旁邊，比跟其他三顆擠在一起清楚太多。 */
+function caseLine(c){
+  var open = c.status === '進行中';
+  var NEXT_T = { '就醫追蹤': '回診', '體檢通知': '體檢', '返鄉休假': '回台' };
+  var what = NEXT_T[c.kind] || '下一次';
+  var h = '<div class="c6line">';
 
-  if(CASE_FORM_[c.kind]){
-    h += '<div class="cbox"><h4>服務紀錄　' + c.items.length + ' 筆</h4>' +
-      (c.items.length ? ctlHtml(c.items)
-        : '<p class="hint" style="margin:0">還沒有。從行事曆的行程往右滑，' +
-          '或填完服務表之後掛上來。</p>') +
-      '</div>';
+  h += c6row('ok', '✓', shortDate_(c.openedAt), '開案',
+    (c.by ? esc(c.by) + ' 開的' : '') + (c.note ? '　' + esc(c.note) : ''), '');
+
+  c.items.forEach(function(it, i){
+    var last = i === c.items.length - 1;
+    var acts = '<a data-rv="' + esc(it.rec) + '">看這張表</a>';
+    if(open) acts += '<a class="rm" data-off="' + esc(it.rec) + '">從這串拿掉</a>';
+    h += c6row(last ? 'now' : 'ok', String(i + 1), shortDate_(it.date),
+      it.sub || '服務紀錄',
+      esc(it.rec) + '　' + esc(RV_LABEL[it.rv] || it.rv) +
+        (it.primary ? '' : '　關聯案件的') +
+        (it.how ? '<br>' + esc(it.how) : ''),
+      acts);
+  });
+
+  if(!c.items.length && CASE_FORM_[c.kind]){
+    h += c6row('', '—', '', '還沒有服務紀錄',
+      '從行事曆的行程往左推到「追蹤」，或按底下那顆開一張。', '');
+  }
+
+  if(open){
+    var when = c.nextDate ? (shortDate_(c.nextDate) +
+      (c.nextIn ? '' : '')) : '未排';
+    var acts = '';
+    if(CASE_FORM_[c.kind]) acts += '<a data-a="new">＋ 開一筆</a>';
+    acts += '<a data-a="next">' + (c.nextDate ? '改日期' : '排日期') + '</a>';
+    if(c.kind !== '異常事件') acts += '<a data-a="msg">提醒訊息</a>';
+    h += c6row('next', '!', when, '要' + what,
+      c.nextDate
+        ? (esc(c.nextNote || '') || '行事曆上已經排好一筆了')
+        : '還沒排。排了會自動出現在行事曆上。', acts);
+
+    var ca = '';
+    var defs = (CK_SCHEMA && CK_SCHEMA.fields && CK_SCHEMA.fields[c.kind]) || [];
+    if(defs.length) ca += '<a data-a="detail">填細節</a>';
+    if(c.kind === '異常事件' && !c.link) ca += '<a data-a="med">開一筆就醫追蹤</a>';
+    ca += '<a data-a="close">結案</a>';
+    ca += '<a class="rm" data-a="cancel">這件開錯了</a>';
+    h += c6row('', '', '之後', '結案',
+      '全部的服務紀錄都歸檔之後才結得掉。', ca);
   } else {
-    h += '<div class="cbox"><h4>下一步</h4>' +
-      kvHtml([['日期', c.nextDate], ['要做什麼', c.nextNote]]) +
-      (c.nextDate
-        ? '<p class="hint" style="margin:9px 0 0">行事曆上已經排好一筆了。' +
-          '在那邊刪掉的話，這裡也會跟著清空。</p>'
-        : '<p class="hint" style="margin:0">還沒排。排了會自動出現在行事曆上。</p>') +
-      '</div>';
+    h += c6row('ok', '✓', shortDate_(c.closedAt), esc(c.status),
+      esc(c.result || ''), '');
   }
+  return h + '</div><div id="ckHint"></div>';
+}
 
-  $('ckBody').innerHTML = h;
-  var lk = $('ckBody').querySelector('.clink');
-  if(lk) lk.addEventListener('click', function(){ openCase(lk.dataset.go); });
-  [].forEach.call($('ckBody').querySelectorAll('[data-rv]'), function(el){
+function c6row(cls, dot, when, title, body, acts){
+  return '<div class="c6i ' + cls + '"><span class="d">' + esc(dot) + '</span>' +
+    '<div class="c">' + (when ? '<em>' + esc(when) + '</em>' : '') +
+    '<b>' + esc(title) + '</b>' +
+    (body ? '<p>' + body + '</p>' : '') +
+    (acts ? '<span class="c6a">' + acts + '</span>' : '') +
+    '</div></div>';
+}
+
+/* 底下只剩一顆。其餘的動作都在時間軸上它該在的那一格旁邊。 */
+function drawCaseActions(c){
+  var h = '';
+  if(c.status === '進行中' && CASE_FORM_[c.kind]){
+    h = '<button type="button" class="p full" id="ckNew">＋ 新增一筆服務紀錄</button>';
+  }
+  $('ckAct').innerHTML = h ? ('<div class="stack">' + h + '</div>') : '';
+  if($('ckNew')) $('ckNew').addEventListener('click', function(){ caseNewRecord(c); });
+}
+
+/* 所有點擊集中綁一次。時間軸的動作是 <a data-a>，服務紀錄是 <a data-rv>。 */
+function bindCase(c){
+  var B = $('ckBody');
+  var ACT = {
+    'new':    function(){ caseNewRecord(c); },
+    'next':   function(){ caseSetNext(c); },
+    'msg':    function(){ openMsg(c, ''); },
+    'med':    function(){ caseSpawnMed(c); },
+    'detail': function(){ openDetailForm(c); },
+    'close':  function(){ caseClose(c); },
+    'cancel': function(){ caseCancelAll(c); }
+  };
+  [].forEach.call(B.querySelectorAll('[data-a]'), function(el){
+    el.addEventListener('click', function(){ (ACT[el.dataset.a] || function(){})(); });
+  });
+  [].forEach.call(B.querySelectorAll('[data-rv]'), function(el){
     el.addEventListener('click', function(){
       $('caseModal').style.display = 'none';
       openRecord(el.dataset.rv);
     });
   });
-
-  var ed = $('ckEdit');
-  if(ed) ed.addEventListener('click', function(){ openDetailForm(c); });
-  [].forEach.call($('ckBody').querySelectorAll('[data-step]'), function(b){
+  [].forEach.call(B.querySelectorAll('[data-off]'), function(el){
+    el.addEventListener('click', function(){ caseDetach(c, el.dataset.off); });
+  });
+  [].forEach.call(B.querySelectorAll('[data-step]'), function(b){
     b.addEventListener('click', function(){
       if(b.dataset.step === c.step) return;
       google.script.run
@@ -4483,33 +4626,263 @@ function drawCase(c){
         .setCaseStep(CODE, c.id, b.dataset.step);
     });
   });
-
-  drawCaseActions(c);
+  var ed = $('ckEdit');
+  if(ed) ed.addEventListener('click', function(){ openDetailForm(c); });
+  var lk = B.querySelector('.c6link');
+  if(lk) lk.addEventListener('click', function(){ openCase(lk.dataset.go); });
 }
 
-function kvHtml(pairs){
-  var rows = pairs.filter(function(p){ return p[1]; });
-  if(!rows.length) return '';
-  return '<dl class="ckv">' + rows.map(function(p){
-    return '<dt>' + esc(p[0]) + '</dt><dd>' + esc(p[1]) + '</dd>';
-  }).join('') + '</dl>';
+/* 把一筆從這串拿掉。
+   ⛔ 確認訊息一定要寫「不會怎樣」——「服務紀錄本身不會刪掉」這一句
+   比什麼都重要。不寫，沒有人敢按，錯的資料就會一直放著。 */
+function caseDetach(c, rec){
+  var n = c.items.length - 1;
+  if(!confirm('把這一筆從「' + c.kind + '」拿掉？\n\n' +
+      '· 服務紀錄本身不會刪掉，行事曆與查詢裡都還在\n' +
+      '· 它只是不再算進這件事，這串會剩 ' + n + ' 筆\n' +
+      '· 之後隨時可以再加回來')) return;
+  google.script.run
+    .withSuccessHandler(function(){
+      TK_LOADED = '';
+      if(n === 0) askCancelEmpty(c); else { toast('已從這串拿掉'); openCase(c.id); }
+    })
+    .withFailureHandler(function(e){ toast(e.message, true); })
+    .detachRecord(CODE, c.id, rec);
 }
 
-/* 案件的時間軸。每一筆都要看得到自己的審核狀態——
-   翻譯在這裡就該發現「有一筆還沒送審」，不用切到送審頁一筆一筆對。 */
-function ctlHtml(items){
-  return '<div class="ctl">' + items.map(function(it){
-    return '<div class="it' + (it.rv === '已歸檔' ? ' done' : '') + '">' +
-      '<div class="d">' + esc(it.date) + (it.crew ? '　' + esc(it.crew) : '') +
-        (it.mode ? '　' + esc(it.mode) : '') + '</div>' +
-      '<div class="h">' + esc(it.sub || '服務紀錄') +
-        (it.primary ? '' : '<span class="qq">關聯案件的</span>') + '</div>' +
-      (it.how ? '<div class="x">' + esc(it.how) + '</div>' : '') +
-      (it.result ? '<div class="x"><b>結果：</b>' + esc(it.result) + '</div>' : '') +
-      '<span class="lk" data-rv="' + esc(it.rec) + '">' + esc(it.rec) +
-        '　' + esc(RV_LABEL[it.rv] || it.rv) + ' ›</span>' +
-    '</div>';
-  }).join('') + '</div>';
+/* 拿掉最後一筆之後順便問。不問的話，空的一串會一直留在追蹤頁製造困惑。 */
+function askCancelEmpty(c){
+  if(confirm('這串已經沒有任何服務紀錄了。\n\n' +
+      '整件「' + c.kind + ' ' + c.id + '」要一起取消嗎？\n\n' +
+      '· 先留著：之後還可以把服務放回來\n' +
+      '· 取消整件：追蹤那一頁不會再出現它，自動排的行程也會收掉')){
+    doCancelCase(c, '拿掉最後一筆之後一起取消');
+  } else { toast('已從這串拿掉'); openCase(c.id); }
+}
+
+function caseCancelAll(c){
+  var why = prompt('這件開錯了要取消。\n請寫一句原因（之後查得到）：', '');
+  if(why === null) return;
+  doCancelCase(c, why || '（未填原因）');
+}
+function doCancelCase(c, why){
+  google.script.run
+    .withSuccessHandler(function(){
+      toast('已取消整件');
+      $('caseModal').style.display = 'none';
+      TK_LOADED = ''; TK_ROWS = []; loadTrack();
+    })
+    .withFailureHandler(function(e){ toast(e.message, true); })
+    .cancelCase(CODE, c.id, why);
+}
+
+/* 「這位移工還有 N 筆沒歸案」。另外打一支，不要拖慢案件頁的顯示。
+   這是「一開始不問」那個做法的另一半：建案當下不逼他挑，
+   案件建好之後在這裡輕輕提一句，要理不理都可以。 */
+function caseLooseHint(c){
+  if(c.status !== '進行中') return;
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!r || !r.ok || !r.n || !$('ckHint')) return;
+      $('ckHint').innerHTML = '<div class="c6sug"><span class="ic">◷</span>' +
+        '<span class="c"><b>' + esc((c.workers || '').split('、')[0] || '這位移工') +
+        '還有 ' + r.n + ' 筆沒歸在任何一串底下</b>' +
+        (r.near ? '<span>其中 ' + r.near + ' 筆在這件前後兩個月內</span>' : '') +
+        '</span><span class="go">看看 ›</span></div>';
+      $('ckHint').firstChild.addEventListener('click', function(){
+        openLoosePick({ mode: 'add', caseId: c.id, kind: c.kind,
+          worker: (c.workers || '').split('、')[0], client: c.client,
+          nearDate: c.openedAt, big: c.big,
+          exclude: c.items.map(function(x){ return x.rec; }) });
+      });
+    })
+    .withFailureHandler(function(){})
+    .caseLooseHint(CODE, c.id);
+}
+
+/* ── 挑選還沒歸案的服務 ─────────────────────────────
+   2026-09-19。他問「一年 30 筆的話會不會找太久」——會，所以這一頁
+   刻意不給全部：後端 looseRecordsFor 預設只回 5 筆，排序也在那裡。
+
+   前端只負責三件事：分組顯示、寫出分母、搜尋。
+
+   ⛔ 一列一定要有「處理經過 · 結果」那一行。少了它，同一位移工一年
+   五筆「文件送達／領回」長得一模一樣，人只能用猜的。 */
+var LP_ = null;
+
+function openLoosePick(o){
+  if(!$('lpModal')){ toast('要先更新 App', true); return; }
+  LP_ = { o: o, rows: [], sel: {}, all: false, kw: '', step: 'pick' };
+  $('lpTitle').textContent = '還要一起放進來嗎？';
+  $('lpWho').textContent = (o.worker || o.client || '') + '　' + (o.kind || '');
+  $('lpKw').value = '';
+  $('lpModal').style.display = '';
+  $('lpBody').scrollTop = 0;
+  lpLoad();
+}
+function closeLoosePick(){ $('lpModal').style.display = 'none'; LP_ = null; }
+
+function lpLoad(){
+  var o = LP_.o;
+  $('lpList').innerHTML = '<div class="mid" style="padding:26px">讀取中…</div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!LP_) return;
+      LP_.rows = r.rows || []; LP_.info = r;
+      drawLoosePick();
+    })
+    .withFailureHandler(function(e){
+      if(!LP_) return;
+      $('lpList').innerHTML = '<div class="mid" style="padding:26px">' +
+        esc(e.message) + '</div>';
+    })
+    .looseRecordsFor(CODE, { worker: o.worker, client: o.client,
+      nearDate: o.nearDate, big: o.big, exclude: o.exclude || [],
+      kw: LP_.kw, all: LP_.all });
+}
+
+/* 分組：同一大類又時間相近的最可能，其餘次之，已歸案的鎖住排最後。
+   規則跟後端的 scoreLoose_ 對得上，不要各自發明一套。 */
+function lpBucket(r){
+  if(r.caseId) return 2;
+  return (LP_.o.big && r.big === LP_.o.big && r.days <= (LP_.info.nearDays || 60))
+    ? 0 : 1;
+}
+var LP_GRP_ = [
+  ['最可能', '同一類 · 時間相近'],
+  ['其他沒歸案的', '按時間遠近排'],
+  ['已經在別串底下', '不能重複掛，列出來只是讓你知道它去哪了']
+];
+
+function drawLoosePick(){
+  var i = LP_.info;
+  $('lpTally').innerHTML =
+    '<span>共 <b>' + i.total + '</b> 筆</span>' +
+    '<span class="hi">還沒歸案 <b>' + i.loose + '</b> 筆</span>' +
+    '<span>' + (LP_.all ? '全部列出' : '這裡先列 <b>' + i.shown + '</b> 筆') + '</span>';
+
+  if(!LP_.rows.length){
+    $('lpList').innerHTML = '<p class="hint" style="padding:18px 2px">' +
+      (LP_.kw ? '找不到符合「' + esc(LP_.kw) + '」的。' : '沒有其他可以放進來的服務。') +
+      '</p>';
+    lpCount(); return;
+  }
+
+  var by = [[], [], []];
+  LP_.rows.forEach(function(r){ by[lpBucket(r)].push(r); });
+  var h = '';
+  by.forEach(function(list, g){
+    if(!list.length) return;
+    h += '<p class="lpgrp"><b>' + LP_GRP_[g][0] + '</b><span>' +
+      LP_GRP_[g][1] + '</span></p>' + list.map(lpRow).join('');
+  });
+  if(!LP_.all && LP_.info.total > LP_.info.shown){
+    h += '<button type="button" class="lpmore" id="lpMore">還有 ' +
+      (LP_.info.total - LP_.info.shown) + ' 筆　·　全部列出</button>';
+  }
+  $('lpList').innerHTML = h;
+
+  [].forEach.call($('lpList').querySelectorAll('.lprw'), function(el){
+    if(el.dataset.lock) return;
+    el.addEventListener('click', function(){
+      var k = el.dataset.rec;
+      if(LP_.sel[k]) delete LP_.sel[k]; else LP_.sel[k] = 1;
+      el.classList.toggle('on', !!LP_.sel[k]);
+      lpCount();
+    });
+  });
+  if($('lpMore')) $('lpMore').addEventListener('click', function(){
+    LP_.all = true; lpLoad();
+  });
+  lpCount();
+}
+
+function lpRow(r){
+  var lock = !!r.caseId;
+  return '<div class="lprw' + (LP_.sel[r.rec] ? ' on' : '') + (lock ? ' lock' : '') +
+    '" data-rec="' + esc(r.rec) + '"' + (lock ? ' data-lock="1"' : '') + '>' +
+    '<span class="ck">' + (LP_.sel[r.rec] ? '✓' : '') + '</span>' +
+    '<span class="c">' +
+      '<span class="r1"><b>' + esc(r.sub || '服務紀錄') + '</b>' +
+        '<em>' + esc(r.ago) + '</em></span>' +
+      (r.gist ? '<span class="r2">' + esc(r.gist) + '</span>' : '') +
+      '<span class="r3">' +
+        (lock ? '<i class="pill lk">在 ' + esc(r.caseId) + ' 底下</i>'
+              : '<i class="pill">' + esc(r.big || '未分類') + '</i>') +
+        esc(r.date) + '<i>' + esc(r.crew || '') + '</i>' + esc(r.rec) +
+      '</span>' +
+    '</span></div>';
+}
+
+function lpCount(){
+  var n = Object.keys(LP_.sel).length;
+  $('lpCount').textContent = '已選 ' + n + ' 筆';
+  $('lpGo').disabled = !n;
+  $('lpGo').textContent = LP_.step === 'pick' ? '看看順序' : ('確定加進去　' + n + ' 筆');
+}
+
+/* 先算給人看再寫進去。這一步是整個流程最重要的一步——
+   現在的問題是按下去才知道發生什麼事。 */
+function lpPreview(){
+  LP_.step = 'confirm';
+  var keep = LP_.rows.filter(function(r){ return LP_.sel[r.rec]; });
+  var have = (LP_.o.items || []).slice();
+  var all = have.concat(keep.map(function(r){
+    return { date: r.date, sub: r.sub, rec: r.rec, isNew: 1 };
+  }));
+  all.sort(function(a, b){ return (a.date || '').localeCompare(b.date || ''); });
+  $('lpTitle').textContent = '加進去會變這樣';
+  $('lpTally').innerHTML = '<span>加完之後共 <b>' + all.length + '</b> 筆</span>';
+  $('lpList').innerHTML = '<div class="lppv">' + all.map(function(x, i){
+    return '<div class="pvi' + (x.isNew ? ' add' : '') + '">' +
+      '<span class="k">' + (i + 1) + '</span>' +
+      '<span class="c"><b>' + esc(x.sub || '服務紀錄') + '</b>' +
+        '<span>' + esc(x.date) + '　' + esc(x.rec) + '</span></span>' +
+      (x.isNew ? '<span class="t">要加的</span>' : '') + '</div>';
+  }).join('') + '</div>' +
+  '<p class="hint" style="margin:10px 2px 0">按日期排。服務紀錄本身不會有任何更動。</p>';
+  lpCount();
+}
+
+function lpCommit(){
+  var list = Object.keys(LP_.sel);
+  if(!list.length) return;
+  var id = LP_.o.caseId;
+  $('lpGo').disabled = true;
+  google.script.run
+    .withSuccessHandler(function(r){
+      toast(r.failed && r.failed.length
+        ? ('加了 ' + r.n + ' 筆，' + r.failed.length + ' 筆沒進去')
+        : ('已加進 ' + r.n + ' 筆'));
+      closeLoosePick();
+      TK_LOADED = ''; openCase(id);
+    })
+    .withFailureHandler(function(e){ $('lpGo').disabled = false; toast(e.message, true); })
+    .attachRecords(CODE, id, list);
+}
+
+/* 搜尋。打字就送太吵，停 350ms 再問後端。 */
+var LP_T_ = null;
+function bindLoosePick(){
+  if(!$('lpModal')) return;
+  $('lpBack').addEventListener('click', function(){
+    if(LP_ && LP_.step === 'confirm'){
+      LP_.step = 'pick'; $('lpTitle').textContent = '還要一起放進來嗎？';
+      drawLoosePick(); return;
+    }
+    closeLoosePick();
+  });
+  $('lpGo').addEventListener('click', function(){
+    if(LP_.step === 'pick') lpPreview(); else lpCommit();
+  });
+  $('lpKw').addEventListener('input', function(){
+    if(LP_T_) clearTimeout(LP_T_);
+    var v = $('lpKw').value;
+    LP_T_ = setTimeout(function(){
+      if(!LP_) return;
+      LP_.kw = v; LP_.all = false; lpLoad();
+    }, 350);
+  });
 }
 
 /* 登機證。返鄉休假的細節存在 detail 裡，沒填的那幾格就不要畫出來，
@@ -4690,6 +5063,9 @@ function caseClose(c){
     .closeCase(CODE, c.id, r);
 }
 
+/* 挑選頁的按鈕在頁面載入時綁一次。跟其他浮層同一個做法。 */
+bindLoosePick();
+
 if($('ckClose2')) $('ckClose2').addEventListener('click', function(){
   $('caseModal').style.display = 'none';
 });
@@ -4791,40 +5167,7 @@ function loadSchema(then){
 /* 階段條。返鄉要追的是「人走了沒、回來了沒」，
    體檢要追的是「通知了沒、約了沒、提醒了沒」——
    那是一格一格往前走的東西，用狀態欄的三個值表達不了。 */
-function stepsHtml(c){
-  var list = (CK_SCHEMA && CK_SCHEMA.steps && CK_SCHEMA.steps[c.kind]) || [];
-  if(!list.length) return '';
-  var at = list.indexOf(c.step);
-  return '<div class="cbox"><h4>進度</h4><div class="steps">' +
-    list.map(function(s, i){
-      var cls = (at < 0) ? '' : (i < at ? 'done' : (i === at ? 'now' : ''));
-      return '<button type="button" class="stp ' + cls + '" data-step="' + esc(s) + '">' +
-        esc(s) + '</button>';
-    }).join('') + '</div>' +
-    '<p class="hint" style="margin:8px 0 0">點一下就換到那一格。按錯了再點回去就好。</p></div>';
-}
-
 /* 詳細欄位。沒填的不要顯示空白列——一整頁「—」看起來像壞掉。 */
-function detailHtml(c){
-  var defs = (CK_SCHEMA && CK_SCHEMA.fields && CK_SCHEMA.fields[c.kind]) || [];
-  if(!defs.length) return '';
-  var d = c.detail || {};
-  var rows = defs.filter(function(f){
-    return f.t === 'check' ? d[f.k] : (d[f.k] !== undefined && d[f.k] !== '');
-  });
-  var body = rows.length
-    ? '<dl class="ckv">' + rows.map(function(f){
-        return '<dt>' + esc(f.l) + '</dt><dd>' +
-          (f.t === 'check' ? '✓' : esc(d[f.k])) + '</dd>';
-      }).join('') + '</dl>'
-    : '<p class="hint" style="margin:0">還沒填。按下面那顆把資料補上，' +
-      (c.kind === '返鄉休假' ? '登機證' : c.kind === '體檢通知' ? '通知單' : '這一區') +
-      '才有東西。</p>';
-  return '<div class="cbox"><h4>' + esc(c.kind) + '的細節</h4>' + body +
-    '<button type="button" class="sec full" id="ckEdit" style="margin-top:10px">' +
-    (rows.length ? '修改細節' : '＋ 填寫細節') + '</button></div>';
-}
-
 /* 編輯表單。型別由後端給，這裡只負責把它畫成輸入框。 */
 function openDetailForm(c){
   var defs = (CK_SCHEMA && CK_SCHEMA.fields && CK_SCHEMA.fields[c.kind]) || [];
