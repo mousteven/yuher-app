@@ -4920,11 +4920,29 @@ function slipHtml(c){
    帶過去的名字直接掉了。同一件事不要維護兩份。
 
    ⚠ 順序不能動：先設服務對象 → fillClients() 重建雇主名單 → 才填得進雇主。 */
+/* 把雇主名字填進去。名單裡沒有就走「其他，自行輸入」——
+   寧可讓人看到名字再確認，也不要默默弄丟。 */
+function setClientValue(name){
+  if(!name){ $('client').value = ''; return; }
+  $('client').value = name;
+  if($('client').value === name) return;
+  $('client').value = OTHER_;
+  $('clientOther').style.display = '';
+  $('clientOther').value = name;
+}
+
 function fillTripForm(r){
   if(r.date) $('date').value = r.date;
-  $('target').value = r.target || '工廠';
+  /* ⚠ 不要相信傳進來的「服務對象」。
+     2026-09-19 實機：張寶華是家庭雇主，但案件那一列記成工廠，
+     結果拉出工廠的名單、裡面沒有他，select 默默拒絕了那個值，
+     雇主就空了；移工名單跟著雇主長，所以移工也一起沒了。
+     客戶名單自己就知道每一家是工廠還是家庭雇主——用它當準。 */
+  var pz = presetOf(r.client);
+  $('target').value = (pz && pz.t) ? pz.t : (r.target || '工廠');
+  if(!$('target').value) $('target').value = '工廠';
   fillClients(); syncMode();
-  $('client').value = r.client || '';
+  setClientValue(r.client);
   applyPreset();
   if(CREW.indexOf(r.crew) !== -1) $('crew').value = r.crew;
   if(r.crewOwner && CREW.indexOf(r.crewOwner) !== -1) $('crewOwner').value = r.crewOwner;
@@ -4936,7 +4954,16 @@ function fillTripForm(r){
     addWorker();
     var card = $('workers').lastElementChild;
     var sel = card.querySelector('[data-k=name]');
-    if(n && sel){ sel.value = n; sel.dispatchEvent(new Event('change')); }
+    if(n && sel){
+      sel.value = n;
+      // 不在這家的名單上（換雇主、名字有出入）就走「其他」，不要默默弄丟
+      if(sel.value !== n){
+        var oth = card.querySelector('[data-k=nameOther]');
+        sel.value = OTHER_;
+        if(oth){ oth.style.display = ''; oth.value = n; }
+      }
+      sel.dispatchEvent(new Event('change'));
+    }
     if(r.big){
       var bg = card.querySelector('[data-k=big]');
       bg.value = r.big; bg.dispatchEvent(new Event('change'));
