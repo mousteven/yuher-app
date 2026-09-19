@@ -1195,24 +1195,34 @@ function drawDay(){
     ? (plan.length ? ('待處理 '+plan.length+'　已完成 '+done.length) : ('已完成 '+done.length))
     : '沒有行程';
 
+  /* ── 行程卡 ─────────────────────────────────────────
+     版型是他從六輪 mockup 挑定的 F4③：
+
+       服務細項（小字眉標）              ◷ 就醫 3/4   進度  狀態
+       客戶名                                    [S260918-DV]
+       移工名                                          [2 人]
+
+     幾個刻意的決定，改之前先看懂：
+
+     · **服務細項放最上面當眉標。** 翻譯在掃一天的行程時，
+       先問的是「這趟要做什麼」，不是「這是哪一家」。
+     · **大類不印。** 「費用收取與發放 ／ 收服務費」——大類講過的事
+       細項又講一次，省一整段寬度。
+     · **「待處理」字樣拿掉。** 上面的分組標題已經寫了「待處理 2」，
+       而且「沒有進度條、沒有代碼」本身就是訊號。
+     · **紀錄代碼做成小標籤貼在客戶名右邊。** 這樣它只在有代碼的時候
+       佔位置，預排的卡片完全不受影響——而預排佔了一天裡的大半。
+     · **卡片上沒有按鈕。** PDF 與送審改成長按出選單，
+       整張卡的寬度都還給文字，長名字不再換行。
+     · **每人細項不同時改成一人一列。** 合併寫成「收服務費 · 帶工人就醫」
+       看不出誰做哪一件，而那正是翻譯要知道的事。 */
   function card(r){
     var l = (r.lang||'').split('、')[0] || '';
     var cls = r.status==='已完成' ? 'done' : (r.status==='取消' ? 'cancel' : 'plan');
-    /* 待處理的包一層：紅色的取消壓在下面，卡片往左滑才露出來。
-       data-go 留在外層，「從填寫頁返回」要靠它把這一張找回來。 */
-    var acts = (r.status !== '預排' && r.recCode)
-      ? '<button type="button" data-pdf="'+esc(r.recCode)+'"'+
-          ' data-client="'+esc(r.client||'')+'"'+
-          ' data-n="'+(r.workers?String(r.workers).split('、').length:0)+'"'+
-          '>PDF</button>'+
-        // 送出去之後就不該再有送審鈕，狀態標籤講得比按鈕清楚
-        ((r.rv==='未送審'||r.rv==='退回補正')
-          ? '<button type="button" data-sub="'+esc(r.recCode)+'">送審</button>' : '')
-      : '';
-    /* 每一張都包一層。往左滑露出紅色的取消（只有預排的有），
-       往右滑露出藍色的追蹤（每一張都有——已完成的那一趟也可能要掛到案件上）。
-       data-go 留在外層，「從填寫頁返回」要靠它把這一張找回來。 */
     var plan = r.status === '預排';
+
+    /* 往左滑露出紅色的取消（只有預排的有），往右滑露出藍色的追蹤。
+       data-go 留在外層，「從填寫頁返回」要靠它把這一張找回來。 */
     var wrapA = '<div class="swwrap"' +
       (r.id ? ' data-go="'+esc(r.id)+'"' : '') +
       (r.recCode ? ' data-rc="'+esc(r.recCode)+'"' : '') +
@@ -1225,24 +1235,38 @@ function drawDay(){
       '<button type="button" class="swtrack" aria-label="追蹤">' +
         (r.caseId ? '看追蹤' : '追蹤') + '</button>' +
       (plan ? '<button type="button" class="swdel">取消</button>' : '');
-    var wrapB = '</div>';
+
+    // 眉標右邊的追蹤標籤。有序號就寫「就醫 3/4」，沒有就只寫類型。
+    var tk = r.caseId
+      ? '<span class="evtk">◷ '+esc(SHORT_[r.caseKind] || r.caseKind || '追蹤')+
+        (r.caseN ? ' '+r.caseN+'/'+r.caseTotal : '')+'</span>'
+      : '';
+
+    var wcount = r.workers ? String(r.workers).split('、').filter(Boolean).length : 0;
+
     return wrapA + '<div class="ev '+cls+'">'+
       '<span class="bar lg-'+esc(l)+'"></span>'+
       '<span class="b"'+(r.recCode?' data-rec="'+esc(r.recCode)+'"':'')+'>'+
-        '<span class="t">'+esc(r.slot||'未定時段')+'　'+esc(r.crew)+
-          (r.caseId ? '　<span class="evtk">◷ '+esc(r.caseKind)+'</span>' : '')+
+        // 眉標：做什麼 ＋ 追蹤 ＋ 進度 ＋ 狀態
+        '<span class="eye">'+
+          '<span class="sv">'+esc(r.topic || r.sub || '—')+'</span>'+
+          tk + (r.rv ? progDots(r.rv) : '') + rvWord(r.rv) +
         '</span>'+
-        '<span class="n">'+esc(r.client)+
-          (r.target&&r.target.indexOf('工廠')!==0?'　'+esc(r.target):'')+'</span>'+
-        '<span class="m">'+esc(r.topic||'—')+
-          (r.workers?'　·　'+esc(r.workers):'')+
-          (r.recCode?'　<span class="code">'+esc(r.recCode)+'</span>':'')+'</span>'+
-        (r.rv?progHtml(r.rv):'')+
+        // 客戶名 ＋ 紀錄代碼
+        '<span class="nmrow">'+
+          '<span class="n">'+esc(r.client)+
+            (r.target&&r.target.indexOf('工廠')!==0?'　'+esc(r.target):'')+'</span>'+
+          (r.recCode?'<span class="codechip">'+esc(r.recCode)+'</span>':'')+
+        '</span>'+
+        // 移工名（自然截斷）＋ 人數標（永遠不縮）
+        (r.workers
+          ? '<span class="wkrow"><span class="wk">'+esc(r.workers)+'</span>'+
+            (wcount>1?'<span class="cnt">'+wcount+' 人</span>':'')+'</span>'
+          : '')+
+        // 時段與翻譯降到最後一行的小字。排一天的行程時還是要看得到。
+        '<span class="whoat">'+esc(r.slot||'未定時段')+'　'+esc(r.crew)+'</span>'+
       '</span>'+
-      /* 待處理的沒有按鈕了（點卡片開始填、左滑出取消），
-         所以整個 .acts 不輸出——空的 flex 子元素還是會吃掉父層 10px 的間距。 */
-      (acts ? '<span class="acts">' + acts + '</span>' : '') +
-      '</div>' + wrapB;
+      '</div></div>';
   }
 
   var html = '';
@@ -1263,11 +1287,12 @@ function drawDay(){
   var all = plan.concat(done);
   [].forEach.call($('calDayList').querySelectorAll('.ev'), function(card){
     var r2 = all[idx++]; if(!r2) return;
-    bindDrag(card, r2.id, r2.status);
+    bindDrag(card, r2);
   });
   if(plan.length && CAL_VIEW !== 'day'){
     $('calDayList').insertAdjacentHTML('beforeend',
-      '<p class="draghint">點一下開始填寫　·　往左滑可以取消　·　長按可以拖到別的日期</p>');
+      '<p class="draghint">點一下開始填寫　·　長按有更多選項　·　往右滑可以追蹤<br>'+
+      '往左滑可以取消　·　長按之後拖動可以改期</p>');
   }
 
   // 點已完成那一趟的內文＝打開整張服務表，送審前先確認過
@@ -1286,28 +1311,312 @@ function drawDay(){
   /* 每一張卡片：點一下（預排＝開始填寫、已完成＝看紀錄）、
      往左滑出取消（只有預排的）、往右滑出追蹤（每一張都有）。 */
   [].forEach.call($('calDayList').querySelectorAll('.swwrap'), bindSwipe);
-  [].forEach.call($('calDayList').querySelectorAll('[data-sub]'), function(b){
-    b.addEventListener('click', function(){
-      b.disabled = true;
-      google.script.run
-        // 重畫一次，卡片上的狀態標籤才會跟著變成「待副理審核」
-        .withSuccessHandler(function(){
-          toast('已送給副理審閱'); calBust(); loadCal(); refreshBadge(); })
-        .withFailureHandler(function(e){ b.disabled=false; toast(e.message, true); })
-        .submitForReview(CODE, b.dataset.sub);
-    });
-  });
-  // 已完成的可以直接調 PDF 出來，不用回查詢頁再找一次。
-  // 面板裡不再重複放送審鈕——卡片右邊本來就有一顆，同一件事只該有一個地方按。
-  [].forEach.call($('calDayList').querySelectorAll('[data-pdf]'), function(b){
-    b.addEventListener('click', function(){
-      openPdfSheet(b.dataset.pdf, {
-        client: b.dataset.client,
-        cnt: b.dataset.n ? +b.dataset.n : 0
-      });
-    });
+}
+
+/* ── 長按行程卡：選單 ──────────────────────────────────
+   2026-09-19。卡片上的 PDF 與送審按鈕拿掉了，改成長按出選單。
+
+   ⚠ 長按原本已經被「拖曳改期」佔用。用 iOS 桌面那套解決：
+       長按不動放開 → 出選單
+       長按之後移動 → 進入拖曳（只有預排的行程可以改期）
+   兩個手勢共存，不用二選一。
+
+   ⛔ 選單內容不是固定的一組。預排的沒有 PDF 也沒東西可以送審；
+   送審後的不能改。放一堆按不了的灰按鈕比少幾個選項更糟——人會以為壞了。
+   上鎖的狀況一定要講出原因與怎麼辦。 */
+
+var CM_ = null;          // 目前選單對應的那一筆
+
+function openCardMenu(r){
+  if(!$('cardMenu')){ toast('要先更新 App', true); return; }
+  CM_ = r;
+  var plan = r.status === '預排';
+  var rv = r.rv || '';
+  var locked = rv === '待副理審' || rv === '待總經理核准' || rv === '已歸檔';
+  var b = [];
+
+  if(plan){
+    b.push(['go',   '✎', '開始填寫']);
+    b.push(['date', '📅', '改期']);
+  } else {
+    b.push(['pdf',  '📄', '輸出 PDF 給雇主']);
+    if(rv === '未送審') b.push(['sub', '➤', '送給副理審閱']);
+    if(rv === '退回補正') b.push(['edit', '✎', '改完重新送審']);
+    if(rv === '未送審') b.push(['edit', '✎', '修改這一筆']);
+  }
+  // 追蹤：有就看、沒有就開。這一項每一種狀態都有。
+  b.push(r.caseId ? ['seechain', '◷', '看追蹤', r.caseId]
+                  : ['track',    '◷', r.recCode ? '加入追蹤' : '開一件追蹤']);
+  if(r.recCode) b.push(['copy', '⧉', '複製紀錄代碼', r.recCode]);
+  if(plan) b.push(['del', '✕', '取消這個行程', '', 1]);
+
+  $('cmTitle').textContent = r.client || '';
+  $('cmSub').textContent = (r.topic || r.sub || '') +
+    (r.workers ? '　·　' + r.workers : '') +
+    (r.recCode ? '　·　' + r.recCode : '');
+  $('cmList').innerHTML = b.map(function(x){
+    return '<button type="button" class="cmi'+(x[4]?' red':'')+'" data-a="'+x[0]+'">' +
+      '<i>'+x[1]+'</i>'+esc(x[2]) +
+      (x[3] ? '<em>'+esc(x[3])+'</em>' : '') + '</button>';
+  }).join('');
+
+  /* 上鎖要講原因與怎麼辦。只把按鈕拿掉，人會以為系統壞了。 */
+  var why = '';
+  if(rv === '待副理審' || rv === '待總經理核准') why = '送審之後就不能改了。真的要改，請副理退回。';
+  else if(rv === '已歸檔') why = '已經歸檔了，內容不能再更動。';
+  else if(rv === '退回補正') why = '副理退回了，改完要重新送審。';
+  else if(!plan && !r.caseId) why = '這一筆還沒掛在任何追蹤底下。';
+  $('cmWhy').textContent = why;
+  $('cmWhy').style.display = why ? '' : 'none';
+
+  $('cardMenu').style.display = '';
+  [].forEach.call($('cmList').children, function(el){
+    el.addEventListener('click', function(){ cardMenuDo(el.dataset.a); });
   });
 }
+
+function closeCardMenu(){ $('cardMenu').style.display = 'none'; }
+
+function cardMenuDo(a){
+  var r = CM_ || {};
+  closeCardMenu();
+  if(a === 'go')   { startFromSchedule(r.id); return; }
+  if(a === 'date') { cardReschedule(r); return; }
+  if(a === 'pdf')  {
+    openPdfSheet(r.recCode, { client: r.client,
+      cnt: r.workers ? String(r.workers).split('、').filter(Boolean).length : 0 });
+    return;
+  }
+  if(a === 'sub')  { cardSubmit(r); return; }
+  if(a === 'edit') { openRecord(r.recCode, { rec: r.recCode, y: window.scrollY,
+      view: CAL_VIEW, ym: CAL_YM, sel: CAL_SEL,
+      label: (($('calDayTitle')||{}).textContent||'').trim(), name: r.client }); return; }
+  if(a === 'seechain'){ openChain(r.recCode || '', r.caseId); return; }
+  if(a === 'track'){
+    // 已經有服務紀錄的走「併進現有的一串」，沒有的走原本的開案流程
+    if(r.recCode) openMergePick(r); else openPick(cardData(r));
+    return;
+  }
+  if(a === 'copy') { copyText(r.recCode, '紀錄代碼'); return; }
+  if(a === 'del')  { cardCancel(r); return; }
+}
+
+/* 選單要的欄位跟右滑那個面板一樣，湊成同一個形狀就好，不要兩套 */
+function cardData(r){
+  return { rc: r.recCode || '', go: r.id || '', client: r.client || '',
+           workers: r.workers || '', lang: r.lang || '',
+           big: r.big || '', sub: r.sub || '' };
+}
+
+function cardSubmit(r){
+  google.script.run
+    .withSuccessHandler(function(){
+      toast('已送給副理審閱'); calBust(); loadCal(); refreshBadge(); })
+    .withFailureHandler(function(e){ toast(e.message, true); })
+    .submitForReview(CODE, r.recCode);
+}
+function cardCancel(r){
+  google.script.run
+    .withSuccessHandler(function(){ toast('已取消'); calBust(); loadCal(); })
+    .withFailureHandler(function(e){ toast(e.message, true); })
+    .setScheduleStatus(CODE, r.id, '取消');
+}
+function cardReschedule(r){
+  openDatePick({ kind: '', nextDate: r.date, nextNote: '' }, function(d){
+    if(!d) return;
+    google.script.run
+      .withSuccessHandler(function(){ toast('已改到 ' + d); calBust(); loadCal(); })
+      .withFailureHandler(function(e){ toast(e.message, true); })
+      .moveSchedule(CODE, r.id, d);
+  });
+}
+
+/* iOS 的 Safari 對 clipboard API 很挑，execCommand 這條老路反而穩。
+   兩條都試，哪條成了就算成了。 */
+function copyText(t, what){
+  var ta = document.createElement('textarea');
+  ta.value = t; ta.style.cssText = 'position:fixed;top:-100px;opacity:0';
+  document.body.appendChild(ta); ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e){}
+  ta.remove();
+  if(ok){ toast((what||'') + '已複製'); return; }
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(t).then(
+      function(){ toast((what||'') + '已複製'); },
+      function(){ toast('複製不了，請長按選取', true); });
+  } else toast('複製不了，請長按選取', true);
+}
+
+if($('cmCancel')) $('cmCancel').addEventListener('click', closeCardMenu);
+if($('cardMenu')) $('cardMenu').addEventListener('click', function(e){
+  if(e.target === $('cardMenu')) closeCardMenu();
+});
+
+
+/* ── 長按追蹤：整串服務紀錄（他挑的 L1 時間軸清單）──────────
+   由舊到新一條線串起來，每一列：第幾次、日期、做了什麼、結果、代碼、審核狀態。
+
+   三個讓第一次用的人就懂的設計：
+     ① 標題直接寫「第 3 次・共 4 次」，不要只寫案件代碼——
+        人不需要先理解「案件」這個概念才看得懂。
+     ② 目前這一筆要標出來。不然點進去看完第一筆，回來就不知道自己原本在哪。
+     ③ 最後一列是「＋ 記第 N 次」。看到它就知道這一串還會繼續長，
+        這比任何說明文字都有效。 */
+function openChain(recCode, caseId){
+  if(!$('chainModal')){ toast('要先更新 App', true); return; }
+  $('chList').innerHTML = '<div class="mid" style="padding:22px">讀取中…</div>';
+  $('chKind').textContent = ''; $('chCount').textContent = '這一串服務';
+  $('chWho').textContent = '';
+  $('chainModal').style.display = '';
+  google.script.run
+    .withSuccessHandler(function(r){ drawChain(r, recCode); })
+    .withFailureHandler(function(e){
+      $('chList').innerHTML = '<div class="mid" style="padding:22px">'+esc(e.message)+'</div>'; })
+    .caseChainOf(CODE, recCode);
+}
+
+function drawChain(r, recCode){
+  if(!r || !r.has){
+    $('chList').innerHTML = '<div class="mid" style="padding:22px">這一筆還沒掛在任何追蹤底下</div>';
+    return;
+  }
+  $('chKind').textContent = '◷ ' + r.kind + '　' + r.id;
+  $('chCount').textContent = (r.n ? ('第 ' + r.n + ' 次・') : '') + '共 ' + r.total + ' 次服務';
+  $('chWho').textContent = (r.client || '') + (r.workers ? '　·　' + r.workers : '');
+  $('chList').innerHTML = '<div class="chl">' + r.list.map(function(x){
+    var cur = x.rec === recCode;
+    return '<button type="button" class="ci'+(cur?' cur':'')+'" data-rec="'+esc(x.rec)+'">' +
+      '<span class="no">'+x.n+'</span>' +
+      '<span class="top"><span class="d">'+esc(x.date)+'</span>' +
+      (cur?'<span class="me">這一筆</span>':'') +
+      '<span class="cd">'+esc(x.rec)+'</span></span>' +
+      '<span class="s">'+esc(x.sub || '服務紀錄')+'</span>' +
+      (x.result ? '<span class="r">'+esc(x.result)+'　·　'+
+        esc(RV_LABEL[x.rv] || x.rv)+'</span>'
+                : '<span class="r">'+esc(RV_LABEL[x.rv] || x.rv)+'</span>') +
+    '</button>';
+  }).join('') +
+  '<button type="button" class="cadd" data-add="'+esc(r.id)+'">＋　記第 ' +
+    (r.total + 1) + ' 次服務</button></div>';
+
+  [].forEach.call($('chList').querySelectorAll('[data-rec]'), function(b){
+    b.addEventListener('click', function(){
+      $('chainModal').style.display = 'none';
+      openRecord(b.dataset.rec, { rec: b.dataset.rec, y: window.scrollY,
+        view: CAL_VIEW, ym: CAL_YM, sel: CAL_SEL,
+        label: (($('calDayTitle')||{}).textContent||'').trim(), name: r.client });
+    });
+  });
+  var add = $('chList').querySelector('[data-add]');
+  if(add) add.addEventListener('click', function(){
+    $('chainModal').style.display = 'none';
+    goTab('track'); openCase(add.dataset.add);
+  });
+}
+if($('chCancel')) $('chCancel').addEventListener('click', function(){
+  $('chainModal').style.display = 'none';
+});
+
+/* ── 加入追蹤（做法一）────────────────────────────────
+   長按一筆已完成、還沒掛案件的紀錄 → 加入追蹤 → 挑一件 → 確認。
+
+   ⛔ 不要讓人從一長串裡找。系統已經知道這張卡的移工與客戶，
+   同一位移工的排最前面並標「同一人」。 */
+function openMergePick(r){
+  if(!$('mergeModal')){ toast('要先更新 App', true); return; }
+  MG_REC_ = r.recCode;
+  $('mgK').textContent = '加入追蹤';
+  $('mgTitle').textContent = '要併到哪一件？';
+  $('mgSub').textContent = (r.workers || '') + (r.client ? '　·　' + r.client : '');
+  $('mgBody').innerHTML = '<div class="mid" style="padding:20px">找找看有哪些…</div>';
+  $('mergeModal').style.display = '';
+  google.script.run
+    .withSuccessHandler(function(res){ drawMergePick(res.rows || [], r); })
+    .withFailureHandler(function(e){
+      $('mgBody').innerHTML = '<div class="mid" style="padding:20px">'+esc(e.message)+'</div>'; })
+    .caseCandidates(CODE, (r.workers||'').split('、')[0] || '', r.client || '');
+}
+var MG_REC_ = '';
+
+function drawMergePick(rows, r){
+  var byRank = { 0: [], 1: [], 2: [] };
+  rows.forEach(function(c){ byRank[c.rank] = (byRank[c.rank]||[]).concat([c]); });
+  var LBL = { 0: '同一位移工　進行中', 1: '同一個客戶　進行中', 2: '其他進行中' };
+  var h = '';
+  [0,1,2].forEach(function(k){
+    if(!byRank[k].length) return;
+    h += '<div class="mgsec">'+LBL[k]+'</div>' + byRank[k].map(function(c){
+      return '<button type="button" class="mgi" data-id="'+esc(c.id)+'">' +
+        '<span class="ic">◷</span><span class="tx">' +
+        '<b>'+esc(c.kind)+'　'+esc(c.id)+
+          (c.sameWorker?'<span class="hit">同一人</span>':'')+'</b>' +
+        '<span>'+esc(c.title || c.client)+'　·　目前 '+c.n+' 次　·　'+
+          esc(c.openedAt)+' 開案</span></span></button>';
+    }).join('');
+  });
+  if(!rows.length){
+    h = '<p class="mgnone">目前沒有進行中的案件。開一件新的吧。</p>';
+  }
+  h += '<button type="button" class="cmi" id="mgNew"><i>＋</i>都不是，開一件新的</button>';
+  $('mgBody').innerHTML = h;
+  [].forEach.call($('mgBody').querySelectorAll('[data-id]'), function(b){
+    b.addEventListener('click', function(){ openMergeConfirm(b.dataset.id); });
+  });
+  $('mgNew').addEventListener('click', function(){
+    $('mergeModal').style.display = 'none';
+    openPick(cardData(r));
+  });
+}
+
+/* 確認：序號會怎麼重排。
+   ⚠ 這一步不能省。清單是照日期排的，後補的紀錄日期比較早就會插在中間，
+   後面全部往後推——人會以為系統把資料弄亂了。先算給他看。 */
+function openMergeConfirm(caseId){
+  $('mgK').textContent = '確認';
+  $('mgTitle').textContent = '算一下會變成怎樣';
+  $('mgBody').innerHTML = '<div class="mid" style="padding:20px">算…</div>';
+  google.script.run
+    .withSuccessHandler(function(p){ drawMergeConfirm(p, caseId); })
+    .withFailureHandler(function(e){
+      $('mgBody').innerHTML = '<div class="mid" style="padding:20px">'+esc(e.message)+'</div>'; })
+    .casePreviewAttach(CODE, caseId, MG_REC_);
+}
+
+function drawMergeConfirm(p, caseId){
+  $('mgTitle').textContent = '加進去會變成第 ' + p.at + ' 次';
+  $('mgSub').textContent = p.kind + '　' + p.id + '　目前 ' + p.before + ' 次';
+  var moved = p.list.filter(function(x){ return x.moved; }).length;
+  $('mgBody').innerHTML =
+    (moved ? '<div class="mgwarn"><b>加進去之後，序號會重排</b>' +
+      '清單是照日期排的。這一筆會插在中間，後面 ' + moved + ' 筆的序號各往後一格。</div>' : '') +
+    '<div class="mgmini">' + p.list.map(function(x){
+      return '<div class="r'+(x.isNew?' new':'')+'">' +
+        '<span class="no">'+x.n+'</span>' +
+        '<span class="d">'+esc(x.date)+'</span>' +
+        '<span class="s">'+esc(x.sub || '服務紀錄')+'</span>' +
+        (x.isNew ? '<span class="was">新加入</span>'
+                 : (x.moved ? '<span class="was">原本第 '+x.was+'</span>' : '')) +
+      '</div>';
+    }).join('') + '</div>' +
+    '<div class="mggo"><button type="button" id="mgBack">再想想</button>' +
+    '<button type="button" class="p" id="mgGo">加進去</button></div>';
+  $('mgBack').addEventListener('click', function(){ $('mergeModal').style.display = 'none'; });
+  $('mgGo').addEventListener('click', function(){
+    $('mgGo').disabled = true;
+    google.script.run
+      .withSuccessHandler(function(){
+        $('mergeModal').style.display = 'none';
+        toast('已併入 ' + caseId);
+        calBust(); loadCal(); TK_LOADED = '';
+      })
+      .withFailureHandler(function(e){ $('mgGo').disabled = false; toast(e.message, true); })
+      .attachRecord(CODE, caseId, MG_REC_);
+  });
+}
+if($('mgCancel')) $('mgCancel').addEventListener('click', function(){
+  $('mergeModal').style.display = 'none';
+});
 
 /* ── 往左滑出取消 ──────────────────────────────────────
    跟下面的長按拖曳改期共存，靠的是兩邊的門檻剛好錯開：
@@ -1439,9 +1748,11 @@ addEventListener('scroll', function(){ if(SWIPE_OPEN_) closeSwipe(SWIPE_OPEN_); 
    長按 500ms 進入拖曳，手指移到哪一天就亮哪一天，放開就改期。
    進入拖曳前不擋捲動，所以平常滑動不受影響。 */
 var DRAG = null;
-function bindDrag(el, id, status){
-  if(status !== '預排') return;      // 已完成的連著紀錄，不給改期
-  var timer = null, sx = 0, sy = 0;
+/* 長按：不動放開 → 出選單；按住之後移動 → 拖曳改期。
+   跟 iOS 桌面同一套。已完成的行程不給改期，長按一律出選單。 */
+function bindDrag(el, r){
+  var id = r.id, canDrag = r.status === '預排';
+  var timer = null, sx = 0, sy = 0, held = false, moved = false;
 
   function cancel(){
     if(timer){ clearTimeout(timer); timer = null; }
@@ -1464,7 +1775,10 @@ function bindDrag(el, id, status){
 
   el.addEventListener('touchstart', function(e){
     var t = e.touches[0]; sx = t.clientX; sy = t.clientY;
+    held = false; moved = false;
     timer = setTimeout(function(){
+      held = true;
+      if(!canDrag) return;          // 已完成的不進拖曳，放開時出選單
       DRAG = { id: id, from: CAL_SEL };
       el.classList.add('dragging');
       document.body.style.userSelect = 'none';
@@ -1480,9 +1794,10 @@ function bindDrag(el, id, status){
 
   el.addEventListener('touchmove', function(e){
     var t = e.touches[0];
+    if(Math.abs(t.clientX-sx) > 8 || Math.abs(t.clientY-sy) > 8) moved = true;
     if(!DRAG){
       // 還沒進入拖曳，手指移動超過一點就當作是在捲動
-      if(Math.abs(t.clientX-sx) > 8 || Math.abs(t.clientY-sy) > 8) cancel();
+      if(moved) cancel();
       return;
     }
     e.preventDefault();
@@ -1494,6 +1809,14 @@ function bindDrag(el, id, status){
   el.addEventListener('touchend', function(e){
     cancel();
     var t = (e.changedTouches && e.changedTouches[0]) || {};
+    /* 按住不動就放開 → 出選單。按住之後移動過 → 那是拖曳（或捲動），
+       選單不要跳出來打斷他。 */
+    if(held && !moved && !DRAG){ openCardMenu(r); held = false; return; }
+    if(held && !moved && DRAG){
+      // 進了拖曳但手指沒動過：他要的是選單，不是改期
+      endDrag(false); openCardMenu(r); held = false; return;
+    }
+    held = false;
     endDrag(true, t.clientX, t.clientY);
   });
   el.addEventListener('touchcancel', function(){ cancel(); endDrag(false); });
@@ -3388,6 +3711,29 @@ var PROG_MAP_ = {
   '已歸檔':       ['done', 'done', 'done', 'done'],
   '退回補正':     ['done', 'back', '',     '']
 };
+/* 類型短名。卡片上寫「就醫 3/4」比「就醫追蹤 3/4」省兩個字，
+   而那兩個字在手機上就是名字會不會被截斷的差別。 */
+var SHORT_ = { '異常事件':'異常', '返鄉休假':'返鄉', '就醫追蹤':'就醫', '體檢通知':'體檢' };
+
+/* 進度：四段細條（他挑的 P2）。取代原本四格長條＋四個文字標籤，省掉一整行。
+   被退回那一格要紅的——退回是最需要被看見的狀態。 */
+var PROG_AT_ = { '未送審':1, '待副理審':2, '待總經理核准':3, '已歸檔':4, '退回補正':2 };
+function progDots(rv){
+  if(!rv) return '';
+  var at = PROG_AT_[rv] || 1, bad = rv === '退回補正', pass = rv === '已歸檔';
+  return '<span class="pgd">' + [0,1,2,3].map(function(i){
+    var c = i < at-1 ? 'on' : (i === at-1 ? (bad ? 'bad' : (pass ? 'on' : 'now')) : '');
+    return '<i class="' + c + '"></i>';
+  }).join('') + '</span>';
+}
+/* 狀態那兩三個字。進度條講「走到哪」，這裡講「在等誰」。 */
+function rvWord(rv){
+  if(!rv) return '';
+  var t = RV_LABEL[rv] || rv;
+  var c = rv === '退回補正' ? ' bad' : (rv === '已歸檔' ? ' pass' : '');
+  return '<span class="rvw' + c + '">' + esc(t) + '</span>';
+}
+
 function progHtml(rv){
   var st = PROG_MAP_[rv] || ['', '', '', ''];
   return '<span class="prog'+(rv==='已歸檔'?' all':'')+'">'+

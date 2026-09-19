@@ -1528,3 +1528,146 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 #msgText{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px;
   font-family:inherit;font-size:0.8125rem;line-height:1.7;background:var(--bg);
   color:var(--ink);margin-top:10px;resize:vertical}
+
+/* ── 行程卡 F4③（2026-09-19 改版）────────────────────────
+   服務細項當眉標 → 客戶名（代碼貼右邊）→ 移工 → 時段與翻譯。
+   卡片上沒有按鈕了，整張的寬度都還給文字。 */
+.ev .eye{display:flex;align-items:center;gap:6px;min-width:0}
+.ev .eye .sv{flex:1;min-width:0;font-size:0.6875rem;letter-spacing:.04em;
+  color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev .nmrow{display:flex;align-items:baseline;gap:6px;margin-top:2px;min-width:0}
+.ev .nmrow .n{flex:1;min-width:0;margin:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+/* 紀錄代碼：只在有代碼的時候佔位置，預排的卡片完全不受影響 */
+.codechip{flex:none;font-size:0.5625rem;color:var(--ink2);background:var(--line2);
+  border-radius:5px;padding:1px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:-.02em}
+/* 移工名自然截斷，人數標永遠不縮。
+   ⚠ 不要用「幾個人」決定要不要截斷——兩個菲籍原文名就爆版，
+   兩個中文譯名卻很短。這是寬度的事，交給 CSS。 */
+.ev .wkrow{display:flex;align-items:baseline;gap:6px;margin-top:1px;min-width:0}
+.ev .wkrow .wk{flex:1;min-width:0;font-size:0.75rem;color:var(--ink2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cnt{flex:none;font-size:0.625rem;font-weight:800;color:var(--ink2);
+  background:var(--line2);border-radius:99px;padding:1px 6px;white-space:nowrap}
+.ev .whoat{display:block;margin-top:3px;font-size:0.6875rem;color:var(--ink3)}
+
+/* 追蹤標籤 K1：眉標右邊寫「◷ 就醫 3/4」 */
+.evtk{flex:none;display:inline-flex;align-items:center;gap:3px;font-size:0.625rem;
+  font-weight:800;color:var(--brand);background:var(--brand-soft);
+  border-radius:99px;padding:1px 7px;white-space:nowrap}
+
+/* 進度 P2：四段細條。取代四格長條＋四個字，省掉一整行。 */
+.pgd{flex:none;display:inline-flex;gap:2px;align-items:center}
+.pgd i{width:11px;height:3px;border-radius:99px;background:var(--line);display:block}
+.pgd i.on{background:var(--brand)}
+.pgd i.now{background:var(--warn-bar)}
+.pgd i.bad{background:var(--bad-bar)}
+.rvw{flex:none;font-size:0.6875rem;font-weight:700;color:var(--warn-ink);white-space:nowrap}
+.rvw.bad{color:var(--danger)} .rvw.pass{color:var(--ok-ink)}
+
+/* ── 底部彈出選單（他挑的 M1）────────────────────────────
+   翻譯是單手拿手機，拇指只搆得到螢幕下半部。
+   選單出現在上半部等於要換手，所以一律從底部上來。 */
+.sheetmask{align-items:flex-end;padding:0}
+.btmsheet{width:100%;padding:8px 8px calc(env(safe-area-inset-bottom,0px) + 8px)}
+.btmsheet .sheet{background:var(--card);border-radius:16px;padding:6px;
+  box-shadow:0 -10px 34px -14px rgba(10,16,28,.45)}
+.btmsheet .shd{padding:10px 12px 9px;border-bottom:1px solid var(--line2)}
+.btmsheet .shd .k{display:block;font-size:0.625rem;letter-spacing:.12em;font-weight:800;
+  color:var(--brand)}
+.btmsheet .shd b{display:block;font-size:0.9375rem;color:var(--ink);margin-top:2px;
+  letter-spacing:-.01em}
+.btmsheet .shd span{display:block;font-size:0.6875rem;color:var(--ink3);margin-top:2px;
+  line-height:1.5}
+.cmi{display:flex;align-items:center;gap:11px;width:100%;text-align:left;border:0;
+  background:transparent;font-family:inherit;font-size:0.9375rem;color:var(--ink);
+  padding:12px;border-radius:11px;cursor:pointer;min-height:2.75rem}
+.cmi:active{background:var(--brand-soft)}
+.cmi.red{color:var(--danger)}
+.cmi i{font-style:normal;width:28px;height:28px;border-radius:9px;flex:none;
+  background:var(--line2);display:flex;align-items:center;justify-content:center;
+  font-size:0.875rem}
+.cmi.red i{background:var(--bad-bg)}
+.cmi em{font-style:normal;font-size:0.625rem;color:var(--ink3);margin-left:auto;
+  font-family:ui-monospace,Menlo,monospace}
+/* 上鎖要講原因與怎麼辦。只把按鈕拿掉，人會以為系統壞了。 */
+.swhy{margin:4px 12px 6px;font-size:0.6875rem;color:var(--ink3);line-height:1.6}
+.scancel{width:100%;margin-top:7px;background:var(--card);border:0;border-radius:15px;
+  padding:14px;font-family:inherit;font-weight:800;font-size:0.9375rem;color:var(--ink2);
+  cursor:pointer;box-shadow:0 -6px 20px -14px rgba(10,16,28,.4)}
+
+/* ── 追蹤的整串服務（他挑的 L1 時間軸清單）── */
+.chl{padding:6px 2px 2px;max-height:56vh;overflow-y:auto}
+.ci{position:relative;display:block;width:100%;text-align:left;border:0;
+  background:transparent;font-family:inherit;padding:8px 9px 8px 32px;border-radius:11px;
+  cursor:pointer}
+.ci:active{background:var(--brand-soft)}
+.ci::before{content:"";position:absolute;left:13px;top:0;bottom:0;width:0;
+  border-left:1.5px solid var(--line)}
+.ci:first-child::before{top:15px}
+.chl .ci:last-of-type::before{height:15px}
+.ci .no{position:absolute;left:6px;top:11px;width:16px;height:16px;border-radius:50%;
+  background:var(--card);border:1.5px solid var(--brand);color:var(--brand);
+  font-size:0.5625rem;font-weight:800;display:flex;align-items:center;
+  justify-content:center;font-variant-numeric:tabular-nums;z-index:1}
+/* 目前這一筆要標出來。不然點進去看完第一筆，回來就不知道自己原本在哪。 */
+.ci.cur{background:var(--brand-soft)}
+.ci.cur .no{background:var(--brand);color:#fff}
+.ci .top{display:flex;align-items:baseline;gap:6px;min-width:0}
+.ci .d{font-size:0.8125rem;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.ci .me{font-size:0.5625rem;font-weight:800;color:var(--brand);background:var(--card);
+  border:1px solid var(--info-line);border-radius:99px;padding:0 6px;flex:none}
+.ci .cd{font-size:0.5625rem;color:var(--ink3);font-family:ui-monospace,Menlo,monospace;
+  margin-left:auto;flex:none}
+.ci .s{display:block;font-size:0.75rem;color:var(--ink2);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ci .r{display:block;font-size:0.6875rem;color:var(--ink3);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 看到這一列就知道這一串還會繼續長。比任何說明文字都有效。 */
+.cadd{display:block;width:100%;text-align:left;padding:11px 9px 11px 32px;border:0;
+  background:transparent;font-family:inherit;font-size:0.8125rem;color:var(--brand);
+  font-weight:700;cursor:pointer;border-radius:11px}
+.cadd:active{background:var(--brand-soft)}
+
+/* ── 加入追蹤：挑一件 ── */
+.mgsec{font-size:0.5625rem;letter-spacing:.14em;font-weight:800;color:var(--ink3);
+  padding:10px 12px 5px}
+.mgi{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;
+  background:transparent;font-family:inherit;padding:10px 12px;border-radius:11px;
+  cursor:pointer}
+.mgi:active{background:var(--brand-soft)}
+.mgi .ic{flex:none;width:30px;height:30px;border-radius:10px;background:var(--info-bg);
+  display:flex;align-items:center;justify-content:center;font-size:0.875rem;color:var(--brand)}
+.mgi .tx{flex:1;min-width:0}
+.mgi b{display:block;font-size:0.8125rem;color:var(--ink)}
+.mgi span{display:block;font-size:0.6875rem;color:var(--ink3);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mgi .hit{display:inline-block;font-size:0.5625rem;font-weight:800;color:var(--ok-ink);
+  background:var(--ok-bg);border-radius:99px;padding:0 6px;margin-left:6px}
+.mgnone{margin:14px 12px;font-size:0.8125rem;color:var(--ink3)}
+
+/* ── 合併確認：序號會怎麼重排 ──
+   這一步不能省。清單照日期排，後補的紀錄插在中間會把後面往後推，
+   不先算給人看，他會以為系統把資料弄亂了。 */
+.mgwarn{margin:8px 12px 0;background:var(--warn-bg);border:1px solid var(--warn-line);
+  border-radius:12px;padding:10px 12px;font-size:0.75rem;line-height:1.65;
+  color:var(--warn-ink)}
+.mgwarn b{display:block;font-size:0.8125rem;margin-bottom:2px}
+.mgmini{margin:10px 12px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.mgmini .r{display:flex;align-items:center;gap:9px;padding:8px 11px;font-size:0.75rem;
+  border-bottom:1px solid var(--line2);color:var(--ink2)}
+.mgmini .r:last-child{border-bottom:0}
+.mgmini .r.new{background:var(--ok-bg);color:var(--ok-ink);font-weight:700}
+.mgmini .no{flex:none;width:17px;height:17px;border-radius:50%;background:var(--line2);
+  color:var(--ink2);font-size:0.5625rem;font-weight:800;display:flex;align-items:center;
+  justify-content:center;font-variant-numeric:tabular-nums}
+.mgmini .r.new .no{background:var(--ok-bar);color:#fff}
+.mgmini .d{flex:none;font-variant-numeric:tabular-nums;font-weight:700;font-size:0.6875rem}
+.mgmini .s{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mgmini .was{flex:none;font-size:0.5625rem;color:var(--ink3)}
+.mggo{display:flex;gap:8px;margin:12px 12px 6px}
+.mggo button{flex:1;padding:13px;border-radius:12px;font-family:inherit;font-size:0.875rem;
+  font-weight:800;cursor:pointer;border:1px solid var(--line);background:var(--card);
+  color:var(--ink2)}
+.mggo button.p{background:var(--brand);border-color:var(--brand);color:#fff}
