@@ -4462,7 +4462,9 @@ function drawCase(c){
 function caseSummary(c){
   var open = c.status === '進行中';
   var steps = (CK_SCHEMA && CK_SCHEMA.steps && CK_SCHEMA.steps[c.kind]) || [];
-  var at = steps.indexOf(c.step);
+  /* 舊案件的「階段」欄是空的——那一欄是後來才加的，以前開的案子沒寫。
+     空的就當第一格，那才是它實際的狀態。留著不選反而看起來像壞掉。 */
+  var at = c.step ? steps.indexOf(c.step) : 0;
   var h = '<div class="c6sum">' +
     '<div class="c6who">' + esc(c.workers || '（未填移工）') + '</div>' +
     '<div class="c6at">' + esc(c.client) +
@@ -4927,45 +4929,6 @@ function slipHtml(c){
         '<span>' + esc(d.room || c.nextNote || '') + '</span></span></div>' +
     (d.bring ? '<div class="ft"><b>要帶：</b>' + esc(d.bring) + '</div>' : '') +
   '</div>';
-}
-
-function drawCaseActions(c){
-  var open = c.status === '進行中';
-  /* id 一律寫死，不要用陣列拼。拼出來的 id 人 grep 不到、
-     部署前的檢查器也看不到，等於少一道防線。 */
-  var h = '';
-  if(open && CASE_FORM_[c.kind]){
-    h += '<button type="button" class="p full" id="ckNew">＋ 新增一筆服務紀錄</button>';
-  }
-  if(open){
-    /* 「排下一次」四個字看不出在排什麼。照案件類型講白話，
-       而且要講出「會排進行事曆」——那才是人真正在意的事。 */
-    var NEXT_T = { '就醫追蹤': '回診', '體檢通知': '體檢', '返鄉休假': '回台' };
-    var what = NEXT_T[c.kind] || '下一次';
-    h += '<button type="button" class="sec full" id="ckNext">' +
-      (c.nextDate ? ('改' + what + '日期　' + esc(c.nextDate))
-                  : ('排' + what + '日期　會進行事曆')) + '</button>';
-  }
-  /* 體檢、返鄉、就醫都要傳訊息給移工。異常事件不傳——
-     那是內部處理的事，不該群發給當事人。 */
-  if(open && c.kind !== '異常事件'){
-    h += '<button type="button" class="sec full" id="ckMsg">' +
-      (c.kind === '體檢通知' ? '產生體檢通知訊息' :
-       c.kind === '返鄉休假' ? '產生返鄉提醒訊息' : '產生回診提醒訊息') +
-      '</button>';
-  }
-  if(open && c.kind === '異常事件' && !c.link){
-    h += '<button type="button" class="sec full" id="ckMed">' +
-      '這件要就醫　→　開一筆就醫追蹤</button>';
-  }
-  if(open) h += '<button type="button" class="q full" id="ckClose">結案</button>';
-  $('ckAct').innerHTML = h ? ('<div class="stack">' + h + '</div>') : '';
-
-  if($('ckNew')) $('ckNew').addEventListener('click', function(){ caseNewRecord(c); });
-  if($('ckNext')) $('ckNext').addEventListener('click', function(){ caseSetNext(c); });
-  if($('ckMsg')) $('ckMsg').addEventListener('click', function(){ openMsg(c, ''); });
-  if($('ckMed')) $('ckMed').addEventListener('click', function(){ caseSpawnMed(c); });
-  if($('ckClose')) $('ckClose').addEventListener('click', function(){ caseClose(c); });
 }
 
 /* 從案件開一張服務表：客戶、移工、服務類別、負責翻譯都帶過去，
