@@ -1592,7 +1592,13 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 /* ── 底部彈出選單（他挑的 M1）────────────────────────────
    翻譯是單手拿手機，拇指只搆得到螢幕下半部。
    選單出現在上半部等於要換手，所以一律從底部上來。 */
-.sheetmask{align-items:flex-end;padding:0}
+/* ⛔ 一定要一起寫 display:flex。上面的 .smask 是 display:block，
+   只寫 align-items 完全沒有作用——彈窗會停在畫面最上面，
+   而底部彈出視窗的全部意義就是拇指搆得到。
+   2026-09-19 才發現，而且我早先的測試還「通過」了，因為它斷言的是
+   getComputedStyle().alignItems==='flex-end'——那個值算得出來，只是不生效。
+   斷言要驗看得到的結果（位置），不是 CSS 屬性值。 */
+.sheetmask{display:flex;align-items:flex-end;padding:0}
 .btmsheet{width:100%;padding:8px 8px calc(env(safe-area-inset-bottom,0px) + 8px)}
 /* ⛔ 一定要把 width 與 min-height 覆寫掉。
    上面那條通用的 .sheet 是**列印用的服務紀錄表**，寫死 794×1123（A4 @96dpi）。
