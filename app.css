@@ -261,7 +261,14 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 /* 全螢幕簽名板：頁面本身不捲，所以 touch-action:none 只作用在這裡，
    不會再影響到填表時的捲動。 */
 /* 內容比螢幕高時要捲得動：原本用 flex 置中，超出的部分會被切掉滑不到 */
-.smask{position:fixed;inset:0;background:rgba(12,22,26,.55);z-index:70;
+/* ⛔ 78 要大於 .rvfull 的 75。對話框永遠在整頁浮層之上——
+   案件詳情、審閱、挑選頁都是 .rvfull，從它們身上開出來的
+   小視窗（填細節、提醒訊息、改日期）如果比它低，就會開在後面，
+   使用者看到的是「按了沒反應」。
+   2026-09-19 之前是 70，只有 #dateModal 單獨補到 80 治症狀，
+   結果 #detailModal 與 #msgModal 又各壞一次。改成從規則面解決。
+   ⚠ 只有拖曳殘影 #dragGhost（90）該在這之上。 */
+.smask{position:fixed;inset:0;background:rgba(12,22,26,.55);z-index:78;
   display:block;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px}
 .smbox{background:var(--card);border-radius:16px;padding:14px;margin:14px auto;width:100%;
   max-width:640px;box-shadow:0 18px 50px rgba(0,0,0,.3)}
@@ -1509,10 +1516,6 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   border:1px dashed var(--info-line);font-weight:800}
 .evw .sub.planned em{color:var(--brand);font-weight:700}
 
-/* 案件詳情是 .rvfull（z-index:75），一般的小視窗 .smask 只有 70——
-   從案件裡開日期視窗會被壓在後面，看起來就是「按了沒反應」。
-   2026-09-18 實機上「排下一次」「改下一次的日期」都按不動就是這個。 */
-#dateModal{z-index:80}
 
 /* 行事曆卡片上的追蹤標記。已經在追蹤的那一趟要看得出來，
    不然人會以為沒開過，又開一件。 */
@@ -1866,3 +1869,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .c4auto{flex:none;font-size:0.5625rem;font-weight:800;color:var(--ink2);
   background:var(--line2);border-radius:99px;padding:1px 6px;white-space:nowrap}
 @media (max-width:380px){ .c4auto{display:none} }
+
+/* 時間軸上「經過／結果」的小標。不用冒號，靠顏色與間距分就好 */
+.c6k{display:inline-block;min-width:2.2em;margin-right:5px;font-weight:700;
+  color:var(--ink3);font-size:0.6875rem}

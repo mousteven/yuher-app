@@ -4542,7 +4542,10 @@ function caseLine(c){
       it.sub || '服務紀錄',
       esc(it.rec) + '　' + esc(RV_LABEL[it.rv] || it.rv) +
         (it.primary ? '' : '　關聯案件的') +
-        (it.how ? '<br>' + esc(it.how) : ''),
+        /* 處理經過與處理結果都要。只有經過的話看不出這一趟的結論，
+           而「結論」才是下一次要不要再跑的依據。 */
+        (it.how ? '<br><span class="c6k">經過</span>' + esc(it.how) : '') +
+        (it.result ? '<br><span class="c6k">結果</span>' + esc(it.result) : ''),
       acts);
   });
 
@@ -4953,6 +4956,14 @@ function setClientValue(name){
 }
 
 function fillTripForm(r){
+  /* ⛔ 一定要先結束編輯狀態。
+     2026-09-19 實機：從案件頁按「＋ 開一筆」，填一填滑到最下面發現
+     它說「內容有異動，要按儲存」——那是在改第一筆服務紀錄，不是新增。
+     因為 EDIT_CODE 是上一次開「修改內容」留下來的，沒有人清。
+     跟 SCHED_ID 完全同一個形狀的 bug：上下文全域設了之後只在特定路徑清。
+     用別人的資料重填表單，就表示不再是在編輯原本那一筆——修在這裡，
+     「從行程開表」與「從案件開表」兩條路一起受惠。 */
+  if(typeof EDIT_CODE !== 'undefined' && EDIT_CODE) endEdit();
   if(r.date) $('date').value = r.date;
   /* ⚠ 不要相信傳進來的「服務對象」。
      2026-09-19 實機：張寶華是家庭雇主，但案件那一列記成工廠，
