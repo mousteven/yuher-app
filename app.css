@@ -1594,7 +1594,13 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    選單出現在上半部等於要換手，所以一律從底部上來。 */
 .sheetmask{align-items:flex-end;padding:0}
 .btmsheet{width:100%;padding:8px 8px calc(env(safe-area-inset-bottom,0px) + 8px)}
+/* ⛔ 一定要把 width 與 min-height 覆寫掉。
+   上面那條通用的 .sheet 是**列印用的服務紀錄表**，寫死 794×1123（A4 @96dpi）。
+   不覆寫的話所有底部彈出視窗都會變成 A4 大小——2026-09-19 實機量到
+   393px 的螢幕上超出右邊 409px、下面 279px，長按選單那一大片空白也是這個。 */
 .btmsheet .sheet{background:var(--card);border-radius:16px;padding:6px;
+  width:auto;min-height:0;max-height:min(72vh,560px);
+  overflow-y:auto;overscroll-behavior:contain;
   box-shadow:0 -10px 34px -14px rgba(10,16,28,.45)}
 .btmsheet .shd{padding:10px 12px 9px;border-bottom:1px solid var(--line2)}
 .btmsheet .shd .k{display:block;font-size:0.625rem;letter-spacing:.12em;font-weight:800;

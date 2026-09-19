@@ -1571,11 +1571,15 @@ function openMergePick(r){
 var MG_REC_ = '';
 
 function drawMergePick(rows, r){
-  var byRank = { 0: [], 1: [], 2: [] };
-  rows.forEach(function(c){ byRank[c.rank] = (byRank[c.rank]||[]).concat([c]); });
-  var LBL = { 0: '同一位移工　進行中', 1: '同一個客戶　進行中', 2: '其他進行中' };
+  /* ⛔ 只分「同一位移工」與「同一個雇主」兩組。
+     以前還有第三組「其他進行中」，那是全系統的案件——
+     併進另一個移工、另一個雇主的案件沒有任何合理情境。
+     後端 caseCandidates 已經不回了，這裡也不要留位置給它。 */
+  var byRank = { 0: [], 1: [] };
+  rows.forEach(function(c){ if(byRank[c.rank]) byRank[c.rank].push(c); });
+  var LBL = { 0: '同一位移工　進行中', 1: '同一個雇主　進行中' };
   var h = '';
-  [0,1,2].forEach(function(k){
+  [0,1].forEach(function(k){
     if(!byRank[k].length) return;
     h += '<div class="mgsec">'+LBL[k]+'</div>' + byRank[k].map(function(c){
       return '<button type="button" class="mgi" data-id="'+esc(c.id)+'">' +
@@ -1586,8 +1590,10 @@ function drawMergePick(rows, r){
           esc(c.openedAt)+' 開案</span></span></button>';
     }).join('');
   });
-  if(!rows.length){
-    h = '<p class="mgnone">目前沒有進行中的案件。開一件新的吧。</p>';
+  if(!byRank[0].length && !byRank[1].length){
+    h = '<p class="mgnone">' + esc((r.workers || '這位移工').split('、')[0]) +
+      '與' + esc(r.client || '這個雇主') +
+      '目前都沒有進行中的追蹤。<br>開一件新的吧。</p>';
   }
   h += '<button type="button" class="cmi" id="mgNew"><i>＋</i>都不是，開一件新的</button>';
   $('mgBody').innerHTML = h;
