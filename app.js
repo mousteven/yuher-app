@@ -1238,7 +1238,7 @@ function drawDay(){
 
     // 眉標右邊的追蹤標籤。有序號就寫「就醫 3/4」，沒有就只寫類型。
     var tk = r.caseId
-      ? '<span class="evtk">◷ '+esc(SHORT_[r.caseKind] || r.caseKind || '追蹤')+
+      ? '<span class="c4tk">◷ '+esc(SHORT_[r.caseKind] || r.caseKind || '追蹤')+
         (r.caseN ? ' '+r.caseN+'/'+r.caseTotal : '')+'</span>'
       : '';
 
@@ -1248,23 +1248,23 @@ function drawDay(){
       '<span class="bar lg-'+esc(l)+'"></span>'+
       '<span class="b"'+(r.recCode?' data-rec="'+esc(r.recCode)+'"':'')+'>'+
         // 眉標：做什麼 ＋ 追蹤 ＋ 進度 ＋ 狀態
-        '<span class="eye">'+
+        '<span class="c4eye">'+
           '<span class="sv">'+esc(r.topic || r.sub || '—')+'</span>'+
           tk + (r.rv ? progDots(r.rv) : '') + rvWord(r.rv) +
         '</span>'+
         // 客戶名 ＋ 紀錄代碼
-        '<span class="nmrow">'+
+        '<span class="c4nm">'+
           '<span class="n">'+esc(r.client)+
             (r.target&&r.target.indexOf('工廠')!==0?'　'+esc(r.target):'')+'</span>'+
-          (r.recCode?'<span class="codechip">'+esc(r.recCode)+'</span>':'')+
+          (r.recCode?'<span class="c4code">'+esc(r.recCode)+'</span>':'')+
         '</span>'+
         // 移工名（自然截斷）＋ 人數標（永遠不縮）
         (r.workers
-          ? '<span class="wkrow"><span class="wk">'+esc(r.workers)+'</span>'+
-            (wcount>1?'<span class="cnt">'+wcount+' 人</span>':'')+'</span>'
+          ? '<span class="c4wk"><span class="c4ws">'+esc(r.workers)+'</span>'+
+            (wcount>1?'<span class="c4cnt">'+wcount+' 人</span>':'')+'</span>'
           : '')+
         // 時段與翻譯降到最後一行的小字。排一天的行程時還是要看得到。
-        '<span class="whoat">'+esc(r.slot||'未定時段')+'　'+esc(r.crew)+'</span>'+
+        '<span class="c4who">'+esc(r.slot||'未定時段')+'　'+esc(r.crew)+'</span>'+
       '</span>'+
       '</div></div>';
   }
@@ -3641,7 +3641,7 @@ function drawRecordSkeleton(recCode, r){
   '</div>';
 
   names.forEach(function(nm, i){
-    h += '<div class="rvw">' +
+    h += '<div class="c4st">' +
       '<div class="hd"><i>' + (i + 1) + '</i><b>' + esc(nm || '') + '</b></div>' +
       '<div class="rvf"><span>服務項目</span><b>' +
         esc(r && r.big && r.sub ? (r.big + ' ／ ' + r.sub) : ((r && r.topic) || '')) +
@@ -3721,7 +3721,7 @@ var PROG_AT_ = { '未送審':1, '待副理審':2, '待總經理核准':3, '已�
 function progDots(rv){
   if(!rv) return '';
   var at = PROG_AT_[rv] || 1, bad = rv === '退回補正', pass = rv === '已歸檔';
-  return '<span class="pgd">' + [0,1,2,3].map(function(i){
+  return '<span class="c4pg">' + [0,1,2,3].map(function(i){
     var c = i < at-1 ? 'on' : (i === at-1 ? (bad ? 'bad' : (pass ? 'on' : 'now')) : '');
     return '<i class="' + c + '"></i>';
   }).join('') + '</span>';
@@ -3820,7 +3820,7 @@ function drawRecordBody(d){
     var ex = [];
     if(w.fee) ex.push('費用 '+w.fee);
     if(w.memo) ex.push(w.memo);
-    h += '<div class="rvw">'+
+    h += '<div class="c4st">'+
       '<div class="hd"><i>'+(i+1)+'</i><b>'+esc(w.name||'（未填姓名）')+'</b>'+
         (o?'<span class="or">'+esc(o)+'</span>':'')+
         (w.lang?'<em>'+esc(w.lang)+'</em>':'')+'</div>'+

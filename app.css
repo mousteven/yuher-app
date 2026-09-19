@@ -1531,40 +1531,56 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
 /* ── 行程卡 F4③（2026-09-19 改版）────────────────────────
    服務細項當眉標 → 客戶名（代碼貼右邊）→ 移工 → 時段與翻譯。
-   卡片上沒有按鈕了，整張的寬度都還給文字。 */
-.ev .eye{display:flex;align-items:center;gap:6px;min-width:0}
-.ev .eye .sv{flex:1;min-width:0;font-size:0.6875rem;letter-spacing:.04em;
+
+   ⚠ 類別一律用 c4 前綴。這個檔案裡 .wk 是週檢視的容器、
+   .rvw 是評鑑的移工卡、.eye/.cnt 也很容易撞到。
+   2026-09-19 就是因為沒先查而排版全爛。
+
+   ⚠ 列容器要寫成 `.ev .b>span.c4xx`，比既有的
+   `.ev .b>span{display:block}` 更精確才蓋得過去——
+   只寫 `.c4eye{display:flex}` 是輸的。 */
+.ev .b>span.c4eye{display:flex;align-items:center;gap:6px;min-width:0}
+.ev .b>span.c4nm{display:flex;align-items:baseline;gap:6px;margin-top:2px;min-width:0}
+.ev .b>span.c4wk{display:flex;align-items:baseline;gap:6px;margin-top:1px;min-width:0}
+
+.c4eye .sv{flex:1;min-width:0;font-size:0.6875rem;letter-spacing:.04em;
   color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ev .nmrow{display:flex;align-items:baseline;gap:6px;margin-top:2px;min-width:0}
-.ev .nmrow .n{flex:1;min-width:0;margin:0;overflow:hidden;text-overflow:ellipsis;
+.ev .c4nm .n{flex:1;min-width:0;margin:0;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap}
 /* 紀錄代碼：只在有代碼的時候佔位置，預排的卡片完全不受影響 */
-.codechip{flex:none;font-size:0.5625rem;color:var(--ink2);background:var(--line2);
+.c4code{flex:none;font-size:0.5625rem;color:var(--ink2);background:var(--line2);
   border-radius:5px;padding:1px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  letter-spacing:-.02em}
+  letter-spacing:-.02em;white-space:nowrap}
 /* 移工名自然截斷，人數標永遠不縮。
    ⚠ 不要用「幾個人」決定要不要截斷——兩個菲籍原文名就爆版，
    兩個中文譯名卻很短。這是寬度的事，交給 CSS。 */
-.ev .wkrow{display:flex;align-items:baseline;gap:6px;margin-top:1px;min-width:0}
-.ev .wkrow .wk{flex:1;min-width:0;font-size:0.75rem;color:var(--ink2);
+.c4ws{flex:1;min-width:0;font-size:0.75rem;color:var(--ink2);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cnt{flex:none;font-size:0.625rem;font-weight:800;color:var(--ink2);
+.c4cnt{flex:none;font-size:0.625rem;font-weight:800;color:var(--ink2);
   background:var(--line2);border-radius:99px;padding:1px 6px;white-space:nowrap}
-.ev .whoat{display:block;margin-top:3px;font-size:0.6875rem;color:var(--ink3)}
+.ev .b>span.c4who{display:block;margin-top:3px;font-size:0.6875rem;color:var(--ink3)}
 
-/* 追蹤標籤 K1：眉標右邊寫「◷ 就醫 3/4」 */
-.evtk{flex:none;display:inline-flex;align-items:center;gap:3px;font-size:0.625rem;
+/* 追蹤標 K1：眉標右邊寫「◷ 就醫 3/4」 */
+.c4tk{flex:none;display:inline-flex;align-items:center;gap:3px;font-size:0.625rem;
   font-weight:800;color:var(--brand);background:var(--brand-soft);
   border-radius:99px;padding:1px 7px;white-space:nowrap}
 
 /* 進度 P2：四段細條。取代四格長條＋四個字，省掉一整行。 */
-.pgd{flex:none;display:inline-flex;gap:2px;align-items:center}
-.pgd i{width:11px;height:3px;border-radius:99px;background:var(--line);display:block}
-.pgd i.on{background:var(--brand)}
-.pgd i.now{background:var(--warn-bar)}
-.pgd i.bad{background:var(--bad-bar)}
-.rvw{flex:none;font-size:0.6875rem;font-weight:700;color:var(--warn-ink);white-space:nowrap}
-.rvw.bad{color:var(--danger)} .rvw.pass{color:var(--ok-ink)}
+.c4pg{flex:none;display:inline-flex;gap:2px;align-items:center}
+.c4pg i{width:10px;height:3px;border-radius:99px;background:var(--line);display:block}
+.c4pg i.on{background:var(--brand)}
+.c4pg i.now{background:var(--warn-bar)}
+.c4pg i.bad{background:var(--bad-bar)}
+.c4st{flex:none;font-size:0.6875rem;font-weight:700;color:var(--warn-ink);
+  white-space:nowrap}
+.c4st.bad{color:var(--danger)} .c4st.pass{color:var(--ok-ink)}
+
+/* 窄螢幕（Android 常見 360、iPhone SE 375）：眉標放不下四樣東西時，
+   狀態詞先讓位——進度條那四格已經講了同一件事。 */
+@media (max-width:380px){
+  .c4st{display:none}
+  .c4tk{font-size:0.5625rem;padding:1px 5px}
+}
 
 /* ── 底部彈出選單（他挑的 M1）────────────────────────────
    翻譯是單手拿手機，拇指只搆得到螢幕下半部。
