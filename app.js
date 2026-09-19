@@ -4531,8 +4531,10 @@ function caseLine(c){
   var what = NEXT_T[c.kind] || '下一次';
   var h = '<div class="c6line">';
 
-  h += c6row('ok', '✓', shortDate_(c.openedAt), '開案',
-    (c.by ? esc(c.by) + ' 開的' : '') + (c.note ? '　' + esc(c.note) : ''), '');
+  /* ⛔ 這裡以前有一格「開案」。2026-09-19 拿掉：
+     他說會讓人搞糊塗，確實——那一格沒有任何動作可做，而且案子常常是
+     事後補開的，「開案 9/19」會排在「服務 9/2」前面，看起來像時間倒著走。
+     開案日已經寫在摘要卡的 meta 那一行，不用在時間軸上再占一格。 */
 
   c.items.forEach(function(it, i){
     var last = i === c.items.length - 1;
@@ -4542,10 +4544,10 @@ function caseLine(c){
       it.sub || '服務紀錄',
       esc(it.rec) + '　' + esc(RV_LABEL[it.rv] || it.rv) +
         (it.primary ? '' : '　關聯案件的') +
-        /* 處理經過與處理結果都要。只有經過的話看不出這一趟的結論，
-           而「結論」才是下一次要不要再跑的依據。 */
-        (it.how ? '<br><span class="c6k">經過</span>' + esc(it.how) : '') +
-        (it.result ? '<br><span class="c6k">結果</span>' + esc(it.result) : ''),
+        /* 處理經過與處理結果都要，而且補充要比罐頭選項顯眼——
+           罐頭每一筆都長得差不多，補充才分得出這一趟發生什麼事。
+           「結論」也是下一次要不要再跑的依據。 */
+        c6note('經過', it.how, it.hnote) + c6note('結果', it.result, it.rnote),
       acts);
   });
 
@@ -4579,6 +4581,16 @@ function caseLine(c){
       esc(c.result || ''), '');
   }
   return h + '</div><div id="ckHint"></div>';
+}
+
+/* 時間軸上的一行「經過／結果」。
+   罐頭選項用淡的，人自己補寫的那句用深的——
+   後者才是這一趟真正的內容。兩個都沒有就整行不出現。 */
+function c6note(label, canned, note){
+  if(!canned && !note) return '';
+  return '<br><span class="c6k">' + label + '</span>' +
+    (canned ? esc(canned) : '') +
+    (note ? '<span class="c6x">' + esc(note) + '</span>' : '');
 }
 
 function c6row(cls, dot, when, title, body, acts){

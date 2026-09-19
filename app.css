@@ -1873,3 +1873,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 /* 時間軸上「經過／結果」的小標。不用冒號，靠顏色與間距分就好 */
 .c6k{display:inline-block;min-width:2.2em;margin-right:5px;font-weight:700;
   color:var(--ink3);font-size:0.6875rem}
+
+/* 人自己補寫的細節。罐頭選項是淡的，這個要深、要換行，
+   因為它才是這一趟真正的內容（「亞大 腸胃 38診 8號」）。 */
+.c6x{display:block;margin:1px 0 0 2.2em;color:var(--ink);font-weight:600}
