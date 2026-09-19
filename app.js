@@ -1902,6 +1902,9 @@ function showBack(meta, where){
   var id = (where === 'rec') ? 'rvBk' : 'bkBar';
   var b = bkBar(id, (where === 'rec') ? 'revModal' : 'p-new', where === 'rec');
   if(!b) return;
+  // 沒有標籤就不要畫這一條。以前會印出「回 undefined」——
+  // 使用者看得到的字串要在這裡擋，不能靠呼叫的人記得帶。
+  if(!meta || !meta.label){ hideBack(); return; }
   BACK_ = meta;
   b.querySelector('.to').textContent = meta.label + (meta.name ? '　·　' + meta.name : '');
   b.style.display = '';
@@ -1920,6 +1923,9 @@ function backToCal(){
   hideBack();
   var rm = $('revModal');          // 從服務紀錄視窗返回的話，先把那一層收掉
   if(rm && rm.style.display !== 'none') rm.style.display = 'none';
+  /* 從追蹤案件頁點「看這張表」進來的，要回那件案子，不是回行事曆。
+     改版之後這條路變常走了——時間軸上每一筆旁邊都有「看這張表」。 */
+  if(m && m.caseBack){ goTab('track'); openCase(m.caseBack); return; }
   if(m){ CAL_VIEW = m.view; CAL_YM = m.ym; CAL_SEL = m.sel; }
   document.querySelector('.tabs button[data-t=cal]').click();
   if(!m) return;
@@ -4610,7 +4616,8 @@ function bindCase(c){
   [].forEach.call(B.querySelectorAll('[data-rv]'), function(el){
     el.addEventListener('click', function(){
       $('caseModal').style.display = 'none';
-      openRecord(el.dataset.rv);
+      openRecord(el.dataset.rv, { caseBack: c.id, rec: el.dataset.rv,
+        label: c.kind, name: c.workers || c.client || '' });
     });
   });
   [].forEach.call(B.querySelectorAll('[data-off]'), function(el){
