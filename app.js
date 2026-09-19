@@ -1435,7 +1435,7 @@ function cardMenuDo(a){
 /* 選單要的欄位跟右滑那個面板一樣，湊成同一個形狀就好，不要兩套 */
 function cardData(r){
   return { rc: r.recCode || '', go: r.id || '', client: r.client || '',
-           workers: r.workers || '', lang: r.lang || '',
+           target: r.target || '', workers: r.workers || '', lang: r.lang || '',
            big: r.big || '', sub: r.sub || '' };
 }
 
@@ -2895,9 +2895,24 @@ function paintSaved(){
       makePdf(code, false, $('svPdfSlot'), 'svRe');
     });
     $('svTrack').addEventListener('click', function(){
-      openPick({ rc: code, client: $('client').value || '',
-                 workers: (PICKED_ || []).join('、'),
-                 lang: PICK_LG || '', big: firstBig() });
+      /* ⛔ 這裡以前送的是 PICKED_ 與 PICK_LG ——那是「移工名冊挑人視窗」的
+         勾選與語別篩選，不是這張表上實際填的人。翻譯直接在移工卡打名字
+         （沒走那個視窗）時 PICKED_ 是空的，開出來的案件就沒有移工。
+         而且 sub 與 target 根本沒傳，target 用預設的「工廠」——
+         2026-09-19 張寶華（家庭雇主）那件記成工廠就是這裡來的。
+         直接從表單讀，collectForm 已經在做這件事，不要再寫第三份。 */
+      var f = collectForm();          // 剛存過的表單一定是有效的
+      var w = (f && f.workers) || [];
+      var uniq = function(a){ var o = []; a.forEach(function(x){
+        if(x && o.indexOf(x) === -1) o.push(x); }); return o.join('、'); };
+      openPick({
+        rc: code, go: SCHED_ID || '',
+        target: (f && f.trip.target) || $('target').value || '',
+        client: (f && f.trip.client) || clientVal() || '',
+        workers: uniq(w.map(function(x){ return x.name; })),
+        lang: uniq(w.map(function(x){ return x.lang; })),
+        big: (w[0] || {}).big || '', sub: (w[0] || {}).sub || ''
+      });
     });
     $('svWhy').style.display = 'none';
     $('svClose').textContent = '完成';
@@ -5132,6 +5147,8 @@ function pickNew(kind){
     .addCase(CODE, {
       kind: kind, client: d.client || '', workers: d.workers || '',
       lang: d.lang || '', big: d.big || '', sub: d.sub || '',
+      // 服務對象沒傳的話後端會用預設的「工廠」，家庭雇主就記錯了
+      target: d.target || '',
       title: d.sub || '', recCode: d.rc || '',
       // 行程代碼一定要傳。行程要記住自己屬於哪一件，
       // 之後從行事曆點進去填表，存檔時才掛得回來。
