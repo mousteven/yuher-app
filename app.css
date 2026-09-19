@@ -301,11 +301,27 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .swwrap>.ev{margin-bottom:0;will-change:transform;touch-action:pan-y;cursor:pointer;
   position:relative;z-index:1;-webkit-tap-highlight-color:transparent}
 .swwrap>.ev.snap{transition:transform .34s cubic-bezier(.32,.72,0,1)}
-.swdel{position:absolute;right:0;top:0;bottom:0;width:96px;border:0;z-index:0;
-  background:var(--danger);color:#fff;font-family:inherit;font-weight:800;
-  font-size:0.9375rem;letter-spacing:.04em;cursor:pointer}
-.swdel:active{filter:brightness(.9)}
-@media (prefers-reduced-motion:reduce){ .swwrap>.ev.snap{transition:transform .001s} }
+/* 軌道藏在卡片右邊外面（left:100%），跟卡片一起往左走。
+   ⚠ 用 left:100% 而不是 right:0 —— right:0 的話一開始就疊在卡片底下，
+   推的時候是「卡片讓開」，看不出東西是滑進來的。 */
+.swrail{position:absolute;left:100%;top:0;bottom:0;display:flex;z-index:0;
+  will-change:transform}
+.swrail.snap{transition:transform .34s cubic-bezier(.32,.72,0,1)}
+.swst{width:52px;flex:none;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:2px;background:var(--line2);color:var(--ink2);
+  border-left:1px solid var(--line);transition:background .13s,color .13s}
+.swst i{font-style:normal;font-size:0.9375rem;line-height:1}
+.swst b{font-size:0.625rem;font-weight:800;letter-spacing:.02em}
+.swst.hot{background:var(--brand);color:#fff}
+.swst.bad{color:var(--danger)}
+.swst.bad.hot{background:var(--danger);color:#fff}
+/* 滑過一格的那一下。iPhone 不給網頁震動，這個是他們唯一收得到的回饋 */
+.swst.pop{animation:swpop .22s cubic-bezier(.34,1.4,.5,1)}
+@keyframes swpop{ 0%{transform:scale(1)} 40%{transform:scale(1.14)} 100%{transform:scale(1)} }
+@media (prefers-reduced-motion:reduce){
+  .swwrap>.ev.snap,.swrail.snap{transition:transform .001s}
+  .swst.pop{animation:none}
+}
 
 /* ── 從行事曆點進來的返回列 ───────────────────────────────
    2026-09-18。原本從行事曆按「開始填寫」進來之後沒有回頭路，
@@ -1349,15 +1365,6 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 /* ── 追蹤：四個要追到結束的事 ──────────────────────────
    2026-09-18。色票、圓角、間距全部沿用上面既有的 token，
    這一段沒有新增任何顏色——新功能不該長得像另一個 App。 */
-
-/* 右滑出來的「追蹤」壓在卡片左邊，跟右邊紅色的取消是一對。
-   .swwrap 的底色要看滑的方向換，不然滑右邊會露出紅色。 */
-/* wrapper 不要有底色。顏色由按鈕自己帶，按鈕只有 96px 寬，
-   不會像整片底色那樣從半透明的卡片透出來。 */
-.swtrack{position:absolute;left:0;top:0;bottom:0;width:96px;border:0;z-index:0;
-  background:var(--brand);color:#fff;font-family:inherit;font-weight:800;
-  font-size:0.9375rem;letter-spacing:.04em;cursor:pointer}
-.swtrack:active{filter:brightness(.92)}
 
 /* 頁籤上的計數。跟送審那顆紅點同一個 .badge，只是這裡貼在文字後面 */
 #tkKinds button{position:relative}

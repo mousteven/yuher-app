@@ -1221,7 +1221,7 @@ function drawDay(){
     var cls = r.status==='已完成' ? 'done' : (r.status==='取消' ? 'cancel' : 'plan');
     var plan = r.status === '預排';
 
-    /* 往左滑露出紅色的取消（只有預排的有），往右滑露出藍色的追蹤。
+    /* 由右往左推，一格一個動作。軌道藏在卡片右邊外面，跟著卡片一起走。
        data-go 留在外層，「從填寫頁返回」要靠它把這一張找回來。 */
     var wrapA = '<div class="swwrap"' +
       (r.id ? ' data-go="'+esc(r.id)+'"' : '') +
@@ -1232,9 +1232,7 @@ function drawDay(){
       ' data-workers="'+esc(r.workers||'')+'"' +
       ' data-lang="'+esc(r.lang||'')+'"' +
       ' data-big="'+esc(r.big||'')+'" data-sub="'+esc(r.sub||'')+'">' +
-      '<button type="button" class="swtrack" aria-label="追蹤">' +
-        (r.caseId ? '看追蹤' : '追蹤') + '</button>' +
-      (plan ? '<button type="button" class="swdel">取消</button>' : '');
+      swRail(r);
 
     // 眉標右邊的追蹤標籤。有序號就寫「就醫 3/4」，沒有就只寫類型。
     var tk = r.caseId
@@ -1291,8 +1289,8 @@ function drawDay(){
   });
   if(plan.length && CAL_VIEW !== 'day'){
     $('calDayList').insertAdjacentHTML('beforeend',
-      '<p class="draghint">點一下開始填寫　·　長按有更多選項　·　往右滑可以追蹤<br>'+
-      '往左滑可以取消　·　長按之後拖動可以改期</p>');
+      '<p class="draghint">點一下開始填寫　·　長按有更多選項<br>'+
+      '往左推：追蹤 → 改期 → 取消　·　長按之後拖動可以改期</p>');
   }
 
   // 點已完成那一趟的內文＝打開整張服務表，送審前先確認過
@@ -1309,8 +1307,45 @@ function drawDay(){
     });
   });
   /* 每一張卡片：點一下（預排＝開始填寫、已完成＝看紀錄）、
-     往左滑出取消（只有預排的）、往右滑出追蹤（每一張都有）。 */
-  [].forEach.call($('calDayList').querySelectorAll('.swwrap'), bindSwipe);
+     由右往左推出四段選單（有哪幾格看這張卡的狀態）。 */
+  var si = 0;
+  [].forEach.call($('calDayList').querySelectorAll('.swwrap'), function(w){
+    var r3 = all[si++]; if(r3) bindSwipe(w, r3);
+  });
+}
+
+/* ── 左滑四段選單 ──────────────────────────────────────
+   2026-09-19。原本是「往右滑＝追蹤、往左滑＝取消」兩顆按鈕，
+   改成由右往左推的一條軌道，推愈遠換愈後面的動作，放開就執行。
+
+   ⛔ 不要寫死四格。四個動作沒有一張卡片全部適用：
+       預排　　　　　→ 追蹤 / 改期 / 取消
+       已完成・未送審 → 送審 / 追蹤
+       已完成・已送審 → 追蹤（送審的走審核流程，行程本身不能再動）
+   排出按不動的格子比少幾格更糟，跟長按選單同一個原則。
+
+   順序固定「送審 → 追蹤 → 改期 → 取消」：最常用的先碰到，
+   會出事的（取消）推到最遠，而且要再確認一次。 */
+var SW_STEP_ = 52;          // 一格多寬，跟 CSS 的 .swst 一致
+var SW_ARM_  = 0.6;         // 露出六成就算數，不用推滿
+
+function swStops(r){
+  var plan = r.status === '預排', rv = r.rv || '';
+  var a = [];
+  if(r.recCode && (rv === '未送審' || rv === '退回補正'))
+    a.push({ k:'sub', t:'送審', i:'➤' });
+  a.push({ k:'track', t: r.caseId ? '看追蹤' : '追蹤', i:'◷' });
+  if(plan){
+    a.push({ k:'date', t:'改期', i:'📅' });
+    a.push({ k:'del',  t:'取消', i:'✕', bad:1 });
+  }
+  return a;
+}
+function swRail(r){
+  return '<div class="swrail">' + swStops(r).map(function(x){
+    return '<span class="swst'+(x.bad?' bad':'')+'">' +
+      '<i>'+x.i+'</i><b>'+x.t+'</b></span>';
+  }).join('') + '</div>';
 }
 
 /* ── 長按行程卡：選單 ──────────────────────────────────
@@ -1628,53 +1663,71 @@ if($('mgCancel')) $('mgCancel').addEventListener('click', function(){
    兩邊都用 touch 事件，不要一邊 pointer 一邊 touch——
    同一個手指會產生兩套事件，判斷會互相打架。 */
 var SWIPE_OPEN_ = null;      // 一次只開一張
-var SW_W_ = 96;              // 紅色那一塊的寬度，跟 CSS 的 .swdel 一致
 
 function closeSwipe(w){
   if(!w) return;
-  var el = w.querySelector('.ev');
+  var el = w.querySelector('.ev'), rail = w.querySelector('.swrail');
   if(el){ el.classList.add('snap'); el.style.transform = ''; }
+  if(rail){ rail.classList.add('snap'); rail.style.transform = ''; }
   w.dataset.x = '0';
+  [].forEach.call(w.querySelectorAll('.swst'), function(c){ c.classList.remove('hot'); });
   if(SWIPE_OPEN_ === w) SWIPE_OPEN_ = null;
 }
 
-function bindSwipe(w){
-  var el = w.querySelector('.ev');
-  if(!el) return;
-  var id = w.dataset.go || '';
-  var plan = !!w.dataset.plan;
-  /* 能往哪邊滑，由那一邊有沒有東西決定。已完成的卡片沒有取消可按，
-     就不該滑得出左邊——滑出一片空白比滑不動更難懂。 */
-  var canL = plan, canR = true;
-  var base = 0, sx = 0, sy = 0, mode = null, lastX = 0, lastT = 0, vel = 0, moved = false;
+/* 每滑過一格的體感。
+   ⚠ navigator.vibrate 只有 Android 有，iOS Safari 一律無效（Apple 擋的，
+   裝成 PWA 也一樣，沒有繞路的方法）。所以視覺上的那一下 .pop 不是裝飾，
+   它是 iPhone 唯一收得到的回饋，不要拿掉。
+   聲音沒做：他們在工廠手機都是靜音，而且 iOS 靜音時 Web Audio 也不響。 */
+function swTick(chip, bad){
+  try { if(navigator.vibrate) navigator.vibrate(bad ? 18 : 6); } catch(e){}
+  if(!chip) return;
+  chip.classList.remove('pop');
+  void chip.offsetWidth;            // 重播動畫要先讓瀏覽器看到類別被拿掉
+  chip.classList.add('pop');
+}
+
+function bindSwipe(w, r){
+  var el = w.querySelector('.ev'), rail = w.querySelector('.swrail');
+  if(!el || !rail) return;
+  var chips = [].slice.call(rail.querySelectorAll('.swst'));
+  if(!chips.length) return;
+  var MAX = SW_STEP_ * chips.length;
+  var sx = 0, sy = 0, mode = null, at = -1, moved = false;
   w.dataset.x = '0';
 
+  /* 推多遠 → 現在指著第幾格 */
+  function indexOf(x){
+    return Math.max(-1, Math.min(chips.length - 1,
+      Math.floor(x / SW_STEP_ - SW_ARM_)));
+  }
   function put(x, snap){
     el.classList.toggle('snap', !!snap);
-    el.style.transform = x ? 'translateX(' + x + 'px)' : '';
-    // 往左滑露出紅色的取消、往右滑露出藍色的追蹤，底色要跟著方向換
-    w.classList.toggle('toleft', x < 0);
+    rail.classList.toggle('snap', !!snap);
+    var t = x ? 'translateX(' + (-x) + 'px)' : '';
+    el.style.transform = t; rail.style.transform = t;
     w.dataset.x = String(x);
     SWIPE_OPEN_ = x ? w : (SWIPE_OPEN_ === w ? null : SWIPE_OPEN_);
   }
-  /* 超出範圍就愈拉愈重，不要硬停——硬停讀起來像當掉，
-     漸進的阻力讀起來是「可以動，但這邊沒有東西了」。 */
-  function rubber(over){ return over * 0.32; }
+  function mark(n){
+    chips.forEach(function(c, i){ c.classList.toggle('hot', i === n); });
+  }
+  /* 超出最後一格就愈推愈重，不要硬停——硬停讀起來像當掉 */
+  function rubber(over){ return over * 42 / (42 + over); }
 
   el.addEventListener('touchstart', function(e){
     if(DRAG) return;
     if(SWIPE_OPEN_ && SWIPE_OPEN_ !== w) closeSwipe(SWIPE_OPEN_);
     var t = e.touches[0];
-    base = parseFloat(w.dataset.x) || 0;
-    sx = t.clientX; sy = t.clientY; lastX = t.clientX; lastT = Date.now();
-    mode = null; vel = 0; moved = false;
-    el.classList.remove('snap');
+    sx = t.clientX; sy = t.clientY;
+    mode = null; moved = false; at = -1;
+    el.classList.remove('snap'); rail.classList.remove('snap');
   }, {passive:true});
 
   el.addEventListener('touchmove', function(e){
     if(DRAG) return;                       // 長按拖曳優先
     var t = e.touches[0];
-    var dx = t.clientX - sx, dy = t.clientY - sy;
+    var dx = sx - t.clientX, dy = t.clientY - sy;
     if(mode === null){
       if(Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) mode = 'swipe';
       else if(Math.abs(dy) > 10) mode = 'scroll';
@@ -1683,32 +1736,22 @@ function bindSwipe(w){
     if(mode !== 'swipe') return;
     e.preventDefault();                    // 確定是左滑了才擋捲動
     moved = true;
-    var now = Date.now();
-    if(now > lastT){
-      vel = (t.clientX - lastX) / (now - lastT) * 1000;
-      lastX = t.clientX; lastT = now;
-    }
-    var nx = base + dx;
-    var hi = canR ? SW_W_ : 0, lo = canL ? -SW_W_ : 0;
-    if(nx > hi) nx = hi + rubber(nx - hi);
-    if(nx < lo) nx = lo + rubber(nx - lo);
+    var nx = dx <= MAX ? Math.max(0, dx) : MAX + rubber(dx - MAX);
+    var n = indexOf(nx);
+    if(n !== at){ at = n; mark(at); if(at >= 0) swTick(chips[at], chips[at].classList.contains('bad')); }
     put(nx, false);
   }, {passive:false});
 
-  el.addEventListener('touchend', function(e){
+  el.addEventListener('touchend', function(){
     if(DRAG || mode !== 'swipe'){ mode = null; return; }
-    var t = (e.changedTouches && e.changedTouches[0]) || {};
-    var cur = base + ((t.clientX == null ? sx : t.clientX) - sx);
-    /* 用甩的速度投影它「要飛到哪」再決定開或關，不是看放開時停在哪。
-       這樣輕輕一甩就開得了，而滑出來又往右甩回去會關掉。 */
-    var projected = cur + (vel / 1000) * 0.998 / (1 - 0.998);
-    var to = 0;
-    if(canL && projected < -SW_W_ / 2) to = -SW_W_;
-    else if(canR && projected > SW_W_ / 2) to = SW_W_;
-    put(to, true);
     mode = null;
+    var n = at;
+    put(0, true); mark(-1); at = -1;
+    if(n >= 0) swDo(swStops(r)[n].k, r);
   });
-  el.addEventListener('touchcancel', function(){ mode = null; put(0, true); });
+  el.addEventListener('touchcancel', function(){
+    mode = null; at = -1; mark(-1); put(0, true);
+  });
 
   /* 用捕獲階段接，才擋得住裡面 .b[data-rec] 的那個 click——
      不然滑完放開，手指底下那一筆紀錄會跟著被打開。 */
@@ -1719,27 +1762,27 @@ function bindSwipe(w){
       ev.stopPropagation(); ev.preventDefault(); closeSwipe(w); return;
     }
     // 預排的點一下開始填寫；已完成的交給裡面的 data-rec，這裡不要攔
-    if(plan && id){ ev.stopPropagation(); startFromSchedule(id); }
+    if(r.status === '預排' && r.id){ ev.stopPropagation(); startFromSchedule(r.id); }
   }, true);
-
-  var del = w.querySelector('.swdel');
-  if(del) del.addEventListener('click', function(ev){
-    ev.stopPropagation();
-    google.script.run
-      .withSuccessHandler(function(){ toast('已取消'); calBust(); loadCal(); })
-      .withFailureHandler(function(e){ toast(e.message, true); })
-      .setScheduleStatus(CODE, id, '取消');
-  });
-
-  w.querySelector('.swtrack').addEventListener('click', function(ev){
-    ev.stopPropagation();
-    closeSwipe(w);
-    /* 已經在追蹤的就直接開那一件。再問一次「要開哪一種」，
-       人就會又開一件——他實機上一口氣開出三件一樣的就是這樣來的。 */
-    if(w.dataset.case){ goTab('track'); openCase(w.dataset.case); return; }
-    openPick(w.dataset);
-  });
 }
+
+/* 放開就執行。動作本身沿用長按選單那幾支，不要再寫第二份。
+   ⛔ 取消要再問一次：手勢是會滑過頭的，而「取消行程」救不回來。 */
+function swDo(k, r){
+  if(k === 'sub')  { cardSubmit(r); return; }
+  if(k === 'date') { cardReschedule(r); return; }
+  if(k === 'del')  {
+    if(!confirm('要取消這個行程嗎？\n' + (r.client || '') +
+                (r.slot ? '　' + r.slot : ''))) return;
+    cardCancel(r); return;
+  }
+  if(k === 'track'){
+    if(r.caseId){ goTab('track'); openCase(r.caseId); return; }
+    if(r.recCode){ openMergePick(r); return; }
+    openPick(cardData(r));
+  }
+}
+
 /* 捲動就把開著的收起來：手指已經離開那一張了，紅色不該還留著 */
 addEventListener('scroll', function(){ if(SWIPE_OPEN_) closeSwipe(SWIPE_OPEN_); },
   {passive:true});
