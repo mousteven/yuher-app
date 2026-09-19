@@ -3641,7 +3641,7 @@ function drawRecordSkeleton(recCode, r){
   '</div>';
 
   names.forEach(function(nm, i){
-    h += '<div class="c4st">' +
+    h += '<div class="rvw">' +
       '<div class="hd"><i>' + (i + 1) + '</i><b>' + esc(nm || '') + '</b></div>' +
       '<div class="rvf"><span>服務項目</span><b>' +
         esc(r && r.big && r.sub ? (r.big + ' ／ ' + r.sub) : ((r && r.topic) || '')) +
@@ -3731,7 +3731,7 @@ function rvWord(rv){
   if(!rv) return '';
   var t = RV_LABEL[rv] || rv;
   var c = rv === '退回補正' ? ' bad' : (rv === '已歸檔' ? ' pass' : '');
-  return '<span class="rvw' + c + '">' + esc(t) + '</span>';
+  return '<span class="c4st' + c + '">' + esc(t) + '</span>';
 }
 
 function progHtml(rv){
@@ -3820,7 +3820,7 @@ function drawRecordBody(d){
     var ex = [];
     if(w.fee) ex.push('費用 '+w.fee);
     if(w.memo) ex.push(w.memo);
-    h += '<div class="c4st">'+
+    h += '<div class="rvw">'+
       '<div class="hd"><i>'+(i+1)+'</i><b>'+esc(w.name||'（未填姓名）')+'</b>'+
         (o?'<span class="or">'+esc(o)+'</span>':'')+
         (w.lang?'<em>'+esc(w.lang)+'</em>':'')+'</div>'+
