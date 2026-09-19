@@ -1662,26 +1662,20 @@ if($('mgCancel')) $('mgCancel').addEventListener('click', function(){
 
    兩邊都用 touch 事件，不要一邊 pointer 一邊 touch——
    同一個手指會產生兩套事件，判斷會互相打架。 */
-var SWIPE_OPEN_ = null;      // 一次只開一張
-
-function closeSwipe(w){
-  if(!w) return;
-  var el = w.querySelector('.ev'), rail = w.querySelector('.swrail');
-  if(el){ el.classList.add('snap'); el.style.transform = ''; }
-  if(rail){ rail.classList.add('snap'); rail.style.transform = ''; }
-  w.dataset.x = '0';
-  [].forEach.call(w.querySelectorAll('.swst'), function(c){ c.classList.remove('hot'); });
-  if(SWIPE_OPEN_ === w) SWIPE_OPEN_ = null;
-}
+/* ⚠ 這裡以前有一整套「一次只開一張」的記帳（SWIPE_OPEN_ / closeSwipe /
+   dataset.x / scroll 監聽）。那是為了「滑出來會停在那裡等你點按鈕」的舊做法。
+   現在是放開就執行，卡片永遠彈回 0，沒有東西會停在開著的狀態——整套刪掉。
+   哪天又改回「滑出來latch住」，記得要一起加回來。 */
 
 /* 每滑過一格的體感。
    ⚠ navigator.vibrate 只有 Android 有，iOS Safari 一律無效（Apple 擋的，
    裝成 PWA 也一樣，沒有繞路的方法）。所以視覺上的那一下 .pop 不是裝飾，
    它是 iPhone 唯一收得到的回饋，不要拿掉。
    聲音沒做：他們在工廠手機都是靜音，而且 iOS 靜音時 Web Audio 也不響。 */
-function swTick(chip, bad){
-  try { if(navigator.vibrate) navigator.vibrate(bad ? 18 : 6); } catch(e){}
+function swTick(chip){
   if(!chip) return;
+  var bad = chip.classList.contains('bad');
+  try { if(navigator.vibrate) navigator.vibrate(bad ? 18 : 6); } catch(e){}
   chip.classList.remove('pop');
   void chip.offsetWidth;            // 重播動畫要先讓瀏覽器看到類別被拿掉
   chip.classList.add('pop');
@@ -1694,7 +1688,6 @@ function bindSwipe(w, r){
   if(!chips.length) return;
   var MAX = SW_STEP_ * chips.length;
   var sx = 0, sy = 0, mode = null, at = -1, moved = false;
-  w.dataset.x = '0';
 
   /* 推多遠 → 現在指著第幾格 */
   function indexOf(x){
@@ -1706,9 +1699,8 @@ function bindSwipe(w, r){
     rail.classList.toggle('snap', !!snap);
     var t = x ? 'translateX(' + (-x) + 'px)' : '';
     el.style.transform = t; rail.style.transform = t;
-    w.dataset.x = String(x);
-    SWIPE_OPEN_ = x ? w : (SWIPE_OPEN_ === w ? null : SWIPE_OPEN_);
   }
+  function reset(){ mode = null; at = -1; mark(-1); put(0, true); }
   function mark(n){
     chips.forEach(function(c, i){ c.classList.toggle('hot', i === n); });
   }
@@ -1717,7 +1709,6 @@ function bindSwipe(w, r){
 
   el.addEventListener('touchstart', function(e){
     if(DRAG) return;
-    if(SWIPE_OPEN_ && SWIPE_OPEN_ !== w) closeSwipe(SWIPE_OPEN_);
     var t = e.touches[0];
     sx = t.clientX; sy = t.clientY;
     mode = null; moved = false; at = -1;
@@ -1738,29 +1729,23 @@ function bindSwipe(w, r){
     moved = true;
     var nx = dx <= MAX ? Math.max(0, dx) : MAX + rubber(dx - MAX);
     var n = indexOf(nx);
-    if(n !== at){ at = n; mark(at); if(at >= 0) swTick(chips[at], chips[at].classList.contains('bad')); }
+    if(n !== at){ at = n; mark(at); if(at >= 0) swTick(chips[at]); }
     put(nx, false);
   }, {passive:false});
 
   el.addEventListener('touchend', function(){
     if(DRAG || mode !== 'swipe'){ mode = null; return; }
-    mode = null;
     var n = at;
-    put(0, true); mark(-1); at = -1;
+    reset();
     if(n >= 0) swDo(swStops(r)[n].k, r);
   });
-  el.addEventListener('touchcancel', function(){
-    mode = null; at = -1; mark(-1); put(0, true);
-  });
+  el.addEventListener('touchcancel', reset);
 
   /* 用捕獲階段接，才擋得住裡面 .b[data-rec] 的那個 click——
      不然滑完放開，手指底下那一筆紀錄會跟著被打開。 */
   el.addEventListener('click', function(ev){
     if(DRAG) return;
     if(moved){ ev.stopPropagation(); ev.preventDefault(); moved = false; return; }
-    if(parseFloat(w.dataset.x)){
-      ev.stopPropagation(); ev.preventDefault(); closeSwipe(w); return;
-    }
     // 預排的點一下開始填寫；已完成的交給裡面的 data-rec，這裡不要攔
     if(r.status === '預排' && r.id){ ev.stopPropagation(); startFromSchedule(r.id); }
   }, true);
@@ -1782,10 +1767,6 @@ function swDo(k, r){
     openPick(cardData(r));
   }
 }
-
-/* 捲動就把開著的收起來：手指已經離開那一張了，紅色不該還留著 */
-addEventListener('scroll', function(){ if(SWIPE_OPEN_) closeSwipe(SWIPE_OPEN_); },
-  {passive:true});
 
 /* ── 長按拖曳改期 ──────────────────────────────
    長按 500ms 進入拖曳，手指移到哪一天就亮哪一天，放開就改期。
