@@ -1466,23 +1466,10 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 /* ── 掛號單：就醫追蹤與體檢通知 ────────────────────────
    看診號是翻譯在醫院櫃檯要報的東西，所以它要最大。
    還沒預約的時候整張變灰，一眼看得出「還沒約」。 */
-.slip{background:var(--card);border:1px solid var(--line);border-radius:13px;
   overflow:hidden;margin-bottom:11px}
-.slip .hd{background:var(--line2);padding:10px 13px;border-bottom:1px dashed var(--line)}
-.slip .hd b{display:block;font-size:0.9375rem;letter-spacing:-.01em}
-.slip .hd span{display:block;font-size:0.75rem;color:var(--ink2);margin-top:2px}
-.slip .no{display:flex;align-items:center;gap:14px;padding:13px}
-.slip .no .big{font-size:2.25rem;font-weight:800;line-height:1;color:var(--brand);
   font-variant-numeric:tabular-nums;min-width:2.2em;text-align:center}
-.slip .no .big em{display:block;font-style:normal;font-size:0.625rem;font-weight:700;
   letter-spacing:.14em;color:var(--ink3);margin-top:5px}
-.slip .no .wh{flex:1;min-width:0;font-size:0.8125rem;line-height:1.7}
-.slip .no .wh b{font-variant-numeric:tabular-nums}
-.slip .no .wh span{color:var(--ink3);font-size:0.75rem}
-.slip .ft{padding:9px 13px;border-top:1px dashed var(--line);font-size:0.6875rem;
   color:var(--ink3)}
-.slip .ft b{color:var(--ink2)}
-.slip.none .no .big{color:var(--ink3);font-size:1rem;font-weight:700}
 
 /* 右滑之後那個選單裡的選項 */
 .pk{display:block;width:100%;text-align:left;padding:12px;border:1px solid var(--line);

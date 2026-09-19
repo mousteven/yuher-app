@@ -4498,7 +4498,10 @@ function caseSummary(c){
   h += '</div>';
   var d = c.detail || {};
   if(c.kind === '返鄉休假' && (d.out || d.air)) h += bpHtml(c);
-  if((c.kind === '體檢通知' || c.kind === '就醫追蹤') && (d.hos || d.no)) h += slipHtml(c);
+  /* ⛔ 這裡以前還會畫一張「掛號單」（醫院／科別／看診號）。
+     2026-09-19 他要求拿掉：那些欄位底下「就醫追蹤的細節」那張卡已經
+     完整列出來了，兩塊在講同一件事，而且還會互相矛盾——
+     掛號單寫「未約」，細節卡卻有看診號 15。 */
 
   if(c.link){
     h += '<div class="c6link" data-go="' + esc(c.link.id) + '">' +
@@ -4930,24 +4933,6 @@ function bpHtml(c){
     '<div class="rt">回程' + (d.rair ? '　' + esc(d.rair) : '') +
       '　<b>' + esc(d.back || c.nextDate || '未定') + '</b>' +
       '<span class="tag">' + (late ? '逾期未回' : '應回台') + '</span></div>' +
-  '</div>';
-}
-
-/* 掛號單。台灣的醫院掛號單就長這樣——看診號是翻譯在櫃檯要報的，
-   所以它要最大。沒有預約的時候整張變灰，一眼看得出「還沒約」。 */
-function slipHtml(c){
-  var d = c.detail || {};
-  if(!d.hos && !c.nextDate) return '';
-  var none = !c.nextDate;
-  return '<div class="slip' + (none ? ' none' : '') + '">' +
-    '<div class="hd"><b>' + esc(d.hos || '尚未指定醫院') + '</b>' +
-      (d.dep ? '<span>' + esc(d.dep) + '</span>' : '') + '</div>' +
-    '<div class="no"><span class="big">' + esc(none ? '未約' : (d.no || '—')) +
-      (none || !d.no ? '' : '<em>看診號</em>') + '</span>' +
-      '<span class="wh"><b>' + esc(c.nextDate || '尚未預約') +
-        (d.time ? '　' + esc(d.time) : '') + '</b><br>' +
-        '<span>' + esc(d.room || c.nextNote || '') + '</span></span></div>' +
-    (d.bring ? '<div class="ft"><b>要帶：</b>' + esc(d.bring) + '</div>' : '') +
   '</div>';
 }
 
