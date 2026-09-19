@@ -1857,11 +1857,15 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   background:var(--line2);border-radius:99px;padding:1px 6px;white-space:nowrap}
 @media (max-width:380px){ .c4auto{display:none} }
 
-/* 時間軸上「經過／結果」的小標。不用冒號，靠顏色與間距分就好 */
-.c6k{display:inline-block;min-width:2.2em;margin-right:5px;font-weight:700;
-  color:var(--ink3);font-size:0.6875rem}
 
-/* 人自己補寫的細節。罐頭選項是淡的，這個要深、要換行，
-   因為它才是這一趟真正的內容（「亞大 腸胃 38診 8號」）。 */
-.c6x{display:block;margin:1px 0 0 2.2em;color:var(--ink);font-weight:600}
-.c6ln{display:block;margin-top:2px}
+
+/* 時間軸的服務內容：左標右文（他挑的排法 F）。
+   標籤欄固定寬才對得齊，一眼掃得下來。
+   ⚠ 補充那兩列要上底色——罐頭選項每一筆都長得幾乎一樣，
+   補充才分得出這一趟發生什麼事。這是整個排法的重點，不要拿掉。 */
+.c6g{display:grid;grid-template-columns:2.6em 1fr;gap:3px 8px;
+  margin:5px 0 0;font-size:0.75rem}
+.c6g dt{color:var(--ink3);font-size:0.6875rem;font-weight:700;line-height:1.5}
+.c6g dd{margin:0;color:var(--ink2);word-break:break-word}
+.c6g dd.hi{color:var(--ink);font-weight:700;font-size:0.875rem;
+  background:var(--warn-bg);border-radius:7px;padding:3px 8px;margin:-2px 0}

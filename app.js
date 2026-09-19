@@ -4546,11 +4546,7 @@ function caseLine(c){
     h += c6row(last ? 'now' : 'ok', String(i + 1), shortDate_(it.date),
       it.sub || '服務紀錄',
       esc(it.rec) + '　' + esc(RV_LABEL[it.rv] || it.rv) +
-        (it.primary ? '' : '　關聯案件的') +
-        /* 處理經過與處理結果都要，而且補充要比罐頭選項顯眼——
-           罐頭每一筆都長得差不多，補充才分得出這一趟發生什麼事。
-           「結論」也是下一次要不要再跑的依據。 */
-        c6note('經過', it.how, it.hnote) + c6note('結果', it.result, it.rnote),
+        (it.primary ? '' : '　關聯案件的') + c6grid(it),
       acts);
   });
 
@@ -4586,16 +4582,27 @@ function caseLine(c){
   return h + '</div><div id="ckHint"></div>';
 }
 
-/* 時間軸上的一行「經過／結果」。
-   罐頭選項用淡的，人自己補寫的那句用深的——
-   後者才是這一趟真正的內容。兩個都沒有就整行不出現。 */
-function c6note(label, canned, note){
-  if(!canned && !note) return '';
-  /* 整段包成一個區塊，不要用 <br> 換行。
-     .c6x 本身是 display:block，接在 <br> 後面會多出一個空行。 */
-  return '<span class="c6ln"><span class="c6k">' + label + '</span>' +
-    (canned ? esc(canned) : '') +
-    (note ? '<span class="c6x">' + esc(note) + '</span>' : '') + '</span>';
+/* 時間軸上的服務內容：四個固定欄位排成兩欄格線（他挑的排法 F）。
+     做了　罐頭選項　　　　淡的，每一筆都長得差不多，是雜訊
+     細節　人自己補寫的　　深的＋淡色底，這才分得出發生什麼事
+     結果　罐頭選項　　　　淡的
+     交代　人自己補寫的　　深的＋淡色底
+   空的欄位整列不出現——一整排「—」看起來像壞掉。
+
+   ⚠「細節」不要寫成「現場」。那個詞只對「帶工人去醫院」成立，
+   電話詢問、文件送達、收取證件的補充寫「現場」會很怪。 */
+function c6grid(it){
+  var rows = [
+    ['做了', it.how,    0],
+    ['細節', it.hnote,  1],
+    ['結果', it.result, 0],
+    ['交代', it.rnote,  1]
+  ].filter(function(r){ return r[1]; });
+  if(!rows.length) return '';
+  return '<dl class="c6g">' + rows.map(function(r){
+    return '<dt>' + r[0] + '</dt><dd' + (r[2] ? ' class="hi"' : '') + '>' +
+      esc(r[1]) + '</dd>';
+  }).join('') + '</dl>';
 }
 
 function c6row(cls, dot, when, title, body, acts){
