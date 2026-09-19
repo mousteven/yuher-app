@@ -1239,6 +1239,10 @@ function drawDay(){
       ? '<span class="c4tk">◷ '+esc(SHORT_[r.caseKind] || r.caseKind || '追蹤')+
         (r.caseN ? ' '+r.caseN+'/'+r.caseTotal : '')+'</span>'
       : '';
+    /* 追蹤案件自己排的行程要標出來。
+       ⛔ 2026-09-19 他在行事曆看到一筆「拆線」完全不知道哪來的——
+       系統做了事卻只寫在試算表的備註欄，畫面上看不到。 */
+    if(r.auto) tk += '<span class="c4auto">自動排的</span>';
 
     var wcount = r.workers ? String(r.workers).split('、').filter(Boolean).length : 0;
 
@@ -1962,31 +1966,7 @@ function startFromSchedule(id){
                label: (($('calDayTitle') || {}).textContent || '').trim(),
                name: r.client };
   SCHED_ID = id;
-  $('date').value = r.date;
-  $('target').value = (r.target||'工廠');
-  fillClients(); syncMode();
-  $('client').value = r.client;
-  applyPreset();
-  if(CREW.indexOf(r.crew) !== -1) $('crew').value = r.crew;
-
-  // 排程時選好的移工與服務項目一併帶進去，當天只要補處理經過與結果
-  var names = (r.workers||'').split('、').filter(String);
-  $('workers').innerHTML = '';
-  (names.length ? names : ['']).forEach(function(n){
-    addWorker();
-    var card = $('workers').lastElementChild;
-    var sel = card.querySelector('[data-k=name]');
-    if(n && sel){ sel.value = n; sel.dispatchEvent(new Event('change')); }
-    if(r.big){
-      var bg = card.querySelector('[data-k=big]');
-      bg.value = r.big; bg.dispatchEvent(new Event('change'));
-      if(r.sub){
-        var sb = card.querySelector('[data-k=sub]');
-        sb.value = r.sub; sb.dispatchEvent(new Event('change'));
-      }
-    }
-  });
-  renumber();
+  fillTripForm(r);
   document.querySelector('.tabs button[data-t=new]').click();
   showBack(back, 'form');          // 要在切完分頁之後，分頁切換會把它收起來
   window.scrollTo(0,0);
@@ -3865,7 +3845,7 @@ function ctxHtml(r){
   return '<p class="c5line"><span class="c5k">◷ ' + esc(r.kind) + '</span>' +
       '這是<b>第 ' + r.n + ' 次服務</b>，目前共 ' + r.total + ' 次</p>' +
     '<span class="c5rail">' + steps.join('') + '</span>' +
-    '<span class="c5foot"><span class="c5id">' + esc(r.id) + '</span>' +
+    '<span class="c5foot"><span class="c5id">追蹤編號 ' + esc(r.id) + '</span>' +
       (done ? '已結案' : '還沒結案') +
       '<span class="c5go">看整串 ›</span></span>';
 }
@@ -4456,7 +4436,10 @@ function openCase(id){
 
 function drawCase(c){
   $('ckTitle').textContent = c.kind;
-  $('ckSub').textContent = (c.workers || c.client || '') + '　' + c.state.text;
+  /* ⛔ 改版時我把案件編號從這裡拿掉了，結果它只剩服務表看得到，
+     點「看整串」進來反而不見，想核對也核對不到。補回去。 */
+  $('ckSub').textContent = (c.workers || c.client || '') +
+    '　·　' + c.id + '　·　' + c.state.text;
   $('ckBody').innerHTML = caseSummary(c) + caseLine(c);
   drawCaseActions(c);
   bindCase(c);
@@ -4467,22 +4450,17 @@ function drawCase(c){
    移工的名字放最大——以前它埋在第二張卡的第一列。 */
 function caseSummary(c){
   var open = c.status === '進行中';
-  var steps = (CK_SCHEMA && CK_SCHEMA.steps && CK_SCHEMA.steps[c.kind]) || [];
-  /* 舊案件的「階段」欄是空的——那一欄是後來才加的，以前開的案子沒寫。
-     空的就當第一格，那才是它實際的狀態。留著不選反而看起來像壞掉。 */
-  var at = c.step ? steps.indexOf(c.step) : 0;
   var h = '<div class="c6sum">' +
     '<div class="c6who">' + esc(c.workers || '（未填移工）') + '</div>' +
     '<div class="c6at">' + esc(c.client) +
       (c.sub ? '　·　' + esc(c.sub) : '') + '</div>';
 
-  if(steps.length && open){
-    h += '<div class="c6seg">' + steps.map(function(x, i){
-      return '<button type="button" class="c6st' +
-        (i === at ? ' on' : '') + '" data-step="' + esc(x) + '">' +
-        esc(x) + '</button>';
-    }).join('') + '</div>';
-  }
+  /* ⛔ 這裡以前有「治療中／追蹤回診／待結案」三顆按鈕給人手動切。
+     2026-09-19 拿掉了。他的原話：「你放上去有時候也會人家忘了去更改，
+     所以說我覺得沒有必要」——他是對的，而且沒人更新的狀態比沒有狀態更糟：
+     它會肯定地告訴你一件錯的事。而且當時還有兩套狀態在打架
+     （這三格 vs 標題上系統算的那行）。現在只剩後端 casePhase_ 算的那一個。 */
+  h += '<div class="c6now">' + esc(c.state.text) + '</div>';
 
   /* 一行 meta。空的欄位不要留「—」，一整排破折號看起來像壞掉。 */
   var m = [];
@@ -4604,7 +4582,16 @@ function bindCase(c){
   var ACT = {
     'new':    function(){ caseNewRecord(c); },
     'next':   function(){ caseSetNext(c); },
-    'msg':    function(){ openMsg(c, ''); },
+    'msg':    function(){
+      openMsg(c, '');
+      /* 體檢的「已通知」是唯一算不出來的（訊息到底發了沒）。
+         做了這件事本來就等於通知了，順手記起來，不要再要人多按一次。 */
+      if(c.kind === '體檢通知' && !(c.detail || {}).noticeAt){
+        google.script.run.withSuccessHandler(function(){})
+          .withFailureHandler(function(){})
+          .setCaseDetail(CODE, c.id, { noticeAt: new Date().toISOString().slice(0,10) });
+      }
+    },
     'med':    function(){ caseSpawnMed(c); },
     'detail': function(){ openDetailForm(c); },
     'close':  function(){ caseClose(c); },
@@ -4622,18 +4609,6 @@ function bindCase(c){
   });
   [].forEach.call(B.querySelectorAll('[data-off]'), function(el){
     el.addEventListener('click', function(){ caseDetach(c, el.dataset.off); });
-  });
-  [].forEach.call(B.querySelectorAll('[data-step]'), function(b){
-    b.addEventListener('click', function(){
-      if(b.dataset.step === c.step) return;
-      google.script.run
-        .withSuccessHandler(function(){
-          toast('已改成「' + b.dataset.step + '」');
-          TK_LOADED = ''; openCase(c.id);
-        })
-        .withFailureHandler(function(e){ toast(e.message, true); })
-        .setCaseStep(CODE, c.id, b.dataset.step);
-    });
   });
   var ed = $('ckEdit');
   if(ed) ed.addEventListener('click', function(){ openDetailForm(c); });
@@ -4938,20 +4913,59 @@ function slipHtml(c){
   '</div>';
 }
 
-/* 從案件開一張服務表：客戶、移工、服務類別、負責翻譯都帶過去，
-   存檔之後自動掛回來。人只要填處理經過、結果、費用、簽名。 */
+/* 把已知的資料填進服務表。
+   ⛔ 這支是「從行程開表」與「從案件開表」共用的。
+   2026-09-19 之前兩條路各寫一份，案件那一份漏了服務對象、移工與服務項目，
+   而且沒有先設服務對象就填雇主——家庭雇主的名字在工廠名單裡找不到，
+   帶過去的名字直接掉了。同一件事不要維護兩份。
+
+   ⚠ 順序不能動：先設服務對象 → fillClients() 重建雇主名單 → 才填得進雇主。 */
+function fillTripForm(r){
+  if(r.date) $('date').value = r.date;
+  $('target').value = r.target || '工廠';
+  fillClients(); syncMode();
+  $('client').value = r.client || '';
+  applyPreset();
+  if(CREW.indexOf(r.crew) !== -1) $('crew').value = r.crew;
+  if(r.crewOwner && CREW.indexOf(r.crewOwner) !== -1) $('crewOwner').value = r.crewOwner;
+
+  // 移工與服務項目一併帶進去，當天只要補處理經過與結果
+  var names = (r.workers || '').split('、').filter(String);
+  $('workers').innerHTML = '';
+  (names.length ? names : ['']).forEach(function(n){
+    addWorker();
+    var card = $('workers').lastElementChild;
+    var sel = card.querySelector('[data-k=name]');
+    if(n && sel){ sel.value = n; sel.dispatchEvent(new Event('change')); }
+    if(r.big){
+      var bg = card.querySelector('[data-k=big]');
+      bg.value = r.big; bg.dispatchEvent(new Event('change'));
+      if(r.sub){
+        var sb = card.querySelector('[data-k=sub]');
+        sb.value = r.sub; sb.dispatchEvent(new Event('change'));
+      }
+    }
+  });
+  renumber();
+}
+
+/* 從案件開一張服務表：雇主、移工、服務項目、負責翻譯全部帶過去，
+   存檔之後自動掛回來。人只要填處理經過、結果、費用、簽名。
+   日期帶案件的下次日期（那才是這一趟要去的日子），沒有就帶今天。 */
 function caseNewRecord(c){
   CASE_FOR_ = c.id;
   $('caseModal').style.display = 'none';
   goTab('new');
   try {
-    $('date').valueAsDate = new Date();
-    setVal('client', c.client);
-    setVal('crewOwner', c.crew || '');
-    /* 服務類別不帶：它是每一張移工卡自己的 select[data-k=big]，
-       不是頁面上的單一欄位。一趟服務可能每個人的項目都不同。 */
+    fillTripForm({
+      date: c.nextDate || new Date().toISOString().slice(0, 10),
+      target: c.target, client: c.client,
+      crew: c.crew, crewOwner: c.crew,
+      workers: c.workers, big: c.big, sub: c.sub
+    });
   } catch(e){}
-  toast('填完存檔會自動掛回 ' + c.id);
+  window.scrollTo(0, 0);
+  toast('已帶入 ' + (c.workers || c.client) + '，接著填服務內容');
 }
 var CASE_FOR_ = '';       // 這次填寫要掛回哪個案件
 
@@ -5098,6 +5112,34 @@ function pickNew(kind){
     });
 }
 
+/* 掛進某一件之前先問清楚它現在屬於誰。
+   ⛔ 後端已經擋了「已經在別件底下」，但只擋不給路，人就會去開第三件案子
+   ——2026-09-19 那三筆重複就是這樣來的。所以這裡先查，是別件就問要不要搬。
+   先查再做，也比讓後端丟錯誤訊息回來給人看好懂。 */
+function attachOrMove(caseId, recCode, done){
+  if(!recCode){ done(); return; }
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(r && r.has && r.id !== caseId){
+        if(!confirm('這一筆已經掛在「' + (r.kind||'另一件') + ' ' + r.id + '」底下了。\n\n' +
+            '一筆服務只能算在一件事裡，不然次數會重複。\n\n' +
+            '要從那邊搬過來嗎？')) return;
+        google.script.run
+          .withSuccessHandler(function(){ toast('已搬過來'); done(); })
+          .withFailureHandler(function(e){ toast(e.message, true); })
+          .moveRecord(CODE, r.id, caseId, recCode);
+        return;
+      }
+      if(r && r.has && r.id === caseId){ toast('本來就在這一件底下'); done(); return; }
+      google.script.run
+        .withSuccessHandler(function(){ done(); })
+        .withFailureHandler(function(e){ toast(e.message, true); })
+        .attachRecord(CODE, caseId, recCode);
+    })
+    .withFailureHandler(function(e){ toast(e.message, true); })
+    .caseChainOf(CODE, recCode);
+}
+
 function pickAttach(id){
   var d = PICK_D_ || {};
   $('pickModal').style.display = 'none';
@@ -5107,13 +5149,10 @@ function pickAttach(id){
     goTab('track');
     return;
   }
-  google.script.run
-    .withSuccessHandler(function(){
-      toast('已掛到 ' + id);
-      TK_ROWS = []; TK_LOADED = ''; goTab('track'); openCase(id);
-    })
-    .withFailureHandler(function(e){ toast(e.message, true); })
-    .attachRecord(CODE, id, d.rc);
+  attachOrMove(id, d.rc, function(){
+    toast('已掛到 ' + id);
+    TK_ROWS = []; TK_LOADED = ''; goTab('track'); openCase(id);
+  });
 }
 
 if($('pickCancel')) $('pickCancel').addEventListener('click', function(){

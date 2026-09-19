@@ -1740,11 +1740,10 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   border-top:3px solid var(--brand);padding:13px;margin-bottom:10px}
 .c6who{font-size:1.0625rem;font-weight:800;letter-spacing:-.01em;line-height:1.3}
 .c6at{font-size:0.8125rem;color:var(--ink2);margin-top:1px}
-.c6seg{display:flex;gap:7px;margin-top:10px}
-.c6st{flex:1;border:1px solid var(--line);background:none;border-radius:9px;
-  padding:8px 2px;font-family:inherit;font-size:0.8125rem;color:var(--ink2);
-  cursor:pointer}
-.c6st.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
+/* 現在走到哪一步。系統自己算的，不是人手動切的——
+   原本那三顆手動按鈕 2026-09-19 拿掉了，理由寫在 app.js 的 caseSummary 裡。 */
+.c6now{display:inline-block;margin-top:9px;font-size:0.875rem;font-weight:700;
+  color:var(--warn-ink);background:var(--warn-bg);border-radius:99px;padding:4px 13px}
 .c6meta{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:9px;
   font-size:0.75rem;color:var(--ink3)}
 .c6meta b{color:var(--ink2);font-weight:600}
@@ -1850,3 +1849,8 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   font-size:0.625rem;color:var(--ink3)}
 .lppv .t{font-size:0.625rem;font-weight:800;border-radius:99px;padding:1px 8px;
   flex:none;background:var(--brand-soft);color:var(--brand)}
+
+/* 追蹤案件自己排的行程，在行事曆卡片上要標出來 */
+.c4auto{flex:none;font-size:0.5625rem;font-weight:800;color:var(--ink2);
+  background:var(--line2);border-radius:99px;padding:1px 6px;white-space:nowrap}
+@media (max-width:380px){ .c4auto{display:none} }
