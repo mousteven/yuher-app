@@ -4588,9 +4588,11 @@ function caseLine(c){
    後者才是這一趟真正的內容。兩個都沒有就整行不出現。 */
 function c6note(label, canned, note){
   if(!canned && !note) return '';
-  return '<br><span class="c6k">' + label + '</span>' +
+  /* 整段包成一個區塊，不要用 <br> 換行。
+     .c6x 本身是 display:block，接在 <br> 後面會多出一個空行。 */
+  return '<span class="c6ln"><span class="c6k">' + label + '</span>' +
     (canned ? esc(canned) : '') +
-    (note ? '<span class="c6x">' + esc(note) + '</span>' : '');
+    (note ? '<span class="c6x">' + esc(note) + '</span>' : '') + '</span>';
 }
 
 function c6row(cls, dot, when, title, body, acts){

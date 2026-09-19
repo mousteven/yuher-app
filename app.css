@@ -1877,3 +1877,4 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 /* 人自己補寫的細節。罐頭選項是淡的，這個要深、要換行，
    因為它才是這一趟真正的內容（「亞大 腸胃 38診 8號」）。 */
 .c6x{display:block;margin:1px 0 0 2.2em;color:var(--ink);font-weight:600}
+.c6ln{display:block;margin-top:2px}
