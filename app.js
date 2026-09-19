@@ -2454,13 +2454,27 @@ $('ebCancel').addEventListener('click', function(){
 /* 把表單收成後端要的形狀。驗不過回 null（訊息已經 toast 出去了）。
    抽出來是因為「儲存修改」要用同一份——兩邊各寫一次，
    哪天改了欄位卻只改一邊，送出去的資料就會不一樣。 */
+/* 這張表還是不是從那筆行程來的？
+   ⛔ SCHED_ID 一旦設了就只有整個 App 重載才會清。所以「點了一張卡、
+   退回去、改填另一筆」的時候它還留著，存檔就會把新紀錄掛到舊那張卡上——
+   舊卡被誤標成已完成，顯示的雇主又還是舊的（後端只寫狀態與代碼，
+   不同步雇主移工）。2026-09-19 實機上就是這樣跑出「點黃秀英開出鉅鋐」。
+   對不上就不要掛，後端會自己補一列正確的，舊那張預排也留著。 */
+function schedLink_(){
+  if(!SCHED_ID) return '';
+  var r = (typeof CAL_ROWS !== 'undefined' ? CAL_ROWS : [])
+            .filter(function(x){ return x.id === SCHED_ID; })[0];
+  if(!r) return SCHED_ID;          // 查不到就別自作聰明，維持原本的行為
+  return (r.client === clientVal() && r.date === $('date').value) ? SCHED_ID : '';
+}
+
 function collectForm(){
   var trip = {
     date: $('date').value,
     mode: (document.querySelector('input[name=md]:checked')||{}).value||'到場',
     target: $('target').value, client: clientVal(), place: '',
     crew: $('crew').value, crewOwner: $('crewOwner').value,
-    brief: BRIEF ? BRIEF.token : '', sched: SCHED_ID,
+    brief: BRIEF ? BRIEF.token : '', sched: schedLink_(),
     sigEmployer: sigOf(document.querySelector('[data-sig=employer]')),
     sigStaff: sigOf(document.querySelector('[data-sig=staff]'))
   };
