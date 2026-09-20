@@ -2060,3 +2060,13 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 #hcAlertBar{cursor:pointer}
 #hcAlertBar .more{margin-left:auto;font-size:0.75rem;color:var(--ink2);
   flex:none}
+
+/* 體檢開單：每個人底下多一格電話 */
+.hcw{padding:10px 0;border-bottom:1px solid var(--line2)}
+.hcw:last-child{border-bottom:0}
+.hcw label.p{display:flex;align-items:flex-start;gap:9px}
+.hcw .hcph{width:100%;margin-top:7px;margin-left:24px;
+  width:calc(100% - 24px);border:1px solid var(--line);border-radius:9px;
+  padding:9px 11px;font-size:0.875rem;font-family:ui-monospace,Menlo,monospace;
+  background:var(--card);color:var(--ink)}
+.hcw .hcph::placeholder{font-family:inherit;color:var(--ink3);font-size:0.8125rem}

@@ -5509,9 +5509,10 @@ function hcInit(){
   }).withFailureHandler(function(e){ toast(e.message, true); }).hcClients(CODE);
 }
 
-/* 預設勾起來的兩樣。這兩樣每一次體檢都要帶，不勾反而是漏。
-   護照 2026-09-20 從詞彙表整個拿掉——體檢掛號認居留證就好。 */
-var HC_BRING_DEF_ = ['居留證正本', '健保卡'];
+/* 預設勾起來的三樣。這三樣每一次體檢都要帶，不勾反而是漏。
+   護照 2026-09-20 從詞彙表整個拿掉——體檢掛號認居留證就好。
+   口罩 2026-09-21 加進預設（牟佑彬）。 */
+var HC_BRING_DEF_ = ['居留證正本', '健保卡', '口罩'];
 
 function hcThou_(n){
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -5565,17 +5566,29 @@ function hcDrawWho(){
   }
   $('hcWho').innerHTML = HC_PICK_.map(function(w, i){
     var late = w.days !== undefined && w.days < 0;
-    return '<label class="hcw'+(late?' late':'')+'">' +
-      '<input type="checkbox" data-i="'+i+'"'+(w.pick?' checked':'')+'>' +
-      '<span class="n">'+esc(w.name)+
-        (w.lang?'<em>'+esc(w.lang)+'</em>':'')+'</span>' +
-      '<span class="w">'+esc(w.term ? (w.term+'　'+w.why) : w.why)+
-        (w.baseFrom ? '<i>依'+esc(w.baseFrom)+'</i>' : '')+'</span>' +
-    '</label>';
+    /* 電話先填的話，工人那邊從「打十碼」變成「按一下確認」。
+       ⛔ 留空是正常的——不知道就讓他自己填，不要逼翻譯去問。 */
+    return '<div class="hcw'+(late?' late':'')+'">' +
+      '<label class="p">' +
+        '<input type="checkbox" data-i="'+i+'"'+(w.pick?' checked':'')+'>' +
+        '<span class="n">'+esc(w.name)+
+          (w.lang?'<em>'+esc(w.lang)+'</em>':'')+'</span>' +
+        '<span class="w">'+esc(w.term ? (w.term+'　'+w.why) : w.why)+
+          (w.baseFrom ? '<i>依'+esc(w.baseFrom)+'</i>' : '')+'</span>' +
+      '</label>' +
+      '<input class="hcph" data-ph="'+i+'" inputmode="tel" value="'+
+        esc(w.phone || '')+'" placeholder="'+
+        (w.phone ? '' : '他的手機（知道就先填，他只要按確認）')+'">' +
+    '</div>';
   }).join('');
-  [].forEach.call($('hcWho').querySelectorAll('input'), function(el){
+  [].forEach.call($('hcWho').querySelectorAll('[data-i]'), function(el){
     el.addEventListener('change', function(){
       HC_PICK_[+el.dataset.i].pick = el.checked; hcTally();
+    });
+  });
+  [].forEach.call($('hcWho').querySelectorAll('[data-ph]'), function(el){
+    el.addEventListener('input', function(){
+      HC_PICK_[+el.dataset.ph].phone = el.value.trim();
     });
   });
   hcTally();
@@ -5590,7 +5603,8 @@ function hcTally(){
 
 function hcSubmit(){
   var people = HC_PICK_.filter(function(w){ return w.pick; })
-    .map(function(w){ return { name: w.name, lang: w.lang }; });
+    .map(function(w){
+      return { name: w.name, lang: w.lang, phone: w.phone || '' }; });
   if(!people.length){ toast('至少要選一位移工', true); return; }
   var hos = valOf($('hcHos'), $('hcHosOther'));
   if(!hos){ toast('請選體檢醫院', true); return; }
