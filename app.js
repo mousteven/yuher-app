@@ -5476,6 +5476,19 @@ function hcInit(){
     [].forEach.call($('hcBringPick').children, function(b){
       b.addEventListener('click', function(){ b.classList.toggle('on'); });
     });
+    /* 費用只有兩種（牟佑彬 2026-09-20）。做成選的不是打的——
+       打字會出現 1800／1,800／NT$1800 三種寫法，訊息上就不一致。
+       只能選一個，所以是單選不是多選。 */
+    $('hcFeePick').innerHTML = (o.fees || []).map(function(x, i){
+      return '<button type="button" class="'+(i === 0 ? 'on' : '')+
+        '" data-fee="'+esc(x)+'">'+esc(hcThou_(x))+' 元</button>';
+    }).join('');
+    [].forEach.call($('hcFeePick').children, function(b){
+      b.addEventListener('click', function(){
+        [].forEach.call($('hcFeePick').children, function(x){
+          x.classList.toggle('on', x === b); });
+      });
+    });
   });
   /* ⛔ 不要用填寫頁那份「服務客戶名單」。2026-09-20 實際比對：
      移工名冊上有 184 家，其中 51 家不在服務客戶名單裡（多半是家庭雇主）。
@@ -5488,8 +5501,18 @@ function hcInit(){
   }).withFailureHandler(function(e){ toast(e.message, true); }).hcClients(CODE);
 }
 
-/* 預設勾起來的三樣。這三樣每一次體檢都要帶，不勾反而是漏。 */
+/* 預設勾起來的兩樣。這兩樣每一次體檢都要帶，不勾反而是漏。
+   護照 2026-09-20 從詞彙表整個拿掉——體檢掛號認居留證就好。 */
 var HC_BRING_DEF_ = ['居留證正本', '健保卡'];
+
+function hcThou_(n){
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function hcFeeVal(){
+  var on = [].filter.call($('hcFeePick').children, function(b){
+    return b.classList.contains('on'); })[0];
+  return on ? on.dataset.fee : '';
+}
 
 function hcBringVal(){
   var picked = [].filter.call($('hcBringPick').children, function(b){
@@ -5568,8 +5591,8 @@ function hcSubmit(){
   var o = {
     client: $('hcClient').value, date: $('hcDate').value,
     time: $('hcTime').value, hos: hos, term: $('hcTerm').value,
-    fee: $('hcFee').value.trim(), bring: hcBringVal(),
-    fast: $('hcFast').checked, note: $('hcNote').value.trim(),
+    fee: hcFeeVal(), bring: hcBringVal(),
+    note: $('hcNote').value.trim(),
     ride: ride === 'self' ? '自行前往' : '接送',
     carLater: ride === 'later',
     carAt: $('hcCarAt').value, carWhere: $('hcWhere').value.trim(),
