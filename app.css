@@ -2001,3 +2001,62 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .hcdiff .act button{border:1px solid var(--line);background:var(--card);
   border-radius:8px;padding:4px 11px;font-size:0.75rem;font-weight:700;
   color:var(--brand);font-family:inherit}
+
+/* ── 體檢頁籤：搜尋、日期分組、批次卡（2026-09-21 排法 A）──
+   ⛔ 卡片的主角是日期與進度，不是把一批 17 個名字印出來。 */
+.hsr{padding:0 0 9px}
+.hsr input{width:100%;border:1px solid var(--line);background:var(--card);
+  border-radius:10px;padding:10px 12px;font-size:0.9375rem;color:var(--ink);
+  font-family:inherit}
+.hsr input:focus{outline:2px solid var(--brand);outline-offset:1px;
+  border-color:transparent}
+
+.hgh{display:flex;align-items:baseline;gap:9px;padding:14px 2px 6px}
+.hgh b{font-size:0.9375rem}
+.hgh em{font-style:normal;font-size:0.75rem;color:var(--ink2)}
+.hgh .r{margin-left:auto;font-family:ui-monospace,Menlo,monospace;
+  font-size:0.75rem;color:var(--ink3)}
+.hgh.hot b{color:var(--bad-ink)}
+
+.hbc{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  margin-bottom:8px;padding:12px 13px;position:relative;overflow:hidden}
+.hbc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--info-bar)}
+.hbc.warn::before{background:var(--warn-bar)}
+.hbc.bad::before{background:var(--bad-bar)}
+.hbc.done::before{background:var(--ok-bar)}
+.hbc.nw{box-shadow:0 0 0 2px var(--brand)}
+.hbc .new{position:absolute;right:0;top:0;background:var(--brand);color:#fff;
+  font-size:0.5625rem;font-weight:800;padding:2px 9px;border-radius:0 0 0 8px}
+.hbc .r1{display:flex;align-items:baseline;gap:8px}
+.hbc .d{font-family:ui-monospace,Menlo,monospace;font-size:1.0625rem;
+  font-weight:600;font-variant-numeric:tabular-nums}
+.hbc .dw{font-size:0.75rem;color:var(--ink2)}
+.hbc .tm{font-family:ui-monospace,Menlo,monospace;font-size:0.8125rem;
+  color:var(--ink2)}
+.hbc .pill{margin-left:auto;font-size:0.625rem;font-weight:800;border-radius:99px;
+  padding:1px 9px;white-space:nowrap;background:var(--line2);color:var(--ink3)}
+.hbc .pill.i{background:var(--info-bg);color:var(--info-ink)}
+.hbc .pill.w{background:var(--warn-bg);color:var(--warn-ink)}
+.hbc .pill.b{background:var(--bad-bg);color:var(--bad-ink)}
+.hbc .pill.g{background:var(--ok-bg);color:var(--ok-ink)}
+.hbc .r2{font-size:0.9375rem;font-weight:700;margin-top:3px}
+.hbc .r2 em{font-style:normal;font-weight:400;font-size:0.8125rem;
+  color:var(--ink2)}
+.hbc .r3{font-size:0.8125rem;color:var(--ink2);margin-top:1px}
+.hbc .bar{height:4px;border-radius:99px;background:var(--line2);margin-top:9px;
+  overflow:hidden}
+.hbc .bar i{display:block;height:100%;background:var(--ok-bar)}
+.hbc .r4{display:flex;gap:9px;align-items:center;margin-top:6px;
+  font-size:0.75rem;color:var(--ink2);flex-wrap:wrap}
+.hbc .r4 b{font-family:ui-monospace,Menlo,monospace}
+.hbc .r4 .code{font-family:ui-monospace,Menlo,monospace;font-size:0.6875rem;
+  color:var(--ink3);margin-left:auto}
+.hbc .todo{margin-top:9px;background:var(--warn-bg);border-radius:8px;
+  padding:7px 10px;font-size:0.75rem;color:var(--warn-ink);font-weight:700}
+.hbc .todo.r{background:var(--bad-bg);color:var(--bad-ink)}
+
+/* 收合的提醒條 */
+#hcAlertBar{cursor:pointer}
+#hcAlertBar .more{margin-left:auto;font-size:0.75rem;color:var(--ink2);
+  flex:none}
