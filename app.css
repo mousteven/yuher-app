@@ -1869,3 +1869,116 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .c6g dd{margin:0;color:var(--ink2);word-break:break-word}
 .c6g dd.hi{color:var(--ink);font-weight:700;font-size:0.875rem;
   background:var(--warn-bg);border-radius:7px;padding:3px 8px;margin:-2px 0}
+
+/* ── 體檢通知（2026-09-20）─────────────────────────────
+   類別一律 hc 開頭，跟既有的 c4/c5/c6/lp/sw 都不撞。 */
+
+/* 開單：怎麼去（三選一，整塊可點） */
+.hcride{display:grid;gap:7px;margin-top:6px}
+.hcride label{display:block;border:1px solid var(--line);border-radius:10px;
+  padding:11px 12px;cursor:pointer}
+.hcride label:has(input:checked){border-color:var(--brand);border-width:2px;
+  padding:10px 11px;background:var(--brand-soft)}
+.hcride input{margin-right:7px}
+.hcride b{font-size:0.9375rem}
+.hcride span{display:block;font-size:0.75rem;color:var(--ink2);margin-top:2px;
+  padding-left:22px}
+
+/* 開單：通知誰 */
+.hcw{display:flex;align-items:flex-start;gap:9px;padding:9px 0;
+  border-bottom:1px solid var(--line2)}
+.hcw:last-child{border-bottom:0}
+.hcw input{margin-top:3px;flex:none}
+.hcw .n{font-size:0.9375rem;font-weight:600;flex:none;min-width:5.2em}
+.hcw .n em{font-style:normal;font-size:0.6875rem;color:var(--ink3);
+  font-weight:400;margin-left:5px}
+.hcw .w{font-size:0.75rem;color:var(--ink2);flex:1;text-align:right}
+.hcw .w i{display:block;font-style:normal;font-size:0.625rem;color:var(--ink3)}
+.hcw.late .w{color:var(--bad-ink);font-weight:600}
+
+/* 要貼出去的訊息 */
+.hcmsg{border:1px solid var(--line);border-radius:11px;overflow:hidden;
+  margin-bottom:11px}
+.hcmsg .h{display:flex;align-items:center;gap:8px;margin:0;padding:8px 11px;
+  background:var(--line2);font-size:0.8125rem;font-weight:700}
+.hcmsg .h button{margin-left:auto;border:1px solid var(--line);background:var(--card);
+  border-radius:7px;padding:3px 11px;font-size:0.75rem;color:var(--brand);
+  font-weight:700;font-family:inherit}
+.hcmsg pre{margin:0;padding:11px;font-size:0.8125rem;line-height:1.7;
+  white-space:pre-wrap;word-break:break-all;font-family:inherit;color:var(--ink)}
+
+/* 車次 */
+.hccar{border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  margin-bottom:11px}
+.hccar .h{display:flex;align-items:center;gap:8px;margin:0;padding:8px 12px;
+  background:var(--line2);font-size:0.8125rem;font-weight:700}
+.hccar .h em{font-style:normal;font-weight:400;color:var(--ink2);font-size:0.75rem}
+.hccar .h button{margin-left:auto;border:0;background:none;font-size:0.75rem;
+  color:var(--bad-ink);font-family:inherit}
+.hccar .b{padding:11px 12px}
+.hcwho{display:flex;flex-wrap:wrap;gap:6px}
+.hcwho button{border:1px solid var(--line);background:var(--card);border-radius:8px;
+  padding:5px 11px;font-size:0.8125rem;color:var(--ink2);font-family:inherit}
+.hcwho button.on{background:var(--brand);border-color:var(--brand);color:#fff;
+  font-weight:700}
+
+/* 案件頁的體檢區塊 */
+.hcbox{margin-top:14px;border-top:1px solid var(--line2);padding-top:12px}
+.hcbox .h{display:flex;align-items:baseline;gap:8px;margin:0 0 9px;
+  font-size:0.875rem;font-weight:700}
+.hcbox .h em{margin-left:auto;font-style:normal;font-weight:400;
+  font-size:0.75rem;color:var(--ink2)}
+.hclist{border:1px solid var(--line);border-radius:11px;padding:2px 11px}
+.hcrow{display:flex;align-items:center;gap:9px;padding:9px 0;
+  border-bottom:1px solid var(--line2)}
+.hcrow:last-child{border-bottom:0}
+.hcrow .c{flex:1;min-width:0}
+.hcrow .c b{display:block;font-size:0.875rem}
+.hcrow .c span{display:block;font-size:0.6875rem;color:var(--ink2)}
+.hcrow .flag{display:block;font-style:normal;font-size:0.6875rem;
+  color:var(--bad-ink);font-weight:600}
+.hcrow .rcp{border:1px solid var(--line);background:var(--card);border-radius:7px;
+  padding:3px 9px;font-size:0.6875rem;color:var(--brand);font-weight:700;
+  font-family:inherit;flex:none}
+.hcrow .st{font-size:0.625rem;font-weight:800;border-radius:99px;padding:1px 8px;
+  flex:none}
+.hcrow .st.g{background:var(--ok-bg);color:var(--ok-ink)}
+.hcrow .st.b{background:var(--info-bg);color:var(--info-ink)}
+.hcrow .st.y{background:var(--warn-bg);color:var(--warn-ink)}
+.hcrow .st.n{background:var(--line2);color:var(--ink3)}
+
+/* 報到來源。強弱要分得出來——翻譯點名與收據是證據，
+   工人自己按只是訊號，不可以拿來當缺席扣款的依據。 */
+.src{font-size:0.5625rem;font-weight:800;border-radius:5px;padding:0 5px;
+  margin-right:5px}
+.src.a{background:var(--ok-bg);color:var(--ok-ink)}
+.src.b{background:var(--info-bg);color:var(--info-ink)}
+.src.n{background:var(--line2);color:var(--ink3)}
+
+/* 點名的到／沒到 */
+.seg2{display:flex;gap:6px;flex:none}
+.seg2 button{border:1px solid var(--line);background:var(--card);border-radius:8px;
+  padding:6px 13px;font-size:0.8125rem;color:var(--ink2);font-family:inherit}
+.seg2 button.on{background:var(--ok-ink);border-color:var(--ok-ink);color:#fff;
+  font-weight:700}
+.seg2 button.no.on{background:var(--bad-ink);border-color:var(--bad-ink)}
+
+/* 提醒條（追蹤頁頂端與案件頁共用） */
+.hcal{display:flex;flex-wrap:wrap;align-items:center;gap:4px 9px;
+  border-radius:11px;padding:10px 12px;margin-bottom:9px;background:var(--line2)}
+.hcal.w{background:var(--warn-bg)}
+.hcal.r{background:var(--bad-bg)}
+.hcal b{font-size:0.8125rem;flex:none}
+.hcal.w b{color:var(--warn-ink)}
+.hcal.r b{color:var(--bad-ink)}
+.hcal span{font-size:0.75rem;color:var(--ink2);flex:1 1 100%}
+.hcal button{border:1px solid var(--line);background:var(--card);border-radius:8px;
+  padding:5px 13px;font-size:0.8125rem;font-weight:700;color:var(--brand);
+  font-family:inherit;margin-left:auto;flex:none}
+
+.hcacts{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.hcacts button{flex:1 1 auto;border:1px solid var(--line);background:var(--card);
+  border-radius:10px;padding:11px;font-size:0.875rem;font-weight:600;
+  color:var(--ink2);font-family:inherit}
+.hcacts button.p{background:var(--brand);border-color:var(--brand);color:#fff;
+  font-weight:700}

@@ -4297,6 +4297,9 @@ function tkMatch(c, k){
 function loadTrack(force){
   if(!$('tkKinds')) return;      // 舊版面沒有這一頁，安靜略過
   drawKinds();
+  /* 體檢的兩條提醒（快到期的人、接送資訊沒填的件）。
+     獨立打，不要塞進 listCases——那支現在就要 2 秒多了。 */
+  if(typeof hcNudge === 'function') hcNudge();
   if(!force && TK_LOADED === TK_CUR){ drawCases(); return; }
   $('tkBody').innerHTML = '<div class="mid" style="padding:26px">載入中…</div>';
   google.script.run
@@ -4465,6 +4468,9 @@ function drawCase(c){
   drawCaseActions(c);
   bindCase(c);
   caseLooseHint(c);
+  /* 體檢通知的案子多一塊：每個人確認了沒、分到哪一車、報到了沒。
+     一件案子底下有一整批人，那是其他三種類型沒有的形狀。 */
+  if(c.kind === '體檢通知') hcCaseBlock(c.id);
 }
 
 /* 摘要：第一眼要回答「誰、什麼事、現在到哪一步」。
@@ -4497,7 +4503,11 @@ function caseSummary(c){
      那個日期現在在時間軸的「下一次」那一格，這裡不用重複。 */
   h += '</div>';
   var d = c.detail || {};
-  if(c.kind === '返鄉休假' && (d.out || d.air)) h += bpHtml(c);
+  var bpShown = false;
+  if(c.kind === '返鄉休假'){
+    var bp = bpHtml(c);
+    if(bp){ h += bp; bpShown = true; }
+  }
   /* ⛔ 這裡以前還會畫一張「掛號單」（醫院／科別／看診號）。
      2026-09-19 他要求拿掉：那些欄位底下「就醫追蹤的細節」那張卡已經
      完整列出來了，兩塊在講同一件事，而且還會互相矛盾——
@@ -4509,9 +4519,12 @@ function caseSummary(c){
       esc(c.link.status) + '</span><span class="go">›</span></div>';
   }
 
-  /* 填好的細節才顯示。沒填的走時間軸最後那一格的「填細節」。 */
+  /* 填好的細節才顯示。沒填的走時間軸最後那一格的「填細節」。
+     ⛔ 上面已經畫了登機證的話，那 10 個欄位不要再列一次（2026-09-20）。 */
   var defs = (CK_SCHEMA && CK_SCHEMA.fields && CK_SCHEMA.fields[c.kind]) || [];
+  var hidden = bpShown ? BP_SHOWN_ : [];
   var rows = defs.filter(function(f){
+    if(hidden.indexOf(f.k) !== -1) return false;
     return f.t === 'check' ? d[f.k] : (d[f.k] !== undefined && d[f.k] !== '');
   });
   if(rows.length){
@@ -4917,18 +4930,30 @@ function bindLoosePick(){
   });
 }
 
+/* 登機證上已經畫過的欄位。底下那張「返鄉休假的細節」不要再印一次——
+   2026-09-20 清點：18 個欄位有 10 個是重複的。
+   ⚠ 跟掛號單不同，登機證本身留著：兩邊都從同一個 detail 讀，不會互相矛盾，
+     而且「逾期未回整張變紅」是清單式的細節卡做不到的事。 */
+var BP_SHOWN_ = ['air', 'from', 'fromName', 'to', 'toName',
+                 'out', 'outTime', 'rair', 'back', 'book'];
+
 /* 登機證。返鄉休假的細節存在 detail 裡，沒填的那幾格就不要畫出來，
-   空的登機證比沒有登機證更難看。 */
+   空的登機證比沒有登機證更難看。
+
+   ⛔ 沒填的欄位一律顯示「—」，不要自己補一個看起來很合理的預設值。
+      2026-09-20 修掉兩個：出發機場沒填就印 TPE／桃園、回台日沒填就拿
+      nextDate 頂替印成「已經訂好票」的樣子。畫面上看不出那是猜的，
+      跟掛號單印「未約」是同一種錯。原件沒有的資料就寫沒有。 */
 function bpHtml(c){
   var d = c.detail || {};
-  if(!d.out && !c.nextDate && !d.air) return '';
+  if(!d.out && !d.back && !d.air) return '';
   var late = c.state.key === 'late';
   return '<div class="bp' + (late ? ' late' : '') + '">' +
     '<div class="hd">去程' + (d.air ? '　' + esc(d.air) : '') +
       (d.book ? '<b>' + esc(d.book) + '</b>' : '') + '</div>' +
     '<div class="leg">' +
-      '<span class="ap"><b>' + esc(d.from || 'TPE') + '</b><span>' +
-        esc(d.fromName || '桃園') + '</span></span>' +
+      '<span class="ap"><b>' + esc(d.from || '—') + '</b><span>' +
+        esc(d.fromName || '') + '</span></span>' +
       '<span class="arw"></span>' +
       '<span class="ap"><b>' + esc(d.to || '—') + '</b><span>' +
         esc(d.toName || '') + '</span></span>' +
@@ -4938,7 +4963,7 @@ function bpHtml(c){
     '</div>' +
     '<div class="cut"></div>' +
     '<div class="rt">回程' + (d.rair ? '　' + esc(d.rair) : '') +
-      '　<b>' + esc(d.back || c.nextDate || '未定') + '</b>' +
+      '　<b>' + esc(d.back || '未填') + '</b>' +
       '<span class="tag">' + (late ? '逾期未回' : '應回台') + '</span></div>' +
   '</div>';
 }
@@ -5363,3 +5388,648 @@ function goTab(t){
 if(CODE){ $('code').value = CODE; lgBusy(true); login(CODE); }
 
 else { $('login').style.display=''; document.body.classList.add('lgon'); appShown(); }
+
+/* ==========================================================================
+   體檢通知（2026-09-20）
+
+   後端在 HealthCheck.gs / HealthCheckPub.gs，工人那一頁在 HealthCheck.html。
+   這裡只負責翻譯這一端：開單、補接送資訊、點名、結案。
+
+   ⚠ 三件事跟其他功能不一樣，改之前先知道：
+   1. 體檢通知不產生服務紀錄。所以它不走 collectForm / saveTrip 那條路，
+      也不該出現在評鑑與月報的服務次數裡。
+   2. 一人一條短連結。訊息裡每個人的網址都不同，不可以共用——
+      共用的話誰按的都分不出來。
+   3. 報到來源有強弱。翻譯點名與收據是證據，工人自己按只是訊號
+      （在家也按得下去）。畫面上一定要標出來，不可以混在一起算。
+   ========================================================================== */
+
+var HC_OPT_ = null;        // 醫院／司機／可平日工廠，第一次進體檢頁才抓
+var HC_PICK_ = [];         // 開單畫面上那份名單
+var HC_CUR_ = null;        // 正在看的那一件（車輛／點名共用）
+var HC_CARS_ = [];         // 車次編輯中的暫存
+
+function hcOpt(cb){
+  if(HC_OPT_){ cb(HC_OPT_); return; }
+  google.script.run.withSuccessHandler(function(r){
+    HC_OPT_ = r || { hos:[], weekday:[], drivers:[], terms:[] };
+    cb(HC_OPT_);
+  }).withFailureHandler(function(e){ toast(e.message, true); }).hcOptions(CODE);
+}
+
+/* 下一個週日。體檢幾乎都排週日——工人要上班，工廠不放人。
+   可平日體檢的工廠另外列在設定裡，選到那幾家會提示，但不擋。 */
+function hcNextSunday_(){
+  var d = new Date();
+  d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || 7));
+  return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) +
+         '-' + ('0'+d.getDate()).slice(-2);
+}
+
+/* ── 填寫頁的模式切換 ───────────────────────────────── */
+
+function hcMode(on){
+  var pane = $('p-new');
+  [].forEach.call(pane.children, function(el){
+    if(el.id === 'hcSeg') return;
+    if(el.id === 'hcPane'){ el.style.display = on ? '' : 'none'; return; }
+    /* 記住原本的 display 再蓋掉。editBar 與 briefCard 本來就是隱藏的，
+       切回來時直接設成空字串會把它們變出來。 */
+    if(on){
+      if(el.dataset.hcWas === undefined) el.dataset.hcWas = el.style.display;
+      el.style.display = 'none';
+    } else {
+      el.style.display = el.dataset.hcWas || '';
+      delete el.dataset.hcWas;
+    }
+  });
+  [].forEach.call($('hcSeg').children, function(b){
+    b.classList.toggle('on', (b.dataset.m === 'hc') === on);
+  });
+  if(on) hcInit();
+}
+
+var HC_READY_ = false;
+function hcInit(){
+  if(HC_READY_) return;
+  HC_READY_ = true;
+  hcOpt(function(o){
+    $('hcHos').innerHTML = o.hos.map(function(h){
+      return '<option>'+esc(h)+'</option>'; }).join('') +
+      '<option value="'+OTHER_+'">其他（自行輸入）</option>';
+    $('hcTerm').innerHTML = o.terms.map(function(t){
+      return '<option>'+esc(t)+'</option>'; }).join('');
+    $('hcDrv').innerHTML = '<option value="">先不指定</option>' +
+      o.drivers.map(function(d){
+        return '<option value="'+esc(d.phone)+'">'+esc(d.name) +
+               (d.phone ? '　'+esc(d.phone) : '') + '</option>'; }).join('');
+    if(!$('hcDate').value) $('hcDate').value = hcNextSunday_();
+  });
+  /* ⛔ 不要用填寫頁那份「服務客戶名單」。2026-09-20 實際比對：
+     移工名冊上有 184 家，其中 51 家不在服務客戶名單裡（多半是家庭雇主）。
+     沿用那一份的話，那 51 家的移工永遠收不到體檢通知，而且畫面上看不出來。
+     體檢的事實來源是名冊——名冊上有在職的人，就要通知。 */
+  google.script.run.withSuccessHandler(function(r){
+    $('hcClient').innerHTML = '<option value="">請選擇…</option>' +
+      ((r && r.list) || []).map(function(x){
+        return '<option>'+esc(x.c)+'</option>'; }).join('');
+  }).withFailureHandler(function(e){ toast(e.message, true); }).hcClients(CODE);
+}
+
+function hcRideVal(){
+  var r = document.querySelector('#hcRide input:checked');
+  return r ? r.value : 'later';
+}
+
+/* ── 誰要通知 ───────────────────────────────────────── */
+
+function hcLoadWho(){
+  var c = $('hcClient').value;
+  /* 這家肯不肯讓人平日去，只是提示，不要幫他改日期——
+     那是他跟工廠人資談出來的，程式不該自作主張。 */
+  var wd = HC_OPT_ && HC_OPT_.weekday.indexOf(c) !== -1;
+  $('hcWeek').style.display = c ? '' : 'none';
+  $('hcWeek').textContent = !c ? '' : (wd
+    ? '這家可以平日體檢，日期不一定要挑週日。'
+    : '這家沒列在「可平日體檢」名單裡，預設排週日。');
+  if(!c){ $('hcWho').innerHTML = '<p class="hint">先選工廠</p>'; return; }
+  $('hcWho').innerHTML = '<p class="hint">查名冊…</p>';
+  google.script.run.withSuccessHandler(function(r){
+    HC_PICK_ = (r && r.list) || [];
+    hcDrawWho();
+  }).withFailureHandler(function(e){
+    $('hcWho').innerHTML = '<p class="hint">'+esc(e.message)+'</p>';
+  }).hcPickFor(CODE, c);
+}
+
+function hcDrawWho(){
+  if(!HC_PICK_.length){
+    $('hcWho').innerHTML = '<p class="hint">名冊上這家沒有在職的移工。' +
+      '要先到「移工名冊」把人建進去，體檢到期日是拿名冊上的日期算的。</p>';
+    $('hcTally').textContent = '';
+    return;
+  }
+  $('hcWho').innerHTML = HC_PICK_.map(function(w, i){
+    var late = w.days !== undefined && w.days < 0;
+    return '<label class="hcw'+(late?' late':'')+'">' +
+      '<input type="checkbox" data-i="'+i+'"'+(w.pick?' checked':'')+'>' +
+      '<span class="n">'+esc(w.name)+
+        (w.lang?'<em>'+esc(w.lang)+'</em>':'')+'</span>' +
+      '<span class="w">'+esc(w.term ? (w.term+'　'+w.why) : w.why)+
+        (w.baseFrom ? '<i>依'+esc(w.baseFrom)+'</i>' : '')+'</span>' +
+    '</label>';
+  }).join('');
+  [].forEach.call($('hcWho').querySelectorAll('input'), function(el){
+    el.addEventListener('change', function(){
+      HC_PICK_[+el.dataset.i].pick = el.checked; hcTally();
+    });
+  });
+  hcTally();
+}
+function hcTally(){
+  var n = HC_PICK_.filter(function(w){ return w.pick; }).length;
+  $('hcTally').textContent = '　已選 ' + n + ' / ' + HC_PICK_.length + ' 位';
+  $('hcGo').textContent = n ? ('產生通知　·　' + n + ' 人') : '產生通知';
+}
+
+/* ── 產生 ───────────────────────────────────────────── */
+
+function hcSubmit(){
+  var people = HC_PICK_.filter(function(w){ return w.pick; })
+    .map(function(w){ return { name: w.name, lang: w.lang }; });
+  if(!people.length){ toast('至少要選一位移工', true); return; }
+  var hos = valOf($('hcHos'), $('hcHosOther'));
+  if(!hos){ toast('請選體檢醫院', true); return; }
+  var ride = hcRideVal();
+  var drv = $('hcDrv');
+  var o = {
+    client: $('hcClient').value, date: $('hcDate').value,
+    time: $('hcTime').value, hos: hos, term: $('hcTerm').value,
+    fee: $('hcFee').value.trim(), bring: $('hcBring').value.trim(),
+    fast: $('hcFast').checked, note: $('hcNote').value.trim(),
+    ride: ride === 'self' ? '自行前往' : '接送',
+    carLater: ride === 'later',
+    carAt: $('hcCarAt').value, carWhere: $('hcWhere').value.trim(),
+    carPlate: $('hcPlate').value.trim(),
+    driver: drv.selectedIndex > 0
+      ? drv.options[drv.selectedIndex].text.split('　')[0] : '',
+    driverPhone: drv.value,
+    people: people
+  };
+  if(!o.client){ toast('請選工廠', true); return; }
+  if(!o.date){ toast('請選體檢日期', true); return; }
+  var b = $('hcGo'); b.disabled = true; b.textContent = '產生中…';
+  google.script.run.withSuccessHandler(function(r){
+    b.disabled = false;
+    toast('已開單　' + r.n + ' 人');
+    HC_PICK_ = []; $('hcWho').innerHTML = '<p class="hint">先選工廠</p>';
+    $('hcClient').value = ''; $('hcWeek').style.display = 'none';
+    hcTally();
+    hcShowMsgs(r.id, 'new');
+  }).withFailureHandler(function(e){
+    b.disabled = false; hcTally(); toast(e.message, true);
+  }).hcCreate(CODE, o);
+}
+
+/* ── 要貼到群組的訊息 ───────────────────────────────── */
+
+var HC_LGN_ = { vi:'越南文', id:'印尼文', th:'泰文', en:'英文' };
+
+function hcShowMsgs(caseId, which){
+  $('hcMsgModal').style.display = '';
+  $('hcMsgSub').textContent = caseId;
+  $('hcMsgT').textContent = which === 'car' ? '車輛資訊補發' : '貼到工廠群組';
+  $('hcMsgBody').innerHTML = '<div class="mid">產生中…</div>';
+  google.script.run.withSuccessHandler(function(r){
+    var m = (r && r.msgs) || [];
+    if(!m.length){
+      $('hcMsgBody').innerHTML = '<div class="mid">沒有要發的人</div>'; return;
+    }
+    $('hcMsgBody').innerHTML =
+      '<p class="hint">一個語別一則。' +
+      (which === 'car'
+        ? '這一則只是叫他回去看——連結還是原來那條，內容已經換成新的了。'
+        : '每個人的連結都不一樣，整則一起貼，不要拆開。') + '</p>' +
+      m.map(function(x, i){
+        return '<div class="hcmsg"><p class="h">' +
+          esc(HC_LGN_[x.lang] || x.lang) + '　·　' + x.n + ' 人' +
+          '<button type="button" data-c="'+i+'">複製</button></p>' +
+          '<pre>'+esc(x.text)+'</pre></div>';
+      }).join('');
+    [].forEach.call($('hcMsgBody').querySelectorAll('button[data-c]'), function(b){
+      b.addEventListener('click', function(){ hcCopy(m[+b.dataset.c].text, b); });
+    });
+  }).withFailureHandler(function(e){
+    $('hcMsgBody').innerHTML = '<div class="mid">'+esc(e.message)+'</div>';
+  }).hcMessages(CODE, caseId, which || 'new');
+}
+
+/* 工廠訊號差的時候 clipboard API 會靜默失敗，退回 execCommand。
+   兩條都不成至少要講出來——不要什麼都不發生，那比報錯更難查。 */
+function hcCopy(text, btn){
+  function done(){
+    btn.textContent = '已複製';
+    setTimeout(function(){ btn.textContent = '複製'; }, 1500);
+  }
+  function fallback(){
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    var okd = false;
+    try { okd = document.execCommand('copy'); } catch(e){}
+    document.body.removeChild(ta);
+    if(okd) done(); else toast('複製不了，長按上面那段文字自己選', true);
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done, fallback);
+  } else { fallback(); }
+}
+
+/* ── 接送資訊（晚到的那一段）─────────────────────────
+
+   實務上日期先發、車牌司機體檢前 3–5 天才拿到。
+   ⛔ 不要重發通知。連結是活的頁面，這裡存完工人手上那條就換內容了；
+      補發的三行訊息只是敲門。
+
+   車次 = 一台車＋一個司機，底下掛幾個上車點。
+   ⚠ 單位是車次不是工廠：會變的是司機，不是廠。做成一廠一列的話，
+     一個司機跑兩廠就要把同一組車牌電話打兩次，改司機要改兩個地方。 */
+
+function hcOpenCar(v){
+  HC_CUR_ = v;
+  var cars = (v.detail.cars || []).slice();
+  if(!cars.length) cars = [{ n:1, at:'', where:'', driver:'', phone:'', plate:'' }];
+  /* 已經分過車的人跟著自己那一車；沒分過的全部先放第 1 車。 */
+  cars.forEach(function(c){ c.who = []; });
+  v.list.forEach(function(p){
+    var i = Math.max(0, cars.map(function(c){ return String(c.n); })
+                            .indexOf(String(p.car)));
+    cars[i].who.push(p.name);
+  });
+  HC_CARS_ = cars;
+  $('hcCarModal').style.display = '';
+  $('hcCarSub').textContent = v.date + '　·　' + v.list.length + ' 人';
+  hcDrawCar();
+}
+
+function hcDrawCar(){
+  var drv = (HC_OPT_ && HC_OPT_.drivers) || [];
+  $('hcCarBody').innerHTML = HC_CARS_.map(function(c, i){
+    return '<div class="hccar"><p class="h">第 ' + (i+1) + ' 車' +
+      '<em>' + c.who.length + ' 人</em>' +
+      (HC_CARS_.length > 1
+        ? '<button type="button" data-rm="'+i+'">刪掉這一車</button>' : '') +
+      '</p><div class="b">' +
+      '<div class="g2">' +
+        '<div class="f"><label>上車時間</label>' +
+          '<input type="time" data-k="at" data-i="'+i+'" value="'+esc(c.at)+'"></div>' +
+        '<div class="f"><label>車牌</label>' +
+          '<input data-k="plate" data-i="'+i+'" value="'+esc(c.plate)+'" ' +
+          'placeholder="BQL-2187"></div>' +
+      '</div>' +
+      '<div class="f"><label>上車地點</label>' +
+        '<input data-k="where" data-i="'+i+'" value="'+esc(c.where)+'" ' +
+        'placeholder="工廠大門口"></div>' +
+      '<div class="f"><label>司機</label><select data-k="drv" data-i="'+i+'">' +
+        '<option value="">先不指定</option>' +
+        drv.map(function(d){
+          return '<option value="'+esc(d.phone)+'"' +
+            (d.name === c.driver ? ' selected' : '') + '>' + esc(d.name) +
+            (d.phone ? '　'+esc(d.phone) : '') + '</option>';
+        }).join('') + '</select></div>' +
+      '<div class="f"><label>誰坐這一車</label><div class="hcwho">' +
+        HC_CUR_.list.map(function(p){
+          var here = c.who.indexOf(p.name) !== -1;
+          return '<button type="button" class="'+(here?'on':'')+'" ' +
+            'data-mv="'+esc(p.name)+'" data-to="'+i+'">'+esc(p.name)+'</button>';
+        }).join('') + '</div></div>' +
+      '</div></div>';
+  }).join('');
+
+  [].forEach.call($('hcCarBody').querySelectorAll('[data-k]'), function(el){
+    el.addEventListener('change', function(){
+      var c = HC_CARS_[+el.dataset.i];
+      if(el.dataset.k === 'drv'){
+        c.phone = el.value;
+        c.driver = el.selectedIndex > 0
+          ? el.options[el.selectedIndex].text.split('　')[0] : '';
+      } else { c[el.dataset.k] = el.value; }
+    });
+  });
+  [].forEach.call($('hcCarBody').querySelectorAll('[data-mv]'), function(b){
+    b.addEventListener('click', function(){
+      var nm = b.dataset.mv, to = +b.dataset.to;
+      HC_CARS_.forEach(function(c){
+        c.who = c.who.filter(function(x){ return x !== nm; });
+      });
+      HC_CARS_[to].who.push(nm);
+      hcDrawCar();
+    });
+  });
+  [].forEach.call($('hcCarBody').querySelectorAll('[data-rm]'), function(b){
+    b.addEventListener('click', function(){
+      var i = +b.dataset.rm;
+      var moved = HC_CARS_[i].who;
+      HC_CARS_.splice(i, 1);
+      /* 刪掉一車，車上的人要有地方去。丟回第 1 車，不要讓他們消失——
+         「有人沒分到車」存檔時會被擋，但那時候他已經不知道是誰不見了。 */
+      HC_CARS_[0].who = HC_CARS_[0].who.concat(moved);
+      hcDrawCar();
+    });
+  });
+}
+
+function hcSaveCar(){
+  var b = $('hcCarSave'); b.disabled = true; b.textContent = '存…';
+  google.script.run.withSuccessHandler(function(r){
+    b.disabled = false; b.textContent = '存起來並補發';
+    $('hcCarModal').style.display = 'none';
+    if(!r.changed.length){ toast('車輛資訊已更新（沒有人的車次有變）'); openCase(HC_CUR_.id); return; }
+    toast('已更新　' + r.changed.length + ' 人要重看');
+    hcShowMsgs(HC_CUR_.id, 'car');
+  }).withFailureHandler(function(e){
+    b.disabled = false; b.textContent = '存起來並補發'; toast(e.message, true);
+  }).hcSetCars(CODE, HC_CUR_.id, HC_CARS_);
+}
+
+/* ── 當天點名 ───────────────────────────────────────
+
+   ⛔ 沒按報到 ≠ 缺席。工人自己按那顆只是訊號，在家也按得下去；
+      沒按也可能是到了忘記按。所以預設值一律是「還沒點」，
+      不要拿工人自己的動作直接當成點名結果。
+      自己按過的會標出來當參考，但要翻譯自己勾。 */
+
+var HC_MARK_ = {};
+
+function hcOpenRoll(v){
+  HC_CUR_ = v; HC_MARK_ = {};
+  $('hcRollModal').style.display = '';
+  $('hcRollSub').textContent = v.date + '　·　' + v.detail.hos;
+  hcDrawRoll();
+}
+
+function hcSrc_(p){
+  if(!p.inAt) return '<span class="src n">沒動作</span>';
+  if(p.receipt) return '<span class="src a">收據</span>';
+  if(p.inBy === '翻譯點名') return '<span class="src a">已點名</span>';
+  return '<span class="src b">自己按</span>';
+}
+
+function hcDrawRoll(){
+  $('hcRollBody').innerHTML =
+    '<p class="hint">工人自己按的那顆只是參考——在家也按得下去。' +
+    '真正算數的是你在這裡勾的。</p>' +
+    HC_CUR_.list.map(function(p){
+      var m = HC_MARK_[p.name];
+      return '<div class="hcrow"><div class="c"><b>'+esc(p.name)+'</b>' +
+        '<span>'+hcSrc_(p) + (p.inAt ? esc(p.inAt) : '還沒報到') + '</span></div>' +
+        '<div class="seg2">' +
+          '<button type="button" data-y="'+esc(p.name)+'"' +
+            (m === true ? ' class="on"' : '') + '>到</button>' +
+          '<button type="button" data-n="'+esc(p.name)+'"' +
+            (m === false ? ' class="no on"' : ' class="no"') + '>沒到</button>' +
+        '</div></div>';
+    }).join('');
+  [].forEach.call($('hcRollBody').querySelectorAll('[data-y]'), function(b){
+    b.addEventListener('click', function(){ HC_MARK_[b.dataset.y] = true; hcDrawRoll(); });
+  });
+  [].forEach.call($('hcRollBody').querySelectorAll('[data-n]'), function(b){
+    b.addEventListener('click', function(){ HC_MARK_[b.dataset.n] = false; hcDrawRoll(); });
+  });
+  var done = Object.keys(HC_MARK_).length;
+  var no = Object.keys(HC_MARK_).filter(function(k){ return !HC_MARK_[k]; });
+  $('hcRollN').textContent = '已點 ' + done + ' / ' + HC_CUR_.list.length +
+    (no.length ? ('　沒到 ' + no.length) : '');
+}
+
+function hcSaveRoll(){
+  if(!Object.keys(HC_MARK_).length){ toast('還沒點任何人', true); return; }
+  var no = Object.keys(HC_MARK_).filter(function(k){ return !HC_MARK_[k]; });
+  if(no.length && !confirm('要記「沒到」的有 ' + no.length + ' 位：\n' +
+      no.join('、') + '\n\n沒到要收 500 元交通費並改期。\n' +
+      '他有可能是到了忘記按——確定要記沒到嗎？')) return;
+  var b = $('hcRollSave'); b.disabled = true;
+  google.script.run.withSuccessHandler(function(r){
+    b.disabled = false; $('hcRollModal').style.display = 'none';
+    toast('已存　到 ' + r.came.length + ' 人' +
+          (r.missed.length ? ('　沒到 ' + r.missed.length + ' 人') : ''));
+    openCase(HC_CUR_.id);
+  }).withFailureHandler(function(e){
+    b.disabled = false; toast(e.message, true);
+  }).hcRoll(CODE, HC_CUR_.id, HC_MARK_);
+}
+
+/* ── 結案 ───────────────────────────────────────────
+
+   結案時才算下一次到期日。算法是「下一個還沒做的期別」，
+   不是「這次 + 12 個月」——法定是 6／18／30 三個固定點，不等距。 */
+
+function hcClose(v){
+  var res = {};
+  var undone = [];
+  v.list.forEach(function(p){
+    if(p.result === '沒到'){ res[p.name] = '沒到'; return; }
+    if(!p.inAt){ undone.push(p.name); return; }
+    res[p.name] = '正常';
+  });
+  if(undone.length && !confirm('這 ' + undone.length + ' 位沒有報到紀錄：\n' +
+      undone.join('、') + '\n\n先當他們沒到嗎？\n' +
+      '（要改成正常的話，先回去點名）')) return;
+  undone.forEach(function(n){ res[n] = '沒到'; });
+
+  var bad = prompt('報告有異常的寫在這裡，用頓號分開。\n' +
+    '沒有就直接按確定。\n\n（異常的會另外開一件就醫追蹤）', '');
+  if(bad === null) return;
+  String(bad).split(/[、,，]/).map(function(x){ return x.trim(); })
+    .filter(String).forEach(function(n){ res[n] = '異常'; });
+
+  google.script.run.withSuccessHandler(function(r){
+    toast('已結案' + (r.bad.length ? ('　異常 ' + r.bad.length + ' 人要開就醫追蹤') : ''));
+    loadTrack(true);
+  }).withFailureHandler(function(e){ toast(e.message, true); })
+    .hcCloseBatch(CODE, v.id, res);
+}
+
+/* ── 案件頁上的體檢區塊 ─────────────────────────────── */
+
+function hcCaseBlock(caseId){
+  var box = $('hcBox'); if(box) box.remove();
+  google.script.run.withSuccessHandler(function(v){
+    if(!v || !v.has || !$('ckBody')) return;
+    var old = $('hcBox'); if(old) old.remove();
+    var el = document.createElement('div');
+    el.id = 'hcBox'; el.className = 'hcbox';
+    el.innerHTML = hcBoxHtml(v);
+    $('ckBody').appendChild(el);
+    hcBindBox(v);
+  }).withFailureHandler(function(){}).hcCaseView(CODE, caseId);
+}
+
+function hcBoxHtml(v){
+  var t = v.tally;
+  var h = '<p class="h">通知狀態' +
+    '<em>' + t.ack + ' / ' + t.n + ' 人已確認</em></p>';
+
+  if(v.needCar){
+    h += '<div class="hcal ' + (v.carUrgent ? 'r' : (v.carWarn ? 'w' : '')) + '">' +
+      '<b>接送資訊還沒填</b><span>' +
+      (v.days === null ? '' :
+        (v.days < 0 ? '體檢日已經過了' :
+         v.days === 0 ? '就是今天' : ('剩 ' + v.days + ' 天'))) +
+      '　·　' + t.n + ' 位移工在等</span>' +
+      '<button type="button" id="hcCarBtn">去填</button></div>';
+  }
+
+  h += '<div class="hclist">' + v.list.map(function(p){
+    var st = p.inAt ? 'g' : (p.ack ? 'b' : (p.seen ? 'y' : 'n'));
+    var txt = p.inAt ? '已報到' : (p.ack ? '已確認' : (p.seen ? '看過沒按' : '沒讀'));
+    return '<div class="hcrow"><div class="c"><b>' + esc(p.name) +
+      (p.flagged ? '<i class="flag">⚠ 生日連錯，可能不是本人</i>' : '') + '</b>' +
+      '<span>' + (p.car ? ('第 ' + esc(p.car) + ' 車　') : '') +
+        (p.inAt ? hcSrc_(p) : '') +
+        (p.phone ? esc(p.phone) : (p.ack ? '沒留電話' : '')) + '</span></div>' +
+      (p.receipt ? '<button type="button" class="rcp" data-r="' + esc(p.name) +
+        '">收據</button>' : '') +
+      '<span class="st ' + st + '">' + txt + '</span></div>';
+  }).join('') + '</div>';
+
+  var acts = [];
+  acts.push('<button type="button" id="hcMsgBtn">複製通知訊息</button>');
+  if(!v.needCar && v.detail.ride === '接送')
+    acts.push('<button type="button" id="hcCarBtn2">改接送資訊</button>');
+  if(v.isToday || t.inn)
+    acts.push('<button type="button" class="p" id="hcRollBtn">當天點名</button>');
+  if(t.inn || v.days < 0)
+    acts.push('<button type="button" id="hcCloseBtn">結案</button>');
+  h += '<div class="hcacts">' + acts.join('') + '</div>';
+  return h;
+}
+
+function hcBindBox(v){
+  function on(id, fn){ var b = $(id); if(b) b.addEventListener('click', fn); }
+  on('hcCarBtn', function(){ hcOpenCar(v); });
+  on('hcCarBtn2', function(){ hcOpenCar(v); });
+  on('hcMsgBtn', function(){ hcShowMsgs(v.id, 'new'); });
+  on('hcRollBtn', function(){ hcOpenRoll(v); });
+  on('hcCloseBtn', function(){ hcClose(v); });
+  [].forEach.call(document.querySelectorAll('#hcBox [data-r]'), function(b){
+    b.addEventListener('click', function(){ hcReceipt(v.id, b.dataset.r); });
+  });
+}
+
+/* 收據只在點「看大圖」時才抓。列表一次帶十張圖回來，
+   在工廠的 4G 下就是十幾秒的空白。 */
+function hcReceipt(caseId, name){
+  toast('讀收據…');
+  google.script.run.withSuccessHandler(function(r){
+    if(!r || !r.ok){ toast('讀不到這張收據', true); return; }
+    var w = window.open('');
+    if(!w){ toast('瀏覽器擋掉新分頁了', true); return; }
+    w.document.write('<title>' + esc(name) + ' 收據</title>' +
+      '<body style="margin:0;background:#111"><img style="width:100%" src="data:' +
+      r.mime + ';base64,' + r.data + '">');
+    w.document.close();
+  }).withFailureHandler(function(e){ toast(e.message, true); })
+    .hcReceiptData(CODE, caseId, name);
+}
+
+/* ── 追蹤頁頂端的兩條提醒 ───────────────────────────── */
+
+function hcNudge(){
+  var box = $('hcNudge');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'hcNudge';
+    $('tkLede').parentNode.insertBefore(box, $('tkLede'));
+  }
+  box.innerHTML = '';
+  google.script.run.withSuccessHandler(function(r){
+    var l = (r && r.list) || [];
+    if(!l.length) return;
+    box.innerHTML += '<div class="hcal ' + (l[0].late ? 'r' : 'w') + '">' +
+      '<b>接送資訊還沒填　' + l.length + ' 件</b><span>' +
+      l.slice(0, 3).map(function(x){
+        return esc(x.client) + ' ' + esc(x.date) + '（剩 ' + x.days + ' 天）';
+      }).join('　·　') + '</span></div>';
+  }).withFailureHandler(function(){}).hcCarTodo(CODE);
+
+  google.script.run.withSuccessHandler(function(r){
+    var l = ((r && r.list) || []).filter(function(x){ return !x.noBase; });
+    var nb = ((r && r.list) || []).filter(function(x){ return x.noBase; });
+    if(l.length){
+      var late = l.filter(function(x){ return x.late; }).length;
+      box.innerHTML += '<div class="hcal ' + (late ? 'r' : '') + '">' +
+        '<b>體檢快到期　' + l.length + ' 人' +
+        (late ? ('（已逾期 ' + late + ' 人）') : '') + '</b><span>' +
+        l.slice(0, 3).map(function(x){
+          return esc(x.name) + '（' + esc(x.client) + '　' +
+            (x.late ? ('逾期 ' + (-x.days) + ' 天') : ('剩 ' + x.days + ' 天')) + '）';
+        }).join('　·　') + '　到「填寫 → 體檢通知」開單</span></div>';
+    }
+    /* 起算日之前的期別系統沒有紀錄。講出來，不要假裝全部都掌握了。
+       一個會說謊的警報比沒有警報更糟。 */
+    if(r && r.unknown){
+      box.innerHTML += '<div class="hcal">' +
+        '<b>' + r.unknown + ' 期在起算日之前</b>' +
+        '<span>' + esc(r.since) + ' 之前的體檢系統沒有紀錄，所以不報逾期——' +
+        '那幾期要自己確認。要往前追的話，到系統設定改「體檢開始追蹤日」。</span></div>';
+    }
+    /* 算不出到期日的人要講出來，不要靜靜地漏掉。
+       這是名冊缺資料，不是沒有人到期。 */
+    if(nb.length){
+      box.innerHTML += '<div class="hcal">' +
+        '<b>' + nb.length + ' 人算不出體檢到期日</b>' +
+        '<span>名冊上沒有許可生效日／續聘日／入境日：' +
+        nb.slice(0, 4).map(function(x){ return esc(x.name); }).join('、') +
+        (nb.length > 4 ? ' 等' : '') + '　·　到「移工名冊」補</span></div>';
+    }
+  }).withFailureHandler(function(){}).hcDueSoon(CODE, 30);
+}
+
+/* ── 設定 ───────────────────────────────────────────── */
+
+function hcOpenSet(){
+  hcOpt(function(o){
+    $('hcSetHos').value = o.hos.join('\n');
+    $('hcSetDrv').value = o.drivers.map(function(d){
+      return d.name + (d.phone ? (',' + d.phone) : ''); }).join('\n');
+    $('hcSetWd').value = o.weekday.join('\n');
+    $('hcSetModal').style.display = '';
+  });
+}
+
+function hcSaveSet(){
+  var b = $('hcSetSave'); b.disabled = true;
+  var jobs = [['體檢常用醫院', $('hcSetHos').value],
+              ['接送司機名單', $('hcSetDrv').value],
+              ['可平日體檢的工廠', $('hcSetWd').value]];
+  var left = jobs.length, bad = 0;
+  jobs.forEach(function(j){
+    google.script.run.withSuccessHandler(fin).withFailureHandler(function(e){
+      bad++; toast(e.message, true); fin();
+    }).hcSaveSetting(CODE, j[0], j[1]);
+  });
+  function fin(){
+    if(--left) return;
+    b.disabled = false;
+    if(bad) return;
+    $('hcSetModal').style.display = 'none';
+    HC_OPT_ = null; HC_READY_ = false; hcInit();
+    toast('設定已更新');
+  }
+}
+
+/* ── 綁定 ───────────────────────────────────────────── */
+
+[].forEach.call($('hcSeg').children, function(b){
+  b.addEventListener('click', function(){ hcMode(b.dataset.m === 'hc'); });
+});
+$('hcClient').addEventListener('change', hcLoadWho);
+$('hcHos').addEventListener('change', function(){
+  $('hcHosOther').style.display = $('hcHos').value === OTHER_ ? '' : 'none';
+});
+[].forEach.call($('hcRide').querySelectorAll('input'), function(r){
+  r.addEventListener('change', function(){
+    var v = hcRideVal();
+    $('hcCarNow').style.display = v === 'now' ? '' : 'none';
+    $('hcRideHint').textContent = v === 'later'
+      ? '工人那邊會顯示「車輛資訊 體檢前 3 天通知」，不會是空白。體檢前 5 天追蹤頁會自己提醒你填。'
+      : v === 'now'
+        ? '現在填的話，工人第一次點連結就看得到車牌與司機。'
+        : '自行前往：當天 06:00–14:00 那條連結會變成報到畫面，他自己按「我到了」，還可以選填上傳繳費收據。';
+  });
+});
+$('hcGo').addEventListener('click', hcSubmit);
+$('hcSet').addEventListener('click', hcOpenSet);
+$('hcSetX').addEventListener('click', function(){ $('hcSetModal').style.display='none'; });
+$('hcSetSave').addEventListener('click', hcSaveSet);
+$('hcMsgX').addEventListener('click', function(){ $('hcMsgModal').style.display='none'; });
+$('hcCarX').addEventListener('click', function(){ $('hcCarModal').style.display='none'; });
+$('hcCarSave').addEventListener('click', hcSaveCar);
+$('hcCarAdd').addEventListener('click', function(){
+  HC_CARS_.push({ n: HC_CARS_.length + 1, at:'', where:'', driver:'',
+                  phone:'', plate:'', who:[] });
+  hcDrawCar();
+});
+$('hcRollX').addEventListener('click', function(){ $('hcRollModal').style.display='none'; });
+$('hcRollSave').addEventListener('click', hcSaveRoll);
