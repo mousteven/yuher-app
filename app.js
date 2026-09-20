@@ -5902,11 +5902,22 @@ function hcBoxHtml(v){
   h += '<div class="hclist">' + v.list.map(function(p){
     var st = p.inAt ? 'g' : (p.ack ? 'b' : (p.seen ? 'y' : 'n'));
     var txt = p.inAt ? '已報到' : (p.ack ? '已確認' : (p.seen ? '看過沒按' : '沒讀'));
+    /* 生日錯 1 次就要看得到。門檻設在 3 的話，翻譯永遠不知道前兩次
+       發生過什麼——而生日存錯的時候（第一輪是工人自己填的，沒人審），
+       那個人會一直錯下去，而且他輸入真的生日反而過不了。 */
+    var warn = '';
+    if(p.miss > 0){
+      warn = '<i class="flag">⚠ 生日輸入錯 ' + p.miss + ' 次' +
+        (p.dob ? ('　系統存的是 ' + esc(p.dob)) : '') +
+        (p.flagged ? '　可能不是本人' : '') + '</i>';
+    }
     return '<div class="hcrow"><div class="c"><b>' + esc(p.name) +
-      (p.flagged ? '<i class="flag">⚠ 生日連錯，可能不是本人</i>' : '') + '</b>' +
+      warn + '</b>' +
       '<span>' + (p.car ? ('第 ' + esc(p.car) + ' 車　') : '') +
         (p.inAt ? hcSrc_(p) : '') +
         (p.phone ? esc(p.phone) : (p.ack ? '沒留電話' : '')) + '</span></div>' +
+      (p.miss > 0 ? '<button type="button" class="rcp" data-fix="' +
+        esc(p.name) + '">清生日</button>' : '') +
       (p.receipt ? '<button type="button" class="rcp" data-r="' + esc(p.name) +
         '">收據</button>' : '') +
       '<span class="st ' + st + '">' + txt + '</span></div>';
@@ -5934,6 +5945,26 @@ function hcBindBox(v){
   [].forEach.call(document.querySelectorAll('#hcBox [data-r]'), function(b){
     b.addEventListener('click', function(){ hcReceipt(v.id, b.dataset.r); });
   });
+  [].forEach.call(document.querySelectorAll('#hcBox [data-fix]'), function(b){
+    b.addEventListener('click', function(){ hcFixDob(v, b.dataset.fix); });
+  });
+}
+
+/* 清掉存錯的生日，讓工人重填一次。
+   ⛔ 沒有這一顆的話，生日一填錯就把人鎖在外面：那個錯的值變成往後
+      每一次的門檻，他輸入真的生日反而過不了，而翻譯兩張表都改不到。 */
+function hcFixDob(v, name){
+  var p = v.list.filter(function(x){ return x.name === name; })[0] || {};
+  if(!confirm('要清掉「' + name + '」的生日嗎？\n\n' +
+      '系統現在存的是：' + (p.dob || '（空的）') + '\n' +
+      '他已經輸入錯 ' + (p.miss || 0) + ' 次。\n\n' +
+      '清掉之後，他下一次開連結填什麼就存什麼——\n' +
+      '所以先確認那個人真的是本人再清。')) return;
+  google.script.run.withSuccessHandler(function(r){
+    toast('已清掉（原本 ' + r.was + '），請他重開連結填一次');
+    openCase(v.id);
+  }).withFailureHandler(function(e){ toast(e.message, true); })
+    .hcResetDob(CODE, v.id, name);
 }
 
 /* 收據只在點「看大圖」時才抓。列表一次帶十張圖回來，
