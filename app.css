@@ -1989,3 +1989,15 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   padding:6px 12px;font-size:0.8125rem;color:var(--ink2);font-family:inherit}
 .hcbring button.on{background:var(--brand);border-color:var(--brand);color:#fff;
   font-weight:700}
+
+/* 體檢：移工自己回報的號碼跟名冊不一樣 */
+.hcdiff{background:var(--warn-bg);border-radius:9px;padding:9px 11px;margin:0 0 9px}
+.hcdiff b{display:block;font-size:0.75rem;color:var(--warn-ink)}
+.hcdiff span{display:block;font-size:0.75rem;color:var(--ink2);margin-top:2px}
+.hcdiff s{font-family:ui-monospace,Menlo,monospace;opacity:.6}
+.hcdiff em{font-style:normal;font-family:ui-monospace,Menlo,monospace;
+  font-weight:700;color:var(--ink)}
+.hcdiff .act{display:flex;gap:6px;margin-top:7px}
+.hcdiff .act button{border:1px solid var(--line);background:var(--card);
+  border-radius:8px;padding:4px 11px;font-size:0.75rem;font-weight:700;
+  color:var(--brand);font-family:inherit}

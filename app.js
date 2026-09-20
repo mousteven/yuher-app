@@ -5943,7 +5943,17 @@ function hcBoxHtml(v){
         esc(p.name) + '">清生日</button>' : '') +
       (p.receipt ? '<button type="button" class="rcp" data-r="' + esc(p.name) +
         '">收據</button>' : '') +
-      '<span class="st ' + st + '">' + txt + '</span></div>';
+      '<span class="st ' + st + '">' + txt + '</span></div>' +
+      /* 他自己填了、而且跟名冊那支不一樣。
+         ⛔ 不可以自動覆蓋名冊——手滑打錯一碼、或群組裡有人亂填，
+            你會失去一個原本正確的聯絡方式，那比沒收到通知更難救。
+            並排給翻譯看，按了才換。 */
+      (p.said ? '<div class="hcdiff"><b>他自己填的號碼跟名冊不一樣</b>' +
+        '<span>名冊 <s>' + esc(p.phone || '（空的）') + '</s>　→　' +
+        '他填 <em>' + esc(p.said) + '</em></span>' +
+        '<div class="act"><button type="button" data-ad="' + esc(p.name) +
+        '">更新名冊</button><button type="button" data-dr="' + esc(p.name) +
+        '">先不要動</button></div></div>' : '');
   }).join('') + '</div>';
 
   var acts = [];
@@ -5971,6 +5981,26 @@ function hcBindBox(v){
   [].forEach.call(document.querySelectorAll('#hcBox [data-fix]'), function(b){
     b.addEventListener('click', function(){ hcFixDob(v, b.dataset.fix); });
   });
+  [].forEach.call(document.querySelectorAll('#hcBox [data-ad]'), function(b){
+    b.addEventListener('click', function(){ hcPhone(v, b.dataset.ad, 1); });
+  });
+  [].forEach.call(document.querySelectorAll('#hcBox [data-dr]'), function(b){
+    b.addEventListener('click', function(){ hcPhone(v, b.dataset.dr, 0); });
+  });
+}
+
+/* 採用或丟棄移工自己回報的號碼。兩種都會在備註留痕，
+   之後要查「這支號碼是誰改的、什麼時候改的」查得到。 */
+function hcPhone(v, name, take){
+  var p = v.list.filter(function(x){ return x.name === name; })[0] || {};
+  if(take && !confirm('把「' + name + '」名冊上的號碼換成他自己填的？\n\n' +
+      '名冊：' + (p.phone || '（空的）') + '\n' +
+      '他填：' + p.said)) return;
+  google.script.run.withSuccessHandler(function(){
+    toast(take ? '名冊已更新' : '已記錄，名冊不動');
+    openCase(v.id);
+  }).withFailureHandler(function(e){ toast(e.message, true); })
+    [take ? 'hcAdoptPhone' : 'hcDropSaidPhone'](CODE, v.id, name);
 }
 
 /* 清掉存錯的生日，讓工人重填一次。
