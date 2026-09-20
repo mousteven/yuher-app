@@ -6038,6 +6038,13 @@ function hcReceipt(caseId, name){
 
 /* ── 追蹤頁頂端的兩條提醒 ───────────────────────────── */
 
+/* 追蹤頁頂端的提醒條。
+   ⛔ 兩支後端各自回來就各自 += 的話會疊。loadTrack 會被叫好幾次
+      （切頁籤、切篩選、存完檔重載），第二次的清空跟第一次的回呼交錯，
+      畫面上就出現兩條一模一樣的——2026-09-21 實機看到的就是這個。
+      改成：兩支都回來了才一次畫完，而且用序號擋掉舊的那一輪。 */
+var HC_NUDGE_SEQ_ = 0;
+
 function hcNudge(){
   var box = $('hcNudge');
   if(!box){
@@ -6045,23 +6052,35 @@ function hcNudge(){
     box.id = 'hcNudge';
     $('tkLede').parentNode.insertBefore(box, $('tkLede'));
   }
-  box.innerHTML = '';
-  google.script.run.withSuccessHandler(function(r){
-    var l = (r && r.list) || [];
-    if(!l.length) return;
-    box.innerHTML += '<div class="hcal ' + (l[0].late ? 'r' : 'w') + '">' +
-      '<b>接送資訊還沒填　' + l.length + ' 件</b><span>' +
-      l.slice(0, 3).map(function(x){
-        return esc(x.client) + ' ' + esc(x.date) + '（剩 ' + x.days + ' 天）';
-      }).join('　·　') + '</span></div>';
-  }).withFailureHandler(function(){}).hcCarTodo(CODE);
+  var seq = ++HC_NUDGE_SEQ_;
+  var got = { car: null, due: null };
+
+  function paint(){
+    if(seq !== HC_NUDGE_SEQ_) return;           // 已經有更新的一輪在跑
+    if(got.car === null || got.due === null) return;
+    box.innerHTML = got.car + got.due;
+  }
+  function fail(k){ return function(){ got[k] = ''; paint(); }; }
 
   google.script.run.withSuccessHandler(function(r){
-    var l = ((r && r.list) || []).filter(function(x){ return !x.noBase; });
-    var nb = ((r && r.list) || []).filter(function(x){ return x.noBase; });
+    var l = (r && r.list) || [];
+    got.car = !l.length ? '' :
+      ('<div class="hcal ' + (l[0].late ? 'r' : 'w') + '">' +
+       '<b>接送資訊還沒填　' + l.length + ' 件</b><span>' +
+       l.slice(0, 3).map(function(x){
+         return esc(x.client) + ' ' + esc(x.date) + '（剩 ' + x.days + ' 天）';
+       }).join('　·　') + '</span></div>');
+    paint();
+  }).withFailureHandler(fail('car')).hcCarTodo(CODE);
+
+  google.script.run.withSuccessHandler(function(r){
+    var all = (r && r.list) || [];
+    var l = all.filter(function(x){ return !x.noBase; });
+    var nb = all.filter(function(x){ return x.noBase; });
+    var h = '';
     if(l.length){
       var late = l.filter(function(x){ return x.late; }).length;
-      box.innerHTML += '<div class="hcal ' + (late ? 'r' : '') + '">' +
+      h += '<div class="hcal ' + (late ? 'r' : '') + '">' +
         '<b>體檢快到期　' + l.length + ' 人' +
         (late ? ('（已逾期 ' + late + ' 人）') : '') + '</b><span>' +
         l.slice(0, 3).map(function(x){
@@ -6070,23 +6089,24 @@ function hcNudge(){
         }).join('　·　') + '　到「填寫 → 體檢通知」開單</span></div>';
     }
     /* 起算日之前的期別系統沒有紀錄。講出來，不要假裝全部都掌握了。
-       一個會說謊的警報比沒有警報更糟。 */
-    if(r && r.unknown){
-      box.innerHTML += '<div class="hcal">' +
-        '<b>' + r.unknown + ' 期在起算日之前</b>' +
-        '<span>' + esc(r.since) + ' 之前的體檢系統沒有紀錄，所以不報逾期——' +
-        '那幾期要自己確認。要往前追的話，到系統設定改「體檢開始追蹤日」。</span></div>';
+       ⛔ 但不要報「1365 期」——那是全部人 × 三個期別加起來的數字，
+          對人沒有任何意義。要報就報「幾個人」，而且一句話講完。 */
+    if(r && r.unknownPeople){
+      h += '<div class="hcal"><b>' + r.unknownPeople +
+        ' 人的舊期別系統沒有紀錄</b><span>' + esc(r.since) +
+        ' 之前的要自己確認。系統設定可以改起算日。</span></div>';
     }
     /* 算不出到期日的人要講出來，不要靜靜地漏掉。
        這是名冊缺資料，不是沒有人到期。 */
     if(nb.length){
-      box.innerHTML += '<div class="hcal">' +
+      h += '<div class="hcal">' +
         '<b>' + nb.length + ' 人算不出體檢到期日</b>' +
         '<span>名冊上沒有許可生效日／續聘日／入境日：' +
         nb.slice(0, 4).map(function(x){ return esc(x.name); }).join('、') +
         (nb.length > 4 ? ' 等' : '') + '　·　到「移工名冊」補</span></div>';
     }
-  }).withFailureHandler(function(){}).hcDueSoon(CODE, 30);
+    got.due = h; paint();
+  }).withFailureHandler(fail('due')).hcDueSoon(CODE, 30);
 }
 
 /* ── 設定 ───────────────────────────────────────────── */
