@@ -5585,19 +5585,32 @@ function hcShowMsgs(caseId, which){
     if(!m.length){
       $('hcMsgBody').innerHTML = '<div class="mid">沒有要發的人</div>'; return;
     }
+    /* ⛔ 一人一則，不要合成一大則。2026-09-20 實機發現：
+       LINE 會替每一條連結各生一張預覽卡，八個人就掛八張
+       「Health Check・體檢通知」，整則被卡片淹掉，
+       工人找不到自己那一行。一則一條連結＝一張乾淨的卡。 */
     $('hcMsgBody').innerHTML =
-      '<p class="hint">一個語別一則。' +
+      '<p class="hint">一人一則，' + m.length + ' 則。' +
       (which === 'car'
-        ? '這一則只是叫他回去看——連結還是原來那條，內容已經換成新的了。'
-        : '每個人的連結都不一樣，整則一起貼，不要拆開。') + '</p>' +
+        ? '內容已經換到同一條連結上了，這幾則只是叫他回去看。'
+        : '一則一個人、一條連結——合起來貼的話 LINE 會掛一排預覽卡。') +
+      '</p>' +
+      '<div class="hcacts" style="margin:0 0 11px">' +
+        '<button type="button" id="hcCopyAll">複製全部（' + m.length + ' 則，' +
+        '中間空一行）</button></div>' +
       m.map(function(x, i){
-        return '<div class="hcmsg"><p class="h">' +
-          esc(HC_LGN_[x.lang] || x.lang) + '　·　' + x.n + ' 人' +
+        return '<div class="hcmsg"><p class="h">' + esc(x.name) +
+          '<em style="font-style:normal;font-weight:400;color:var(--ink2);' +
+          'font-size:0.75rem;margin-left:6px">' +
+          esc(HC_LGN_[x.lang] || x.lang) + '</em>' +
           '<button type="button" data-c="'+i+'">複製</button></p>' +
           '<pre>'+esc(x.text)+'</pre></div>';
       }).join('');
     [].forEach.call($('hcMsgBody').querySelectorAll('button[data-c]'), function(b){
       b.addEventListener('click', function(){ hcCopy(m[+b.dataset.c].text, b); });
+    });
+    $('hcCopyAll').addEventListener('click', function(){
+      hcCopy(m.map(function(x){ return x.text; }).join('\n\n'), $('hcCopyAll'));
     });
   }).withFailureHandler(function(e){
     $('hcMsgBody').innerHTML = '<div class="mid">'+esc(e.message)+'</div>';
@@ -5607,9 +5620,12 @@ function hcShowMsgs(caseId, which){
 /* 工廠訊號差的時候 clipboard API 會靜默失敗，退回 execCommand。
    兩條都不成至少要講出來——不要什麼都不發生，那比報錯更難查。 */
 function hcCopy(text, btn){
+  /* 記住原本的字再改。寫死成「複製」的話，
+     「複製全部（8 則…）」那顆按一次就變成「複製」，再也回不來。 */
+  var was = btn.textContent;
   function done(){
     btn.textContent = '已複製';
-    setTimeout(function(){ btn.textContent = '複製'; }, 1500);
+    setTimeout(function(){ btn.textContent = was; }, 1500);
   }
   function fallback(){
     var ta = document.createElement('textarea');

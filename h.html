@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>體檢通知 · Health Check · YU HER</title>
+<meta name="description" content="羽禾管理顧問有限公司　定期健康檢查通知">
+<!--
+  短網址轉送（2026-09-20 建立）
+
+  為什麼要這一頁：Apps Script 的 /exec 網址有 130 個字。貼到工廠 LINE 群組，
+  一條連結在手機上就換行八次，整則訊息被網址淹掉，而且那個長度看起來像詐騙——
+  工人不敢點。走這裡是 52 個字，兩行以內。
+
+  它只做一件事：把 ?s=<短碼> 原封不動送到 Apps Script。
+  ⚠ 這裡不碰、不解讀、不記錄任何個資。短碼在 Apps Script 那邊才換成人。
+
+  ⚠ 只能用 JS 轉送——meta refresh 讀不到網址上的 ?s=，沒辦法帶著參數走。
+    所以一定要同時畫出一顆看得到、按得下去的連結：
+    工廠的舊手機或擋 JS 的內建瀏覽器上，「點了沒反應」是最難查的那種壞法，
+    至少要讓他有東西可以按。
+-->
+<style>
+  :root{ color-scheme: dark; }
+  body{margin:0;min-height:100vh;display:grid;place-items:center;
+    background:#070C13;color:#E9EEF5;
+    font-family:system-ui,-apple-system,'PingFang TC','Noto Sans TC',sans-serif;
+    line-height:1.7;padding:24px}
+  .b{max-width:340px;text-align:center}
+  .m{width:54px;height:54px;border-radius:99px;background:rgba(95,208,194,.16);
+    color:#5FD0C2;margin:0 auto 14px;position:relative}
+  .m::before,.m::after{content:'';position:absolute;background:currentColor;
+    border-radius:2px}
+  .m::before{left:16px;right:16px;top:41%;height:18%}
+  .m::after{top:16px;bottom:16px;left:41%;width:18%}
+  h1{font-size:1.0625rem;margin:0 0 6px;letter-spacing:-.01em}
+  p{margin:0;font-size:.875rem;color:#9FAEC0}
+  a.go{display:inline-block;margin-top:16px;background:#0E8C7F;color:#fff;
+    text-decoration:none;border-radius:12px;padding:13px 26px;font-weight:700;
+    font-size:.9375rem}
+  a.go small{display:block;font-size:.6875rem;font-weight:400;opacity:.85}
+  .ft{margin-top:18px;font-size:.75rem;color:#6C7C90}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+  <div class="b">
+    <div class="m"></div>
+    <h1>Health Check · 體檢通知</h1>
+    <p id="st">Opening…　開啟中…</p>
+    <a class="go" id="go" href="#" hidden>Open　開啟通知<small>點這裡</small></a>
+    <p class="ft">羽禾管理顧問有限公司　YU HER</p>
+  </div>
+<script>
+(function () {
+  /* 只放行短碼。其他參數一律丟掉——這一頁沒有理由轉送別的東西。 */
+  var m = /[?&]s=([A-Za-z0-9]{1,16})/.exec(location.search || '');
+  var base = 'https://script.google.com/macros/s/' +
+    'AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec';
+  if (!m) {
+    document.getElementById('st').textContent =
+      '這個連結不完整，請回到 LINE 重新點一次。';
+    return;
+  }
+  var url = base + '?s=' + m[1];
+  var a = document.getElementById('go');
+  a.href = url; a.hidden = false;
+  /* replace 而不是 assign：工人按上一頁時應該回到 LINE，不是回到這一頁然後
+     又被轉走一次——那會變成他怎麼按都離不開。 */
+  location.replace(url);
+})();
+</script>
+</body>
+</html>
