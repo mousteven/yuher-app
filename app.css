@@ -1982,3 +1982,10 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   color:var(--ink2);font-family:inherit}
 .hcacts button.p{background:var(--brand);border-color:var(--brand);color:#fff;
   font-weight:700}
+
+/* 體檢：要帶什麼（點選的會翻成工人的母語） */
+.hcbring{display:flex;flex-wrap:wrap;gap:6px}
+.hcbring button{border:1px solid var(--line);background:var(--card);border-radius:8px;
+  padding:6px 12px;font-size:0.8125rem;color:var(--ink2);font-family:inherit}
+.hcbring button.on{background:var(--brand);border-color:var(--brand);color:#fff;
+  font-weight:700}

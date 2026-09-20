@@ -5464,6 +5464,18 @@ function hcInit(){
         return '<option value="'+esc(d.phone)+'">'+esc(d.name) +
                (d.phone ? '　'+esc(d.phone) : '') + '</option>'; }).join('');
     if(!$('hcDate').value) $('hcDate').value = hcNextSunday_();
+    /* ⛔ 要帶什麼一定要從詞彙表點選，不要讓人打自由文字。
+       2026-09-20 實機：翻譯打的中文直接印在越南籍工人的通知上，他看不懂。
+       詞彙表在 HealthCheck.gs 的 HC_BRING_，四語各一份。
+       表外的東西還是收（下面那格），但畫面會標「只有中文」。 */
+    $('hcBringPick').innerHTML = (o.bring || []).map(function(x){
+      var on = HC_BRING_DEF_.indexOf(x) !== -1;
+      return '<button type="button" class="'+(on?'on':'')+'" data-b="'+esc(x)+'">' +
+        esc(x) + '</button>';
+    }).join('');
+    [].forEach.call($('hcBringPick').children, function(b){
+      b.addEventListener('click', function(){ b.classList.toggle('on'); });
+    });
   });
   /* ⛔ 不要用填寫頁那份「服務客戶名單」。2026-09-20 實際比對：
      移工名冊上有 184 家，其中 51 家不在服務客戶名單裡（多半是家庭雇主）。
@@ -5474,6 +5486,17 @@ function hcInit(){
       ((r && r.list) || []).map(function(x){
         return '<option>'+esc(x.c)+'</option>'; }).join('');
   }).withFailureHandler(function(e){ toast(e.message, true); }).hcClients(CODE);
+}
+
+/* 預設勾起來的三樣。這三樣每一次體檢都要帶，不勾反而是漏。 */
+var HC_BRING_DEF_ = ['居留證正本', '健保卡'];
+
+function hcBringVal(){
+  var picked = [].filter.call($('hcBringPick').children, function(b){
+    return b.classList.contains('on'); }).map(function(b){ return b.dataset.b; });
+  var extra = $('hcBring').value.trim();
+  return picked.concat(extra ? extra.split(/[、,，]/).map(function(x){
+    return x.trim(); }).filter(String) : []).join('、');
 }
 
 function hcRideVal(){
@@ -5545,7 +5568,7 @@ function hcSubmit(){
   var o = {
     client: $('hcClient').value, date: $('hcDate').value,
     time: $('hcTime').value, hos: hos, term: $('hcTerm').value,
-    fee: $('hcFee').value.trim(), bring: $('hcBring').value.trim(),
+    fee: $('hcFee').value.trim(), bring: hcBringVal(),
     fast: $('hcFast').checked, note: $('hcNote').value.trim(),
     ride: ride === 'self' ? '自行前往' : '接送',
     carLater: ride === 'later',
