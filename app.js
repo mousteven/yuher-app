@@ -735,6 +735,7 @@ $('briefStart').addEventListener('click', function(){
     .createBriefing(CODE, {
       client: clientVal(), date: $('date').value, crew: $('crew').value,
       topic: ws.length ? (ws[0].big + ' / ' + ws[0].sub) : '',
+      content: briefContent_(),
       expected: pickedNames()
     });
 });
@@ -818,6 +819,22 @@ function briefDeadline(r){
   }
 }
 
+/* 宣導模式只有一張卡（標題被改成「宣導內容」），工人頁要看的就是它。
+   ⛔ 不要把整包 collectWorkers() 送上去——裡面有費用、備註、DOM 節點，
+      那些不該出現在工人看得到的頁面上。 */
+function briefContent_(){
+  var c = $('workers').children[0];
+  if(!c) return null;
+  var g = function(k){ var el = c.querySelector('[data-k='+k+']');
+                       return el ? el.value.trim() : ''; };
+  var pick = function(sel){
+    return [].map.call(c.querySelectorAll(sel+' input:checked'),
+                       function(i){ return i.value; });
+  };
+  return { big: g('big'), sub: g('sub'), did: pick('[data-do]'),
+           dnote: g('dnote'), res: pick('[data-res]'), rnote: g('rnote') };
+}
+
 function pollBrief(){
   if(!BRIEF) return;
   google.script.run
@@ -856,7 +873,11 @@ function pollBrief(){
       if(p.open === false && BRIEF_TIMER){ clearInterval(BRIEF_TIMER); BRIEF_TIMER = null; }
     })
     .withFailureHandler(function(){})
-    .briefingProgress(CODE, BRIEF.token);
+    /* ⚠ 把畫面上的宣導內容一起送上去。實務上他常常先按「開始簽到」
+       讓大家邊聽邊簽，服務項目與處理經過是後來才填的——
+       只在建立場次時存一次的話，工人頁永遠是空白。
+       後端內容沒變就不寫，不會一直改試算表。 */
+    .briefingProgress(CODE, BRIEF.token, briefContent_());
 }
 $('briefRefresh').addEventListener('click', pollBrief);
 $('rosterToggle').addEventListener('click', function(){
@@ -2211,11 +2232,11 @@ function openPlan(client){
     if(pz0){
       $('planTarget').value = (pz0.t === '家庭雇主') ? '家庭雇主' : '工廠';
       fillPlanClients();
-      $('planClient').value = client;
+      setPlanClient(client);
       if(pz0.crew && CREW.indexOf(pz0.crew)!==-1) $('planCrew').value = pz0.crew;
-    } else { fillPlanClients(); }
+    } else { fillPlanClients(); setPlanClient(client); }
   } else {
-    fillPlanClients();
+    fillPlanClients(); setPlanClient('');
   }
   fillPlanBig();
   fillPlanWorkers();
@@ -2248,13 +2269,37 @@ function planWorkerNames(){
   return [].map.call($('planWorkers').querySelectorAll('input:checked'),
                      function(i){ return i.value; });
 }
-$('planClient').addEventListener('change', fillPlanWorkers);
+/* 排行程那一格。跟開單、服務紀錄共用同一個元件——
+   ⛔ 三個畫面三種選法，使用者每換一個地方就要重新學一次。
+   ⚠ #planClient 是 hidden input，不會發 change，所以不掛監聽，
+     由 onPick 直接叫 fillPlanWorkers。 */
+var PLAN_PK_ = {
+  id: 'planPk', mode: 'svc', list: [], allowNew: true,
+  onPick: function(c){ setPlanClient(c); fillPlanWorkers(); }
+};
+function setPlanClient(c){
+  c = c || '';
+  $('planClient').value = c;
+  $('planPkVal').textContent = c || '請選擇…';
+  $('planPkVal').classList.toggle('has', !!c);
+  $('planPkVal').classList.remove('open');
+  $('planPkPop').style.display = 'none';
+  if($('planPkQ')) $('planPkQ').value = '';
+}
+pkWire(PLAN_PK_);
 
 function fillPlanClients(){
   var kind = $('planTarget').value.indexOf('家庭')!==-1 ? '家庭雇主' : '工廠';
-  var list = PRESETS.filter(function(x){ return (x.t||'工廠')===kind; });
-  $('planClient').innerHTML = '<option value="">請選擇…</option>' +
-    list.map(function(x){ return '<option>'+esc(x.c)+'</option>'; }).join('');
+  PLAN_PK_.list = PRESETS.filter(function(x){ return (x.t||'工廠')===kind; })
+                         .map(pkFromPreset_);
+  /* 換了服務對象，原本選的那一家可能不在這一類裡了。
+     ⛔ 不要默默留著——工廠名單裡留著家庭雇主，移工名單會整個對不上。 */
+  var keep = $('planClient').value;
+  if(keep && presetOf(keep) &&
+     !PLAN_PK_.list.some(function(x){ return x.c === keep; })){
+    setPlanClient('');
+  }
+  if($('planPkPop').style.display !== 'none') pkDraw(PLAN_PK_);
 }
 $('planTarget').addEventListener('change', function(){ fillPlanClients(); fillPlanWorkers(); });
 $('planCancel').addEventListener('click', function(){ $('planModal').style.display='none'; });

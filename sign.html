@@ -81,6 +81,46 @@ button.act:disabled{opacity:.5}
 .hint{font-size:13.5px;color:var(--ink3);margin:9px 0 0}
 .back{background:none;border:0;color:var(--brand);font-size:14px;font-family:inherit;
   padding:6px 0;cursor:pointer;font-weight:700}
+
+/* 誰已經簽了。⛔ 這一段取代原本的下拉選單：三十個人在現場，
+   每個人都要知道「還剩誰沒簽」，不然沒人確定自己到底簽過沒有。 */
+.who{display:flex;flex-direction:column}
+.whoh{display:flex;justify-content:space-between;align-items:baseline;
+  font-size:14px;font-weight:700;color:var(--ink2);margin-bottom:10px}
+.whoh em{font-style:normal;font-size:13px;color:var(--ink3);font-weight:400}
+.p1{display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  padding:13px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;
+  font-family:inherit;font-size:17px;color:var(--ink);margin-bottom:8px;
+  cursor:pointer;min-height:58px}
+.p1:last-child{margin-bottom:0}
+.p1 .tick{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);
+  flex:none;display:grid;place-items:center;color:transparent;font-size:15px;
+  font-weight:800}
+.p1 .who1{flex:1;min-width:0}
+.p1 .who1 b{display:block;font-weight:700;line-height:1.3}
+.p1 .who1 i{display:block;font-style:normal;font-size:13px;color:var(--ink3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p1 .tm{flex:none;font-size:13px;color:var(--ink3)}
+/* 已經簽好的：打勾、變淡、不能再點——⛔ 可以點的話，
+   有人手滑點到別人的名字就會把別人的簽名蓋掉。 */
+.p1.on{background:#F1F7F6;border-color:#CFE3E0}
+.p1.on .tick{background:var(--ok);border-color:var(--ok);color:#fff}
+.p1.on .who1 b{color:var(--ink2)}
+.p1.me{border-color:var(--brand);box-shadow:0 0 0 2px rgba(46,125,138,.18)}
+.p1.sel{border-color:var(--brand);background:#EFF6F6}
+.p1.sel .tick{border-color:var(--brand)}
+.p1.oth{color:var(--brand);font-weight:700;justify-content:center}
+.p1.oth .tick{display:none}
+
+/* 今天講了什麼 */
+.cnt dt{font-size:13px;font-weight:700;color:var(--ink3);margin:12px 0 3px}
+.cnt dt:first-child{margin-top:0}
+.cnt dd{margin:0;font-size:16px;color:var(--ink);line-height:1.6}
+.cnt .free{color:var(--ink2);font-size:15px;margin-top:3px;white-space:pre-wrap}
+.zhonly{font-size:13px;color:var(--ink3);margin:0 0 10px}
+.okbar{background:#E4F1E9;border:1px solid #BFDECB;color:var(--ok);
+  border-radius:12px;padding:13px 14px;font-size:16px;font-weight:700;
+  margin-bottom:14px;text-align:center}
 </style>
 <div class="wrap"><div id="app"><div class="mid">…</div></div></div>
 
@@ -125,14 +165,14 @@ var T = {
     signHint:'Ký bằng ngón tay tại đây', clear:'Xóa', submit:'Gửi', sending:'Đang gửi…',
     foot:'Sau khi gửi, phiên dịch viên tại hiện trường sẽ thấy bạn đã ký.',
     needName:'Vui lòng chọn hoặc nhập tên của bạn', needSign:'Vui lòng ký tên trước',
-    doneTitle:'Đã điểm danh', doneMsg:'Cảm ơn bạn', back:'Đổi ngôn ngữ', netBad:'Mạng không ổn định. Vui lòng bấm Gửi lại.' },
+    doneTitle:'Đã điểm danh', doneMsg:'Cảm ơn bạn', back:'Đổi ngôn ngữ', who:'Ai đã ký', pickYou:'Chạm vào tên của bạn', signedAt:'đã ký', already:'Bạn đã ký rồi', todayT:'Nội dung hôm nay', didT:'Đã làm gì', resT:'Kết quả', zhOnly:'(Bản ghi bằng tiếng Trung)', ofN:'đã ký', netBad:'Mạng không ổn định. Vui lòng bấm Gửi lại.' },
   '泰': { self:'ภาษาไทย', sub:'泰文',
     title:'ลงชื่อเข้าร่วมการอบรม', name:'ชื่อของคุณ', choose:'กรุณาเลือก…',
     other:'อื่น ๆ (พิมพ์เอง)', typeName:'พิมพ์ชื่อของคุณ', sign:'ลายเซ็น',
     signHint:'เซ็นชื่อด้วยนิ้วมือตรงนี้', clear:'ลบ', submit:'ส่ง', sending:'กำลังส่ง…',
     foot:'หลังจากส่งแล้ว ล่ามที่หน้างานจะเห็นว่าคุณเซ็นชื่อแล้ว',
     needName:'กรุณาเลือกหรือพิมพ์ชื่อของคุณ', needSign:'กรุณาเซ็นชื่อก่อน',
-    doneTitle:'ลงชื่อเรียบร้อย', doneMsg:'ขอบคุณ', back:'เปลี่ยนภาษา', netBad:'สัญญาณไม่เสถียร กรุณากดส่งอีกครั้ง' },
+    doneTitle:'ลงชื่อเรียบร้อย', doneMsg:'ขอบคุณ', back:'เปลี่ยนภาษา', who:'ใครเซ็นแล้ว', pickYou:'แตะชื่อของคุณ', signedAt:'เซ็นแล้ว', already:'คุณเซ็นแล้ว', todayT:'เนื้อหาวันนี้', didT:'สิ่งที่ทำ', resT:'ผลลัพธ์', zhOnly:'(บันทึกเป็นภาษาจีน)', ofN:'เซ็นแล้ว', netBad:'สัญญาณไม่เสถียร กรุณากดส่งอีกครั้ง' },
   '印': { self:'Bahasa Indonesia', sub:'印尼文',
     title:'Daftar hadir sosialisasi', name:'Nama Anda', choose:'Silakan pilih…',
     other:'Lainnya (isi sendiri)', typeName:'Tulis nama Anda', sign:'Tanda tangan',
@@ -140,7 +180,7 @@ var T = {
     sending:'Mengirim…',
     foot:'Setelah dikirim, penerjemah di lokasi akan melihat Anda sudah tanda tangan.',
     needName:'Silakan pilih atau tulis nama Anda', needSign:'Silakan tanda tangan dulu',
-    doneTitle:'Berhasil daftar hadir', doneMsg:'Terima kasih', back:'Ganti bahasa', netBad:'Jaringan tidak stabil. Silakan tekan Kirim lagi.' },
+    doneTitle:'Berhasil daftar hadir', doneMsg:'Terima kasih', back:'Ganti bahasa', who:'Siapa yang sudah tanda tangan', pickYou:'Ketuk nama Anda', signedAt:'sudah', already:'Anda sudah tanda tangan', todayT:'Materi hari ini', didT:'Yang dilakukan', resT:'Hasil', zhOnly:'(Catatan dalam bahasa Mandarin)', ofN:'sudah', netBad:'Jaringan tidak stabil. Silakan tekan Kirim lagi.' },
   '英': { self:'English', sub:'英文',
     title:'Briefing sign-in', name:'Your name', choose:'Please select…',
     other:'Other (type it)', typeName:'Type your name', sign:'Signature',
@@ -148,14 +188,14 @@ var T = {
     sending:'Sending…',
     foot:'After you submit, the interpreter here will see that you have signed.',
     needName:'Please choose or type your name', needSign:'Please sign first',
-    doneTitle:'Signed in', doneMsg:'Thank you', back:'Change language', netBad:'Network problem. Please tap Submit again.' },
+    doneTitle:'Signed in', doneMsg:'Thank you', back:'Change language', who:'Who has signed', pickYou:'Tap your name', signedAt:'signed', already:'You have already signed', todayT:"Today's content", didT:'What was done', resT:'Result', zhOnly:'(Record is in Chinese)', ofN:'signed', netBad:'Network problem. Please tap Submit again.' },
   '中': { self:'中文', sub:'中文',
     title:'宣導簽到', name:'你的名字', choose:'請選擇…',
     other:'其他（自己輸入）', typeName:'輸入你的名字', sign:'簽名',
     signHint:'用手指在這裡簽名', clear:'清除', submit:'送出', sending:'送出中…',
     foot:'送出後現場的翻譯人員就會看到你已經簽好了。',
     needName:'請選擇或輸入你的名字', needSign:'請先簽名',
-    doneTitle:'簽到完成', doneMsg:'謝謝你', back:'換語言', netBad:'網路不太穩，請再按一次送出' }
+    doneTitle:'簽到完成', doneMsg:'謝謝你', back:'換語言', who:'誰已經簽了', pickYou:'點你的名字', signedAt:'已簽', already:'你已經簽好了', todayT:'今天的內容', didT:'處理經過', resT:'結果', zhOnly:'', ofN:'已簽', netBad:'網路不太穩，請再按一次送出' }
 };
 function t(k){ return (T[LANG] || T['中'])[k]; }
 
@@ -196,45 +236,119 @@ function pickLang(){
   });
 }
 
-/* ── 第二步：選名字、簽名 ── */
+/* ── 第二步：看誰簽了、點自己的名字、簽名 ── */
+
+var PICK = '';        // 目前選中的名字
+var MYNAME = '';      // 自己簽好的名字（簽完之後不再讓他選別人）
+var POLL = null;
+
 function renderForm(){
-  var names = INFO.names || [];
   $('app').innerHTML =
     '<div class="top"><h1>'+esc(t('title'))+'</h1>'+
       '<p>'+esc(INFO.client)+(INFO.date?'　'+esc(INFO.date):'')+'</p>'+
       (INFO.topic?'<p>'+esc(INFO.topic)+'</p>':'')+'</div>'+
     '<button type="button" class="back" id="back">‹ '+esc(t('back'))+'</button>'+
-    '<div class="card">'+
-      '<label>'+esc(t('name'))+'</label>'+
-      '<select id="nm"><option value="">'+esc(t('choose'))+'</option>'+
-        names.map(function(w){
-          // 移工自己認得的是原文名，只給中文他會找不到自己
-          return '<option value="'+esc(w.n)+'">'+esc(w.n)+
-                 (w.o?'　'+esc(w.o):'')+'</option>'; }).join('')+
-        '<option value="'+OTHER+'">'+esc(t('other'))+'</option></select>'+
-      '<input id="nmOther" placeholder="'+esc(t('typeName'))+'" style="display:none;margin-top:9px">'+
-    '</div>'+
-    '<div class="card">'+
+    '<div id="okbar"></div>'+
+    '<div class="card"><div class="who" id="who"></div></div>'+
+    '<div class="card" id="signCard">'+
       '<label>'+esc(t('sign'))+'</label>'+
       '<div class="pad" id="pad"><canvas id="cv"></canvas>'+
         '<div class="ph">'+esc(t('signHint'))+'</div></div>'+
+      '<input id="nmOther" placeholder="'+esc(t('typeName'))+'" style="display:none;margin-top:9px">'+
       '<div class="row">'+
         '<button type="button" class="act" id="clr">'+esc(t('clear'))+'</button>'+
         '<button type="button" class="act p" id="send">'+esc(t('submit'))+'</button>'+
       '</div>'+
       '<p class="hint">'+esc(t('foot'))+'</p>'+
-    '</div>';
+    '</div>'+
+    '<div class="card" id="cntCard" style="display:none">'+
+      '<label>'+esc(t('todayT'))+'</label>'+
+      '<div id="cnt"></div></div>';
 
-  $('back').addEventListener('click', pickLang);
-  $('nm').addEventListener('change', function(){
-    var on = this.value === OTHER;
-    $('nmOther').style.display = on ? '' : 'none';
-    if(on) $('nmOther').focus();
-  });
+  $('back').addEventListener('click', function(){ stopPoll(); pickLang(); });
   initPad();
   $('clr').addEventListener('click', function(){ PAD.clear(); });
   $('send').addEventListener('click', submit);
+  drawWho(); drawContent();
+  startPoll();
 }
+
+/* ⛔ 只重畫名單，不要重畫整個表單——重畫會把已經畫好的簽名擦掉。
+   2026-09-21 這一頁加上每 12 秒更新之後，這條就是它能不能用的關鍵。 */
+function drawWho(){
+  var names = (INFO.names || []).concat(INFO.extra || []);
+  var done = names.filter(function(w){ return w.at; }).length;
+  $('who').innerHTML =
+    '<div class="whoh"><span>'+esc(t('who'))+'</span>'+
+      '<em>'+done+' / '+names.length+'　'+esc(t('ofN'))+'</em></div>'+
+    names.map(function(w){
+      var cls = 'p1' + (w.at ? ' on' : '') +
+                (w.n === MYNAME ? ' me' : '') +
+                (!w.at && w.n === PICK ? ' sel' : '');
+      return '<button type="button" class="'+cls+'" data-n="'+esc(w.n)+'"'+
+        (w.at ? ' disabled' : '')+'>'+
+        '<span class="tick">✓</span>'+
+        '<span class="who1"><b>'+esc(w.n)+'</b>'+
+          (w.o?'<i>'+esc(w.o)+'</i>':'')+'</span>'+
+        (w.at?'<span class="tm">'+esc(w.at)+'</span>':'')+'</button>';
+    }).join('') +
+    (MYNAME ? '' :
+      '<button type="button" class="p1 oth" data-n="'+OTHER+'">'+
+        esc(t('other'))+'</button>');
+
+  [].forEach.call($('who').querySelectorAll('.p1:not([disabled])'), function(b){
+    b.addEventListener('click', function(){
+      PICK = b.dataset.n;
+      $('nmOther').style.display = (PICK === OTHER) ? '' : 'none';
+      if(PICK === OTHER) $('nmOther').focus();
+      drawWho();
+      $('signCard').scrollIntoView({ behavior:'smooth', block:'center' });
+    });
+  });
+  if(!MYNAME && !PICK){
+    var h = $('who').querySelector('.whoh em');
+    if(h) h.textContent += '　·　' + t('pickYou');
+  }
+}
+
+/* 今天講了什麼。⚠ 工人簽的是「我到場、我聽過」，
+   所以內容要跟簽名放在同一頁，不是另外一張紙。 */
+function drawContent(){
+  var c = INFO.content;
+  if(!c || (!c.big && !c.sub && !(c.did||[]).length && !c.dnote &&
+            !(c.res||[]).length && !c.rnote)){
+    $('cntCard').style.display = 'none'; return;
+  }
+  $('cntCard').style.display = '';
+  var row = function(label, list, free){
+    var body = (list || []).join('、');
+    if(!body && !free) return '';
+    return '<dt>'+esc(label)+'</dt><dd>'+esc(body)+
+      (free?'<div class="free">'+esc(free)+'</div>':'')+'</dd>';
+  };
+  $('cnt').innerHTML =
+    (t('zhOnly') ? '<p class="zhonly">'+esc(t('zhOnly'))+'</p>' : '') +
+    '<dl class="cnt">'+
+      row(t('name') === 'Your name' ? 'Item' : '服務項目',
+          [c.big, c.sub].filter(String), '') +
+      row(t('didT'), c.did, c.dnote) +
+      row(t('resT'), c.res, c.rnote) +
+    '</dl>';
+}
+
+/* 每 12 秒更新一次「誰簽了」。
+   ⚠ 不要更短：一場三十個人同時開著這一頁，每個人都在打後端。
+   ⚠ 也不要用 setInterval 疊加——換語言、送出之後都要先停掉。 */
+function startPoll(){
+  stopPoll();
+  POLL = setInterval(function(){
+    api('briefingInfo', null, function(r){
+      if(!r || !r.ok) return;              // 結束了就維持現況，不要把畫面洗掉
+      INFO = r; drawWho(); drawContent();
+    });
+  }, 12000);
+}
+function stopPoll(){ if(POLL){ clearInterval(POLL); POLL = null; } }
 
 var PAD = null;
 function initPad(){
@@ -278,8 +392,7 @@ function initPad(){
 }
 
 function submit(){
-  var sel = $('nm');
-  var name = sel.value === OTHER ? $('nmOther').value.trim() : sel.value;
+  var name = (PICK === OTHER) ? $('nmOther').value.trim() : PICK;
   if(!name){ alert(t('needName')); return; }
   if(!PAD.dirty()){ alert(t('needSign')); return; }
   var b = $('send'); b.disabled = true; b.textContent = t('sending');
@@ -291,10 +404,19 @@ function submit(){
           b.disabled=false; b.textContent=t('submit');
           alert((r && r.err) || t('needSign')); return;
         }
-        $('app').innerHTML =
-          '<div class="done"><div class="ic">✓</div>'+
-            '<h2>'+esc(t('doneTitle'))+'</h2>'+
-            '<p>'+esc(name)+'　'+esc(t('doneMsg'))+'</p></div>';
+        /* ⛔ 不要整頁換成「完成」就結束。他簽完還要看得到今天的內容、
+           也要看得到還有誰沒簽（現場常常是一個人幫全組看）。
+           所以留在同一頁，上面加一條成功提示。 */
+        MYNAME = name; PICK = '';
+        b.disabled = false; b.textContent = t('submit');
+        $('okbar').innerHTML = '<div class="okbar">✓ '+esc(t('doneTitle'))+
+          '　'+esc(name)+'</div>';
+        $('signCard').style.display = 'none';
+        api('briefingInfo', null, function(r2){
+          if(r2 && r2.ok){ INFO = r2; }
+          drawWho(); drawContent();
+          $('okbar').scrollIntoView({ behavior:'smooth', block:'center' });
+        });
       },
       function(){ b.disabled=false; b.textContent=t('submit');
                   alert(t('netBad')); });
