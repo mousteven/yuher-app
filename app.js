@@ -4785,6 +4785,8 @@ function loadTrack(force){
     .listCases(CODE, want);
 }
 
+if($('tkAdd')) $('tkAdd').addEventListener('click', function(){ openPick(null); });
+
 function drawKinds(){
   $('tkKinds').innerHTML = TK_KINDS.map(function(k){
     var n = TK_COUNTS[k] || 0;
@@ -5637,15 +5639,72 @@ var PICK_D_ = null;
    會不會渲染出來是整個功能的入口，不值得賭在一段非同步流程上。
    動態的只剩「掛到現有案件」，放在另一個 div，失敗就是少那一段，
    四個選項照樣在。 */
+/* d = null 代表「從追蹤頁直接開」——沒有行程、也還不知道是誰。
+   ⛔ 返鄉休假通常是工人先來講「我十一月要回家」，那時候還沒有任何行程。
+      只留「行事曆右滑」一個入口，等於逼人先去排一筆假行程。 */
 function openPick(d){
   if(!$('pickModal')){ toast('要先更新 App 才有追蹤功能', true); return; }
   PICK_D_ = d;
   $('pickEx').innerHTML = '';
+  var who = $('pickWho');
+  if(who) who.style.display = d ? 'none' : '';
+  $('pickWhy').textContent = d
+    ? '開好之後，這一趟的服務紀錄會自動掛到那個案件底下。'
+    : '先選是誰，再選要開哪一種。之後那一家的服務紀錄可以再掛進來。';
   $('pickModal').style.display = '';
+  if(!d){ pkcFill(); return; }        // 還沒選人，沒有「現有案件」可以查
   google.script.run
     .withSuccessHandler(function(r){ drawPickEx((r && r.rows) || []); })
     .withFailureHandler(function(){})
     .openCasesForWorker(CODE, (d.workers || '').split('、')[0] || '', d.client || '');
+}
+
+/* 追蹤頁那顆「＋ 開一件追蹤」用的雇主選擇器。跟其他三個畫面同一個元件。 */
+var PKC_PK_ = {
+  id: 'pkcPk', mode: 'svc', list: [], allowNew: true,
+  onPick: function(c){
+    $('pkClient').value = c;
+    $('pkcPkVal').textContent = c;
+    $('pkcPkVal').classList.add('has');
+    $('pkcPkVal').classList.remove('open');
+    $('pkcPkPop').style.display = 'none';
+    pkcWorkers();
+    /* 選好人才查得到「已經有哪幾件」——不查的話他會重複開一件。 */
+    google.script.run
+      .withSuccessHandler(function(r){ drawPickEx((r && r.rows) || []); })
+      .withFailureHandler(function(){})
+      .openCasesForWorker(CODE, '', c);
+  }
+};
+if($('pkcPkVal')) pkWire(PKC_PK_);
+
+function pkcFill(){
+  if(!$('pkcPkVal')) return;
+  var kind = $('pkTarget').value.indexOf('家庭') !== -1 ? '家庭雇主' : '工廠';
+  PKC_PK_.list = PRESETS.filter(function(x){ return (x.t||'工廠') === kind; })
+                        .map(pkFromPreset_);
+  $('pkClient').value = '';
+  $('pkcPkVal').textContent = '請選擇…';
+  $('pkcPkVal').classList.remove('has');
+  $('pkWorkers').innerHTML = '<div class="empty">先選工廠／雇主</div>';
+  $('pickEx').innerHTML = '';
+}
+if($('pkTarget')) $('pkTarget').addEventListener('change', pkcFill);
+
+function pkcWorkers(){
+  var pz = presetOf($('pkClient').value);
+  var ws = pz ? pz.w : [];
+  $('pkWorkers').innerHTML = ws.length
+    ? ws.map(function(w){
+        return '<label><input type="checkbox" value="'+esc(w.n)+'">'+
+          '<span>'+esc(w.n)+(w.o?'<span class="o">'+esc(w.o)+'</span>':'')+'</span>'+
+          (w.l?'<span class="lg">'+esc(w.l)+'</span>':'')+'</label>';
+      }).join('')
+    : '<div class="empty">這一家名冊上沒有人，直接開也可以</div>';
+}
+function pkcPicked(){
+  return [].map.call($('pkWorkers').querySelectorAll('input:checked'),
+                     function(i){ return i.value; }).join('、');
 }
 
 function drawPickEx(existing){
@@ -5666,12 +5725,19 @@ function drawPickEx(existing){
 });
 
 function pickNew(kind){
-  var d = PICK_D_ || {};
+  var d = PICK_D_;
+  if(!d){
+    /* 從追蹤頁直接開的那條路：雇主是必填，移工可以空著
+       （例如整廠的宣導型追蹤）。 */
+    var c = ($('pkClient') || {}).value || '';
+    if(!c){ toast('請先選工廠／雇主名稱', true); return; }
+    d = { client: c, workers: pkcPicked(), target: $('pkTarget').value };
+  }
   $('pickModal').style.display = 'none';
   google.script.run
     .withSuccessHandler(function(r){
       toast('已開 ' + r.id);
-      TK_CUR = kind; TK_ROWS = []; TK_LOADED = '';
+      TK_CUR = kind; tkBust();
       goTab('track');
       openCase(r.id);
     })
