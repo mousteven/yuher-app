@@ -1897,17 +1897,37 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .hcride span{display:block;font-size:0.75rem;color:var(--ink2);margin-top:2px;
   padding-left:22px}
 
-/* 開單：通知誰 */
-.hcw{display:flex;align-items:flex-start;gap:9px;padding:9px 0;
-  border-bottom:1px solid var(--line2)}
+/* 開單：通知誰
+
+   ⛔ 上下堆疊，不是並排（2026-09-21 改）。
+      並排的時候「30 個月的應辦期間已經過完（2026-05-30），來源沒有紀錄」
+      那種長句被擠成兩個字寬的直柱，電話輸入框整個掉出螢幕。
+      原因是三樣東西搶同一行，而說明文字的長度是不可控的。
+   ⚠ 說明靠左：那是一句話，不是一個數字，靠右讀起來是斷的。
+   ⚠ 這一組樣式只能有一份。2026-09-21 曾經在檔案兩處各有一份
+      `.hcw{}`，隔了 200 行，改了上面那份完全沒反應。 */
+.hcw{display:block;padding:10px 0;border-bottom:1px solid var(--line2)}
 .hcw:last-child{border-bottom:0}
-.hcw input{margin-top:3px;flex:none}
-.hcw .n{font-size:0.9375rem;font-weight:600;flex:none;min-width:5.2em}
+.hcw label.p{display:grid;grid-template-columns:auto 1fr;gap:3px 9px;
+  align-items:start}
+.hcw label.p > input[type=checkbox]{grid-row:1/3;align-self:start;margin-top:3px}
+.hcw .n{grid-column:2;font-size:0.9375rem;font-weight:600;min-width:0}
 .hcw .n em{font-style:normal;font-size:0.6875rem;color:var(--ink3);
   font-weight:400;margin-left:5px}
-.hcw .w{font-size:0.75rem;color:var(--ink2);flex:1;text-align:right}
+/* 原文名：中文名會撞（1781 人裡 198 個重複），勾人的時候靠它確定是哪一個。 */
+.hcw .n .og{display:block;font-style:normal;font-weight:400;
+  font-family:ui-monospace,Menlo,monospace;font-size:0.6875rem;
+  color:var(--ink3);letter-spacing:.01em}
+.hcw .w{grid-column:2;font-size:0.75rem;color:var(--ink2);line-height:1.55}
 .hcw .w i{display:block;font-style:normal;font-size:0.625rem;color:var(--ink3)}
 .hcw.late .w{color:var(--bad-ink);font-weight:600}
+/* 應辦期間整個過完、來源又沒紀錄＝真的漏了。不要跟一般逾期同色。 */
+.hcw .w.miss{color:var(--bad-ink);font-weight:700}
+.hcw .hcph{width:100%;margin-top:8px;border:1px solid var(--line);
+  border-radius:9px;padding:9px 11px;font-size:0.875rem;
+  font-family:ui-monospace,Menlo,monospace;
+  background:var(--card);color:var(--ink)}
+.hcw .hcph::placeholder{font-family:inherit;color:var(--ink3);font-size:0.8125rem}
 
 /* 要貼出去的訊息 */
 .hcmsg{border:1px solid var(--line);border-radius:11px;overflow:hidden;
@@ -2117,18 +2137,3 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 #hcAlertBar .more{margin-left:auto;font-size:0.75rem;color:var(--ink2);
   flex:none}
 
-/* 體檢開單：每個人底下多一格電話 */
-/* 開單畫面的原文名：中文名會撞（1781 人裡 198 個重複），
-   勾人的時候要靠原文名才確定是哪一個。 */
-.hcw .n .og{display:block;font-style:normal;font-family:ui-monospace,Menlo,monospace;
-  font-size:0.6875rem;color:var(--ink3);letter-spacing:.01em}
-/* 應辦期間整個過完、來源又沒紀錄＝真的漏了。不要跟一般逾期同色。 */
-.hcw .w.miss{color:var(--bad-ink);font-weight:700}
-.hcw{padding:10px 0;border-bottom:1px solid var(--line2)}
-.hcw:last-child{border-bottom:0}
-.hcw label.p{display:flex;align-items:flex-start;gap:9px}
-.hcw .hcph{width:100%;margin-top:7px;margin-left:24px;
-  width:calc(100% - 24px);border:1px solid var(--line);border-radius:9px;
-  padding:9px 11px;font-size:0.875rem;font-family:ui-monospace,Menlo,monospace;
-  background:var(--card);color:var(--ink)}
-.hcw .hcph::placeholder{font-family:inherit;color:var(--ink3);font-size:0.8125rem}
