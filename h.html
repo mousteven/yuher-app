@@ -321,6 +321,7 @@ var D = null, SHOT = null, STEP = 1, DOB = '', TAIL = '', HASP = false;
      下一個人點進來看到別人的體檢通知是最難解釋的那種錯。 */
 var MYTOK = '';
 var PICKI = -1;
+var SHOWLIST = false;
 function myKey(){ return 'hc.me.' + SCODE; }
 function loadMe(){
   try { MYTOK = localStorage.getItem(myKey()) || ''; } catch(e){ MYTOK = ''; }
@@ -638,13 +639,23 @@ function row(k, main, sub){
   return '<li><em>' + lbl(k) + '</em><div class="v"><b>' + main + '</b>' +
     (sub ? '<span>' + esc(sub) + '</span>' : '') + '</div></li>';
 }
+/* ⛔ 判斷要明確比對「自行前往」，不可以寫成「不等於接送」。
+   2026-09-21 實機：群組連結點完名字之後畫面用錯資料，D.ride 是 undefined，
+   `D.ride !== '接送'` 變成 true，於是印出「你自己前往醫院」——
+   **而那一批其實有派車**。工人照著做會自己跑一趟，或以為沒車就不去。
+   「沒有值」不等於「不是」。 */
 function note(k){
+  var own = (k === 'ride' && D.ride === '自行前往');
   return '<li><em>' + lbl(k) + '</em><div class="v">' +
-    '<b style="font-weight:400;font-size:14px;color:var(--w75)">' + two(k === 'ride' &&
-      D.ride !== '接送' ? 'own' : 'pend') + '</b></div></li>';
+    '<b style="font-weight:400;font-size:14px;color:var(--w75)">' +
+    two(own ? 'own' : 'pend') + '</b></div></li>';
 }
 
+/* ⛔ 沒有姓名就整區不畫。
+   用「沒有值」去畫個人區塊，畫出來的是一張空的、看起來壞掉的單子——
+   2026-09-21 實機就是這樣：WHO 底下一片空白。 */
 function secWho(){
+  if(!D.name) return '';
   /* 電話放這一區：這一區本來就是在回答「這是不是我」。
      ⛔ 只顯示遮罩過的後三碼，而且只在確認之後。
         本人看得出「對，是我的號碼」就夠了，
@@ -676,7 +687,7 @@ function secWhere(){
        地標才是他自己找得到門口的東西。 */
   if(D.hosMark) h += row('mark', esc(D.hosMark));
   if(D.hosAddr) h += row('addr', esc(D.hosAddr));
-  if(D.ride !== '接送' || !D.car){
+  if(D.ride === '自行前往' || !D.car){
     h += note('ride');
   } else {
     var c = D.car;
@@ -793,17 +804,28 @@ function calBtn(){
       跟目的正好相反。
    ⚠ 這一頁還不知道你是誰，所以每一種語別各印一行提示。
      只印中文的話，看不懂中文的人第一步就卡住。 */
-function pickPage(){
-  var ls = (D.langs || ['zh']).filter(function(x){ return x !== 'zh'; });
-  var ask = ls.map(function(l){
-    return '<p class="q">' + esc((T[l] || T.en).q0) + '</p>';
-  }).join('') + '<p class="qz">' + esc(ZH.q0) + '</p>';
+/* 還沒認人之前先看到通知本身（牟佑彬 2026-09-21 定案）。
+   ⛔ 只畫「整批共通」的東西：日期、醫院、要帶什麼、注意事項。
+      那些本來就在群組訊息裡，沒有多洩漏。
+   ⛔ 個人的東西（姓名、接送對象、車牌、電話）在拿到那個人的資料之前
+      一格都不畫——今天那個 bug 就是用「沒有值」推論出「自行前往」。
+   ⚠ 理由不只是安全：就算他懶得認自己，通知也已經到他眼前了，
+     而「確實通知到」正是這條連結存在的目的。 */
+function noticePage(){
+  return '<div class="pg">' + head() + band() +
+    '<div class="bd">' + secWhere() + secWhat() +
+      '<button type="button" id="whoami">' + esc(t('q0')) +
+      (zhOnly() ? '' : '<small>' + esc(ZH.q0) + '</small>') + '</button>' +
+    '</div><div class="prog"><i class="on"></i><i></i><i></i></div></div>';
+}
 
+function listPage(){
   return '<div class="pg">' +
     '<div class="hd"><span class="brand">YU HER MANAGEMENT</span>' +
       '<span class="no">' + esc(D.client || '') + '　' +
       (D.list || []).length + ' 位</span></div>' +
-    '<div class="bd">' + ask +
+    '<div class="bd"><p class="q">' + esc(t('q0')) + '</p>' +
+    (zhOnly() ? '' : '<p class="qz">' + esc(ZH.q0) + '</p>') +
     '<div class="who">' + (D.list || []).map(function(p){
       return '<button type="button" class="pk" data-i="' + p.i + '">' +
         '<span class="av">' + esc(p.name.slice(0, 1)) + '</span>' +
@@ -811,15 +833,28 @@ function pickPage(){
         (p.orig ? '<i>' + esc(p.orig) + '</i>' : '') + '</span></button>';
     }).join('') + '</div>' +
     '<p class="why">' + esc(ZH.q0z) + '</p>' +
-    '</div><div class="prog"><i class="on"></i><i></i></div></div>';
+    '</div><div class="prog"><i class="on"></i><i class="on"></i><i></i></div></div>';
 }
+
+/* 認完名字之後問生日。整頁只有這一件事——
+   底下那一大張通知這時候只會讓他分心。 */
+function pickDobPage(){
+  var me = (D.list || []).filter(function(p){ return p.i === PICKI; })[0] || {};
+  return '<div class="pg">' +
+    '<div class="hd"><span class="brand">' + esc(me.name || '') + '</span>' +
+      '<span class="no">' + esc(me.orig || '') + '</span></div>' +
+    '<div class="bd">' + step1() + '</div>' +
+    '<div class="prog"><i class="on"></i><i class="on"></i><i></i></div></div>';
+}
+
 function bindPick(){
   [].forEach.call(document.querySelectorAll('.pk'), function(b){
     b.addEventListener('click', function(){
-      PICKI = +b.dataset.i;
-      STEP = 1; draw();
+      PICKI = +b.dataset.i; STEP = 1; draw();
     });
   });
+  var w = $('whoami');
+  if(w) w.addEventListener('click', function(){ SHOWLIST = true; draw(); });
 }
 
 /* ── 確認 V1：兩步 ──────────────────────────────── */
@@ -872,7 +907,15 @@ function bind1(){
     api(fn, (fn === 'hcPickMe') ? { i: PICKI, dob: DOB } : { dob: DOB },
         function(r){
       b.disabled = false;
-      if(r && r.t){ saveMe(r.t); PICKI = -1; STEP = 1; load(); return; }
+      /* ⛔ 生日只問一次。過了就直接走到電話那一步。
+         退回第一步會再問一次生日——使用者對「我明明剛填過」的
+         容忍度是零，第二次他會以為系統壞了然後關掉。 */
+      if(r && r.t){
+        saveMe(r.t); PICKI = -1; SHOWLIST = false;
+        HASP = !!r.hasPhone; TAIL = r.phoneTail || '';
+        STEP = r.already ? 1 : 2;
+        load(); return;
+      }
       if(r && r.already){ load(); return; }
       if(r && r.ok){
         HASP = !!r.hasPhone; TAIL = r.phoneTail || ''; STEP = 2; draw(); return;
@@ -1029,7 +1072,7 @@ function send(){
 function bindNotMe(){
   var b = $('notme'); if(!b) return;
   b.addEventListener('click', function(){
-    saveMe(''); PICKI = -1; STEP = 1; D = null;
+    saveMe(''); PICKI = -1; SHOWLIST = false; STEP = 1; D = null;
     $('app').innerHTML = '<p class="load">…</p>';
     load();
   });
@@ -1039,9 +1082,13 @@ function bindNotMe(){
 function draw(){
   document.body.className = (D.lang === 'th') ? 'th' : '';
 
-  /* 群組連結、還沒認人 → 先出名單。 */
-  if(D.mode === 'pick' && PICKI < 0){
-    $('app').innerHTML = pickPage();
+  /* 群組連結、還沒認人。三個畫面，一路往前不回頭：
+       通知本身 → 名單 → 生日
+     ⛔ 這三個之後絕對不可以再落到下面那一段（畫「那個人」的頁面），
+        因為 D 是「這一批」的資料，不是「這個人」的。 */
+  if(D.mode === 'pick' && !MYTOK){
+    if(PICKI >= 0){ $('app').innerHTML = pickDobPage(); bind1(); return; }
+    $('app').innerHTML = SHOWLIST ? listPage() : noticePage();
     bindPick(); return;
   }
 
