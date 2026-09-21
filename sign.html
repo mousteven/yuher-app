@@ -116,7 +116,9 @@ button.act:disabled{opacity:.5}
 .cnt dt{font-size:13px;font-weight:700;color:var(--ink3);margin:12px 0 3px}
 .cnt dt:first-child{margin-top:0}
 .cnt dd{margin:0;font-size:16px;color:var(--ink);line-height:1.6}
-.cnt .free{color:var(--ink2);font-size:15px;margin-top:3px;white-space:pre-wrap}
+.cnt dd b{display:block;font-weight:700}
+/* 中文是正式紀錄上的字，一定要看得到，但不要搶掉譯文 */
+.cnt dd .zh{color:var(--ink3);font-size:14px;margin-top:2px;line-height:1.5}
 .zhonly{font-size:13px;color:var(--ink3);margin:0 0 10px}
 .okbar{background:#E4F1E9;border:1px solid #BFDECB;color:var(--ok);
   border-radius:12px;padding:13px 14px;font-size:16px;font-weight:700;
@@ -165,14 +167,14 @@ var T = {
     signHint:'Ký bằng ngón tay tại đây', clear:'Xóa', submit:'Gửi', sending:'Đang gửi…',
     foot:'Sau khi gửi, phiên dịch viên tại hiện trường sẽ thấy bạn đã ký.',
     needName:'Vui lòng chọn hoặc nhập tên của bạn', needSign:'Vui lòng ký tên trước',
-    doneTitle:'Đã điểm danh', doneMsg:'Cảm ơn bạn', back:'Đổi ngôn ngữ', itemT:'Nội dung', who:'Ai đã ký', pickYou:'Chạm vào tên của bạn', signedAt:'đã ký', already:'Bạn đã ký rồi', todayT:'Nội dung hôm nay', didT:'Đã làm gì', resT:'Kết quả', zhOnly:'(Bản ghi bằng tiếng Trung)', ofN:'đã ký', netBad:'Mạng không ổn định. Vui lòng bấm Gửi lại.' },
+    doneTitle:'Đã điểm danh', doneMsg:'Cảm ơn bạn', back:'Đổi ngôn ngữ', itemT:'Nội dung', mt:'Bản dịch tự động, bản tiếng Trung là bản chính thức.', who:'Ai đã ký', pickYou:'Chạm vào tên của bạn', signedAt:'đã ký', already:'Bạn đã ký rồi', todayT:'Nội dung hôm nay', didT:'Đã làm gì', resT:'Kết quả', zhOnly:'(Bản ghi bằng tiếng Trung)', ofN:'đã ký', netBad:'Mạng không ổn định. Vui lòng bấm Gửi lại.' },
   '泰': { self:'ภาษาไทย', sub:'泰文',
     title:'ลงชื่อเข้าร่วมการอบรม', name:'ชื่อของคุณ', choose:'กรุณาเลือก…',
     other:'อื่น ๆ (พิมพ์เอง)', typeName:'พิมพ์ชื่อของคุณ', sign:'ลายเซ็น',
     signHint:'เซ็นชื่อด้วยนิ้วมือตรงนี้', clear:'ลบ', submit:'ส่ง', sending:'กำลังส่ง…',
     foot:'หลังจากส่งแล้ว ล่ามที่หน้างานจะเห็นว่าคุณเซ็นชื่อแล้ว',
     needName:'กรุณาเลือกหรือพิมพ์ชื่อของคุณ', needSign:'กรุณาเซ็นชื่อก่อน',
-    doneTitle:'ลงชื่อเรียบร้อย', doneMsg:'ขอบคุณ', back:'เปลี่ยนภาษา', itemT:'หัวข้อ', who:'ใครเซ็นแล้ว', pickYou:'แตะชื่อของคุณ', signedAt:'เซ็นแล้ว', already:'คุณเซ็นแล้ว', todayT:'เนื้อหาวันนี้', didT:'สิ่งที่ทำ', resT:'ผลลัพธ์', zhOnly:'(บันทึกเป็นภาษาจีน)', ofN:'เซ็นแล้ว', netBad:'สัญญาณไม่เสถียร กรุณากดส่งอีกครั้ง' },
+    doneTitle:'ลงชื่อเรียบร้อย', doneMsg:'ขอบคุณ', back:'เปลี่ยนภาษา', itemT:'หัวข้อ', mt:'แปลด้วยระบบอัตโนมัติ ฉบับภาษาจีนเป็นฉบับทางการ', who:'ใครเซ็นแล้ว', pickYou:'แตะชื่อของคุณ', signedAt:'เซ็นแล้ว', already:'คุณเซ็นแล้ว', todayT:'เนื้อหาวันนี้', didT:'สิ่งที่ทำ', resT:'ผลลัพธ์', zhOnly:'(บันทึกเป็นภาษาจีน)', ofN:'เซ็นแล้ว', netBad:'สัญญาณไม่เสถียร กรุณากดส่งอีกครั้ง' },
   '印': { self:'Bahasa Indonesia', sub:'印尼文',
     title:'Daftar hadir sosialisasi', name:'Nama Anda', choose:'Silakan pilih…',
     other:'Lainnya (isi sendiri)', typeName:'Tulis nama Anda', sign:'Tanda tangan',
@@ -180,7 +182,7 @@ var T = {
     sending:'Mengirim…',
     foot:'Setelah dikirim, penerjemah di lokasi akan melihat Anda sudah tanda tangan.',
     needName:'Silakan pilih atau tulis nama Anda', needSign:'Silakan tanda tangan dulu',
-    doneTitle:'Berhasil daftar hadir', doneMsg:'Terima kasih', back:'Ganti bahasa', itemT:'Materi', who:'Siapa yang sudah tanda tangan', pickYou:'Ketuk nama Anda', signedAt:'sudah', already:'Anda sudah tanda tangan', todayT:'Materi hari ini', didT:'Yang dilakukan', resT:'Hasil', zhOnly:'(Catatan dalam bahasa Mandarin)', ofN:'sudah', netBad:'Jaringan tidak stabil. Silakan tekan Kirim lagi.' },
+    doneTitle:'Berhasil daftar hadir', doneMsg:'Terima kasih', back:'Ganti bahasa', itemT:'Materi', mt:'Terjemahan mesin; versi bahasa Mandarin adalah yang resmi.', who:'Siapa yang sudah tanda tangan', pickYou:'Ketuk nama Anda', signedAt:'sudah', already:'Anda sudah tanda tangan', todayT:'Materi hari ini', didT:'Yang dilakukan', resT:'Hasil', zhOnly:'(Catatan dalam bahasa Mandarin)', ofN:'sudah', netBad:'Jaringan tidak stabil. Silakan tekan Kirim lagi.' },
   '英': { self:'English', sub:'英文',
     title:'Briefing sign-in', name:'Your name', choose:'Please select…',
     other:'Other (type it)', typeName:'Type your name', sign:'Signature',
@@ -188,14 +190,14 @@ var T = {
     sending:'Sending…',
     foot:'After you submit, the interpreter here will see that you have signed.',
     needName:'Please choose or type your name', needSign:'Please sign first',
-    doneTitle:'Signed in', doneMsg:'Thank you', back:'Change language', itemT:'Item', who:'Who has signed', pickYou:'Tap your name', signedAt:'signed', already:'You have already signed', todayT:"Today's content", didT:'What was done', resT:'Result', zhOnly:'(Record is in Chinese)', ofN:'signed', netBad:'Network problem. Please tap Submit again.' },
+    doneTitle:'Signed in', doneMsg:'Thank you', back:'Change language', itemT:'Item', mt:'Machine translation. The Chinese text is the official record.', who:'Who has signed', pickYou:'Tap your name', signedAt:'signed', already:'You have already signed', todayT:"Today's content", didT:'What was done', resT:'Result', zhOnly:'(Record is in Chinese)', ofN:'signed', netBad:'Network problem. Please tap Submit again.' },
   '中': { self:'中文', sub:'中文',
     title:'宣導簽到', name:'你的名字', choose:'請選擇…',
     other:'其他（自己輸入）', typeName:'輸入你的名字', sign:'簽名',
     signHint:'用手指在這裡簽名', clear:'清除', submit:'送出', sending:'送出中…',
     foot:'送出後現場的翻譯人員就會看到你已經簽好了。',
     needName:'請選擇或輸入你的名字', needSign:'請先簽名',
-    doneTitle:'簽到完成', doneMsg:'謝謝你', back:'換語言', itemT:'服務項目', who:'誰已經簽了', pickYou:'點你的名字', signedAt:'已簽', already:'你已經簽好了', todayT:'今天的內容', didT:'處理經過', resT:'結果', zhOnly:'', ofN:'已簽', netBad:'網路不太穩，請再按一次送出' }
+    doneTitle:'簽到完成', doneMsg:'謝謝你', back:'換語言', itemT:'服務項目', mt:'', who:'誰已經簽了', pickYou:'點你的名字', signedAt:'已簽', already:'你已經簽好了', todayT:'今天的內容', didT:'處理經過', resT:'結果', zhOnly:'', ofN:'已簽', netBad:'網路不太穩，請再按一次送出' }
 };
 function t(k){ return (T[LANG] || T['中'])[k]; }
 
@@ -323,19 +325,26 @@ function drawContent(){
     $('cntCard').style.display = 'none'; return;
   }
   $('cntCard').style.display = '';
-  var row = function(label, list, free){
-    var body = (list || []).join('、');
-    if(!body && !free) return '';
-    return '<dt>'+esc(label)+'</dt><dd>'+esc(body)+
-      (free?'<div class="free">'+esc(free)+'</div>':'')+'</dd>';
-  };
-  $('cnt').innerHTML =
-    (t('zhOnly') ? '<p class="zhonly">'+esc(t('zhOnly'))+'</p>' : '') +
-    '<dl class="cnt">'+
-      row(t('itemT'), [c.big, c.sub].filter(String), '') +
-      row(t('didT'), c.did, c.dnote) +
-      row(t('resT'), c.res, c.rnote) +
-    '</dl>';
+  /* 三行，順序跟一對一的「預覽」一樣：項目／處理經過／結果。
+     ⚠ 譯文在上、中文在下。他讀的是譯文，但中文是正式紀錄上的字，
+       兩個都要在——這是機器翻譯，蓋掉原文等於叫他簽一份看不到原文的東西。 */
+  var zh = [
+    [c.big, c.sub].filter(String).join(' ／ '),
+    (c.did || []).join('、') + (c.dnote ? '。' + c.dnote : ''),
+    (c.res || []).join('、') + (c.rnote ? '。' + c.rnote : '')
+  ];
+  var tr = (c.tr && c.tr[LANG]) || null;      // 中文介面就沒有譯文，本來就不用
+  var lab = [t('itemT'), t('didT'), t('resT')];
+  var out = '';
+  for(var i = 0; i < 3; i++){
+    if(!zh[i]) continue;
+    var line = tr && tr[i];
+    out += '<dt>' + esc(lab[i]) + '</dt><dd>' +
+      (line ? '<b>' + esc(line) + '</b>' : '') +
+      '<div class="zh">' + esc(zh[i]) + '</div></dd>';
+  }
+  $('cnt').innerHTML = '<dl class="cnt">' + out + '</dl>' +
+    (tr ? '<p class="zhonly">' + esc(t('mt')) + '</p>' : '');
 }
 
 /* 每 12 秒更新一次「誰簽了」。
