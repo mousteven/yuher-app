@@ -1897,6 +1897,19 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .hcride span{display:block;font-size:0.75rem;color:var(--ink2);margin-top:2px;
   padding-left:22px}
 
+/* 宣導：把簽到連結傳到工廠群組 */
+.bshare{display:flex;gap:8px;margin-top:10px}
+.bshare a,.bshare button{flex:1;display:block;text-align:center;padding:11px 8px;
+  border-radius:10px;font:inherit;font-size:0.8125rem;font-weight:700;
+  text-decoration:none;border:1px solid var(--line);background:var(--card);
+  color:var(--ink2)}
+.bshare a.line{background:#06C755;border-color:#06C755;color:#fff}
+
+/* 宣導：補簽期限那一行 */
+.bdue{font-size:0.75rem;color:var(--ink2);text-align:center;margin:8px 0 0;
+  line-height:1.5}
+.bdue.off{color:var(--bad-ink);font-weight:600}
+
 /* ══ 雇主選擇器 ══════════════════════════════════
    309 家。原生 select 在手機上要捲三十次，而且看不出哪一家有事。 */
 .epk{position:relative}

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sign in · 宣導簽到</title>
+<!--
+  宣導簽到：移工掃 QR 打開的那一頁
+
+  ⛔ 這一頁住在 GitHub Pages，不在 Apps Script（2026-09-21 搬過來）。
+     原因跟體檢通知那一頁（h.html）一模一樣：Apps Script 代管的網頁，
+     Google 會在最上面掛一條「這個應用程式是由 Google Apps Script 的
+     使用者建立　檢舉濫用情形」。掃 QR 的是一群看不懂中文的移工，
+     「檢舉濫用情形」六個字等於「這是詐騙」。
+     它在我們的頁面外層，程式裡移不掉——只能不要住在那裡。
+
+  ⛔ 所以這一頁沒有 google.script.run，改用 fetch 打 Apps Script 的
+     JSON 介面（見下面的 api()）。後端在 HealthCheckPub.gs 的 hcApi_。
+     ⚠ POST 一定要用 text/plain。用 application/json 會觸發 preflight，
+       而 Apps Script 沒有 doOptions，整個請求會被瀏覽器擋掉。
+
+  ⛔ 檔名 sign.html 與參數 ?b= 不可以改。QR 一旦印出來、貼進群組就改不掉了。
+     舊的 ?page=sign&b= 由 Code.gs 轉址過來。
+
+  流程刻意設計成「先選語言，再看得懂其他所有東西」：
+  現場一場宣導常常混了越南、泰國、印尼幾個國籍，
+  一開始就用中文問「你是誰」，看不懂中文的人第一步就卡住。
+  所以第一頁只有語言選擇，而且每個選項都用該語言自己的寫法呈現。
+-->
+<style>
+:root{
+  --bg:#F4F6F7; --card:#fff; --ink:#12181B; --ink2:#4A575E; --ink3:#8A959B;
+  --line:#DCE3E5; --brand:#2E7D8A; --brand2:#1F5F6B; --ok:#2E7D4F; --danger:#B3261E;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  font-size:17px;line-height:1.7;-webkit-text-size-adjust:100%}
+.wrap{max-width:520px;margin:0 auto;padding:18px 16px 46px}
+.top{background:var(--brand);color:#fff;padding:16px 18px;border-radius:14px;margin-bottom:16px}
+.top h1{margin:0;font-size:20px;font-weight:700}
+.top p{margin:3px 0 0;font-size:14px;opacity:.92}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:16px;margin-bottom:14px}
+label{display:block;font-size:14px;font-weight:700;color:var(--ink2);margin-bottom:7px}
+select,input{width:100%;padding:14px 13px;border:1px solid var(--line);border-radius:11px;
+  background:#F8FAFA;font-size:17px;font-family:inherit;color:var(--ink)}
+
+/* 語言選擇：每個選項用自己的語言寫，看不懂中文的人也能直接認出母語 */
+.langs{display:flex;flex-direction:column;gap:11px}
+.langs button{width:100%;padding:18px 16px;border:1px solid var(--line);border-radius:14px;
+  background:#fff;text-align:left;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;gap:14px}
+.langs button:active{background:#EFF5F5}
+.langs .flag{width:44px;height:44px;border-radius:12px;background:#EDF3F3;color:var(--brand2);
+  display:grid;place-items:center;font-size:17px;font-weight:800;flex:none}
+.langs .nm{font-size:19px;font-weight:700;color:var(--ink)}
+.langs .sub{font-size:13px;color:var(--ink3);margin-top:1px}
+
+.chips{display:flex;flex-wrap:wrap;gap:9px}
+.pad{border:2px dashed var(--line);border-radius:14px;background:#fff;height:230px;
+  position:relative;overflow:hidden;touch-action:none}
+.pad.on{border-style:solid;border-color:var(--brand)}
+.pad canvas{display:block;width:100%;height:100%}
+.pad .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:var(--ink3);font-size:16px;pointer-events:none;text-align:center;padding:0 20px}
+.pad.on .ph{display:none}
+.row{display:flex;gap:10px;margin-top:12px}
+button.act{flex:1;padding:16px;border-radius:12px;border:1px solid var(--line);background:#fff;
+  font-size:17px;font-weight:700;font-family:inherit;color:var(--ink2);cursor:pointer}
+button.act.p{background:var(--brand);border-color:var(--brand);color:#fff}
+button.act:disabled{opacity:.5}
+.mid{padding:56px 20px;text-align:center;color:var(--ink3);font-size:16px;line-height:1.9}
+.done{text-align:center;padding:44px 20px}
+.done .ic{width:82px;height:82px;border-radius:50%;background:#E4F1E9;color:var(--ok);
+  display:grid;place-items:center;margin:0 auto 18px;font-size:42px;font-weight:700}
+.done h2{margin:0 0 8px;font-size:24px}
+.done p{margin:0;color:var(--ink2);font-size:17px}
+.err{background:#F8EAEF;border:1px solid #E2C3CD;color:var(--danger);border-radius:12px;
+  padding:14px;font-size:15px;margin-bottom:14px}
+.hint{font-size:13.5px;color:var(--ink3);margin:9px 0 0}
+.back{background:none;border:0;color:var(--brand);font-size:14px;font-family:inherit;
+  padding:6px 0;cursor:pointer;font-weight:700}
+</style>
+<div class="wrap"><div id="app"><div class="mid">…</div></div></div>
+
+<script>
+var $ = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+/* 場次代碼從網址來。⚠ 只留英數——它會被原樣送回後端，
+   而且 8 碼的字母表本來就只有大寫英數。 */
+var TOKEN = (function(){
+  var m = /[?&]b=([^&]*)/.exec(location.search || '');
+  return m ? decodeURIComponent(m[1]).replace(/[^0-9A-Za-z]/g, '').slice(0, 20) : '';
+})();
+
+var API_ = 'https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec';
+
+/* 有 body 就 POST（簽名圖很大，塞不進網址），沒有就 GET。 */
+function api(fn, body, ok, bad){
+  var p;
+  if(body){
+    body.api = fn; body.b = TOKEN;
+    p = fetch(API_, { method:'POST',
+                      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+                      body: JSON.stringify(body) });
+  } else {
+    p = fetch(API_ + '?api=' + encodeURIComponent(fn) +
+              '&b=' + encodeURIComponent(TOKEN));
+  }
+  p.then(function(r){ return r.json(); })
+   .then(function(j){ ok(j); })
+   .catch(function(){ if(bad) bad(); });
+}
+
+var INFO = null, LANG = '', OTHER = '__other__';
+
+/* 介面字串。key 用語別代碼（跟簽到表要記的語別同一組），選了語言就一次到位。 */
+var T = {
+  '越': { self:'Tiếng Việt', sub:'越南文',
+    title:'Điểm danh buổi tuyên truyền', name:'Tên của bạn', choose:'Vui lòng chọn…',
+    other:'Khác (tự nhập)', typeName:'Nhập tên của bạn', sign:'Chữ ký',
+    signHint:'Ký bằng ngón tay tại đây', clear:'Xóa', submit:'Gửi', sending:'Đang gửi…',
+    foot:'Sau khi gửi, phiên dịch viên tại hiện trường sẽ thấy bạn đã ký.',
+    needName:'Vui lòng chọn hoặc nhập tên của bạn', needSign:'Vui lòng ký tên trước',
+    doneTitle:'Đã điểm danh', doneMsg:'Cảm ơn bạn', back:'Đổi ngôn ngữ', netBad:'Mạng không ổn định. Vui lòng bấm Gửi lại.' },
+  '泰': { self:'ภาษาไทย', sub:'泰文',
+    title:'ลงชื่อเข้าร่วมการอบรม', name:'ชื่อของคุณ', choose:'กรุณาเลือก…',
+    other:'อื่น ๆ (พิมพ์เอง)', typeName:'พิมพ์ชื่อของคุณ', sign:'ลายเซ็น',
+    signHint:'เซ็นชื่อด้วยนิ้วมือตรงนี้', clear:'ลบ', submit:'ส่ง', sending:'กำลังส่ง…',
+    foot:'หลังจากส่งแล้ว ล่ามที่หน้างานจะเห็นว่าคุณเซ็นชื่อแล้ว',
+    needName:'กรุณาเลือกหรือพิมพ์ชื่อของคุณ', needSign:'กรุณาเซ็นชื่อก่อน',
+    doneTitle:'ลงชื่อเรียบร้อย', doneMsg:'ขอบคุณ', back:'เปลี่ยนภาษา', netBad:'สัญญาณไม่เสถียร กรุณากดส่งอีกครั้ง' },
+  '印': { self:'Bahasa Indonesia', sub:'印尼文',
+    title:'Daftar hadir sosialisasi', name:'Nama Anda', choose:'Silakan pilih…',
+    other:'Lainnya (isi sendiri)', typeName:'Tulis nama Anda', sign:'Tanda tangan',
+    signHint:'Tanda tangani di sini dengan jari', clear:'Hapus', submit:'Kirim',
+    sending:'Mengirim…',
+    foot:'Setelah dikirim, penerjemah di lokasi akan melihat Anda sudah tanda tangan.',
+    needName:'Silakan pilih atau tulis nama Anda', needSign:'Silakan tanda tangan dulu',
+    doneTitle:'Berhasil daftar hadir', doneMsg:'Terima kasih', back:'Ganti bahasa', netBad:'Jaringan tidak stabil. Silakan tekan Kirim lagi.' },
+  '英': { self:'English', sub:'英文',
+    title:'Briefing sign-in', name:'Your name', choose:'Please select…',
+    other:'Other (type it)', typeName:'Type your name', sign:'Signature',
+    signHint:'Sign here with your finger', clear:'Clear', submit:'Submit',
+    sending:'Sending…',
+    foot:'After you submit, the interpreter here will see that you have signed.',
+    needName:'Please choose or type your name', needSign:'Please sign first',
+    doneTitle:'Signed in', doneMsg:'Thank you', back:'Change language', netBad:'Network problem. Please tap Submit again.' },
+  '中': { self:'中文', sub:'中文',
+    title:'宣導簽到', name:'你的名字', choose:'請選擇…',
+    other:'其他（自己輸入）', typeName:'輸入你的名字', sign:'簽名',
+    signHint:'用手指在這裡簽名', clear:'清除', submit:'送出', sending:'送出中…',
+    foot:'送出後現場的翻譯人員就會看到你已經簽好了。',
+    needName:'請選擇或輸入你的名字', needSign:'請先簽名',
+    doneTitle:'簽到完成', doneMsg:'謝謝你', back:'換語言', netBad:'網路不太穩，請再按一次送出' }
+};
+function t(k){ return (T[LANG] || T['中'])[k]; }
+function t(k){ return (T[LANG] || T['中'])[k]; }
+
+
+if(!TOKEN){ setTimeout(function(){ fail('這個簽到連結無效'); }, 0); }
+else {
+  api('briefingInfo', null, function(r){
+    if(!r || !r.ok){ fail((r && (r.error || r.err)) || '這個簽到連結無效'); return; }
+    INFO = r; pickLang();
+  }, function(){
+    fail('連不上，請確認網路之後重新整理');
+  });
+}
+
+/* 出錯時還沒選語言，所以中英並陳 */
+function fail(msg){
+  $('app').innerHTML = '<div class="err">'+esc(msg)+
+    '<br><span style="opacity:.85">This sign-in link is not valid or has closed.</span></div>'+
+    '<div class="mid">請跟現場的翻譯人員確認<br>Please ask the interpreter here.</div>';
+}
+
+/* ── 第一步：選語言 ── */
+function pickLang(){
+  var order = ['越','泰','印','英','中'];
+  $('app').innerHTML =
+    '<div class="top"><h1>Select language</h1>'+
+      '<p>選擇語言　·　Chọn ngôn ngữ　·　เลือกภาษา　·　Pilih bahasa</p></div>'+
+    '<div class="card"><div class="langs">'+
+      order.map(function(k){
+        return '<button type="button" data-k="'+k+'">'+
+          '<span class="flag">'+esc(k)+'</span>'+
+          '<span><span class="nm">'+esc(T[k].self)+'</span>'+
+          '<span class="sub">'+esc(T[k].sub)+'</span></span></button>';
+      }).join('')+
+    '</div></div>';
+  [].forEach.call($('app').querySelectorAll('.langs button'), function(b){
+    b.addEventListener('click', function(){ LANG = b.dataset.k; renderForm(); });
+  });
+}
+
+/* ── 第二步：選名字、簽名 ── */
+function renderForm(){
+  var names = INFO.names || [];
+  $('app').innerHTML =
+    '<div class="top"><h1>'+esc(t('title'))+'</h1>'+
+      '<p>'+esc(INFO.client)+(INFO.date?'　'+esc(INFO.date):'')+'</p>'+
+      (INFO.topic?'<p>'+esc(INFO.topic)+'</p>':'')+'</div>'+
+    '<button type="button" class="back" id="back">‹ '+esc(t('back'))+'</button>'+
+    '<div class="card">'+
+      '<label>'+esc(t('name'))+'</label>'+
+      '<select id="nm"><option value="">'+esc(t('choose'))+'</option>'+
+        names.map(function(w){
+          // 移工自己認得的是原文名，只給中文他會找不到自己
+          return '<option value="'+esc(w.n)+'">'+esc(w.n)+
+                 (w.o?'　'+esc(w.o):'')+'</option>'; }).join('')+
+        '<option value="'+OTHER+'">'+esc(t('other'))+'</option></select>'+
+      '<input id="nmOther" placeholder="'+esc(t('typeName'))+'" style="display:none;margin-top:9px">'+
+    '</div>'+
+    '<div class="card">'+
+      '<label>'+esc(t('sign'))+'</label>'+
+      '<div class="pad" id="pad"><canvas id="cv"></canvas>'+
+        '<div class="ph">'+esc(t('signHint'))+'</div></div>'+
+      '<div class="row">'+
+        '<button type="button" class="act" id="clr">'+esc(t('clear'))+'</button>'+
+        '<button type="button" class="act p" id="send">'+esc(t('submit'))+'</button>'+
+      '</div>'+
+      '<p class="hint">'+esc(t('foot'))+'</p>'+
+    '</div>';
+
+  $('back').addEventListener('click', pickLang);
+  $('nm').addEventListener('change', function(){
+    var on = this.value === OTHER;
+    $('nmOther').style.display = on ? '' : 'none';
+    if(on) $('nmOther').focus();
+  });
+  initPad();
+  $('clr').addEventListener('click', function(){ PAD.clear(); });
+  $('send').addEventListener('click', submit);
+}
+
+var PAD = null;
+function initPad(){
+  var cv = $('cv'), pad = $('pad'), ctx = cv.getContext('2d');
+  var drawing=false, dirty=false, last=null;
+  var r = pad.getBoundingClientRect();
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.round(r.width*dpr); cv.height = Math.round(r.height*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.lineWidth=5; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#111';
+  function pt(e){ var b=cv.getBoundingClientRect(); var x=e.touches?e.touches[0]:e;
+    return { x:x.clientX-b.left, y:x.clientY-b.top }; }
+  function down(e){ e.preventDefault(); drawing=true;
+    if(!dirty){ dirty=true; pad.classList.add('on'); } last=pt(e); }
+  function move(e){ if(!drawing) return; e.preventDefault();
+    var q=pt(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(q.x,q.y); ctx.stroke(); last=q; }
+  function up(){ drawing=false; }
+  ['mousedown','touchstart'].forEach(function(k){ cv.addEventListener(k,down,{passive:false}); });
+  ['mousemove','touchmove'].forEach(function(k){ cv.addEventListener(k,move,{passive:false}); });
+  ['mouseup','mouseleave','touchend','touchcancel'].forEach(function(k){ cv.addEventListener(k,up); });
+
+  PAD = {
+    dirty: function(){ return dirty; },
+    clear: function(){ ctx.clearRect(0,0,cv.width,cv.height); dirty=false; pad.classList.remove('on'); },
+    // 裁掉四周空白，簽名放進簽到表才不會縮成一根細線
+    data: function(){
+      if(!dirty) return '';
+      var w=cv.width,h=cv.height,d;
+      try{ d=ctx.getImageData(0,0,w,h).data; }catch(e){ return cv.toDataURL('image/png'); }
+      var x0=w,y0=h,x1=-1,y1=-1;
+      for(var y=0;y<h;y++) for(var x=0;x<w;x++){
+        if(d[(y*w+x)*4+3]>12){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } }
+      if(x1<0) return '';
+      var p=Math.round(Math.min(w,h)*0.04);
+      x0=Math.max(0,x0-p); y0=Math.max(0,y0-p); x1=Math.min(w-1,x1+p); y1=Math.min(h-1,y1+p);
+      var o=document.createElement('canvas'); o.width=x1-x0+1; o.height=y1-y0+1;
+      o.getContext('2d').drawImage(cv,x0,y0,o.width,o.height,0,0,o.width,o.height);
+      return o.toDataURL('image/png');
+    }
+  };
+}
+
+function submit(){
+  var sel = $('nm');
+  var name = sel.value === OTHER ? $('nmOther').value.trim() : sel.value;
+  if(!name){ alert(t('needName')); return; }
+  if(!PAD.dirty()){ alert(t('needSign')); return; }
+  var b = $('send'); b.disabled = true; b.textContent = t('sending');
+  api('signBriefing',
+      // 選的語言同時就是要記進簽到表的語別，不用再問第二次
+      { name: name, lang: LANG === '中' ? '' : LANG, sig: PAD.data() },
+      function(r){
+        if(!r || !r.ok){
+          b.disabled=false; b.textContent=t('submit');
+          alert((r && r.err) || t('needSign')); return;
+        }
+        $('app').innerHTML =
+          '<div class="done"><div class="ic">✓</div>'+
+            '<h2>'+esc(t('doneTitle'))+'</h2>'+
+            '<p>'+esc(name)+'　'+esc(t('doneMsg'))+'</p></div>';
+      },
+      function(){ b.disabled=false; b.textContent=t('submit');
+                  alert(t('netBad')); });
+}
+</script>
+</body>
+</html>

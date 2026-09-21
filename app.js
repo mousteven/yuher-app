@@ -727,19 +727,7 @@ $('briefStart').addEventListener('click', function(){
   google.script.run
     .withSuccessHandler(function(r){
       b.disabled = false; b.textContent = '開始簽到，產生 QR';
-      BRIEF = r;
-      $('briefIdle').style.display = 'none';
-      $('briefLive').style.display = '';
-      $('qr').innerHTML = '';
-      try{
-        new QRCode($('qr'), { text: r.url, width: 230, height: 230,
-                              correctLevel: QRCode.CorrectLevel.M });
-      }catch(e){
-        $('qr').innerHTML = '<p class="hint">QR 產生失敗，請改用下面的網址</p>';
-      }
-      $('qrUrl').textContent = r.url;
-      pollBrief();
-      BRIEF_TIMER = setInterval(pollBrief, 8000);
+      briefShow(r);
     })
     .withFailureHandler(function(e){
       b.disabled = false; b.textContent = '開始簽到，產生 QR'; toast(e.message, true);
@@ -750,6 +738,85 @@ $('briefStart').addEventListener('click', function(){
       expected: pickedNames()
     });
 });
+
+/* 把場次畫到畫面上。開新的一場、以及重新打開已經存檔的那一筆，
+   走的是同一支——⛔ 不要為了「重開」再寫一份，兩份一定會長歪。 */
+function briefShow(r){
+  BRIEF = r;
+  $('briefIdle').style.display = 'none';
+  $('briefLive').style.display = '';
+  $('qr').innerHTML = '';
+  try{
+    new QRCode($('qr'), { text: r.url, width: 230, height: 230,
+                          correctLevel: QRCode.CorrectLevel.M });
+  }catch(e){
+    $('qr').innerHTML = '<p class="hint">QR 產生失敗，請改用下面的網址</p>';
+  }
+  $('qrUrl').textContent = r.url;
+  briefDeadline(r);
+  briefShare(r);
+  pollBrief();
+  if(BRIEF_TIMER) clearInterval(BRIEF_TIMER);
+  BRIEF_TIMER = setInterval(pollBrief, 8000);
+}
+
+/* 把簽到連結傳到工廠的 LINE 群組。
+
+   現場掃 QR 解決一半的人；另一半是「在產線上」「手機沒電」「請假」，
+   要等晚一點才簽。QR 拍照傳群組會糊，直接給連結最可靠。
+
+   ⚠ 訊息要中英並陳。收到的人有一半看不懂中文，
+     只寫中文等於只有翻譯自己看得懂。
+   ⚠ 連結單獨一行。夾在句子裡 LINE 常常把後面的標點一起吃進網址。 */
+function briefShare(r){
+  var box = $('briefShare'); if(!box || !r.url) return;
+  if(r.open === false){ box.innerHTML = ''; return; }
+  var who = (clientVal() || '').trim();
+  var txt = '【宣導簽到 · Sign in】\n' +
+    (who ? who + '　' : '') + ($('date').value || '') + '\n' +
+    '請點下面的連結，選語言後簽名。\n' +
+    'Please tap the link, choose your language and sign.\n' +
+    r.url;
+  box.innerHTML =
+    '<a class="line" target="_blank" rel="noopener" href="https://line.me/R/msg/text/?' +
+      encodeURIComponent(txt) + '">傳到 LINE</a>' +
+    '<button type="button" id="briefCopy">複製連結</button>';
+  /* ⛔ 不要用 window.open——這一頁跑在 Apps Script 的巢狀 iframe 裡，
+     window.open 會被擋掉，<a target="_blank"> 才過得去。 */
+  var cp = $('briefCopy');
+  if(cp) cp.addEventListener('click', function(){
+    /* navigator.clipboard 在 iframe 裡常常沒有權限，失敗就退回選取文字，
+       讓他自己長按複製——比按了沒反應好。 */
+    var done = function(){ cp.textContent = '已複製';
+      setTimeout(function(){ cp.textContent = '複製連結'; }, 1600); };
+    try {
+      navigator.clipboard.writeText(r.url).then(done, function(){ selUrl(); });
+    } catch(e){ selUrl(); }
+  });
+  function selUrl(){
+    try {
+      var rg = document.createRange(); rg.selectNodeContents($('qrUrl'));
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(rg);
+      toast('已選起來，長按複製');
+    } catch(e2){ toast('請長按上面的網址複製', true); }
+  }
+}
+
+/* 補簽期限一定要寫在畫面上。
+   ⚠ 不寫的話，過期那天他只會看到「這個連結無效」，
+     而現場的人已經站在那裡等著簽了。 */
+function briefDeadline(r){
+  var el = $('briefDue'); if(!el) return;
+  if(r.open === false){
+    el.textContent = r.why || '這場的簽到已經結束';
+    el.className = 'bdue off';
+  } else if(r.lastDay){
+    el.textContent = '沒簽到的人可以補簽到 ' + r.lastDay + '（存檔之後這個 QR 還是有效）';
+    el.className = 'bdue';
+  } else {
+    el.textContent = ''; el.className = 'bdue';
+  }
+}
 
 function pollBrief(){
   if(!BRIEF) return;
@@ -783,6 +850,10 @@ function pollBrief(){
                 extra.map(function(x){ return item(x.name, x); }).join('');
       }
       $('briefList').innerHTML = html || '<div class="none">還沒有人簽到</div>';
+      briefDeadline(p);
+      if(p.open === false){ var sb2 = $('briefShare'); if(sb2) sb2.innerHTML = ''; }
+      /* 已經結束就別再每 8 秒問一次 */
+      if(p.open === false && BRIEF_TIMER){ clearInterval(BRIEF_TIMER); BRIEF_TIMER = null; }
     })
     .withFailureHandler(function(){})
     .briefingProgress(CODE, BRIEF.token);
@@ -799,6 +870,8 @@ $('briefClose').addEventListener('click', function(){
   google.script.run
     .withSuccessHandler(function(){
       if(BRIEF_TIMER){ clearInterval(BRIEF_TIMER); BRIEF_TIMER = null; }
+      briefDeadline({ open: false, why: '這場的簽到已經結束，QR 失效' });
+      var sb = $('briefShare'); if(sb) sb.innerHTML = '';
       toast('簽到已結束，QR 失效');
     })
     .withFailureHandler(function(e){ toast(e.message, true); })
@@ -2528,6 +2601,15 @@ function fillFormFrom(d){
       if(el) el.value = w[k] || '';
     });
   });
+
+  /* ⛔ 宣導場次要接回同一場。resetForm() 已經把 BRIEF 清掉了，
+     沒有這一段的話畫面會退回「開始簽到，產生 QR」——
+     按下去是開一場新的、換一個 QR，**已經簽好的人全部作廢**。
+     這正是他 2026-09-21 遇到的事：存完檔要補簽，QR 卻死了。 */
+  if(d.brief && d.brief.ok){
+    briefShow(d.brief);
+    if(isBrief()) fillPicks();
+  }
 }
 
 function startEdit(recCode){
