@@ -77,6 +77,16 @@ body.hidechrome{--stick:0px}
   padding:11px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 /* 有新版時的提示條。擺在最上面、整條可以點，
    在工廠裡單手操作也按得到。 */
+/* 程式更新中的進度列。不定速——我們不知道真實進度，
+   所以不假裝有百分比，只表示「它在做事」。 */
+#upbar{position:sticky;top:0;z-index:31;height:3px;background:var(--line2);
+  overflow:hidden}
+#upbar i{display:block;height:100%;width:40%;border-radius:99px;
+  background:var(--brand);animation:upslide 1.1s cubic-bezier(.45,0,.55,1) infinite}
+@keyframes upslide{0%{transform:translateX(-110%)}100%{transform:translateX(320%)}}
+@media (prefers-reduced-motion:reduce){
+  #upbar i{animation:none;width:100%;opacity:.6}
+}
 #newver{position:sticky;top:0;z-index:30;background:var(--brand2);color:#fff;
   padding:10px 14px;font-size:0.875rem;font-weight:700;text-align:center;cursor:pointer;
   letter-spacing:.02em}

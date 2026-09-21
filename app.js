@@ -389,22 +389,71 @@ if($('outFind')) $('outFind').addEventListener('click', function(){
   hideBack(); backToTop();
 });
 
-$('outReload').addEventListener('click', appReload);
-$('newver').addEventListener('click', appReload);
+$('outReload').addEventListener('click', runUpdate);
+$('newver').addEventListener('click', runUpdate);
 
-/* 伺服器上的版本跟這一頁不一樣，就是被快取住了 */
+/* ── 程式更新 ───────────────────────────────────────
+   ⛔ 跟「下拉更新」是兩件不同的事，以前混在一起：
+      下拉會把整個程式重載，三秒白畫面，填到一半的東西消失。
+      使用者下拉要的只是「資料是不是新的」。
+
+   下拉    → 只重新抓這一頁的資料（ptrRefresh）
+   有新版  → 自己更新，不要叫他按（下面這一段）
+
+   ⚠ YouTube 可以想更新就更新，因為它沒有表單。我們有——
+     填到一半的服務紀錄、簽名板上那一筆、開著的視窗。
+     重載就全部消失，而且他不會知道是誰弄掉的。
+     所以自動更新只在「乾淨」的時候做，不乾淨就先掛著等。 */
+
+var NEWVER_ = false;          // 伺服器上有比這一頁新的版本
 var BUILD_AT = 0;
+
+/* 現在重載會不會弄丟東西。
+   ⚠ 填寫分頁只要開著就算忙——不去猜「他有沒有真的填了字」。
+     猜錯的代價不對稱：多等一下沒人受傷，猜錯就是他打的字沒了。 */
+function appBusy(){
+  if(typeof DIRTY_ !== 'undefined' && DIRTY_) return true;
+  var pane = document.querySelector('.pane.on');
+  if(pane && pane.id === 'p-new') return true;
+  var masks = document.querySelectorAll('.smask, .rvfull, #pvModal, #outModal');
+  for(var i = 0; i < masks.length; i++){
+    if(masks[i].style.display !== 'none' && masks[i].offsetParent !== null) return true;
+  }
+  return false;
+}
+
 function checkBuild(force){
   if(!force && BUILD_AT && (Date.now() - BUILD_AT) < 5*60*1000) return;
   BUILD_AT = Date.now();
   google.script.run.withSuccessHandler(function(b){
-    if(b && BUILD && b !== BUILD){
-      $('newver').textContent = '有新版本，點一下更新';
-      $('newver').style.display = '';
-      fixStick();
-    }
+    if(b && BUILD && b !== BUILD){ NEWVER_ = true; tryUpdate(); }
   }).withFailureHandler(function(){}).appBuild();
 }
+
+/* 能更新就直接更新；不能就顯示一條，等他手上的事做完。 */
+function tryUpdate(){
+  if(!NEWVER_) return;
+  if(appBusy()){
+    $('newver').textContent = '有新版本　·　等你這一筆做完就更新';
+    $('newver').style.display = '';
+    fixStick();
+    return;
+  }
+  runUpdate();
+}
+
+function runUpdate(){
+  $('newver').style.display = 'none';
+  /* ⚠ #upbar 是 2026-09-21 才加進 Service.html 的。
+     GitHub Pages 的 app.js 會比 Apps Script 的部署早幾分鐘到，
+     那個空檔裡舊版面上沒有這個元素——不防的話這裡直接炸，
+     整條更新的路斷掉，而且畫面上看不出原因。 */
+  var bar = $('upbar');
+  if(bar) bar.style.display = '';
+  fixStick();
+  appReload();
+}
+
 document.addEventListener('visibilitychange', function(){
   if(!document.hidden && CODE) checkBuild();
 });
@@ -751,6 +800,8 @@ document.querySelectorAll('.tabs button').forEach(function(b){
     if(b.dataset.t==='track') loadTrack();
     if(b.dataset.t==='follow') loadFollow();
     if(b.dataset.t==='stat') loadStat();
+    /* 離開填寫頁＝手上的事告一段落，這時候更新不會弄丟東西。 */
+    tryUpdate();
   });
 });
 
@@ -807,26 +858,41 @@ function onScroll(){
 }
 window.addEventListener('scroll', onScroll, { passive: true });
 
-/* 這一份 app.js 是哪一版——從自己的 <script src> 網址讀 ?v= 出來。
 
-   用途一：同事說「我的畫面怪怪的」時，叫他下拉看一眼就知道手上是哪一版，
-           不用猜他到底更新了沒。
-   用途二：驗證下拉更新真的有通。正常開啟時是「2026-09-18 1445」這種部署戳記；
-           下拉更新之後外殼會在網址後面加時間戳，伺服器再把它接到版面檔的
-           ?v= 上，所以會變成「2026-09-18 1445-1758…」。
-           **後面多出那串數字，就代表外殼真的重載了、&t= 真的傳到伺服器了。**
+/* ── 下拉更新 ───────────────────────────────────────
+   ⛔ 下拉＝只換這一頁的資料，不重載程式。
+      （程式更新是另一件事，自己會做，見上面 tryUpdate。）
 
-   document.currentScript 只在腳本本體執行時讀得到，所以這一段不能搬進函式裡。 */
-var ASSET_V = (function(){
-  try {
-    var el = document.currentScript;
-    var m = el && el.src ? /[?&]v=([^&]+)/.exec(el.src) : null;
-    return m ? decodeURIComponent(m[1]) : '';
-  } catch(e){ return ''; }
-})();
-
-/* ── 下拉更新 ───────────────────────────────────── */
+   ⛔ 一定要等資料真的回來才收起轉圈。用固定秒數假裝完成是騙人：
+      訊號差的時候三秒還沒回來，轉圈收掉了，畫面上還是舊的，
+      他會以為「更新過了，資料就是這樣」。 */
 var PTR = { on:false, y0:0, d:0, armed:false, busy:false };
+var PTR_CB = null;
+
+/* 內容畫出來了。四支 draw* 的開頭都會叫這一支。 */
+function refreshed(){
+  var f = PTR_CB; PTR_CB = null;
+  if(f) f();
+}
+
+function ptrRefresh(done){
+  PTR_CB = done;
+  /* 超時的保險：十秒還沒畫出來就收回去並講實話。
+     ⚠ 沒有這一條的話，某條失敗路徑沒叫到 refreshed()，轉圈會一直轉。 */
+  var t = setTimeout(function(){
+    if(PTR_CB){ PTR_CB = null; toast('更新失敗，請再試一次', true); done(); }
+  }, 10000);
+  var wrapped = PTR_CB;
+  PTR_CB = function(){ clearTimeout(t); wrapped(); };
+
+  var on = document.querySelector('.tabs button.on');
+  var k = on ? on.dataset.t : 'cal';
+  if(k === 'cal')         loadCal(null, true);
+  else if(k === 'track')  loadTrack(true);
+  else if(k === 'follow') loadFollow(true);
+  else if(k === 'stat'){ EV = null; loadStat(); }
+  else refreshed();       // 填寫頁沒有「內容」可以更新
+}
 var PTR_TRIG = 64;          // 拉過這個距離才算數
 
 function ptrPane(){ return document.querySelector('.pane.on'); }
@@ -847,8 +913,7 @@ function ptrSet(d){
   p.style.opacity = Math.min(1, d / 40);
   p.style.transform = 'translate(-50%,' + (d - 52) + 'px)';
   p.className = PTR.armed ? 'go' : '';
-  p.querySelector('em').textContent = (PTR.armed ? '放開更新' : '下拉更新') +
-    (ASSET_V ? '　' + ASSET_V : '');
+  p.querySelector('em').textContent = PTR.armed ? '放開更新' : '下拉更新';
   if(pane) pane.style.transform = 'translateY(' + (d * 0.5) + 'px)';
 }
 
@@ -902,9 +967,14 @@ document.addEventListener('touchend', function(){
       pane.style.transition = 'transform .3s cubic-bezier(.32,.72,0,1)';
       pane.style.transform = 'translateY(28px)';
     }
-    appReload();
-    // 外殼沒接到訊息的話（例如直接開網址），三秒後自己收回來
-    setTimeout(function(){ PTR.busy = false; ptrReset(true); }, 3000);
+    ptrRefresh(function(){
+      PTR.busy = false;
+      ptrReset(true);
+      /* 資料換完了，這時候順便看看程式有沒有新版。
+         ⚠ 順序不能反：先更新資料、再考慮重載程式。
+           反過來的話他下拉一次就被整個重載，又回到原本那個問題。 */
+      checkBuild(true);
+    });
   } else {
     ptrReset(true);
   }
@@ -997,10 +1067,14 @@ function loadCal(ym, force){
         CAL_CACHE[m] = r.rows || [];
         CAL_CACHE_AT[m] = Date.now();
         if(!CREW.length) CREW = r.crew || [];
-        if(--left === 0){ calMerge(months); drawCal(); }
+        /* ⛔ 只有最後一個月份也回來了才算更新完成。
+           上面那段會先拿舊快取畫一次（不要整片變成載入中），
+           如果把 refreshed() 放在 drawCal 裡面，下拉的轉圈會在
+           新資料回來之前就收掉——畫面還是舊的，但他以為更新過了。 */
+        if(--left === 0){ calMerge(months); drawCal(); refreshed(); }
       })
       .withFailureHandler(function(e){
-        if(--left === 0){ calMerge(months); drawCal(); }
+        if(--left === 0){ calMerge(months); drawCal(); refreshed(); }
         toast(e.message, true);
       })
       .listSchedule(CODE, m);
@@ -3537,6 +3611,7 @@ function rvLead(r, isMgr){
 }
 
 function drawReview(){
+  refreshed();
   var r = REV;
   var badge = $('revBadge');
   if(r.count){ badge.textContent = r.count; badge.style.display=''; }
@@ -4130,6 +4205,7 @@ function evState(r){
 }
 
 function drawEval(){
+  refreshed();
   var r = EV;
   // 上面的數字跟著人員篩選走——選了自己就只算自己的
   var scope = EV_CREW ? r.rows.filter(function(x){ return x.crew===EV_CREW; }) : r.rows;
@@ -4337,6 +4413,7 @@ function drawKinds(){
 }
 
 function drawCases(){
+  refreshed();
   var rows = TK_ROWS.filter(function(c){ return tkMatch(c, TK_ST); });
 
   /* 篩選：只列真的有東西的那幾格。列出 0 的分類是在浪費一排寬度。 */
