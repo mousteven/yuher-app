@@ -1046,7 +1046,7 @@ function ptrRefresh(done){
   var on = document.querySelector('.tabs button.on');
   var k = on ? on.dataset.t : 'cal';
   if(k === 'cal')         loadCal(null, true);
-  else if(k === 'track')  loadTrack(true);
+  else if(k === 'track')  { delete TK_CACHE[TK_CUR]; loadTrack(true); }
   else if(k === 'follow') loadFollow(true);
   else if(k === 'stat'){ EV = null; loadStat(); }
   else refreshed();       // 填寫頁沒有「內容」可以更新
@@ -4702,6 +4702,13 @@ var TK_KINDS = ['異常事件', '返鄉休假', '就醫追蹤', '體檢通知'];
 var TK_SHORT = { '異常事件': '異常', '返鄉休假': '返鄉',
                  '就醫追蹤': '就醫', '體檢通知': '體檢' };
 var TK_CUR = '異常事件';
+/* ⛔ 一種一份快取，不是「只記得最後載的那一種」。
+   2026-09-21 之前只有一個 TK_LOADED，切到別的頁籤就把它清掉，
+   所以四個頁籤來回按每一次都是「載入中…」——而 listCases 要兩秒多。
+   他的原話：「切換這四個頁籤時 不要每次都載入中，需要時 會自行下拉更新」。
+   ⚠ 快取沒有時效。要新的就下拉更新——那是他自己說的，也是對的：
+     自動過期會在他正在看的時候把畫面洗掉。 */
+var TK_CACHE = {};       // { 異常事件: { rows, counts, unit }, … }
 var TK_LOADED = '';      // 已經載好的是哪一種，離開再回來時不用重打一次
 var TK_UNIT = '件';      // 後端給的單位。「件」數的是案件，不是服務紀錄
 var TK_ST = '';          // 狀態過濾（'' = 全部）
@@ -4713,6 +4720,11 @@ var TK_COUNTS = {};
    套到這裡來會變成一個沒有樣式的字。這裡用自己的 .cst。 */
 var TK_TONE = { back: 'bad', late: 'bad', today: 'warn', soon: 'warn',
                 empty: 'warn', open: 'info', closed: 'ok', cancel: 'q' };
+
+/* 案件真的有變動（開案、結案、改內容）時把快取整個丟掉。
+   ⛔ 只清目前那一種不夠：開一件異常事件會讓「異常」的數字變，
+      但四個頁籤上的 badge 是同一次呼叫回來的。 */
+function tkBust(){ TK_CACHE = {}; TK_LOADED = ''; TK_ROWS = []; }
 
 function tkPill(st){
   return '<span class="cst ' + (TK_TONE[st.key] || 'info') + '">' +
@@ -4734,22 +4746,43 @@ function loadTrack(force){
   /* 體檢的兩條提醒（快到期的人、接送資訊沒填的件）。
      獨立打，不要塞進 listCases——那支現在就要 2 秒多了。 */
   if(typeof hcNudge === 'function') hcNudge();
-  if(!force && TK_LOADED === TK_CUR){ drawCases(); return; }
-  $('tkBody').innerHTML = '<div class="mid" style="padding:26px">載入中…</div>';
+  /* 手上有這一種的快取就直接畫，不要閃「載入中」。 */
+  var hit = TK_CACHE[TK_CUR];
+  if(!force && hit){
+    TK_ROWS = hit.rows; TK_COUNTS = hit.counts; TK_UNIT = hit.unit;
+    TK_LOADED = TK_CUR;
+    drawKinds(); drawCases();
+    return;
+  }
+  /* ⛔ 只有「真的沒有東西可以畫」才顯示載入中。
+     手上有舊的就先畫舊的——下拉更新的時候整片變成「載入中」
+     等於把他正在看的東西拿走。 */
+  if(!hit){
+    $('tkBody').innerHTML = '<div class="mid" style="padding:26px">載入中…</div>';
+  }
+  var want = TK_CUR;             // 回來的時候他可能已經切走了
   google.script.run
     .withSuccessHandler(function(r){
-      TK_ROWS = r.rows || [];
-      TK_LOADED = TK_CUR;
-      TK_COUNTS = r.counts || {};
-      TK_UNIT = r.unit || '件';
+      TK_CACHE[want] = { rows: r.rows || [], counts: r.counts || {},
+                         unit: r.unit || '件' };
+      /* ⚠ 慢回應不可以蓋掉他現在正在看的那一頁籤。 */
+      if(want !== TK_CUR){ refreshed(); return; }
+      TK_ROWS = TK_CACHE[want].rows;
+      TK_LOADED = want;
+      TK_COUNTS = TK_CACHE[want].counts;
+      TK_UNIT = TK_CACHE[want].unit;
       drawKinds();
       drawCases();
     })
     .withFailureHandler(function(e){
-      $('tkBody').innerHTML = '<div class="mid" style="padding:26px">' +
+      refreshed();
+      /* 手上有舊的就留著，只用 toast 講一聲——
+         ⛔ 把畫面換成錯誤訊息等於把他本來看得到的資料弄不見。 */
+      if(TK_CACHE[want]) toast(e.message, true);
+      else $('tkBody').innerHTML = '<div class="mid" style="padding:26px">' +
         esc(e.message) + '</div>';
     })
-    .listCases(CODE, TK_CUR);
+    .listCases(CODE, want);
 }
 
 function drawKinds(){
@@ -4763,8 +4796,10 @@ function drawKinds(){
     b.addEventListener('click', function(){
       if(b.dataset.k === TK_CUR) return;
       TK_CUR = b.dataset.k; TK_ST = '';
-      TK_ROWS = []; TK_LOADED = '';
-      loadTrack(true);
+      /* ⛔ 不要清掉 TK_ROWS／TK_LOADED，也不要 force。
+         清掉就等於每次切頁籤都重打一次後端（要兩秒多）。
+         要拿新的資料：下拉更新。 */
+      loadTrack();
       backToTop();
     });
   });
@@ -5549,7 +5584,7 @@ function saveCaseNext(c, d, note){
   google.script.run
     .withSuccessHandler(function(r){
       toast(r.date ? ('已排 ' + r.date + '，行事曆上也有了') : '已取消下一次');
-      calBust(); openCase(c.id); loadTrack(true);
+      calBust(); tkBust(); openCase(c.id); loadTrack(true);
     })
     .withFailureHandler(function(e){ toast(e.message, true); })
     .setCaseNext(CODE, c.id, d, note);
@@ -5560,7 +5595,7 @@ function caseSpawnMed(c){
   google.script.run
     .withSuccessHandler(function(r){
       toast('已開 ' + r.id);
-      TK_CUR = '就醫追蹤'; TK_ROWS = []; TK_LOADED = '';
+      TK_CUR = '就醫追蹤'; tkBust();
       loadTrack(true);
       openCase(r.id);
     })
@@ -5580,7 +5615,7 @@ function caseClose(c){
         alert('這件結了，但連著的 ' + res.openLink.kind + ' ' +
               res.openLink.id + ' 還在進行中。\n那一件要自己走完。');
       }
-      TK_ROWS = []; TK_LOADED = ''; loadTrack(true); openCase(c.id);
+      tkBust(); loadTrack(true); openCase(c.id);
     })
     .withFailureHandler(function(e){ alert(e.message); })
     .closeCase(CODE, c.id, r);
@@ -6678,7 +6713,7 @@ function hcClose(v){
 
   google.script.run.withSuccessHandler(function(r){
     toast('已結案' + (r.bad.length ? ('　異常 ' + r.bad.length + ' 人要開就醫追蹤') : ''));
-    loadTrack(true);
+    tkBust(); loadTrack(true);
   }).withFailureHandler(function(e){ toast(e.message, true); })
     .hcCloseBatch(CODE, v.id, res);
 }
