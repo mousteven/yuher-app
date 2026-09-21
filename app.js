@@ -97,6 +97,9 @@ function login(code){
       CAL_SEL = todayStr();
 
       fillClients();
+      /* 上一次沒送出去的表：登入就先畫出來、順便試送一次。
+         ⛔ 不畫的話他完全不知道手機裡還有東西。 */
+      try { obPaint(); obFlush(); } catch(eOb){}
       var opts = '<option value="">請選擇…</option>' +
         CREW.map(function(n){ return '<option>'+esc(n)+'</option>'; }).join('');
       $('crew').innerHTML = opts;
@@ -2762,17 +2765,139 @@ $('save').addEventListener('click', function(){
     return;
   }
 
+  /* ⛔ 先存進手機，再送後端。順序不能反——先送的話，
+     App 在送出過程中被切掉（電話進來、沒電、手滑關掉）就什麼都不剩。
+     最壞的情況要是「還在手機裡」，不是「整份不見」。 */
+  trip.cid = OB.newCid();
+  var job = { cid: trip.cid, at: Date.now(), code: CODE,
+              trip: trip, workers: workers, tries: 0, err: '' };
   toast('儲存中…');
-  google.script.run
-    .withSuccessHandler(function(r){
-      b.disabled=false;
-      calBust(); revBust();       // 那一趟會從「待處理」變「已完成」，送審清單也多一筆
+  OB.put(job).then(function(){
+    obSend(job, function(r){
+      b.disabled = false;
+      calBust(); revBust();     // 那一趟會從「待處理」變「已完成」，送審清單也多一筆
       try{ showSaved(r.code); }
       catch(err){ toast('已存檔（'+r.code+'），但畫面沒換過來：'+err.message, true); }
-    })
-    .withFailureHandler(function(e){ b.disabled=false; toast(e.message, true); })
-    .saveServiceLog(CODE, trip, workers);
+    }, function(msg, keep){
+      b.disabled = false;
+      if(keep){
+        /* 表還在手機裡，所以照樣清空畫面讓他做下一家——
+           ⛔ 如果留在原本的表單，他會以為沒存到而重打一次。 */
+        resetForm();
+        toast('沒訊號，已存在手機裡，有訊號會自動送出', true);
+      } else {
+        toast(msg, true);
+      }
+      obPaint();
+    });
+  }).catch(function(){
+    /* 連手機都存不進去（無痕模式、空間滿了）——那就退回原本的直送，
+       ⚠ 不要假裝存好了。 */
+    google.script.run
+      .withSuccessHandler(function(r){
+        b.disabled=false; calBust(); revBust();
+        try{ showSaved(r.code); }catch(err){ toast('已存檔（'+r.code+'）', true); }
+      })
+      .withFailureHandler(function(e){ b.disabled=false; toast(e.message, true); })
+      .saveServiceLog(CODE, trip, workers);
+  });
 });
+
+/* ── 待送出的表：送、重試、顯示 ───────────────────────────
+   規則寫在 outbox.js 開頭，改這裡之前先讀那一段。 */
+var OB_BUSY_ = false;
+
+function obSend(job, ok, bad){
+  google.script.run
+    .withSuccessHandler(function(r){
+      /* ⛔ 一定要等後端回「寫好了」才從手機刪掉。
+         先刪再送 = 送失敗就永遠不見。 */
+      OB.del(job.cid).then(function(){ obPaint(); });
+      ok(r);
+    })
+    .withFailureHandler(function(e){
+      var msg = (e && e.message) || '';
+      var keep = obIsNetwork(msg);
+      job.tries = (job.tries || 0) + 1;
+      job.err = msg;
+      if(keep && job.tries >= OB.MAX_TRY){
+        /* ⚠ 試太多次還是不行，就不要再安靜地試下去——
+           讓它留著但停手，畫面上寫出原因，由人決定。 */
+        keep = true; job.stopped = true;
+      }
+      if(keep){ OB.put(job).then(function(){ obPaint(); }); }
+      else { OB.del(job.cid).then(function(){ obPaint(); }); }
+      bad(msg || '送不出去', keep);
+    })
+    .saveServiceLog(job.code || CODE, job.trip, job.workers);
+}
+
+/* 把手機裡還沒送出去的都送一遍。
+   ⚠ 一次只送一筆。工廠的訊號本來就不好，同時送三筆只會三筆一起失敗，
+     而且簽名圖都很大。 */
+function obFlush(){
+  if(OB_BUSY_ || !CODE) return;
+  OB.all().then(function(list){
+    var pend = list.filter(function(j){ return !j.stopped; });
+    if(!pend.length){ obPaint(); return; }
+    OB_BUSY_ = true;
+    var j = pend[0];
+    obSend(j, function(){
+      OB_BUSY_ = false;
+      calBust(); revBust();
+      obPaint();
+      obFlush();                      // 還有就接著送
+    }, function(){
+      OB_BUSY_ = false;               // 失敗就停在這裡，等下一次觸發
+      obPaint();
+    });
+  }).catch(function(){ OB_BUSY_ = false; });
+}
+
+/* 畫面上那一條「待上傳 N 筆」。
+   ⛔ 沒有這一條的話，表在手機裡他完全不知道，會以為存丟了而重打一次。 */
+function obPaint(){
+  var box = $('obBar'); if(!box) return;
+  OB.all().then(function(list){
+    if(!list.length){ box.style.display = 'none'; box.innerHTML = ''; return; }
+    var stop = list.filter(function(j){ return j.stopped; });
+    box.style.display = '';
+    box.className = 'obbar' + (stop.length ? ' bad' : '');
+    box.innerHTML =
+      '<div class="obh"><b>' + list.length + ' 筆還在手機裡</b>' +
+        '<button type="button" id="obGo">' +
+          (OB_BUSY_ ? '送出中…' : '立即送出') + '</button></div>' +
+      list.map(function(j){
+        return '<div class="ob1"><span class="c">' +
+          esc((j.trip && j.trip.client) || '—') + '　' +
+          esc((j.trip && j.trip.date) || '') + '</span>' +
+          '<span class="s">' + (j.stopped
+            ? ('送不出去：' + esc((j.err || '').slice(0, 40)))
+            : (j.tries ? ('試過 ' + j.tries + ' 次') : '等訊號')) + '</span></div>';
+      }).join('') +
+      (stop.length ? '<p class="hint">送不出去的那幾筆要人處理：' +
+        '確認網路之後按「立即送出」，還是不行就截圖給佑彬。</p>' : '');
+    var g = $('obGo');
+    if(g) g.addEventListener('click', function(){
+      /* 手動按的話，連之前放棄的那幾筆也重新試一次 */
+      OB.all().then(function(l2){
+        return Promise.all(l2.map(function(j){
+          if(!j.stopped) return null;
+          j.stopped = false; j.tries = 0; return OB.put(j);
+        }));
+      }).then(obFlush);
+    });
+  });
+}
+
+/* 什麼時候送：一連上網、回到 App、每 30 秒各試一次。
+   ⚠ 三個都要。只靠 online 事件的話，手機從「訊號極差」變成「還可以」
+     不會觸發任何事件——那正是工廠裡最常見的狀態。 */
+window.addEventListener('online', obFlush);
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden) obFlush();
+});
+setInterval(obFlush, 30000);
 /* ── 預覽：把每位移工的經過與結果翻成他的母語 ───────────────
    簽名之前先給他看，不然他等於在簽一份看不懂的東西。 */
 /* 一般服務是單選、宣導是複選，統一回傳字串（多語用「、」串起來） */

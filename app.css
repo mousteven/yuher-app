@@ -1897,6 +1897,24 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .hcride span{display:block;font-size:0.75rem;color:var(--ink2);margin-top:2px;
   padding-left:22px}
 
+/* 還沒送出去的服務表。
+   ⚠ 用「提醒」的顏色不是「錯誤」的顏色——東西沒有不見，只是還在手機裡。
+      真的送不出去（.bad）才轉紅。 */
+.obbar{border:1px solid var(--warn-line);background:var(--warn-bg);
+  border-radius:12px;padding:11px 12px;margin:0 0 12px}
+.obbar.bad{border-color:var(--bad-line);background:var(--bad-bg)}
+.obh{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.obh b{font-size:0.875rem;color:var(--warn-ink)}
+.obbar.bad .obh b{color:var(--bad-ink)}
+.obh button{flex:none;border:1px solid var(--line);background:var(--card);
+  border-radius:8px;padding:6px 12px;font:inherit;font-size:0.75rem;
+  font-weight:700;color:var(--ink2)}
+.ob1{display:flex;justify-content:space-between;gap:10px;margin-top:7px;
+  font-size:0.75rem;color:var(--ink2)}
+.ob1 .c{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ob1 .s{flex:none;color:var(--ink3);font-family:ui-monospace,Menlo,monospace}
+.obbar .hint{font-size:0.6875rem;color:var(--ink3);margin:8px 0 0}
+
 /* 審核詳情裡的宣導簽到名單。
    ⛔ 一對多的移工簽名不在服務紀錄那一列上，而是在簽到表裡——
       沒有這一段，畫面會印「未簽名」，看起來整場都沒人簽。 */
