@@ -13,7 +13,20 @@ function $(id){ return document.getElementById(id); }
 /* 手機上沒有開發者工具，前端出錯只會「按了沒反應」。
    把未攔截的錯誤直接顯示出來，才查得到是哪裡壞掉。 */
 window.addEventListener('error', function(e){
-  try{ toast('前端錯誤：' + (e.message || e.type), true); }catch(x){}
+  /* ⛔ 只印 e.message 的話，跨網域載入的 app.js 一律只會給
+     「Script error.」——2026-09-21 就是這樣，查不下去。
+     <script> 上已經掛了 crossorigin="anonymous"，所以檔名行號拿得到，
+     一定要印出來，不然這個提示等於沒有。 */
+  try{
+    var at = e.filename ? (' @' + String(e.filename).split('/').pop() +
+                           ':' + e.lineno + ':' + e.colno) : '';
+    toast('前端錯誤：' + (e.message || e.type) + at, true);
+  }catch(x){}
+});
+/* Promise 裡的錯誤不會觸發 error 事件，會靜靜消失。 */
+window.addEventListener('unhandledrejection', function(e){
+  try{ toast('前端錯誤：' + ((e.reason && (e.reason.message || e.reason)) || '?'), true); }
+  catch(x){}
 });
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -560,13 +573,7 @@ function applyPreset(){
   if(isBrief()) fillPicks();
 }
 /* ⚠ hidden input 不會發 change，所以不掛監聽——選擇器的 onPick 直接叫 applyPreset。 */
-$('svcPkVal').addEventListener('click', function(){
-  var p = $('svcPkPop');
-  var on = p.style.display === 'none';
-  p.style.display = on ? '' : 'none';
-  if(on){ pkDraw(SVC_PK_); setTimeout(function(){ $('svcPkQ').focus(); }, 40); }
-});
-$('svcPkQ').addEventListener('input', function(){ pkDraw(SVC_PK_); });
+pkWire(SVC_PK_);
 
 /* ── 翻譯人員的簽名存在伺服器，跟著帳號走 ──────────────────
    同一個人一天要簽好幾份，每次重畫太浪費時間。
@@ -5088,6 +5095,7 @@ function setClientValue(name){
   $('client').value = name;
   $('svcPkVal').textContent = name || '請選擇…';
   $('svcPkVal').classList.toggle('has', !!name);
+  $('svcPkVal').classList.remove('open');
   $('svcPkPop').style.display = 'none';
   if($('svcPkQ')) $('svcPkQ').value = '';
 }
@@ -5691,7 +5699,8 @@ function pkDraw(o){
        ⛔ 不要只留「找不到」——那等於叫他放棄填這張表。 */
     /* ⚠ 至少兩個字才給。一個字就冒出來，等於他每次打字都看到一列
        「用「全」當雇主名稱」——那是雜訊，而且很容易誤觸。 */
-    ((o.allowNew && q.length >= 2 && !rows.some(function(x){ return x.c === q; }))
+    ((o.allowNew && q.length >= 2 && !pkTyping_(q) &&
+      !rows.some(function(x){ return x.c === q; }))
       ? '<button type="button" class="epkrow epknew" data-new="1">' +
           '<span class="nm"><b>用「' + esc(q) + '」當雇主名稱</b>' +
           '<i>名單上沒有這一家——新接的雇主要等下次匯入名冊</i></span>' +
@@ -5710,6 +5719,40 @@ function pkDraw(o){
     });
   });
 }
+
+/* 打開／收起 ＋ 打字。兩個畫面共用。
+
+   ⛔ **注音／拼音是邊打邊組字的。** 2026-09-21 實機截圖抓到：
+      打「暢廣」的過程中 input 事件先送出「ㄔㄤ ㄍ」，於是
+        · 清單顯示「找不到「ㄔㄤ ㄍ」」——其實他字都還沒打完
+        · 而且冒出一列「用「ㄔㄤ ㄍ」當雇主名稱」，
+          按下去就把注音符號存成雇主名字了
+      組字中不要搜尋，組完（compositionend）再搜一次。
+   ⚠ 打開時自動聚焦輸入框——他點這裡就是要找，少一次點擊。 */
+function pkWire(o){
+  var val = $(o.id + 'Val'), pop = $(o.id + 'Pop'), q = $(o.id + 'Q');
+  val.addEventListener('click', function(){
+    var on = pop.style.display === 'none';
+    pop.style.display = on ? '' : 'none';
+    val.classList.toggle('open', on);
+    if(on){ pkDraw(o); setTimeout(function(){ q.focus(); }, 40); }
+  });
+  var composing = false;
+  q.addEventListener('compositionstart', function(){ composing = true; });
+  q.addEventListener('compositionend', function(){ composing = false; pkDraw(o); });
+  /* ⚠ 每一個字都重畫。309 筆在前端篩，量過是毫秒等級——
+     不要做防抖，那會讓打字看起來卡。 */
+  q.addEventListener('input', function(e){
+    /* 有些輸入法只給 e.isComposing、有些只發 compositionstart，兩個都看。 */
+    if(composing || e.isComposing) return;
+    pkDraw(o);
+  });
+}
+
+/* ⚠ 最後一道防線：有些 Android 輸入法不發 compositionend。
+   只要字串裡還有注音符號，就代表他還在組字——不給「自行輸入」那一列。
+   （\u3105-\u312F 是注音，\u31A0-\u31BF 是閩客語擴充。） */
+function pkTyping_(s){ return /[\u3105-\u312F\u31A0-\u31BF]/.test(s); }
 
 /* 「最近選過」記在這台手機上——一人一份，不用後端。
    ⚠ 第一週它是空的，那是對的，不是壞掉。畫面上要講出來。 */
@@ -5734,6 +5777,7 @@ var HC_PK_ = {
     $('hcClient').value = c;
     $('hcPkVal').textContent = c;
     $('hcPkVal').classList.add('has');
+    $('hcPkVal').classList.remove('open');
     $('hcPkPop').style.display = 'none';
     hcLoadWho();
   }
@@ -5741,7 +5785,7 @@ var HC_PK_ = {
 function hcPkClear(){
   $('hcClient').value = '';
   $('hcPkVal').textContent = '請選擇…';
-  $('hcPkVal').classList.remove('has');
+  $('hcPkVal').classList.remove('has', 'open');
   $('hcPkPop').style.display = 'none';
   if($('hcPkQ')) $('hcPkQ').value = '';
 }
@@ -6654,17 +6698,7 @@ function hcSaveSet(){
 [].forEach.call($('hcSeg').children, function(b){
   b.addEventListener('click', function(){ hcMode(b.dataset.m === 'hc'); });
 });
-/* 打開／收起。⚠ 打開時自動聚焦輸入框——他點這裡就是要找，
-   少一次點擊。 */
-$('hcPkVal').addEventListener('click', function(){
-  var p = $('hcPkPop');
-  var on = p.style.display === 'none';
-  p.style.display = on ? '' : 'none';
-  if(on){ pkDraw(HC_PK_); setTimeout(function(){ $('hcPkQ').focus(); }, 40); }
-});
-/* ⚠ 每一個字都重畫。309 筆在前端篩，量過是毫秒等級——
-   不要做防抖，那會讓打字看起來卡。 */
-$('hcPkQ').addEventListener('input', function(){ pkDraw(HC_PK_); });
+pkWire(HC_PK_);
 $('hcDate').addEventListener('change', hcSlots);
 $('hcHosOther').addEventListener('input', hcSlots);
 $('hcHos').addEventListener('change', function(){

@@ -1901,10 +1901,20 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    309 家。原生 select 在手機上要捲三十次，而且看不出哪一家有事。 */
 .epk{position:relative}
 .epkval{width:100%;text-align:left;border:1px solid var(--line);border-radius:10px;
-  padding:11px 13px;background:var(--card);color:var(--ink3);font:inherit;
-  font-size:0.9375rem}
+  padding:11px 34px 11px 13px;background:var(--card);color:var(--ink3);font:inherit;
+  font-size:0.9375rem;position:relative}
 .epkval.has{color:var(--ink);font-weight:600}
-.epkpop{margin-top:7px;border:1px solid var(--line);border-radius:12px;
+/* ⛔ 沒有這個箭頭，它看起來就是一個「已經填好的文字框」，
+   2026-09-21 實機：使用者看不出來那一格可以點。 */
+.epkval::after{content:'';position:absolute;right:14px;top:50%;width:7px;height:7px;
+  border-right:1.5px solid var(--ink3);border-bottom:1.5px solid var(--ink3);
+  transform:translateY(-70%) rotate(45deg);transition:transform .18s cubic-bezier(.32,.72,0,1)}
+.epkval.open::after{transform:translateY(-30%) rotate(-135deg)}
+/* 展開時跟上面那一格接在一起——分開兩個圓角框看起來像兩個欄位。 */
+.epkval.open{border-bottom-left-radius:0;border-bottom-right-radius:0;
+  border-bottom-color:transparent;border-color:var(--brand)}
+.epkpop{margin-top:-1px;border:1px solid var(--brand);
+  border-radius:0 0 12px 12px;
   background:var(--card);padding:9px 10px;max-height:58vh;overflow-y:auto}
 .epkpop > input{width:100%;border:1.5px solid var(--brand);border-radius:10px;
   padding:9px 11px;font:inherit;font-size:0.9375rem;background:var(--card);
