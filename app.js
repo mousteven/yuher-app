@@ -78,7 +78,6 @@ function login(code){
       CAL_SEL = todayStr();
 
       fillClients();
-      bindOther($('client'), $('clientOther'));
       var opts = '<option value="">請選擇…</option>' +
         CREW.map(function(n){ return '<option>'+esc(n)+'</option>'; }).join('');
       $('crew').innerHTML = opts;
@@ -488,20 +487,31 @@ function bindOther(sel, inp){
 function valOf(sel, inp){
   return sel.value === OTHER_ ? inp.value.trim() : sel.value;
 }
-function clientVal(){ return valOf($('client'), $('clientOther')); }
+/* #client 現在是 hidden input，選擇器直接把最後的名字寫進去
+   （名單上沒有的雇主也一樣，走選擇器裡的「自行輸入」那一列）。 */
+function clientVal(){ return $('client').value.trim(); }
 
 /* 客戶清單依服務對象過濾：選了「家庭雇主」就不該還看到一堆工廠。
    宣導也是對工廠，所以沿用工廠的清單。 */
 function targetKind(){ return $('target').value.indexOf('家庭') !== -1 ? '家庭雇主' : '工廠'; }
+/* 服務紀錄那一邊的選擇器。
+   ⚠ 預設分頁是「最近選過」——同一個翻譯一週跑的就是那幾家，
+     第一週它是空的（畫面上有講），之後就是兩下點完。 */
+var SVC_PK_ = {
+  id: 'svcPk', mode: 'svc', list: [], allowNew: true,
+  onPick: function(c){ setClientValue(c); applyPreset(); }
+};
 function fillClients(){
   var kind = targetKind();
   var keep = $('client').value;
-  var list = PRESETS.filter(function(x){ return (x.t || '工廠') === kind; });
-  $('client').innerHTML = '<option value="">請選擇…</option>' +
-    list.map(function(x){ return '<option>'+esc(x.c)+'</option>'; }).join('') +
-    '<option value="'+OTHER_+'">其他（自行輸入）</option>';
-  $('client').value = list.some(function(x){ return x.c === keep; }) ? keep : '';
-  if($('client').value !== OTHER_){ $('clientOther').style.display='none'; }
+  SVC_PK_.list = PRESETS.filter(function(x){ return (x.t || '工廠') === kind; });
+  /* 換服務對象之後，原本選的那一家可能不在這一類裡了。
+     ⛔ 不要默默留著——工廠名單裡選到家庭雇主，移工名單會整個對不上。
+        自行輸入的（不在名單上）留著，那是他刻意打的。 */
+  if(keep && presetOf(keep) && !SVC_PK_.list.some(function(x){ return x.c === keep; })){
+    setClientValue('');
+  }
+  if($('svcPkPop').style.display !== 'none') pkDraw(SVC_PK_);
 }
 
 function presetOf(name){
@@ -549,8 +559,14 @@ function applyPreset(){
   [].forEach.call($('workers').children, fillWorkerNames);
   if(isBrief()) fillPicks();
 }
-$('client').addEventListener('change', applyPreset);
-$('clientOther').addEventListener('input', applyPreset);
+/* ⚠ hidden input 不會發 change，所以不掛監聽——選擇器的 onPick 直接叫 applyPreset。 */
+$('svcPkVal').addEventListener('click', function(){
+  var p = $('svcPkPop');
+  var on = p.style.display === 'none';
+  p.style.display = on ? '' : 'none';
+  if(on){ pkDraw(SVC_PK_); setTimeout(function(){ $('svcPkQ').focus(); }, 40); }
+});
+$('svcPkQ').addEventListener('input', function(){ pkDraw(SVC_PK_); });
 
 /* ── 翻譯人員的簽名存在伺服器，跟著帳號走 ──────────────────
    同一個人一天要簽好幾份，每次重畫太浪費時間。
@@ -2456,7 +2472,7 @@ function fillFormFrom(d){
   var md = document.querySelector('input[name=md][value="' + (d.trip.mode || '到場') + '"]');
   if(md){ md.checked = true; }
   try { syncMode(); } catch(e){}
-  setSelOrOther($('client'), $('clientOther'), d.trip.client);
+  setClientValue(d.trip.client);
   try { applyPreset(); } catch(e2){}     // 移工姓名選單要先長出來
   if($('crew') && d.trip.crew) $('crew').value = d.trip.crew;
   if($('crewOwner')) $('crewOwner').value = d.trip.crewOwner || '';
@@ -3120,7 +3136,7 @@ function resetForm(){
     $('save').textContent = '儲存';
   }
   $('pvModal').style.display='none';
-  $('client').value=''; $('clientOther').value=''; $('clientOther').style.display='none';
+  setClientValue('');
   if(CREW.indexOf(STAFF_NAME) !== -1) $('crew').value = STAFF_NAME;
   $('workers').innerHTML=''; addWorker();
   applyMySig();
@@ -5068,12 +5084,12 @@ function bpHtml(c){
 /* 把雇主名字填進去。名單裡沒有就走「其他，自行輸入」——
    寧可讓人看到名字再確認，也不要默默弄丟。 */
 function setClientValue(name){
-  if(!name){ $('client').value = ''; return; }
+  name = name || '';
   $('client').value = name;
-  if($('client').value === name) return;
-  $('client').value = OTHER_;
-  $('clientOther').style.display = '';
-  $('clientOther').value = name;
+  $('svcPkVal').textContent = name || '請選擇…';
+  $('svcPkVal').classList.toggle('has', !!name);
+  $('svcPkPop').style.display = 'none';
+  if($('svcPkQ')) $('svcPkQ').value = '';
 }
 
 function fillTripForm(r){
@@ -5539,6 +5555,193 @@ function hcMode(on){
   if(on) hcInit();
 }
 
+
+/* ══ 雇主選擇器 ══════════════════════════════════════════════
+
+   309 家。原生 <select> 在手機上要捲三十次，而且看不到「哪一家有事」。
+
+   ⛔ 分類選單解決不了 309 這個數量。先選工廠/家庭、再選地區、再選名字，
+      是把一次滑動換成三次點擊，而且分類錯的時候（一家同時有廠工與看護）
+      使用者會找不到，還以為那家不存在。**只有打字解得掉。**
+
+   ⛔ 兩個頁面的**預設不一樣**，那是這個元件最重要的部分：
+        體檢通知 → 只給「有人要做」的（309 家裡 190 家現在完全沒事）
+        服務紀錄 → 今天行事曆排的 → 最近去過的
+      預設給錯，等於逼他每次都打字。
+
+   ⚠ 一次把 309 家拿完，在前端篩。每打一個字往返一次，工廠的訊號撐不住。 */
+
+/* ⚠ 長的排前面。取第一個對上的，所以「有限公司」若排在
+   「股份有限公司」前面，「全錦興工業股份有限公司」會被切成
+   「全錦興工業股份」——多一個「股」字，看起來只是小錯，
+   但那是每一列都會出現的小錯。 */
+var PK_SUF_ = ['股份有限公司', '有限公司', '企業社', '工業社', '工藝社',
+               '實業社', '企業行', '商行', '工廠'];
+
+/* 「全錦興工業股份有限公司」→ ['全錦興', '工業股份有限公司']
+   ⚠ 實測 309 家拿掉後綴之後 0 個撞名，而且 83% 只剩 3-4 個字。
+     所以核心名可以放大、後綴縮小——能分辨的就是前面那幾個字。 */
+function pkSplit_(name){
+  var n = String(name || '');
+  for(var i = 0; i < PK_SUF_.length; i++){
+    var k = n.lastIndexOf(PK_SUF_[i]);
+    if(k > 0 && k + PK_SUF_[i].length === n.length){
+      return [n.slice(0, k), n.slice(k)];
+    }
+  }
+  return [n, ''];
+}
+
+/* 比對：中文任意位置、英文、移工名字。後綴不參與——
+   打「有限公司」不應該跑出 117 家。 */
+function pkHit_(x, q){
+  if(!q) return true;
+  /* ⛔ 只比核心名，不要再補一條「整個名字有沒有含」。
+     309 家裡一百多家的全名都含「有限公司」——補那一條等於後綴又回到比對裡，
+     打「有」就跳出一百多家，篩了跟沒篩一樣。
+     後綴不在清單上的公司，核心名本來就是整個名字，不會漏掉。 */
+  if(pkSplit_(x.c)[0].toLowerCase().indexOf(q) !== -1) return true;
+  return (x.who || []).some(function(w){
+    return String(w).toLowerCase().indexOf(q) !== -1;
+  });
+}
+
+function pkRow_(x, mode, q){
+  var p = pkSplit_(x.c);
+  var sub, right;
+  if(mode === 'hc'){
+    sub = x.due ? (x.due + ' 人要做 · 共 ' + x.n + ' 人') : ('共 ' + x.n + ' 人');
+    if(!x.fac && x.who.length) sub = x.who.join('、') + (x.n > x.who.length ? ' 等' : '');
+    right = x.due
+      ? ('<span class="due' + (x.late ? ' r' : '') + '"><b>' + x.due + '</b>' +
+         (x.late ? ('逾期 ' + x.late) : (x.next ? esc(x.next.slice(5)) : '')) + '</span>')
+      : (x.missed
+         ? '<span class="due r"><b>!</b>漏 ' + x.missed + '</span>'
+         : '<span class="due g"><b>—</b></span>');
+  } else {
+    sub = x.fac ? ('共 ' + x.n + ' 人')
+                : ((x.who || []).join('、') + (x.n > x.who.length ? ' 等' : ''));
+    right = '<span class="due g"><b>›</b></span>';
+  }
+  return '<button type="button" class="epkrow" data-c="' + esc(x.c) + '">' +
+    '<span class="nm"><b>' + esc(p[0]) +
+      (p[1] ? '<em>' + esc(p[1]) + '</em>' : '') + '</b>' +
+      (sub ? '<i>' + esc(sub) + '</i>' : '') + '</span>' + right + '</button>';
+}
+
+/* opts = { id, mode:'hc'|'svc', list, value, onPick, only:'fac'|'home'|'' } */
+function pkDraw(o){
+  var box = $(o.id + 'Box'); if(!box) return;
+  var q = (($(o.id + 'Q') && $(o.id + 'Q').value) || '').trim().toLowerCase();
+  var tab = o.tab || (o.mode === 'hc' ? 'due' : 'recent');
+  var all = o.list || [];
+
+  /* 服務對象先選了的話，清單跟著變。這一層過濾是免費的——
+     「服務對象」本來就是必填，他一定會先選。 */
+  if(o.only === 'fac')  all = all.filter(function(x){ return x.fac; });
+  if(o.only === 'home') all = all.filter(function(x){ return !x.fac; });
+
+  var head = '', rows = [];
+  if(q){
+    rows = all.filter(function(x){ return pkHit_(x, q); });
+    head = '找到 ' + rows.length + ' 家';
+  } else if(tab === 'due'){
+    rows = all.filter(function(x){ return x.due || x.missed; });
+    head = '有人要做的';
+  } else if(tab === 'fac'){
+    rows = all.filter(function(x){ return x.fac; }); head = '工廠';
+  } else if(tab === 'home'){
+    rows = all.filter(function(x){ return !x.fac; }); head = '家庭雇主';
+  } else if(tab === 'recent'){
+    var rec = pkRecent_(o.mode);
+    rows = rec.map(function(c){
+      return all.filter(function(x){ return x.c === c; })[0];
+    }).filter(Boolean);
+    head = '最近選過的';
+  } else { rows = all; head = '全部'; }
+
+  var more = '';
+  if(rows.length > 40){ more = '還有 ' + (rows.length - 40) + ' 家，打字縮小範圍';
+                        rows = rows.slice(0, 40); }
+
+  var chips = (o.mode === 'hc')
+    ? [['due', '有人要做'], ['fac', '工廠'], ['home', '家庭'], ['all', '全部']]
+    : [['recent', '最近選過'], ['all', '全部']];
+
+  box.innerHTML =
+    '<div class="epkchips">' + chips.map(function(t){
+      var n = t[0] === 'due'
+        ? all.filter(function(x){ return x.due || x.missed; }).length
+        : t[0] === 'fac' ? all.filter(function(x){ return x.fac; }).length
+        : t[0] === 'home' ? all.filter(function(x){ return !x.fac; }).length
+        : t[0] === 'all' ? all.length : pkRecent_(o.mode).length;
+      return '<button type="button" class="epkchip' + (tab === t[0] ? ' on' : '') +
+        '" data-t="' + t[0] + '">' + esc(t[1]) + ' ' + n + '</button>';
+    }).join('') + '</div>' +
+    (rows.length ? ('<p class="epkhd">' + esc(head) + '</p>') : '') +
+    (rows.length
+      ? rows.map(function(x){ return pkRow_(x, o.mode, q); }).join('')
+      : '<p class="epkempty">' + (q ? ('找不到「' + esc(q) + '」') :
+          (tab === 'recent' ? '還沒有紀錄——打字找，選過之後這裡會記住'
+                            : '這個條件下沒有')) + '</p>') +
+    (more ? '<p class="epkmore">' + esc(more) + '</p>' : '') +
+    /* 名冊每月匯入一次，這個月新接的雇主還不在裡面。
+       ⛔ 不要只留「找不到」——那等於叫他放棄填這張表。 */
+    ((o.allowNew && q && !rows.some(function(x){ return x.c === q; }))
+      ? '<button type="button" class="epkrow epknew" data-new="1">' +
+          '<span class="nm"><b>用「' + esc(q) + '」當雇主名稱</b>' +
+          '<i>名單上沒有這一家——新接的雇主要等下次匯入名冊</i></span>' +
+          '<span class="due g"><b>+</b></span></button>'
+      : '');
+
+  [].forEach.call(box.querySelectorAll('.epkchip'), function(b){
+    b.addEventListener('click', function(){ o.tab = b.dataset.t; pkDraw(o); });
+  });
+  [].forEach.call(box.querySelectorAll('.epkrow'), function(b){
+    b.addEventListener('click', function(){
+      var v = b.dataset.new ? (($(o.id + 'Q') || {}).value || '').trim() : b.dataset.c;
+      if(!v) return;
+      if(!b.dataset.new) pkRemember_(o.mode, v);   // 自行輸入的不記，下次匯入就有了
+      o.onPick(v);
+    });
+  });
+}
+
+/* 「最近選過」記在這台手機上——一人一份，不用後端。
+   ⚠ 第一週它是空的，那是對的，不是壞掉。畫面上要講出來。 */
+function pkRecent_(mode){
+  try {
+    return JSON.parse(localStorage.getItem('pk.recent.' + mode) || '[]');
+  } catch(e){ return []; }
+}
+function pkRemember_(mode, c){
+  try {
+    var a = pkRecent_(mode).filter(function(x){ return x !== c; });
+    a.unshift(c);
+    localStorage.setItem('pk.recent.' + mode, JSON.stringify(a.slice(0, 6)));
+  } catch(e){}
+}
+
+/* 體檢那一邊的選擇器。預設只給「有人要做」的——
+   309 家裡 190 家現在完全沒事，列出來是純雜訊。 */
+var HC_PK_ = {
+  id: 'hcPk', mode: 'hc', list: [],
+  onPick: function(c){
+    $('hcClient').value = c;
+    $('hcPkVal').textContent = c;
+    $('hcPkVal').classList.add('has');
+    $('hcPkPop').style.display = 'none';
+    hcLoadWho();
+  }
+};
+function hcPkClear(){
+  $('hcClient').value = '';
+  $('hcPkVal').textContent = '請選擇…';
+  $('hcPkVal').classList.remove('has');
+  $('hcPkPop').style.display = 'none';
+  if($('hcPkQ')) $('hcPkQ').value = '';
+}
+
 var HC_READY_ = false;
 function hcInit(){
   if(HC_READY_) return;
@@ -5590,9 +5793,8 @@ function hcInit(){
      沿用那一份的話，那 51 家的移工永遠收不到體檢通知，而且畫面上看不出來。
      體檢的事實來源是名冊——名冊上有在職的人，就要通知。 */
   google.script.run.withSuccessHandler(function(r){
-    $('hcClient').innerHTML = '<option value="">請選擇…</option>' +
-      ((r && r.list) || []).map(function(x){
-        return '<option>'+esc(x.c)+'</option>'; }).join('');
+    HC_PK_.list = (r && r.list) || [];
+    pkDraw(HC_PK_);
   }).withFailureHandler(function(e){ toast(e.message, true); }).hcClients(CODE);
 }
 
@@ -5766,7 +5968,7 @@ function hcSubmit(){
     b.disabled = false;
     toast('已開單　' + r.n + ' 人');
     HC_PICK_ = []; $('hcWho').innerHTML = '<p class="hint">先選工廠</p>';
-    $('hcClient').value = ''; $('hcWeek').style.display = 'none';
+    hcPkClear(); $('hcWeek').style.display = 'none';
     hcTally();
     hcShowMsgs(r.id, 'new');
   }).withFailureHandler(function(e){
@@ -6448,7 +6650,17 @@ function hcSaveSet(){
 [].forEach.call($('hcSeg').children, function(b){
   b.addEventListener('click', function(){ hcMode(b.dataset.m === 'hc'); });
 });
-$('hcClient').addEventListener('change', hcLoadWho);
+/* 打開／收起。⚠ 打開時自動聚焦輸入框——他點這裡就是要找，
+   少一次點擊。 */
+$('hcPkVal').addEventListener('click', function(){
+  var p = $('hcPkPop');
+  var on = p.style.display === 'none';
+  p.style.display = on ? '' : 'none';
+  if(on){ pkDraw(HC_PK_); setTimeout(function(){ $('hcPkQ').focus(); }, 40); }
+});
+/* ⚠ 每一個字都重畫。309 筆在前端篩，量過是毫秒等級——
+   不要做防抖，那會讓打字看起來卡。 */
+$('hcPkQ').addEventListener('input', function(){ pkDraw(HC_PK_); });
 $('hcDate').addEventListener('change', hcSlots);
 $('hcHosOther').addEventListener('input', hcSlots);
 $('hcHos').addEventListener('change', function(){
