@@ -3994,6 +3994,40 @@ function showReviewModal(recCode, after){
     .getRecordDetail(CODE, recCode);
 }
 
+/* 宣導簽到那一段。
+   ⚠ 這裡**不放簽名圖**：一場可能三十個人，每張幾十 KB，整包會大到
+     手機讀不動。要看簽名就按下面的「看正式服務紀錄表（PDF）」，
+     那份的簽到表上每一格都有圖。 */
+function rvBriefBlock(bf){
+  var signs = bf.signs || [];
+  var exp = bf.expected || [];
+  var by = {};
+  signs.forEach(function(x){ by[x.name] = x; });
+  /* 應到名單優先，沒指定就照實際簽到的順序 */
+  var rows = exp.length
+    ? exp.map(function(n){ return by[n] || { name: n }; })
+    : signs.slice();
+  /* 名單外自己打名字簽的人要接在後面，不可以漏掉——他們真的到場了 */
+  signs.forEach(function(x){
+    if(!rows.some(function(r){ return r.name === x.name; })) rows.push(x);
+  });
+  var done = rows.filter(function(r){ return r.at; }).length;
+  return '<div class="rvbf">'+
+    '<div class="hd"><b>宣導簽到</b>'+
+      '<em>'+done+' ／ '+rows.length+' 人已簽</em></div>'+
+    rows.map(function(r){
+      return '<div class="bf1'+(r.at?' on':'')+'">'+
+        '<span class="mk">'+(r.at?'✓':'')+'</span>'+
+        '<span class="nm">'+esc(r.name)+'</span>'+
+        (r.lang?'<span class="lg">'+esc(r.lang)+'</span>':'')+
+        '<span class="tm">'+esc(r.at ? String(r.at).slice(-5) : '未簽')+'</span>'+
+      '</div>';
+    }).join('')+
+    (bf.paper ? '<p class="hint">另有紙本簽到表照片，在 PDF 裡</p>' : '')+
+    '<p class="hint">簽名影像在正式表單（PDF）的簽到表上</p>'+
+  '</div>';
+}
+
 /* 一趟服務走完要經過四關。與其只印現在停在哪，不如把整條路畫出來——
    翻譯人員一眼就知道「我的表在誰手上」，不用去問。 */
 var PROG_STEPS_ = ['送審', '副理', '總經理', '歸檔'];
@@ -4142,6 +4176,11 @@ function drawRecordBody(d){
     h += '<div class="rvrej"><b>已退回，等翻譯人員補正</b>'+esc(t.reject)+'</div>';
   }
 
+  /* 宣導（一對多）的簽名不在這一列上，在「宣導簽到」表裡。
+     ⛔ 沿用一般紀錄的排版會印成「（未填姓名）· 移工簽名 未簽名」——
+        看起來整場都沒人簽，但 PDF 的簽到表上明明有四個人簽了。
+        2026-09-21 他截圖指出來的。 */
+  var bf = d.brief;
   ws.forEach(function(w, i){
     var o = (typeof origOf === 'function') ? origOf(w.name) : '';
     var proc = [w.did, w.dnote].filter(String).join('。');
@@ -4149,19 +4188,25 @@ function drawRecordBody(d){
     var ex = [];
     if(w.fee) ex.push('費用 '+w.fee);
     if(w.memo) ex.push(w.memo);
+    /* 一對多那一列是「宣導內容」，本來就不會有個別移工的名字。 */
+    var isBf = !!bf && !w.name;
     h += '<div class="rvw">'+
-      '<div class="hd"><i>'+(i+1)+'</i><b>'+esc(w.name||'（未填姓名）')+'</b>'+
+      '<div class="hd"><i>'+(i+1)+'</i><b>'+
+        esc(w.name || (isBf ? '宣導內容（一對多）' : '（未填姓名）'))+'</b>'+
         (o?'<span class="or">'+esc(o)+'</span>':'')+
         (w.lang?'<em>'+esc(w.lang)+'</em>':'')+'</div>'+
       rvField('服務項目', (w.big&&w.sub) ? (w.big+' ／ '+w.sub) : (w.big||w.sub||''))+
       rvField('處理經過', proc)+
       rvField('處理結果', res)+
       (ex.length ? rvField('其他', ex.join('　·　')) : '')+
-      '<div class="sg"><span>移工簽名</span>'+
-        (w.sigWorker ? '<img src="'+esc(w.sigWorker)+'">' : '<em>未簽名</em>')+
-      '</div>'+
+      (isBf ? '' :
+        '<div class="sg"><span>移工簽名</span>'+
+          (w.sigWorker ? '<img src="'+esc(w.sigWorker)+'">' : '<em>未簽名</em>')+
+        '</div>')+
     '</div>';
   });
+
+  if(bf) h += rvBriefBlock(bf);
 
   h += '<div class="rvsig">'+
     '<div><span>雇主簽名</span>'+
