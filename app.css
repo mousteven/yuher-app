@@ -1895,6 +1895,12 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .hcride span{display:block;font-size:0.75rem;color:var(--ink2);margin-top:2px;
   padding-left:22px}
 
+/* 案件細節裡工人上傳的檔案（機票照片）。
+   ⛔ 一條 Drive 網址沒有人看得懂，給一顆點得開的。 */
+.dflink{display:inline-block;background:var(--brand-soft);color:var(--brand);
+  border:1px solid var(--line);border-radius:9px;padding:8px 16px;
+  font-size:0.8125rem;font-weight:700;text-decoration:none}
+
 /* 還沒送出去的服務表。
    ⚠ 用「提醒」的顏色不是「錯誤」的顏色——東西沒有不見，只是還在手機裡。
       真的送不出去（.bad）才轉紅。 */

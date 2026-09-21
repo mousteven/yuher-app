@@ -5009,6 +5009,12 @@ function caseSummary(c){
            這裡只顯示中文名——要地址地圖的是工人，不是翻譯，
            那些已經送到工人那一頁上了。 */
         var v2 = (f.k === 'hos') ? String(d[f.k]).split('|')[0].trim() : d[f.k];
+        /* link 型別是工人上傳的檔案（機票照片）。
+           ⛔ 印出一長條 Drive 網址沒有人看得懂，要給一顆點得開的。 */
+        if(f.t === 'link'){
+          return '<dt>' + esc(f.l) + '</dt><dd>' +
+            '<a href="' + esc(v2) + '" target="_blank" rel="noopener">開啟</a></dd>';
+        }
         return '<dt>' + esc(f.l) + '</dt><dd>' +
           (f.t === 'check' ? '✓' : esc(v2)) + '</dd>';
       }).join('') + '</dl></div>';
@@ -5836,6 +5842,14 @@ function openDetailForm(c){
     if(f.t === 'area'){
       return '<div class="f"><label>' + esc(f.l) + '</label>' +
         '<textarea data-k="' + esc(f.k) + '" rows="3">' + esc(v) + '</textarea>' + hint + '</div>';
+    }
+    /* ⛔ link 是工人上傳的東西，翻譯不該手打一條 Drive 網址。
+       有就給一顆點得開的，沒有就直說「工人還沒傳」。
+       ⚠ 不放 data-k——放了 patch 會把它變成空字串，把連結洗掉。 */
+    if(f.t === 'link'){
+      return '<div class="f"><label>' + esc(f.l) + '</label>' +
+        (v ? '<a class="dflink" href="' + esc(v) + '" target="_blank" rel="noopener">開啟</a>'
+           : '<p class="hint" style="margin:0">工人還沒傳</p>') + hint + '</div>';
     }
     var type = f.t === 'date' ? 'date' : f.t === 'time' ? 'time' : 'text';
     return '<div class="f"><label>' + esc(f.l) + '</label>' +
