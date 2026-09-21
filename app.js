@@ -4785,7 +4785,15 @@ function loadTrack(force){
     .listCases(CODE, want);
 }
 
-if($('tkAdd')) $('tkAdd').addEventListener('click', function(){ openPick(null); });
+if($('tkAdd')) $('tkAdd').addEventListener('click', function(){
+  if(TK_CUR === '體檢通知'){
+    /* 體檢有自己的開單流程（挑人、算期別、算報到時段），
+       ⛔ 不要塞進那個四選一的通用選單——那支只收雇主與移工。 */
+    hcMode($('hcPane').style.display === 'none');
+    return;
+  }
+  openPick(null);
+});
 
 function drawKinds(){
   $('tkKinds').innerHTML = TK_KINDS.map(function(k){
@@ -4798,6 +4806,9 @@ function drawKinds(){
     b.addEventListener('click', function(){
       if(b.dataset.k === TK_CUR) return;
       TK_CUR = b.dataset.k; TK_ST = '';
+      /* 離開體檢就把開單表單收起來——留在畫面上，切到「異常」
+         卻看到一張體檢單，會以為自己按錯。 */
+      hcMode(false);
       /* ⛔ 不要清掉 TK_ROWS／TK_LOADED，也不要 force。
          清掉就等於每次切頁籤都重打一次後端（要兩秒多）。
          要拿新的資料：下拉更新。 */
@@ -4834,7 +4845,10 @@ function drawCases(){
   });
 
   // 先講一句人話，再列清單。數字一定帶單位（取捨三）。
-  $('tkLede').innerHTML = tkLede();
+  /* ⛔ tkLede 2026-09-22 拿掉（牟佑彬）。上面的頁籤與篩選鈕已經把
+     同一組數字講過兩次，第三次是雜訊，而且會把開單按鈕擠到螢幕外。 */
+  var b2 = $('tkAdd');
+  if(b2 && $('hcPane') && $('hcPane').style.display === 'none') b2.textContent = hcAddLabel();
 
   /* 體檢走自己那一套：一批多人，卡片與排序都跟單人案件不一樣。
      搜尋列只在體檢出現——別的頁籤件數少，多一條輸入框只是雜訊。 */
@@ -4858,33 +4872,12 @@ function drawCases(){
 
 /* 摘要一句話。照「先講結論」的規矩：不要寫「共 6 件」，
    要寫「3 件超過 7 天還沒結案」——人看完就知道下一步做什麼。 */
-function tkLede(){
-  var open = TK_ROWS.filter(function(c){ return c.status === '進行中'; });
-  var late = open.filter(function(c){ return c.state.key === 'late'; }).length;
-  var today = open.filter(function(c){ return c.state.key === 'today'; }).length;
-  var back = open.filter(function(c){ return c.badCount > 0; }).length;
-  var head, sub;
-  if(back){
-    head = back + ' 件底下有服務紀錄被退回';
-    sub = '退回的要改完重送，案件才結得了。';
-  } else if(late){
-    head = late + ' 件已經逾期';
-    sub = TK_CUR === '體檢通知' ? '體檢逾期受罰的是雇主，要盯工廠人資。'
-        : TK_CUR === '返鄉休假' ? '人還沒回來。先聯絡本人，再通知雇主。'
-        : '排定的日期過了還沒處理。';
-  } else if(today){
-    head = '今天有 ' + today + ' 件要處理';
-    sub = '出門前先看一下要帶什麼。';
-  } else if(open.length){
-    head = open.length + ' ' + TK_UNIT + '進行中';
-    sub = '沒有逾期的。' + (TK_CUR === '體檢通知'
-      ? '體檢前一天晚上系統會自動再提醒一次。' : '');
-  } else {
-    head = '沒有進行中的' + TK_CUR;
-    sub = '從行事曆的行程往右滑，就可以開一件。';
-  }
-  return '<div class="tklede"><h3>' + esc(head) + '</h3><p>' + esc(sub) + '</p></div>';
-}
+/* ⛔ tkLede 2026-09-22 整支刪掉（牟佑彬指定）。
+   它印的是「3 件進行中／沒有逾期的…」——但上面的頁籤 badge 與
+   篩選鈕（快到了 1 · 進行中 3 · 已結案）已經把同一組數字講過兩次了。
+   第三次是雜訊，而且它把真正要用的東西（開單按鈕）擠到螢幕外面。
+   ⚠ 要復活的話記得：同一個數字在一個畫面上只講一次。 */
+
 
 function caseCard(c){
   var cls = c.state.key === 'back' || c.state.key === 'late' ? 'bad'
@@ -5976,27 +5969,31 @@ function hcNextSunday_(){
          '-' + ('0'+d.getDate()).slice(-2);
 }
 
-/* ── 填寫頁的模式切換 ───────────────────────────────── */
+/* ── 體檢開單：現在住在「追蹤 › 體檢」那一頁 ─────────────
 
+   ⛔ 2026-09-22 從填寫頁搬過來（牟佑彬）。
+      理由：體檢本來就是四種追蹤之一，**建立的地方跟看的地方應該是同一處**。
+      以前要在「填寫 › 體檢通知」開單，卻在「追蹤 › 體檢」看，
+      而且兩邊的數字還是分開算的。
+
+   ⚠ 表單預設收起來。這一頁最常做的事是「看還有哪幾批要處理」，
+     不是「再開一批」——開單的入口是下面那顆按鈕。 */
 function hcMode(on){
-  var pane = $('p-new');
-  [].forEach.call(pane.children, function(el){
-    if(el.id === 'hcSeg') return;
-    if(el.id === 'hcPane'){ el.style.display = on ? '' : 'none'; return; }
-    /* 記住原本的 display 再蓋掉。editBar 與 briefCard 本來就是隱藏的，
-       切回來時直接設成空字串會把它們變出來。 */
-    if(on){
-      if(el.dataset.hcWas === undefined) el.dataset.hcWas = el.style.display;
-      el.style.display = 'none';
-    } else {
-      el.style.display = el.dataset.hcWas || '';
-      delete el.dataset.hcWas;
-    }
-  });
-  [].forEach.call($('hcSeg').children, function(b){
-    b.classList.toggle('on', (b.dataset.m === 'hc') === on);
-  });
-  if(on) hcInit();
+  var pane = $('hcPane');
+  if(!pane) return;
+  pane.style.display = on ? '' : 'none';
+  var b = $('tkAdd');
+  if(b) b.textContent = on ? '收起來' : hcAddLabel();
+  if(on){
+    hcInit();
+    pane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+/* 按鈕上的字要跟著頁籤換——四種案件不是同一件事，
+   寫成一律「＋ 開一件追蹤」的話，在體檢那一頁按下去會跑出四選一，很怪。 */
+function hcAddLabel(){
+  return TK_CUR === '體檢通知' ? '＋ 開一張體檢通知' : '＋ 開一件追蹤';
 }
 
 
@@ -6996,7 +6993,7 @@ function hcNudge(){
   if(!box){
     box = document.createElement('div');
     box.id = 'hcNudge';
-    $('tkLede').parentNode.insertBefore(box, $('tkLede'));
+    $('tkBody').parentNode.insertBefore(box, $('tkBody'));
   }
   var seq = ++HC_NUDGE_SEQ_;
   var got = { car: null, due: null, ack: null };
@@ -7144,9 +7141,6 @@ function hcSaveSet(){
 
 /* ── 綁定 ───────────────────────────────────────────── */
 
-[].forEach.call($('hcSeg').children, function(b){
-  b.addEventListener('click', function(){ hcMode(b.dataset.m === 'hc'); });
-});
 pkWire(HC_PK_);
 $('hcDate').addEventListener('change', hcSlots);
 $('hcHosOther').addEventListener('input', hcSlots);

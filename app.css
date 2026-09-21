@@ -1389,10 +1389,8 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 #tkKinds button.on .badge{background:rgba(255,255,255,.3)}
 
 /* 先講一句人話，再列清單 */
-.tklede{background:var(--card);border:1px solid var(--line);border-radius:13px;
-  padding:12px 13px;margin-bottom:10px}
-.tklede h3{margin:0 0 4px;font-size:0.9375rem;line-height:1.5;letter-spacing:-.01em}
-.tklede p{margin:0;font-size:0.75rem;color:var(--ink3);line-height:1.6}
+/* ⛔ .tklede 2026-09-22 跟著 tkLede() 一起刪掉。
+   改版之後回頭掃 CSS——換掉的元件，樣式不會自己消失。 */
 
 /* 案件卡沿用行程卡 .ev，多一條底下的統計 */
 .crecs{display:block;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);
