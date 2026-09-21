@@ -813,7 +813,12 @@ function calBtn(){
      而「確實通知到」正是這條連結存在的目的。 */
 function noticePage(){
   return '<div class="pg">' + head() + band() +
-    '<div class="bd">' + secWhere() + secWhat() +
+    /* ⛔ hero() 一定要在。大日期（2.75rem 等寬）、星期、倒數、時段膠囊
+       是這一頁的骨架，不是裝飾。
+       2026-09-21 我組這一頁的時候漏掉它，整張單子從「一眼看到日期」
+       變成「一堆欄位」——跟 9/20 記過的那次一模一樣。
+       那次靠牟佑彬拍照才發現，這次是自己截圖看到的。 */
+    '<div class="bd">' + hero() + secWhere() + secWhat() +
       '<button type="button" id="whoami">' + esc(t('q0')) +
       (zhOnly() ? '' : '<small>' + esc(ZH.q0) + '</small>') + '</button>' +
     '</div><div class="prog"><i class="on"></i><i></i><i></i></div></div>';
