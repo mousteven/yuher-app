@@ -1960,6 +1960,97 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   line-height:1.5}
 .bdue.off{color:var(--bad-ink);font-weight:600}
 
+/* ══ 返鄉：航廈看板 ═══════════════════════════════════════
+   牟佑彬 2026-09-22：「希望這個頁籤看起來像是有出國的 feel」。
+
+   ⛔ **看板刻意不跟著日夜模式變。** 機場大廳的看板本來就永遠是深色的，
+      而且這是整個頁籤唯一的氣氛元件——白天變白、晚上變黑就沒有辨識度。
+   ⚠ 所以它的對比要自己顧：琥珀 #F0B429 對 #0C1118 是 9.8:1，
+     白字 82% 透明度也還有 11:1。好看不可以換來難讀。
+   ⛔ 三個顏色是新加的 token，只有這一塊在用，不要拿去別的地方。 */
+:root{ --fids:#0C1118; --fids2:#161D28; --amber:#F0B429;
+       --fgreen:#39C08A; --fred:#E8657F; }
+
+.fids{background:var(--fids);border-radius:13px;overflow:hidden;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  box-shadow:inset 0 0 0 1px rgba(240,180,41,.18);margin-bottom:12px}
+.fids .bar{display:flex;align-items:center;gap:8px;padding:9px 13px;
+  background:var(--fids2);border-bottom:1px solid rgba(240,180,41,.2)}
+.fids .bar b{color:var(--amber);font-size:0.75rem;letter-spacing:.18em}
+.fids .bar .now{margin-left:auto;color:rgba(255,255,255,.5);font-size:0.6875rem;
+  font-variant-numeric:tabular-nums}
+.fhdr{display:grid;grid-template-columns:50px 1fr 88px;gap:8px;padding:7px 13px 5px;
+  font-size:0.5625rem;letter-spacing:.14em;color:rgba(240,180,41,.55)}
+/* 一列至少 58px——工廠裡站著單手點。 */
+.vrow{display:grid;grid-template-columns:50px 1fr 88px;gap:8px;padding:10px 13px;
+  align-items:center;border-top:1px solid rgba(255,255,255,.07);color:#fff;
+  width:100%;text-align:left;background:none;border-left:0;border-right:0;
+  border-bottom:0;font:inherit;min-height:58px}
+.vrow:active{background:rgba(255,255,255,.06)}
+.vrow .d{font-size:0.9375rem;font-weight:700;color:var(--amber);
+  font-variant-numeric:tabular-nums;line-height:1.15;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.vrow .d s{display:block;text-decoration:none;font-size:0.5625rem;
+  color:rgba(240,180,41,.55);letter-spacing:.1em}
+.vrow .m{min-width:0}
+.vrow .m .rt{display:flex;align-items:center;gap:6px;font-size:0.8125rem;font-weight:700;
+  letter-spacing:.06em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.vrow .m .rt i{font-style:normal;color:rgba(255,255,255,.35);font-size:0.75rem}
+/* 中文名字走系統字——等寬字排中文會散。 */
+.vrow .m .nm{font-family:inherit;font-size:0.8125rem;color:rgba(255,255,255,.82);
+  margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.vrow .m .co{font-family:inherit;font-size:0.625rem;color:rgba(255,255,255,.4);
+  display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vrow .s{text-align:right;font-size:0.625rem;font-weight:700;letter-spacing:.06em;
+  line-height:1.35;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  white-space:nowrap}
+/* ⛔ 三行各自不換行。整句塞進 88px 會被擠成三行還斷字。 */
+.vrow .s em{font-style:normal;display:block;font-family:inherit;font-size:0.625rem;
+  color:rgba(255,255,255,.55);letter-spacing:0;margin-top:1px;white-space:nowrap}
+.vrow .s u{display:block;text-decoration:none;font-size:0.5625rem;
+  color:rgba(255,255,255,.4);letter-spacing:0;margin-top:1px;white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.vrow .s.red u{color:var(--fred)}
+.vrow .s.amber{color:var(--amber)}
+.vrow .s.green{color:var(--fgreen)}
+.vrow .s.red{color:var(--fred)}
+.ffoot{padding:9px 13px;border-top:1px solid rgba(255,255,255,.07);
+  font-size:0.625rem;color:rgba(255,255,255,.4);display:flex;
+  justify-content:space-between;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* 登機證的撕線打孔與條碼。
+   ⚠ 打孔那兩顆圓要跟卡片外面的底色一樣，不然會看到兩個色塊。 */
+.bp .code{padding:0 14px 12px}
+.bp .code .bars{height:26px;border-radius:3px;
+  background:repeating-linear-gradient(90deg,#fff 0 2px,transparent 2px 4px,
+    #fff 4px 5px,transparent 5px 9px,#fff 9px 12px,transparent 12px 13px)}
+.bp .code .id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:0.5625rem;letter-spacing:.2em;opacity:.6;margin-top:4px;text-align:center}
+
+/* 證件通關章。四張都蓋到才進「證件齊」，缺哪一張一眼看到。 */
+.stamps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:11px 0 0}
+.stp{aspect-ratio:1;border-radius:10px;border:2px dashed var(--line);display:grid;
+  place-items:center;text-align:center;padding:6px;background:var(--card)}
+.stp b{display:block;font-size:0.625rem;color:var(--ink3);line-height:1.3;font-weight:700}
+.stp.on{border-style:solid;border-color:var(--ok-bar);background:var(--ok-bg);
+  transform:rotate(-3deg)}
+.stp.on b{color:var(--ok-ink)}
+.stp.on::before{content:"\2713";display:block;font-size:1.05rem;color:var(--ok-bar);
+  font-weight:800;line-height:1}
+.stp.miss{border-color:var(--bad-bar)}
+.stp.miss b{color:var(--bad-ink)}
+@media (prefers-reduced-motion:reduce){ .stp.on{transform:none} }
+
+/* 行李條。⚠ 只有勾了加購才畫得出來——空的元件比沒有元件難看。 */
+.tag2{display:flex;align-items:center;gap:9px;margin-top:9px;background:var(--card);
+  border:1px solid var(--line);border-radius:8px;padding:8px 11px;
+  border-left:5px solid var(--warn-bar)}
+.tag2 .n{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:1.0625rem;
+  font-weight:800;color:var(--warn-ink);font-variant-numeric:tabular-nums}
+.tag2 .t{font-size:0.6875rem;color:var(--ink2);line-height:1.4}
+.tag2 .t b{display:block;color:var(--ink);font-size:0.75rem}
+
 /* ══ 雇主選擇器 ══════════════════════════════════
    309 家。原生 select 在手機上要捲三十次，而且看不出哪一家有事。 */
 .epk{position:relative}

@@ -4861,13 +4861,85 @@ function drawCases(){
   if(!rows.length){
     $('tkBody').innerHTML = '<div class="mid" style="padding:26px">' +
       (TK_ROWS.length ? '這個條件下沒有案件' :
-        '還沒有' + esc(TK_CUR) + '。從行事曆的行程往右滑就開得了一件。') + '</div>';
+        '還沒有' + esc(TK_CUR) + '。上面那顆「＋ 開一件追蹤」就開得了。') + '</div>';
     return;
   }
-  $('tkBody').innerHTML = rows.map(caseCard).join('');
+  /* 返鄉走航廈看板。這個頁籤唯一要回答的問題是
+     「誰快走了、誰還沒回來」——一排日期＋目的地＋狀態燈，比通用卡片直接。 */
+  $('tkBody').innerHTML = (TK_CUR === '返鄉休假')
+    ? vacBoard(rows)
+    : rows.map(caseCard).join('');
   [].forEach.call($('tkBody').querySelectorAll('[data-case]'), function(el){
     el.addEventListener('click', function(){ openCase(el.dataset.case); });
   });
+}
+
+/* ── 航廈看板（返鄉休假專用）──────────────────────────
+
+   牟佑彬 2026-09-22：「希望這個頁籤看起來像是有出國的 feel」。
+
+   ⛔ **借形狀，不借字。** 階段不改成航空術語——「申請中」不會變成
+      CHECK-IN、「證件齊」不會變成 BOARDING。那些字看起來很像機場，
+      但對不到任何實際狀態，翻譯要判斷的是「這個人還缺什麼」，
+      不是猜一個英文詞是什麼意思。
+      所以每一列是兩層：上面英文給氣氛，**下面那行小字才是真的階段**。
+
+   ⚠ 看板刻意不跟著日夜模式變（見 app.css 的 .fids）。 */
+var VAC_EN_ = { '申請中':'PENDING', '證件齊':'READY',
+                '已離境':'DEPARTED', '已回台':'ARRIVED' };
+
+function vacRow(c){
+  var d = c.detail || {};
+  var late = c.state.key === 'late' || c.state.key === 'back';
+  var closed = c.status !== '進行中';
+  var ph = c.phase || '';
+  /* 逾期壓過階段：人沒回來是這個頁籤最嚴重的事。 */
+  var en = late ? 'OVERDUE' : (VAC_EN_[ph] || (closed ? 'CLOSED' : 'PENDING'));
+  var tone = late ? 'red' : (ph === '已離境' || ph === '已回台' || closed)
+                            ? 'green' : 'amber';
+  /* ⛔ 日期優先顯示「下一個會發生的」：還沒走看離境日，走了看回台日。
+     兩個都沒有就印「未定」——不要拿 nextDate 頂替，那會印出一個
+     看起來像已經訂好票的日期（2026-09-20 踩過同一種錯）。 */
+  var day = (ph === '已離境' || ph === '已回台') ? (d.back || '') : (d.out || '');
+  var tm  = (ph === '已離境' || ph === '已回台') ? (d.backTime || '') : (d.outTime || '');
+  var frm = (ph === '已離境' || ph === '已回台') ? (d.to || '') : (d.from || '');
+  var to  = (ph === '已離境' || ph === '已回台') ? (d.from || '') : (d.to || '');
+  var air = (ph === '已離境' || ph === '已回台') ? (d.rair || '') : (d.air || '');
+  /* 倒數那一段從 state.text 取——後端已經算好「剩 N 天／逾期 N 天／今天」，
+     ⛔ 不要在前端再算一次日期差，算兩次就會有一天對不起來。 */
+  var m = /(?:剩\s*\d+\s*天|逾期\s*\d+\s*天|今天)/.exec(c.state.text || '');
+  var cnt = m ? m[0].replace(/\s+/g, '') : '';
+
+  return '<button type="button" class="vrow" data-case="' + esc(c.id) + '">' +
+    '<span class="d">' + esc(day ? day.slice(5).replace('-', '/') : '未定') +
+      '<s>' + esc(tm || '—') + '</s></span>' +
+    /* ⛔ 機場還沒填就整段寫「目的地未定」，不要印 ??? ——
+       那看起來像系統壞了，而不是「這一格他還沒填」。 */
+    '<span class="m"><span class="rt">' +
+        ((frm && to)
+          ? (esc(frm) + ' <i>›</i> ' + esc(to) +
+             (air ? ' <i>' + esc(air) + '</i>' : ' <i>未訂票</i>'))
+          : '<i>目的地未定</i>') + '</span>' +
+      '<span class="nm">' + esc(c.workers || '（未填移工）') + '</span>' +
+      '<span class="co">' + esc(c.client || '') + '</span></span>' +
+    /* ⛔ 狀態欄只有 88px。整句 state.text（「已離境・剩 3 天」）會被擠成三行。
+       拆開：英文一行、階段一行、倒數一行，每一行都不換行。 */
+    '<span class="s ' + tone + '">' + esc(en) +
+      '<em>' + esc(ph || c.state.text) + '</em>' +
+      (cnt ? '<u>' + esc(cnt) + '</u>' : '') + '</span>' +
+  '</button>';
+}
+
+function vacBoard(rows){
+  var going = rows.filter(function(c){ return c.status === '進行中'; }).length;
+  return '<div class="fids">' +
+    '<div class="bar"><b>返鄉 · 出境看板</b>' +
+      '<span class="now">' + going + ' 人在途中　' + esc(todayStr().slice(5)) + '</span></div>' +
+    '<div class="fhdr"><span>DATE</span><span>FLIGHT / 移工</span>' +
+      '<span style="text-align:right">STATUS</span></div>' +
+    rows.map(vacRow).join('') +
+    '<div class="ffoot"><span>往下拉更新</span><span>TERMINAL · YU HER</span></div>' +
+  '</div>';
 }
 
 /* 摘要一句話。照「先講結論」的規矩：不要寫「共 6 件」，
@@ -4878,6 +4950,24 @@ function drawCases(){
    第三次是雜訊，而且它把真正要用的東西（開單按鈕）擠到螢幕外面。
    ⚠ 要復活的話記得：同一個數字在一個畫面上只講一次。 */
 
+
+/* 四張證件 ＋ 行李條。
+   ⚠ 行李條只有勾了加購才出現——空的元件比沒有元件難看。 */
+var VAC_STAMP_ = [['passport', '護照'], ['arc', '居留證'],
+                  ['reentry', '重入國'], ['ticket', '機票']];
+function vacStamps(d){
+  var h = '<div class="stamps">' + VAC_STAMP_.map(function(x){
+    return '<div class="stp ' + (d[x[0]] ? 'on' : 'miss') + '">' +
+      '<b>' + esc(x[1]) + '</b></div>';
+  }).join('') + '</div>';
+  var kg = String(d.bagKg || '').trim();
+  if(kg){
+    h += '<div class="tag2"><span class="n">+' + esc(kg.replace(/[^0-9.]/g, '') || kg) +
+      '</span><span class="t"><b>加購託運行李　' + esc(kg) + ' 公斤</b>' +
+      '費用由旅行社／車行另外報價</span></div>';
+  }
+  return h;
+}
 
 function caseCard(c){
   var cls = c.state.key === 'back' || c.state.key === 'late' ? 'bad'
@@ -5000,6 +5090,12 @@ function caseSummary(c){
     if(hidden.indexOf(f.k) !== -1) return false;
     return f.t === 'check' ? d[f.k] : (d[f.k] !== undefined && d[f.k] !== '');
   });
+  /* 返鄉：四張證件畫成通關章，比四個勾選框好懂，缺哪一張一眼看到。
+     ⛔ 只在登機證有畫出來的時候才接在後面——沒訂票的案子連機場都還沒有，
+        單獨一排章沒有上下文。 */
+  if(bpShown && c.kind === '返鄉休假'){
+    h += vacStamps(d);
+  }
   if(rows.length){
     h += '<div class="c6det"><p class="c6dh">' + esc(c.kind) + '的細節' +
       '<button type="button" class="c6edit" id="ckEdit">修改</button></p>' +
@@ -5449,6 +5545,9 @@ function bpHtml(c){
     '<div class="rt">回程' + (d.rair ? '　' + esc(d.rair) : '') +
       '　<b>' + esc(d.back || '未填') + '</b>' +
       '<span class="tag">' + (late ? '逾期未回' : '應回台') + '</span></div>' +
+    /* 條碼印的是案件代碼——那本來就是這張單的編號，不是裝飾。 */
+    '<div class="code"><div class="bars"></div>' +
+      '<div class="id">' + esc(String(c.id).split('').join(' ')) + '</div></div>' +
   '</div>';
 }
 
