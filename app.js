@@ -5545,8 +5545,6 @@ function hcInit(){
       return '<option value="'+esc(h)+'">'+esc(h.split('|')[0].trim())+
              '</option>'; }).join('') +
       '<option value="'+OTHER_+'">其他（自行輸入）</option>';
-    $('hcTerm').innerHTML = o.terms.map(function(t){
-      return '<option>'+esc(t)+'</option>'; }).join('');
     $('hcDrv').innerHTML = '<option value="">先不指定</option>' +
       o.drivers.map(function(d){
         return '<option value="'+esc(d.phone)+'">'+esc(d.name) +
@@ -5723,7 +5721,11 @@ function hcTally(){
 function hcSubmit(){
   var people = HC_PICK_.filter(function(w){ return w.pick; })
     .map(function(w){
-      return { name: w.name, lang: w.lang, phone: w.phone || '' }; });
+      /* ⛔ term 要逐人帶。同一批車上可以有人是 6 個月、有人 18 個月。
+         以前是開單畫面選一個套給全部人，那本來就會選錯，
+         而錯的值會讓「他哪幾期做過了」跟結案算的下次到期日一起錯。 */
+      return { name: w.name, lang: w.lang, phone: w.phone || '',
+               term: w.term || '' }; });
   if(!people.length){ toast('至少要選一位移工', true); return; }
   var hos = valOf($('hcHos'), $('hcHosOther'));
   if(!hos){ toast('請選體檢醫院', true); return; }
@@ -5733,7 +5735,7 @@ function hcSubmit(){
     client: $('hcClient').value, date: $('hcDate').value,
     time: ($('hcTime').style.display === 'none'
              ? $('hcTimeOther').value : $('hcTime').value),
-    hos: hos, term: $('hcTerm').value,
+    hos: hos,
     fee: hcFeeVal(), bring: hcBringVal(),
     note: $('hcNote').value.trim(),
     ride: ride === 'self' ? '自行前往' : '接送',
@@ -6038,10 +6040,24 @@ function hcClose(v){
 /* ── 案件頁上的體檢區塊 ─────────────────────────────── */
 
 function hcCaseBlock(caseId){
+  /* 兩塊都要先清掉。只清 hcBox 的話，換看另一件案子時
+     頁首會留著上一件的「接送資訊還沒填」——指著錯的案子。 */
   var box = $('hcBox'); if(box) box.remove();
+  var al0 = $('hcAl'); if(al0) al0.remove();
   google.script.run.withSuccessHandler(function(v){
     if(!v || !v.has || !$('ckBody')) return;
     var old = $('hcBox'); if(old) old.remove();
+    var old2 = $('hcAl'); if(old2) old2.remove();
+    /* ⛔ 「接送資訊還沒填」要放在最上面，不是頁尾。
+       2026-09-21 牟佑彬指出：它在整頁最下面，要捲過期別、醫院、
+       時間軸、結案按鈕才看得到。**那是這一頁唯一一件要你現在動手的事**，
+       擺在最後等於藏起來，而漏填的代價是一整車人在門口等不到車。 */
+    if(v.needCar){
+      var al = document.createElement('div');
+      al.id = 'hcAl'; al.className = 'hcbox top';
+      al.innerHTML = hcCarAlert(v);
+      $('ckBody').insertBefore(al, $('ckBody').firstChild);
+    }
     var el = document.createElement('div');
     el.id = 'hcBox'; el.className = 'hcbox';
     el.innerHTML = hcBoxHtml(v);
@@ -6050,20 +6066,22 @@ function hcCaseBlock(caseId){
   }).withFailureHandler(function(){}).hcCaseView(CODE, caseId);
 }
 
+/* 只有這一塊會被搬到頁首。其餘的（進度、每個人的狀態）留在原位——
+   那些是「看」的，不是「做」的。 */
+function hcCarAlert(v){
+  return '<div class="hcal ' + (v.carUrgent ? 'r' : (v.carWarn ? 'w' : '')) + '">' +
+    '<b>接送資訊還沒填</b><span>' +
+    (v.days === null ? '' :
+      (v.days < 0 ? '體檢日已經過了' :
+       v.days === 0 ? '就是今天' : ('剩 ' + v.days + ' 天'))) +
+    '　·　' + v.tally.n + ' 位移工在等</span>' +
+    '<button type="button" id="hcCarBtn">去填</button></div>';
+}
+
 function hcBoxHtml(v){
   var t = v.tally;
   var h = '<p class="h">通知狀態' +
     '<em>' + t.ack + ' / ' + t.n + ' 人已確認</em></p>';
-
-  if(v.needCar){
-    h += '<div class="hcal ' + (v.carUrgent ? 'r' : (v.carWarn ? 'w' : '')) + '">' +
-      '<b>接送資訊還沒填</b><span>' +
-      (v.days === null ? '' :
-        (v.days < 0 ? '體檢日已經過了' :
-         v.days === 0 ? '就是今天' : ('剩 ' + v.days + ' 天'))) +
-      '　·　' + t.n + ' 位移工在等</span>' +
-      '<button type="button" id="hcCarBtn">去填</button></div>';
-  }
 
   h += '<div class="hclist">' + v.list.map(function(p){
     var st = p.inAt ? 'g' : (p.ack ? 'b' : (p.seen ? 'y' : 'n'));

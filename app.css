@@ -2030,6 +2030,9 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
 /* 批次卡＝票根（T3）。撕票線把「行程」跟「乘客」分開，
    上半是當天要做的事，下半是誰、進度、單號。 */
+/* 搬到頁首的接送提示：只有它在上面，所以自己管下方間距。 */
+.hcbox.top{margin:0 0 10px}
+.hcbox.top .hcal{margin-top:0}
 .hbc{background:var(--card);border:1px solid var(--line);border-radius:12px;
   margin-bottom:8px;position:relative;overflow:hidden}
 .hbc.warn{border-color:var(--warn-bar)}
