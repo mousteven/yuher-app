@@ -5462,8 +5462,11 @@ function hcInit(){
   if(HC_READY_) return;
   HC_READY_ = true;
   hcOpt(function(o){
+    /* 值是整行設定（後端要拿地址地標），但顯示只給中文名——
+       2026-09-21 設定值從兩欄變五欄，整行印出來是一條看不完的管線。 */
     $('hcHos').innerHTML = o.hos.map(function(h){
-      return '<option>'+esc(h)+'</option>'; }).join('') +
+      return '<option value="'+esc(h)+'">'+esc(h.split('|')[0].trim())+
+             '</option>'; }).join('') +
       '<option value="'+OTHER_+'">其他（自行輸入）</option>';
     $('hcTerm').innerHTML = o.terms.map(function(t){
       return '<option>'+esc(t)+'</option>'; }).join('');
@@ -5471,7 +5474,9 @@ function hcInit(){
       o.drivers.map(function(d){
         return '<option value="'+esc(d.phone)+'">'+esc(d.name) +
                (d.phone ? '　'+esc(d.phone) : '') + '</option>'; }).join('');
+    HC_SLOTS_ = o.slots || {};
     if(!$('hcDate').value) $('hcDate').value = hcNextSunday_();
+    hcSlots();
     /* ⛔ 要帶什麼一定要從詞彙表點選，不要讓人打自由文字。
        2026-09-20 實機：翻譯打的中文直接印在越南籍工人的通知上，他看不懂。
        詞彙表在 HealthCheck.gs 的 HC_BRING_，四語各一份。
@@ -5484,12 +5489,14 @@ function hcInit(){
     [].forEach.call($('hcBringPick').children, function(b){
       b.addEventListener('click', function(){ b.classList.toggle('on'); });
     });
-    /* 費用只有兩種（牟佑彬 2026-09-20）。做成選的不是打的——
-       打字會出現 1800／1,800／NT$1800 三種寫法，訊息上就不一致。
-       只能選一個，所以是單選不是多選。 */
+    /* 費用看職類：廠工 1800、看護 2000（牟佑彬 2026-09-21）。
+       做成選的不是打的——打字會出現 1800／1,800／NT$1800 三種寫法。
+       ⚠ 按鈕上印職類而不只是金額。翻譯記得住「這家是廠工」，
+         記不住「這家是 1800」。 */
     $('hcFeePick').innerHTML = (o.fees || []).map(function(x, i){
       return '<button type="button" class="'+(i === 0 ? 'on' : '')+
-        '" data-fee="'+esc(x)+'">'+esc(hcThou_(x))+' 元</button>';
+        '" data-fee="'+esc(x.v)+'">'+esc(x.t)+' '+esc(hcThou_(x.v))+
+        '</button>';
     }).join('');
     [].forEach.call($('hcFeePick').children, function(b){
       b.addEventListener('click', function(){
@@ -5513,6 +5520,41 @@ function hcInit(){
    護照 2026-09-20 從詞彙表整個拿掉——體檢掛號認居留證就好。
    口罩 2026-09-21 加進預設（牟佑彬）。 */
 var HC_BRING_DEF_ = ['居留證正本', '健保卡', '口罩'];
+
+/* ── 報到時段：查表，不是用打的 ─────────────────────
+   「醫院＋星期」就決定了報到時段，跟這一批是誰無關。
+   ⛔ 醫院那天不開就把送出鈕停掉。提醒沒有用——翻譯在工廠裡
+      用手機邊走邊填，警告文字會被滑過去，而代價是八個人白跑。
+   ⚠ 表上沒有的醫院（他自己加的）退回讓他自己打時間。
+      不知道就說不知道，不要猜一個時段出來。 */
+var HC_SLOTS_ = null;
+
+function hcSlots(){
+  var sel = $('hcTime'), oth = $('hcTimeOther'), hint = $('hcSlotHint');
+  var hos = (valOf($('hcHos'), $('hcHosOther')) || '').split('|')[0].trim();
+  var tbl = HC_SLOTS_ && HC_SLOTS_[hos];
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec($('hcDate').value || '');
+  var list = (tbl && m)
+    ? (tbl[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] || [])
+        .map(function(p){ return p[0] + '-' + p[1]; })
+    : null;
+
+  sel.style.display = list && list.length ? '' : 'none';
+  oth.style.display = list ? 'none' : '';
+  hint.style.display = (list && !list.length) ? '' : 'none';
+
+  if(list && list.length){
+    var keep = sel.value;
+    sel.innerHTML = list.map(function(x){
+      return '<option>'+esc(x)+'</option>'; }).join('');
+    if(list.indexOf(keep) !== -1) sel.value = keep;
+  } else if(list){
+    hint.innerHTML = '⛔ ' + esc(hos) + ' ' +
+      (m ? HC_DOWZ_[new Date(+m[1], +m[2]-1, +m[3]).getDay()] : '') +
+      ' 不收體檢。換日期或換醫院。';
+  }
+  $('hcGo').disabled = !!(list && !list.length);
+}
 
 function hcThou_(n){
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -5612,7 +5654,9 @@ function hcSubmit(){
   var drv = $('hcDrv');
   var o = {
     client: $('hcClient').value, date: $('hcDate').value,
-    time: $('hcTime').value, hos: hos, term: $('hcTerm').value,
+    time: ($('hcTime').style.display === 'none'
+             ? $('hcTimeOther').value : $('hcTime').value),
+    hos: hos, term: $('hcTerm').value,
     fee: hcFeeVal(), bring: hcBringVal(),
     note: $('hcNote').value.trim(),
     ride: ride === 'self' ? '自行前往' : '接送',
@@ -6198,8 +6242,11 @@ function hcSaveSet(){
   b.addEventListener('click', function(){ hcMode(b.dataset.m === 'hc'); });
 });
 $('hcClient').addEventListener('change', hcLoadWho);
+$('hcDate').addEventListener('change', hcSlots);
+$('hcHosOther').addEventListener('input', hcSlots);
 $('hcHos').addEventListener('change', function(){
   $('hcHosOther').style.display = $('hcHos').value === OTHER_ ? '' : 'none';
+  hcSlots();
 });
 [].forEach.call($('hcRide').querySelectorAll('input'), function(r){
   r.addEventListener('change', function(){
@@ -6289,6 +6336,18 @@ function hcPill_(c){
   return ['i', '剩 ' + day.days + ' 天'];
 }
 
+/* 票根（牟佑彬 2026-09-21 選的 T3）。
+
+   ⛔ 大字放什麼要看他怎麼去，不是固定一種：
+      坐車 → 上車時段。他真正要記的是幾點在哪等車，
+              報到時間退成小字（車到了自然就到了）。
+      自去 → 報到時段。沒有人接他，時間就是他的責任。
+      把兩種印成同一種，等於叫坐車的人自己看著報到時間出門。
+
+   ⛔ 兩個名字都要印。中文是我們內部叫的，原文是他護照上的——
+      當天在醫院門口點名、打電話給他，用得到的是原文那個。
+
+   日期不在卡片上，在上面那條分組標題（同一天的排在一起）。 */
 function hcBatchCard(c){
   var h = c.hc || {}, day = hcDay_(c.nextDate), p = hcPill_(c);
   var todo = hcTodo_(c);
@@ -6297,25 +6356,54 @@ function hcBatchCard(c){
   var pct = h.n ? Math.round((h.ack / h.n) * 100) : 0;
   /* 當天之後看的是報到，不是確認——那時候「誰確認了」已經沒有意義。 */
   var after = day && day.days <= 0 && h.n;
-  if(after){ pct = Math.round((h.inn / h.n) * 100); }
+  if(after) pct = Math.round((h.inn / h.n) * 100);
+
+  var ride = h.ride === '自行前往';
+  var big, sub;
+  if(ride){
+    big = (h.time || '時間未定') + ' <em>報到</em>';
+    sub = '<b>' + esc(h.hos || '醫院未填') + '</b>';
+  } else if(h.at){
+    big = esc(h.at) + ' <em>上車</em>';
+    sub = '<b>' + esc(h.where || '地點未填') + '</b>　→　' +
+          esc(h.hos || '醫院未填') +
+          (h.time ? '　報到 ' + esc(h.time) : '') +
+          (h.nCar > 1 ? '　· ' + h.nCar + ' 台車' : '');
+  } else {
+    big = '<span class="wait">上車時間未定</span>';
+    sub = '<b>' + esc(h.hos || '醫院未填') + '</b>' +
+          (h.time ? '　報到 ' + esc(h.time) : '');
+  }
+
+  /* 名字：中文三個 ＋ 原文三個。超過就「等 N 人」。
+     ⚠ 原文名可能是空的（名冊沒填），空的就不佔位置，
+       不要印一串「·　·　·」讓人以為資料壞了。 */
+  var who = (h.who || []), wo = (h.wo || []).filter(String);
+  var nm = who.join('、') + (h.n > who.length ? ' 等 ' + h.n + ' 人' : '');
 
   return '<div class="hbc ' + cls + (hcIsNew_(c) ? ' nw' : '') +
       '" data-case="' + esc(c.id) + '">' +
     (hcIsNew_(c) ? '<span class="new">剛開的</span>' : '') +
-    '<div class="r1">' +
-      (day ? '<span class="d">' + esc(day.d) + '</span>' +
-             '<span class="dw">' + esc(day.w) + '</span>' : '') +
-      (h.time ? '<span class="tm">' + esc(h.time) + '</span>' : '') +
-      '<span class="pill ' + p[0] + '">' + esc(p[1]) + '</span></div>' +
-    '<div class="r2">' + esc(c.client) +
-      (h.n ? '　<em>' + h.n + ' 人</em>' : '') + '</div>' +
-    (h.hos ? '<div class="r3">' + esc(h.hos) + '</div>' : '') +
-    (h.n ? '<div class="bar"><i style="width:' + pct + '%"></i></div>' : '') +
-    '<div class="r4">' +
-      (h.n ? '<span>' + (after ? '已報到 ' : '已確認 ') +
-             '<b>' + (after ? h.inn : h.ack) + '</b>/' + h.n + '</span>' : '') +
-      '<span class="code">' + esc(c.id) +
-        (c.crew ? ' · ' + esc(c.crew) : '') + '</span></div>' +
+    '<div class="th">' + (ride ? '🚶 自行前往' : '🚐 接送') +
+      '　·　' + esc(c.client) +
+      '<span class="no">' + esc(c.id) + '</span></div>' +
+    '<div class="big"><div class="t">' + big + '</div>' +
+      '<div class="p">' + sub + '</div></div>' +
+    '<div class="tear"><i class="l"></i><i class="r"></i></div>' +
+    '<div class="stub">' +
+      (h.n ? '<div class="pax"><span class="n">' + h.n + ' 人</span>' +
+             '<span class="who">' + esc(nm) +
+             (wo.length ? '<i>' + esc(wo.join(' · ')) + '</i>' : '') +
+             '</span></div>'
+           : '<div class="pax"><span class="who nobody">名單是空的　' +
+             '這批不會有人收到通知</span></div>') +
+      (h.n ? '<div class="bar"><i style="width:' + pct + '%"></i></div>' : '') +
+      '<div class="r4">' +
+        (h.n ? '<span>' + (after ? '已報到 ' : '已確認 ') +
+               '<b>' + (after ? h.inn : h.ack) + '</b>/' + h.n + '</span>' : '') +
+        '<span class="pill ' + p[0] + '">' + esc(p[1]) + '</span>' +
+        (c.crew ? '<span class="code">' + esc(c.crew) + '</span>' : '') +
+      '</div></div>' +
     (todo ? '<div class="todo' + (todo.bad ? ' r' : '') + '">' +
        esc(todo.t) + '</div>' : '') +
   '</div>';

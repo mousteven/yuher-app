@@ -2018,32 +2018,49 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   font-size:0.75rem;color:var(--ink3)}
 .hgh.hot b{color:var(--bad-ink)}
 
+/* 批次卡＝票根（T3）。撕票線把「行程」跟「乘客」分開，
+   上半是當天要做的事，下半是誰、進度、單號。 */
 .hbc{background:var(--card);border:1px solid var(--line);border-radius:12px;
-  margin-bottom:8px;padding:12px 13px;position:relative;overflow:hidden}
-.hbc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
-  background:var(--info-bar)}
-.hbc.warn::before{background:var(--warn-bar)}
-.hbc.bad::before{background:var(--bad-bar)}
-.hbc.done::before{background:var(--ok-bar)}
+  margin-bottom:8px;position:relative;overflow:hidden}
+.hbc.warn{border-color:var(--warn-bar)}
+.hbc.bad{border-color:var(--bad-bar)}
+.hbc.done{opacity:0.7}
 .hbc.nw{box-shadow:0 0 0 2px var(--brand)}
 .hbc .new{position:absolute;right:0;top:0;background:var(--brand);color:#fff;
   font-size:0.5625rem;font-weight:800;padding:2px 9px;border-radius:0 0 0 8px}
-.hbc .r1{display:flex;align-items:baseline;gap:8px}
-.hbc .d{font-family:ui-monospace,Menlo,monospace;font-size:1.0625rem;
-  font-weight:600;font-variant-numeric:tabular-nums}
-.hbc .dw{font-size:0.75rem;color:var(--ink2)}
-.hbc .tm{font-family:ui-monospace,Menlo,monospace;font-size:0.8125rem;
-  color:var(--ink2)}
-.hbc .pill{margin-left:auto;font-size:0.625rem;font-weight:800;border-radius:99px;
-  padding:1px 9px;white-space:nowrap;background:var(--line2);color:var(--ink3)}
-.hbc .pill.i{background:var(--info-bg);color:var(--info-ink)}
-.hbc .pill.w{background:var(--warn-bg);color:var(--warn-ink)}
-.hbc .pill.b{background:var(--bad-bg);color:var(--bad-ink)}
-.hbc .pill.g{background:var(--ok-bg);color:var(--ok-ink)}
-.hbc .r2{font-size:0.9375rem;font-weight:700;margin-top:3px}
-.hbc .r2 em{font-style:normal;font-weight:400;font-size:0.8125rem;
-  color:var(--ink2)}
-.hbc .r3{font-size:0.8125rem;color:var(--ink2);margin-top:1px}
+.hbc .th{display:flex;align-items:center;gap:6px;padding:8px 13px;
+  background:var(--info-bg);color:var(--info-ink);font-size:0.75rem;
+  font-weight:700}
+.hbc.warn .th{background:var(--warn-bg);color:var(--warn-ink)}
+.hbc.bad .th{background:var(--bad-bg);color:var(--bad-ink)}
+.hbc.done .th{background:var(--ok-bg);color:var(--ok-ink)}
+.hbc .th .no{margin-left:auto;font-family:ui-monospace,Menlo,monospace;
+  font-size:0.6875rem;color:var(--ink3);font-weight:400}
+.hbc .big{padding:12px 13px 10px}
+.hbc .big .t{font-family:ui-monospace,Menlo,monospace;font-size:1.375rem;
+  font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.hbc .big .t em{font-style:normal;font-family:-apple-system,"Noto Sans TC",sans-serif;font-size:0.8125rem;
+  font-weight:500;color:var(--ink2);margin-left:7px}
+.hbc .big .t .wait{font-size:0.9375rem;font-weight:500;color:var(--warn-ink)}
+.hbc .big .p{font-size:0.8125rem;color:var(--ink2);margin-top:3px}
+.hbc .big .p b{font-weight:600;color:var(--ink)}
+/* 撕票線。兩端的小圓缺口用底色蓋出來，所以底色要跟頁面一致。 */
+.hbc .tear{position:relative;height:13px}
+.hbc .tear::before{content:"";position:absolute;left:12px;right:12px;top:50%;
+  border-top:1px dashed var(--line)}
+.hbc .tear i{position:absolute;top:50%;transform:translateY(-50%);width:13px;
+  height:13px;border-radius:99px;background:var(--bg)}
+.hbc .tear i.l{left:-7px}
+.hbc .tear i.r{right:-7px}
+.hbc .stub{padding:0 13px 12px}
+.hbc .pax{display:flex;gap:9px;align-items:baseline}
+.hbc .pax .n{font-family:ui-monospace,Menlo,monospace;font-size:0.9375rem;
+  font-weight:700;flex:none}
+.hbc .pax .who{flex:1;min-width:0;font-size:0.875rem;line-height:1.35}
+.hbc .pax .who i{display:block;font-style:normal;font-size:0.75rem;
+  color:var(--ink3);font-family:ui-monospace,Menlo,monospace;margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbc .pax .who.nobody{color:var(--bad-ink);font-weight:700}
 .hbc .bar{height:4px;border-radius:99px;background:var(--line2);margin-top:9px;
   overflow:hidden}
 .hbc .bar i{display:block;height:100%;background:var(--ok-bar)}
@@ -2052,7 +2069,13 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .hbc .r4 b{font-family:ui-monospace,Menlo,monospace}
 .hbc .r4 .code{font-family:ui-monospace,Menlo,monospace;font-size:0.6875rem;
   color:var(--ink3);margin-left:auto}
-.hbc .todo{margin-top:9px;background:var(--warn-bg);border-radius:8px;
+.hbc .pill{font-size:0.625rem;font-weight:800;border-radius:99px;
+  padding:1px 9px;white-space:nowrap;background:var(--line2);color:var(--ink3)}
+.hbc .pill.i{background:var(--info-bg);color:var(--info-ink)}
+.hbc .pill.w{background:var(--warn-bg);color:var(--warn-ink)}
+.hbc .pill.b{background:var(--bad-bg);color:var(--bad-ink)}
+.hbc .pill.g{background:var(--ok-bg);color:var(--ok-ink)}
+.hbc .todo{margin:9px 13px 12px;background:var(--warn-bg);border-radius:8px;
   padding:7px 10px;font-size:0.75rem;color:var(--warn-ink);font-weight:700}
 .hbc .todo.r{background:var(--bad-bg);color:var(--bad-ink)}
 
