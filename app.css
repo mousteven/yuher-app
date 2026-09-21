@@ -2118,6 +2118,12 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   flex:none}
 
 /* 體檢開單：每個人底下多一格電話 */
+/* 開單畫面的原文名：中文名會撞（1781 人裡 198 個重複），
+   勾人的時候要靠原文名才確定是哪一個。 */
+.hcw .n .og{display:block;font-style:normal;font-family:ui-monospace,Menlo,monospace;
+  font-size:0.6875rem;color:var(--ink3);letter-spacing:.01em}
+/* 應辦期間整個過完、來源又沒紀錄＝真的漏了。不要跟一般逾期同色。 */
+.hcw .w.miss{color:var(--bad-ink);font-weight:700}
 .hcw{padding:10px 0;border-bottom:1px solid var(--line2)}
 .hcw:last-child{border-bottom:0}
 .hcw label.p{display:flex;align-items:flex-start;gap:9px}

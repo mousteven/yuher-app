@@ -5682,20 +5682,25 @@ function hcLoadWho(){
 function hcDrawWho(){
   if(!HC_PICK_.length){
     $('hcWho').innerHTML = '<p class="hint">名冊上這家沒有在職的移工。' +
-      '要先到「移工名冊」把人建進去，體檢到期日是拿名冊上的日期算的。</p>';
+      '名冊是從管理系統匯入的——人不在上面，先確認那邊有沒有，' +
+      '然後重新匯入。</p>';
     $('hcTally').textContent = '';
     return;
   }
   $('hcWho').innerHTML = HC_PICK_.map(function(w, i){
     var late = w.days !== undefined && w.days < 0;
+    /* 原文名印出來——中文名會撞（1781 人裡 198 個重複），
+       翻譯勾人的時候看原文名才確定是哪一個。 */
     /* 電話先填的話，工人那邊從「打十碼」變成「按一下確認」。
        ⛔ 留空是正常的——不知道就讓他自己填，不要逼翻譯去問。 */
     return '<div class="hcw'+(late?' late':'')+'">' +
       '<label class="p">' +
         '<input type="checkbox" data-i="'+i+'"'+(w.pick?' checked':'')+'>' +
         '<span class="n">'+esc(w.name)+
+          (w.orig?'<i class="og">'+esc(w.orig)+'</i>':'')+
           (w.lang?'<em>'+esc(w.lang)+'</em>':'')+'</span>' +
-        '<span class="w">'+esc(w.term ? (w.term+'　'+w.why) : w.why)+
+        '<span class="w'+(w.missed?' miss':'')+'">'+
+          esc(w.term ? (w.term+'　'+w.why) : w.why)+
           (w.baseFrom ? '<i>依'+esc(w.baseFrom)+'</i>' : '')+'</span>' +
       '</label>' +
       '<input class="hcph" data-ph="'+i+'" inputmode="tel" value="'+
@@ -5729,7 +5734,9 @@ function hcSubmit(){
       /* ⛔ term 要逐人帶。同一批車上可以有人是 6 個月、有人 18 個月。
          以前是開單畫面選一個套給全部人，那本來就會選錯，
          而錯的值會讓「他哪幾期做過了」跟結案算的下次到期日一起錯。 */
-      return { name: w.name, lang: w.lang, phone: w.phone || '',
+      /* ⛔ eid（外國人編號）一定要帶。後端用它查名冊，沒帶會直接擋下來。
+         姓名會撞——1781 人裡 198 個中文名重複，連「姓名＋客戶」都撞 93 組。 */
+      return { eid: w.eid, name: w.name, lang: w.lang, phone: w.phone || '',
                term: w.term || '' }; });
   if(!people.length){ toast('至少要選一位移工', true); return; }
   var hos = valOf($('hcHos'), $('hcHosOther'));
@@ -6335,17 +6342,28 @@ function hcNudge(){
     /* 起算日之前的期別系統沒有紀錄。講出來，不要假裝全部都掌握了。
        ⛔ 不要報「1365 期」——那是人數 × 三個期別加起來的數字，
           畫面上沒有人看得懂。要報就報幾個人。 */
-    if(r && r.unknownPeople){
-      out.push({ bad: 0, t: r.unknownPeople + ' 人的舊期別系統沒有紀錄',
-        s: esc(r.since) + ' 之前的要自己確認。系統設定可以改起算日。' });
+    /* ⛔ 2026-09-21：舊的「N 人的舊期別系統沒有紀錄」整條拿掉。
+       那是在沒有真實體檢日的時候的權宜做法。管理系統匯出的名冊
+       直接帶了實際體檢日（完整度 95%+），不用再叫人自己確認。
+
+       ⚠ 換成「真的漏掉的」——應辦期間整個過完、來源又沒有紀錄。
+         以前這種被當成「不知道」吞掉，現在它是真的漏件，要浮上來。
+         但它不是「去開單」，是「先查清楚他到底做了沒」。 */
+    if(r && r.missed && r.missed.length){
+      out.push({ bad: 1, t: r.missed.length + ' 人的體檢期間已經過完了',
+        s: r.missed.slice(0, 3).map(function(x){
+             return esc(x.name) + '（' + esc(x.client) + '　' + esc(x.term) +
+                    '　應辦到 ' + esc(x.to) + '）';
+           }).join('　·　') + '　先查清楚做了沒，不要直接再帶一次' });
     }
     /* 算不出到期日的人要講出來，不要靜靜地漏掉。
        這是名冊缺資料，不是沒有人到期。 */
     if(nb.length){
       out.push({ bad: 0, t: nb.length + ' 人算不出體檢到期日',
-        s: '名冊上沒有許可生效日／續聘日／入境日：' +
+        s: '名冊上沒有許可生效日：' +
            nb.slice(0, 4).map(function(x){ return esc(x.name); }).join('、') +
-           (nb.length > 4 ? ' 等' : '') + '　·　到「移工名冊」補' });
+           (nb.length > 4 ? ' 等' : '') +
+           '　·　名冊是從管理系統匯入的，要改請改那邊再重匯' });
     }
     got.due = out; paint();
   }).withFailureHandler(fail('due')).hcDueSoon(CODE, 30);
