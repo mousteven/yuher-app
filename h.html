@@ -244,16 +244,22 @@ input.line::placeholder{color:var(--w28)}
    其中有一組空的樣板標記。編譯器不管那是不是註解，照樣編成
    output.push( ); ——整頁 SyntaxError，而訊息指到 Code.gs 的 evaluate()。
    樣板檔的註解裡不要出現任何樣板標記。 */
-/* 短碼從網址上的 ?s= 讀。
-   ⛔ 只收 16 進位字元——網址是使用者可以隨手改的東西，
-      不要把上面的字原封不動送進後端。
-   （以前是 Apps Script 樣板注入的。那時候用 JSON.stringify 包了一層，
-     樣板把引號跳脫成 HTML 實體混進短碼裡，每一條連結都顯示「無效」。
-     現在從網址讀，沒有那個問題了。） */
-var TOKEN = (function(){
+/* 網址上的 ?s= 有兩種格式，這一頁都原樣往後送，不在這裡判斷：
+     B8396X             六碼短網址（hcUrl_ 發出去的都長這樣）
+     5e8173d8b0c24feb   16 碼短碼本身
+   後端的 hcTokenOf_ 負責展開。
+
+   ⛔ 不可以在這裡洗成十六進位。2026-09-21 我就是這樣寫的，
+      B8396X 被洗成 "8396"，**每一條已經發出去的連結都變成
+      「Link not valid」**——而工人手上只有那一條，他不會來問，
+      只會當天沒去體檢。
+
+   ⚠ 但還是要洗掉英數以外的字元：網址是使用者隨手改得動的東西，
+     不要把上面的字原封不動送進後端。 */
+var SCODE = (function(){
   try {
     var m = /[?&]s=([^&]*)/.exec(location.search || '');
-    return m ? decodeURIComponent(m[1]).replace(/[^0-9a-f]/g, '').slice(0, 32) : '';
+    return m ? decodeURIComponent(m[1]).replace(/[^0-9A-Za-z]/g, '').slice(0, 32) : '';
   } catch(e){ return ''; }
 })();
 
@@ -274,13 +280,13 @@ var API_ = 'https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nu
 function api(fn, body, ok, bad){
   var p, url = API_;
   if(body){
-    body.api = fn; body.t = TOKEN;
+    body.api = fn; body.s = SCODE;
     p = fetch(url, { method:'POST',
                      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
                      body: JSON.stringify(body) });
   } else {
     p = fetch(url + '?api=' + encodeURIComponent(fn) +
-              '&t=' + encodeURIComponent(TOKEN));
+              '&s=' + encodeURIComponent(SCODE));
   }
   p.then(function(r){ return r.json(); })
    .then(function(j){ ok(j); })
@@ -996,7 +1002,7 @@ function gone(){
 function load(){
   /* 短碼根本不在網址上（有人手打了半截、或連結被截斷）——
      直接給無效畫面，不要打後端。 */
-  if(!TOKEN){ gone(); return; }
+  if(!SCODE){ gone(); return; }
   api('hcView', null, function(r){
     if(!r || !r.ok){ gone(); return; }
     D = r; draw();
