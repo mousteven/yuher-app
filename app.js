@@ -87,7 +87,13 @@ function login(code){
       // 簽名板要在畫面顯示之後才 init，隱藏時量到的寬度是 0
       ['employer','staff'].forEach(function(k){
         initSig(document.querySelector('[data-sig='+k+']')); });
-      addWorker(); $('date').valueAsDate = new Date();
+      addWorker();
+      /* ⚠ 不要用 valueAsDate。在沒有原生日期輸入框的 Safari（桌機 WebKit）
+         上，type=date 會退化成 text，設 valueAsDate 直接丟 InvalidStateError，
+         **把後面整段初始化一起帶走**（客戶名單、翻譯人員、移工卡全部沒長出來），
+         而錯誤只會顯示成一句「Script error.」。
+         寫字串沒有這個問題，兩邊行為也一樣。 */
+      $('date').value = todayStr();
       CAL_SEL = todayStr();
 
       fillClients();
@@ -514,10 +520,26 @@ var SVC_PK_ = {
   id: 'svcPk', mode: 'svc', list: [], allowNew: true,
   onPick: function(c){ setClientValue(c); applyPreset(); }
 };
+/* ⛔⛔ 2026-09-21：這裡曾經直接把 PRESETS 丟給選擇器，結果整個清單是空的
+   ＋ 一句「前端錯誤：Script error.」。原因是**兩邊的資料形狀不一樣**：
+     hcClients 給的是 {c, n, due, late, missed, fac, who, next}
+     PRESETS   給的是 {c, t, crew, p, w}
+   `x.fac` 是 undefined → 走到家庭雇主那一支 → `x.who.length` 直接炸，
+   而 pkDraw 在 `box.innerHTML = …` 之前就死了，所以畫面**留在空白**，
+   看起來像「打字沒反應」。我當時誤判成輸入法的問題，修錯了兩次。
+   ⚠ 共用元件就要在入口把形狀轉好，不要讓元件去猜。 */
+function pkFromPreset_(x){
+  var w = x.w || [];
+  return { c: x.c, n: w.length, fac: (x.t || '工廠') === '工廠',
+           who: w.slice(0, 3).map(function(p){ return p.n; }),
+           due: 0, late: 0, missed: 0, next: '' };
+}
+
 function fillClients(){
   var kind = targetKind();
   var keep = $('client').value;
-  SVC_PK_.list = PRESETS.filter(function(x){ return (x.t || '工廠') === kind; });
+  SVC_PK_.list = PRESETS.filter(function(x){ return (x.t || '工廠') === kind; })
+                        .map(pkFromPreset_);
   /* 換服務對象之後，原本選的那一家可能不在這一類裡了。
      ⛔ 不要默默留著——工廠名單裡選到家庭雇主，移工名單會整個對不上。
         自行輸入的（不在名單上）留著，那是他刻意打的。 */
@@ -5616,10 +5638,14 @@ function pkHit_(x, q){
 
 function pkRow_(x, mode, q){
   var p = pkSplit_(x.c);
+  /* ⛔ 缺欄位不可以讓整張清單消失。上面那個 bug 的傷害不是「少一行字」，
+     是 pkDraw 整個中斷、畫面一片空白，而錯誤訊息又是不透明的
+     「Script error.」——查了三輪才找到。少一個欄位最多就是那一格空著。 */
+  var who = x.who || [], n = x.n || who.length;
   var sub, right;
   if(mode === 'hc'){
-    sub = x.due ? (x.due + ' 人要做 · 共 ' + x.n + ' 人') : ('共 ' + x.n + ' 人');
-    if(!x.fac && x.who.length) sub = x.who.join('、') + (x.n > x.who.length ? ' 等' : '');
+    sub = x.due ? (x.due + ' 人要做 · 共 ' + n + ' 人') : ('共 ' + n + ' 人');
+    if(!x.fac && who.length) sub = who.join('、') + (n > who.length ? ' 等' : '');
     right = x.due
       ? ('<span class="due' + (x.late ? ' r' : '') + '"><b>' + x.due + '</b>' +
          (x.late ? ('逾期 ' + x.late) : (x.next ? esc(x.next.slice(5)) : '')) + '</span>')
@@ -5627,8 +5653,8 @@ function pkRow_(x, mode, q){
          ? '<span class="due r"><b>!</b>漏 ' + x.missed + '</span>'
          : '<span class="due g"><b>—</b></span>');
   } else {
-    sub = x.fac ? ('共 ' + x.n + ' 人')
-                : ((x.who || []).join('、') + (x.n > x.who.length ? ' 等' : ''));
+    sub = x.fac ? ('共 ' + n + ' 人')
+                : (who.join('、') + (n > who.length ? ' 等' : ''));
     right = '<span class="due g"><b>›</b></span>';
   }
   return '<button type="button" class="epkrow" data-c="' + esc(x.c) + '">' +
