@@ -5576,7 +5576,7 @@ function hcMode(on){
    「全錦興工業股份」——多一個「股」字，看起來只是小錯，
    但那是每一列都會出現的小錯。 */
 var PK_SUF_ = ['股份有限公司', '有限公司', '企業社', '工業社', '工藝社',
-               '實業社', '企業行', '商行', '工廠'];
+               '實業社', '企業行', '商行'];
 
 /* 「全錦興工業股份有限公司」→ ['全錦興', '工業股份有限公司']
    ⚠ 實測 309 家拿掉後綴之後 0 個撞名，而且 83% 只剩 3-4 個字。
@@ -5675,7 +5675,9 @@ function pkDraw(o){
         : t[0] === 'fac' ? all.filter(function(x){ return x.fac; }).length
         : t[0] === 'home' ? all.filter(function(x){ return !x.fac; }).length
         : t[0] === 'all' ? all.length : pkRecent_(o.mode).length;
-      return '<button type="button" class="epkchip' + (tab === t[0] ? ' on' : '') +
+      /* ⚠ 有打字的時候分頁不生效（搜尋是跨分頁的），
+         所以不要留一個亮著的——那會讓人以為只在那一類裡找。 */
+      return '<button type="button" class="epkchip' + (!q && tab === t[0] ? ' on' : '') +
         '" data-t="' + t[0] + '">' + esc(t[1]) + ' ' + n + '</button>';
     }).join('') + '</div>' +
     (rows.length ? ('<p class="epkhd">' + esc(head) + '</p>') : '') +
@@ -5687,7 +5689,9 @@ function pkDraw(o){
     (more ? '<p class="epkmore">' + esc(more) + '</p>' : '') +
     /* 名冊每月匯入一次，這個月新接的雇主還不在裡面。
        ⛔ 不要只留「找不到」——那等於叫他放棄填這張表。 */
-    ((o.allowNew && q && !rows.some(function(x){ return x.c === q; }))
+    /* ⚠ 至少兩個字才給。一個字就冒出來，等於他每次打字都看到一列
+       「用「全」當雇主名稱」——那是雜訊，而且很容易誤觸。 */
+    ((o.allowNew && q.length >= 2 && !rows.some(function(x){ return x.c === q; }))
       ? '<button type="button" class="epkrow epknew" data-new="1">' +
           '<span class="nm"><b>用「' + esc(q) + '」當雇主名稱</b>' +
           '<i>名單上沒有這一家——新接的雇主要等下次匯入名冊</i></span>' +
