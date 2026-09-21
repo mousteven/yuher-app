@@ -1,74 +1,1010 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>體檢通知 · Health Check · YU HER</title>
-<meta name="description" content="羽禾管理顧問有限公司　定期健康檢查通知">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Health Check · 體檢通知</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600&display=swap">
 <!--
-  短網址轉送（2026-09-20 建立）
+  體檢通知：工人打開連結看到的那一頁
 
-  為什麼要這一頁：Apps Script 的 /exec 網址有 130 個字。貼到工廠 LINE 群組，
-  一條連結在手機上就換行八次，整則訊息被網址淹掉，而且那個長度看起來像詐騙——
-  工人不敢點。走這裡是 52 個字，兩行以內。
+  ⛔ 這一頁住在 GitHub Pages，不在 Apps Script（2026-09-21 搬過來）。
+     原因只有一個：Apps Script 代管的網頁，Google 會在最上面掛一條
+     「這個應用程式是由 Google Apps Script 的使用者建立　檢舉濫用情形」。
+     那條就印在體檢通知旁邊。對一個看不懂中文、剛收到陌生連結的移工來說，
+     「檢舉濫用情形」六個字等於「這是詐騙」。
+     它在我們的頁面外層，程式裡移不掉——只能不要住在那裡。
 
-  它只做一件事：把 ?s=<短碼> 原封不動送到 Apps Script。
-  ⚠ 這裡不碰、不解讀、不記錄任何個資。短碼在 Apps Script 那邊才換成人。
+  ⛔ 所以這一頁沒有 google.script.run，改用 fetch 打 Apps Script 的
+     JSON 介面（見下面 api()）。後端那一側在 HealthCheckPub.gs 的 hcApi_。
 
-  ⚠ 只能用 JS 轉送——meta refresh 讀不到網址上的 ?s=，沒辦法帶著參數走。
-    所以一定要同時畫出一顆看得到、按得下去的連結：
-    工廠的舊手機或擋 JS 的內建瀏覽器上，「點了沒反應」是最難查的那種壞法，
-    至少要讓他有東西可以按。
+  ⛔ 檔名 h.html 不可以改。已經發出去的連結全部長這樣：
+     mousteven.github.io/yuher-app/h.html?s=<短碼>
+     改檔名就是讓所有已發出的通知變成 404。
+
+  版型 N2（牟佑彬 2026-09-21 定案）＝ 9/19 的 P4 深色病歷封面 ＋ 細線分區。
+  確認流程 V1 ＝ 9/19 的 C：生日當門 → 電話只確認後三碼。
+
+  ⛔ 排版的重點不是「有哪些欄位」，是**哪一個欄位放大到佔半個畫面**。
+     2026-09-20 我照功能清單一項一項長，每項變一列、列多了分灰卡，
+     結果大日期不見了、三張灰卡把一張單切成三張，質感整個散掉。
+     大日期（2.75rem 等寬）、星期、倒數、時段膠囊——那四樣是 P4 的骨架，
+     不是裝飾，不可以降級成一般欄位。
+
+  ⚠ 這一頁會被貼到工廠 LINE 群組，任何人都點得進來：
+  1. 只認網址上的 t=（16 碼亂數），不接受任何「我是誰」的輸入。
+  2. 車牌與司機電話鎖在確認後面。未確認的看得到有東西鎖著——
+     不是空白、不是報錯，他才會去按。
+  3. 姓名照牟佑彬 2026-09-20 的決定顯示全名，不遮。
+  4. 電話只顯示遮罩後三碼。就算有人猜中生日也拿不到完整號碼。
+
+  四個階段（同一個網址，內容自己換）：
+    notice 只有日期 → car 車輛資訊到了 → today 當天報到 → done 結案
+  結案之後連結不失效——404 會讓工人以為公司的系統壞了。
 -->
 <style>
-  :root{ color-scheme: dark; }
-  body{margin:0;min-height:100vh;display:grid;place-items:center;
-    background:#070C13;color:#E9EEF5;
-    font-family:system-ui,-apple-system,'PingFang TC','Noto Sans TC',sans-serif;
-    line-height:1.7;padding:24px}
-  .b{max-width:340px;text-align:center}
-  .m{width:54px;height:54px;border-radius:99px;background:rgba(95,208,194,.16);
-    color:#5FD0C2;margin:0 auto 14px;position:relative}
-  .m::before,.m::after{content:'';position:absolute;background:currentColor;
-    border-radius:2px}
-  .m::before{left:16px;right:16px;top:41%;height:18%}
-  .m::after{top:16px;bottom:16px;left:41%;width:18%}
-  h1{font-size:1.0625rem;margin:0 0 6px;letter-spacing:-.01em}
-  p{margin:0;font-size:.875rem;color:#9FAEC0}
-  a.go{display:inline-block;margin-top:16px;background:#0E8C7F;color:#fff;
-    text-decoration:none;border-radius:12px;padding:13px 26px;font-weight:700;
-    font-size:.9375rem}
-  a.go small{display:block;font-size:.6875rem;font-weight:400;opacity:.85}
-  .ft{margin-top:18px;font-size:.75rem;color:#6C7C90}
-  [hidden]{display:none!important}
+:root{
+  --navy:#0B1420; --med:#0E8C7F; --med2:#5FD0C2;
+  --w:#fff; --w75:rgba(255,255,255,.75); --w62:rgba(255,255,255,.62);
+  --w45:rgba(255,255,255,.45); --w38:rgba(255,255,255,.38);
+  --w28:rgba(255,255,255,.28); --w16:rgba(255,255,255,.16);
+  --w12:rgba(255,255,255,.12); --w08:rgba(255,255,255,.08);
+  --bad:#F09AA9;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --lat:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --cjk:system-ui,-apple-system,'PingFang TC','Noto Sans TC',sans-serif;
+  --th:'Noto Sans Thai',var(--cjk);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#060A10;color:var(--w);
+  font-family:var(--lat);line-height:1.6;font-size:16px}
+body.th{font-family:var(--th)}
+.wrap{max-width:460px;margin:0 auto;padding:18px 16px 44px}
+.pg{background:var(--navy);border-radius:18px;overflow:hidden;
+  box-shadow:0 18px 44px -26px rgba(0,0,0,.85)}
+
+/* ── 表頭 ── */
+.hd{padding:17px 18px 13px;border-bottom:1px solid var(--w12);
+  display:flex;align-items:flex-start;gap:12px}
+.cx{position:relative;width:23px;height:23px;flex:none;color:var(--med2);
+  margin-top:2px}
+.cx::before,.cx::after{content:'';position:absolute;background:currentColor;
+  border-radius:1.5px}
+.cx::before{left:0;right:0;top:37%;height:26%}
+.cx::after{top:0;bottom:0;left:37%;width:26%}
+.hd .c{flex:1;min-width:0}
+.hd .k{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--w45)}
+.hd b{display:block;font-size:17px;margin-top:3px;letter-spacing:-.01em;
+  line-height:1.25}
+.hd .no{font-family:var(--mono);font-size:10px;color:var(--w38);text-align:right;
+  flex:none;line-height:1.5}
+
+.band{background:var(--med);padding:12px 18px;font-size:15px;font-weight:700;
+  display:flex;align-items:center;gap:8px}
+.band .r{margin-left:auto;font-family:var(--mono);font-weight:500;opacity:.85}
+.band.done{background:var(--w12);color:var(--w75)}
+
+.bd{padding:16px 18px}
+
+/* ── 大日期：P4 的骨架，不是裝飾 ── */
+.big{font-family:var(--mono);font-size:2.75rem;font-weight:500;line-height:.95;
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.sub{font-size:14px;color:var(--w75);margin-top:6px}
+.pill{display:inline-block;margin-top:11px;font-family:var(--mono);font-size:16px;
+  color:var(--med2);border:1px solid rgba(95,208,194,.4);border-radius:99px;
+  padding:4px 15px}
+
+/* ── 細線分區標籤（N2 的差別就在這：不是灰卡）── */
+.lab{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--w38);
+  padding:18px 0 5px;display:flex;align-items:center;gap:9px}
+.lab::after{content:'';flex:1;height:1px;background:var(--w12)}
+.lab .zh{font-family:var(--cjk);letter-spacing:0}
+
+ul.rows{list-style:none;margin:0;padding:0}
+ul.rows li{display:flex;gap:11px;padding:9px 0;border-top:1px solid var(--w12);
+  font-size:15px}
+ul.rows li:first-child{border-top:0}
+ul.rows li em{font-style:normal;font-family:var(--mono);font-size:10px;
+  letter-spacing:.1em;color:var(--w38);width:5.6em;flex:none;padding-top:5px}
+ul.rows li .v{flex:1;min-width:0}
+ul.rows li b{display:block;font-weight:600;line-height:1.35}
+ul.rows li b.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+ul.rows li span{display:block;font-size:13px;color:var(--w62);margin-top:1px;
+  font-family:var(--cjk)}
+ul.rows li b.lk{color:var(--w38);font-family:var(--mono)}
+.zhonly{display:inline-block;border:1px dashed var(--w28);border-radius:5px;
+  padding:0 5px;font-family:var(--cjk)}
+
+.note{margin-top:12px;background:var(--w08);border:1px dashed var(--w28);
+  border-radius:11px;padding:13px;font-size:14px;color:var(--w62);
+  text-align:center;line-height:1.55}
+
+.pad{padding:0 18px 18px}
+button{display:block;width:100%;border:0;border-radius:12px;padding:16px;
+  font-family:inherit;font-size:17px;font-weight:700;background:var(--med);
+  color:#fff;margin-top:12px}
+button:disabled{opacity:.45}
+button.s{background:var(--w12);font-weight:600;font-size:15px;padding:14px}
+button small{display:block;font-family:var(--cjk);font-size:13px;font-weight:400;
+  opacity:.85;margin-top:2px}
+a.alt{display:block;text-align:center;margin-top:10px;font-size:14px;
+  color:var(--w45);text-decoration:underline}
+a.alt .zh{display:block;font-family:var(--cjk);font-size:13px;text-decoration:none;
+  margin-top:1px}
+a.tel{display:block;text-decoration:none}
+
+/* ── 確認 V1 ── */
+.q{font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.3;margin:0}
+.qz{font-size:15px;color:var(--w62);margin:3px 0 0;font-family:var(--cjk)}
+.why{font-size:13px;color:var(--w45);margin:9px 0 0;line-height:1.55}
+.why .zh{font-family:var(--cjk)}
+.fld{margin-top:16px}
+.three{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:7px}
+.three label{position:relative;display:block}
+.three input{width:100%;background:var(--w08);border:1px solid var(--w16);
+  border-radius:11px;padding:14px 11px 19px;font-family:var(--mono);font-size:19px;
+  color:var(--w);text-align:center}
+.three input:focus{outline:2px solid var(--med2);outline-offset:1px;
+  border-color:transparent}
+.three em{position:absolute;left:0;right:0;bottom:4px;text-align:center;
+  font-style:normal;font-family:var(--cjk);font-size:9px;color:var(--w38);
+  pointer-events:none}
+.hint{font-size:13px;color:var(--w45);margin-top:6px;font-family:var(--cjk)}
+.hasno{background:var(--w08);border-radius:13px;padding:15px;margin-top:16px;
+  text-align:center}
+.hasno .tz{font-size:13px;color:var(--w62);font-family:var(--cjk)}
+.hasno .n{font-family:var(--mono);font-size:24px;letter-spacing:.06em;margin-top:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}
+.two button{margin-top:0}
+input.line{width:100%;background:var(--w08);border:1px solid var(--w16);
+  border-radius:11px;padding:15px 13px;font-family:var(--mono);font-size:19px;
+  color:var(--w)}
+input.line:focus{outline:2px solid var(--med2);outline-offset:1px;
+  border-color:transparent}
+input.line::placeholder{color:var(--w28)}
+.prog{display:flex;gap:5px;padding:0 18px 15px}
+.prog i{flex:1;height:3px;border-radius:99px;background:var(--w16)}
+.prog i.on{background:var(--med2)}
+
+.ok{display:flex;gap:10px;align-items:center;background:rgba(95,208,194,.12);
+  border-radius:11px;padding:11px 13px;margin-bottom:13px}
+.ok .m{color:var(--med2);font-size:19px}
+.ok b{display:block;font-size:16px}
+.ok span{display:block;font-size:13px;color:var(--w62);font-family:var(--cjk)}
+.big2{padding:26px 18px;text-align:center}
+.big2 .m{width:54px;height:54px;border-radius:99px;background:rgba(95,208,194,.16);
+  color:var(--med2);display:grid;place-items:center;font-size:25px;margin:0 auto 11px}
+.big2 b{display:block;font-size:20px}
+.big2 span{display:block;font-size:15px;color:var(--w62);margin-top:5px;
+  font-family:var(--cjk)}
+.badp{padding:24px 18px;text-align:center}
+.badp .m{width:52px;height:52px;border-radius:99px;background:rgba(240,154,169,.18);
+  color:var(--bad);display:grid;place-items:center;font-size:24px;margin:0 auto 11px}
+.badp b{display:block;font-size:17px;color:var(--bad)}
+.badp span{display:block;font-size:14px;color:var(--w62);margin-top:6px;
+  font-family:var(--cjk)}
+.badp .telno{display:inline-block;margin-top:9px;font-family:var(--mono);
+  font-size:18px;color:var(--med2)}
+
+.up{border:2px dashed var(--w28);border-radius:13px;padding:22px 14px;
+  text-align:center;margin-top:13px}
+.up .ic{font-size:27px}
+.up b{display:block;font-size:17px;margin-top:7px}
+.up span{display:block;font-size:14px;color:var(--w62);margin-top:3px;
+  font-family:var(--cjk)}
+.up input{display:none}
+.shot{display:flex;gap:11px;background:var(--w08);border-radius:12px;padding:11px;
+  margin-top:12px;align-items:center}
+.shot img{width:54px;height:70px;object-fit:cover;border-radius:7px;flex:none;
+  background:#fff}
+.shot b{display:block;font-size:15px}
+.shot span{display:block;font-size:13px;color:var(--w62);font-family:var(--cjk)}
+.err{background:rgba(240,154,169,.14);color:var(--bad);border-radius:10px;
+  padding:12px 13px;font-size:14.5px;margin-top:12px;line-height:1.55}
+.err .zh{color:var(--bad);opacity:.85;font-size:13.5px;font-family:var(--cjk)}
+.pill.wait{font-family:var(--cjk);font-size:13px;color:var(--w45);
+  border-style:dashed;border-color:var(--w28);line-height:1.4}
+.pill.wait .z{display:block;font-size:12px;color:var(--w38)}
+.warnbox{margin-top:18px;border:1px solid rgba(232,199,131,.3);
+  background:rgba(232,199,131,.07);border-radius:12px;padding:13px 14px}
+.warnbox .t{font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  color:#E8C783;margin:0 0 9px}
+.warnbox .t .z{font-family:var(--cjk);letter-spacing:0}
+.warnbox p{margin:0;font-size:14px;line-height:1.5}
+.warnbox p+p{margin-top:10px;padding-top:10px;border-top:1px solid var(--w12)}
+.warnbox p .z{display:block;font-family:var(--cjk);font-size:13px;
+  color:var(--w62);margin-top:1px}
+.warnbox p.hot{color:#F0A9A9}
+.warnbox p.hot .z{color:rgba(240,169,169,.72)}
+.warnbox p.only{color:var(--w62);font-family:var(--cjk);font-size:13px}
+.warnbox p.only .oz{display:block;font-size:11.5px;color:var(--w38);margin-top:1px}
+.load{text-align:center;padding:60px 0;color:var(--w38);font-size:15px}
+.ft{text-align:center;font-size:12px;color:var(--w38);margin-top:18px;
+  font-family:var(--cjk);line-height:1.65}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-  <div class="b">
-    <div class="m"></div>
-    <h1>Health Check · 體檢通知</h1>
-    <p id="st">Opening…　開啟中…</p>
-    <a class="go" id="go" href="#" hidden>Open　開啟通知<small>點這裡</small></a>
-    <p class="ft">羽禾管理顧問有限公司　YU HER</p>
-  </div>
+<div class="wrap">
+  <div id="app"><p class="load">…</p></div>
+  <p class="ft">羽禾管理顧問有限公司　YU HER<br>
+    這些資料只用於安排體檢。這是公司發給您本人的通知，請勿轉傳。</p>
+</div>
+
 <script>
-(function () {
-  /* 只放行短碼。其他參數一律丟掉——這一頁沒有理由轉送別的東西。 */
-  var m = /[?&]s=([A-Za-z0-9]{1,16})/.exec(location.search || '');
-  var base = 'https://script.google.com/macros/s/' +
-    'AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec';
-  if (!m) {
-    document.getElementById('st').textContent =
-      '這個連結不完整，請回到 LINE 重新點一次。';
+/* ⛔ token 不可以用 JSON.stringify 包。
+   Apps Script 的輸出型樣板標記會做 HTML 跳脫，JSON.stringify 加的那對引號
+   會被 escape 成 &quot;，TOKEN 的值變成「"abc123"」——引號成了字串的一部分，
+   查不到任何一列，每一條連結都顯示「Link not valid」。
+   token 在 Code.gs 已經濾成 [0-9a-f]{0,32}，直接夾在引號裡是安全的。
+
+   ⛔⛔ 這一段註解本身也踩過一次：原本在裡面「示範」錯誤寫法，
+   其中有一組空的樣板標記。編譯器不管那是不是註解，照樣編成
+   output.push( ); ——整頁 SyntaxError，而訊息指到 Code.gs 的 evaluate()。
+   樣板檔的註解裡不要出現任何樣板標記。 */
+/* 短碼從網址上的 ?s= 讀。
+   ⛔ 只收 16 進位字元——網址是使用者可以隨手改的東西，
+      不要把上面的字原封不動送進後端。
+   （以前是 Apps Script 樣板注入的。那時候用 JSON.stringify 包了一層，
+     樣板把引號跳脫成 HTML 實體混進短碼裡，每一條連結都顯示「無效」。
+     現在從網址讀，沒有那個問題了。） */
+var TOKEN = (function(){
+  try {
+    var m = /[?&]s=([^&]*)/.exec(location.search || '');
+    return m ? decodeURIComponent(m[1]).replace(/[^0-9a-f]/g, '').slice(0, 32) : '';
+  } catch(e){ return ''; }
+})();
+
+/* ── 跟後端要資料 ───────────────────────────────────
+   這一頁在 GitHub Pages，後端在 Apps Script，是兩個網域。
+   實測過那個端點會回 Access-Control-Allow-Origin: *，所以打得通。
+
+   ⛔ POST 的 Content-Type 一定要是 text/plain。
+      用 application/json 會觸發瀏覽器預檢（OPTIONS），
+      而 Apps Script 沒有 doOptions，預檢直接失敗——
+      症狀是「按了完全沒反應」，只有主控台看得到錯誤，
+      在工人的手機上根本查不出來。
+
+   ⛔ 只讀的用 GET，會寫東西的用 POST。
+      生日不可以出現在網址上：網址會進伺服器記錄，那是個資。 */
+var API_ = 'https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec';
+
+function api(fn, body, ok, bad){
+  var p, url = API_;
+  if(body){
+    body.api = fn; body.t = TOKEN;
+    p = fetch(url, { method:'POST',
+                     headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+                     body: JSON.stringify(body) });
+  } else {
+    p = fetch(url + '?api=' + encodeURIComponent(fn) +
+              '&t=' + encodeURIComponent(TOKEN));
+  }
+  p.then(function(r){ return r.json(); })
+   .then(function(j){ ok(j); })
+   .catch(function(){ if(bad) bad(); });
+}
+var D = null, SHOT = null, STEP = 1, DOB = '', TAIL = '', HASP = false;
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;'); }
+
+/* 四語。每一個欄位名都要有母語與中文。
+   ⛔ 區塊標題（sWho/sWhere/sWhat）與列標題（hos/ride/…）不可以共用鍵——
+      2026-09-20 共用過一次，畫面上出現兩次 DATE。
+   ⛔ 醫院名稱不翻譯，只附真實英文名。各語言音譯出來的名字現實中不存在，
+      招牌上沒有、地圖搜不到、計程車司機聽不懂。 */
+var T = {
+  vi:{ head:'KHÁM SỨC KHỎE ĐỊNH KỲ', today:'HÔM NAY KHÁM SỨC KHỎE',
+    sWho:'AI', sWhere:'Ở ĐÂU', sWhat:'MANG GÌ',
+    who:'NGƯỜI KHÁM', hos:'BỆNH VIỆN', ride:'XE ĐÓN', at:'ĐIỂM ĐÓN',
+    plate:'BIỂN SỐ', drv:'TÀI XẾ', bring:'MANG THEO', fee:'PHÍ',
+    left:'Còn {n} ngày', today2:'Hôm nay', tmr:'Ngày mai',
+    pend:'Công ty có xe đón. Thông tin xe sẽ báo trước 3 ngày.',
+    own:'Bạn tự đi đến bệnh viện.',
+    onlyZh:'Mục này chỉ có tiếng Trung — hỏi phiên dịch nếu không rõ.',
+    lock:'Bấm xác nhận để xem biển số và số tài xế.',
+    cal:'Thêm vào lịch', cal2:'Không được? Dùng Google Lịch',
+    call:'Gọi tài xế',
+    q1:'Ngày sinh của bạn?', q1z:'Để chắc chắn đúng là bạn',
+    y:'năm', mo:'tháng', dd:'ngày', likeArc:'Giống như trên thẻ ARC',
+    next:'Tiếp tục',
+    q2:'Số điện thoại còn dùng không?', have:'Số chúng tôi đang có',
+    same:'Đúng rồi', changed:'Đã đổi số', only3:'Chỉ hiện 3 số cuối để bảo mật',
+    q2b:'Số điện thoại của bạn?', noPhone:'Chúng tôi chưa có số của bạn',
+    skip:'Không có điện thoại',
+    okT:'Đã xác nhận', okS:'Phiên dịch đã nhận được',
+    badT:'Ngày sinh không đúng', badS:'Đây không phải thông báo của bạn?',
+    retry:'Thử lại', callUs:'Hoặc gọi', askTr:'Vui lòng liên hệ phiên dịch của bạn.',
+    badDob:'Ngày này không giống ngày sinh.',
+    inQ:'Bạn đã đến bệnh viện chưa?', inB:'Tôi đã đến', inOk:'Đã báo đến',
+    rQ:'Chụp hóa đơn nộp tiền?',
+    rWhy:'Có hóa đơn thì công ty không cần hỏi lại bạn nữa.',
+    rB:'Chụp ảnh hóa đơn', rSub:'Chụp ngay hoặc chọn từ thư viện',
+    send:'Gửi', fin:'Xong rồi', closed:'Lần khám này đã hoàn tất.',
+    inApp:'Không mở được? Bấm ⋯ ở góc trên rồi mở bằng trình duyệt.',
+    board:'lên xe', arrive:'đến bệnh viện',
+    pickWait:'Giờ đón sẽ báo trước 3 ngày',
+    checkin:'GIỜ ĐĂNG KÝ', phone:'ĐIỆN THOẠI',
+    mark:'CHỖ ĐĂNG KÝ', addr:'ĐỊA CHỈ', openMap:'Mở bản đồ',
+    phoneNote:'Muốn đổi số thì báo phiên dịch',
+    sNote:'LƯU Ý',
+    w1:'Chỉ xuất trình giấy tờ tại quầy đăng ký của bệnh viện. Không đưa cho bất kỳ ai để làm việc khác (ví dụ mở thẻ SIM). Vào bệnh viện nhớ đeo khẩu trang.',
+    w2:'TUYỆT ĐỐI không tự mang mẫu phân hoặc nước tiểu đến. Bệnh viện sẽ báo Sở Y tế và giấy phép lao động của bạn sẽ bị hủy. Nếu buồn đi vệ sinh, hãy đợi đến bệnh viện.',
+    w3:'Muốn đổi ngày phải báo trước 5 ngày. Không báo trước mà không đến thì vẫn phải trả 500 Đài tệ tiền xe.',
+    w4:'Nhớ lấy hóa đơn sau khi nộp tiền.',
+    onlyZhNote:'Mục này chỉ có tiếng Trung' },
+  id:{ head:'PEMERIKSAAN KESEHATAN BERKALA', today:'HARI INI PEMERIKSAAN',
+    sWho:'SIAPA', sWhere:'DI MANA', sWhat:'BAWA APA',
+    who:'PESERTA', hos:'RUMAH SAKIT', ride:'JEMPUTAN', at:'TITIK JEMPUT',
+    plate:'NOMOR', drv:'SOPIR', bring:'BAWA', fee:'BIAYA',
+    left:'{n} hari lagi', today2:'Hari ini', tmr:'Besok',
+    pend:'Perusahaan menyediakan jemputan. Info kendaraan 3 hari sebelumnya.',
+    own:'Anda pergi sendiri ke rumah sakit.',
+    onlyZh:'Item ini hanya dalam bahasa Mandarin — tanyakan penerjemah.',
+    lock:'Tekan konfirmasi untuk melihat nomor kendaraan dan sopir.',
+    cal:'Tambahkan ke kalender', cal2:'Tidak bisa? Pakai Google Calendar',
+    call:'Telepon sopir',
+    q1:'Tanggal lahir Anda?', q1z:'Untuk memastikan ini benar Anda',
+    y:'tahun', mo:'bulan', dd:'tanggal', likeArc:'Sama seperti di kartu izin tinggal',
+    next:'Lanjut',
+    q2:'Nomor ini masih dipakai?', have:'Nomor yang kami punya',
+    same:'Benar', changed:'Sudah ganti', only3:'Hanya 3 angka terakhir demi keamanan',
+    q2b:'Nomor HP Anda?', noPhone:'Kami belum punya nomor Anda',
+    skip:'Tidak punya HP',
+    okT:'Sudah dikonfirmasi', okS:'Penerjemah sudah menerimanya',
+    badT:'Tanggal lahir salah', badS:'Ini bukan pemberitahuan Anda?',
+    retry:'Coba lagi', callUs:'Atau telepon', askTr:'Silakan hubungi penerjemah Anda.',
+    badDob:'Tanggal ini bukan tanggal lahir.',
+    inQ:'Apakah Anda sudah sampai?', inB:'Saya sudah sampai', inOk:'Sudah lapor',
+    rQ:'Foto kuitansi pembayaran?',
+    rWhy:'Dengan kuitansi, perusahaan tidak perlu bertanya lagi.',
+    rB:'Foto kuitansi', rSub:'Foto sekarang atau pilih dari galeri',
+    send:'Kirim', fin:'Selesai', closed:'Pemeriksaan ini sudah selesai.',
+    inApp:'Tidak terbuka? Tekan ⋯ di pojok atas, buka di browser.',
+    board:'naik jemputan', arrive:'tiba di rumah sakit',
+    pickWait:'Jam jemputan diberitahu 3 hari sebelumnya',
+    checkin:'JAM DAFTAR', phone:'NOMOR HP',
+    mark:'TEMPAT DAFTAR', addr:'ALAMAT', openMap:'Buka peta',
+    phoneNote:'Mau ganti nomor? Beri tahu penerjemah',
+    sNote:'PERHATIAN',
+    w1:'Tunjukkan dokumen hanya di loket pendaftaran rumah sakit. Jangan berikan kepada siapa pun untuk urusan lain (misalnya membuat kartu SIM). Pakai masker saat masuk rumah sakit.',
+    w2:'JANGAN membawa sampel tinja atau urine sendiri. Rumah sakit akan melapor ke Dinas Kesehatan dan izin kerja Anda akan dicabut. Kalau ingin buang air besar, tahan sampai di rumah sakit.',
+    w3:'Untuk mengubah jadwal, beri tahu kami 5 hari sebelumnya. Kalau tidak memberi tahu dan tidak datang, biaya transport NT$500 tetap harus dibayar.',
+    w4:'Jangan lupa minta kuitansi setelah membayar.',
+    onlyZhNote:'Item ini hanya dalam bahasa Mandarin' },
+  th:{ head:'ตรวจสุขภาพตามกำหนด', today:'วันนี้ตรวจสุขภาพ',
+    sWho:'ใคร', sWhere:'ที่ไหน', sWhat:'นำอะไรมา',
+    who:'ผู้เข้ารับการตรวจ', hos:'โรงพยาบาล', ride:'รถรับส่ง', at:'จุดรับ',
+    plate:'ทะเบียน', drv:'คนขับ', bring:'นำติดตัว', fee:'ค่าใช้จ่าย',
+    left:'อีก {n} วัน', today2:'วันนี้', tmr:'พรุ่งนี้',
+    pend:'บริษัทมีรถรับส่ง จะแจ้งข้อมูลรถก่อน 3 วัน',
+    own:'คุณเดินทางไปเอง',
+    onlyZh:'รายการนี้มีแต่ภาษาจีน — สอบถามล่ามได้',
+    lock:'กดยืนยันเพื่อดูทะเบียนรถและเบอร์คนขับ',
+    cal:'เพิ่มลงปฏิทิน', cal2:'ไม่ได้ใช่ไหม ลองใช้ Google ปฏิทิน',
+    call:'โทรหาคนขับ',
+    q1:'วันเกิดของคุณ', q1z:'เพื่อยืนยันว่าเป็นคุณจริง',
+    y:'ปี', mo:'เดือน', dd:'วัน', likeArc:'ตรงกับบัตรถิ่นที่อยู่',
+    next:'ถัดไป',
+    q2:'ยังใช้เบอร์นี้อยู่ไหม', have:'เบอร์ที่เรามี',
+    same:'ใช่', changed:'เปลี่ยนแล้ว', only3:'แสดงแค่ 3 ตัวท้ายเพื่อความปลอดภัย',
+    q2b:'เบอร์โทรของคุณ', noPhone:'เรายังไม่มีเบอร์ของคุณ',
+    skip:'ไม่มีโทรศัพท์',
+    okT:'ยืนยันแล้ว', okS:'ล่ามได้รับแล้ว',
+    badT:'วันเกิดไม่ถูกต้อง', badS:'นี่ไม่ใช่ประกาศของคุณใช่ไหม',
+    retry:'ลองอีกครั้ง', callUs:'หรือโทร', askTr:'กรุณาติดต่อล่ามของคุณ',
+    badDob:'วันที่นี้ไม่ใช่วันเกิด',
+    inQ:'คุณถึงโรงพยาบาลแล้วหรือยัง', inB:'ถึงแล้ว', inOk:'รายงานตัวแล้ว',
+    rQ:'ถ่ายใบเสร็จไหม', rWhy:'มีใบเสร็จแล้วบริษัทจะไม่ต้องถามอีก',
+    rB:'ถ่ายใบเสร็จ', rSub:'ถ่ายเลยหรือเลือกจากคลังภาพ',
+    send:'ส่ง', fin:'เสร็จแล้ว', closed:'การตรวจครั้งนี้เสร็จสิ้นแล้ว',
+    inApp:'เปิดไม่ได้? กด ⋯ มุมบน แล้วเปิดในเบราว์เซอร์',
+    board:'ขึ้นรถ', arrive:'ถึงโรงพยาบาล',
+    pickWait:'จะแจ้งเวลารับก่อน 3 วัน',
+    checkin:'เวลาลงทะเบียน', phone:'เบอร์โทร',
+    mark:'จุดลงทะเบียน', addr:'ที่อยู่', openMap:'เปิดแผนที่',
+    phoneNote:'ถ้าจะเปลี่ยนเบอร์ แจ้งล่าม',
+    sNote:'ข้อควรระวัง',
+    w1:'แสดงเอกสารเฉพาะที่เคาน์เตอร์ลงทะเบียนของโรงพยาบาลเท่านั้น ห้ามให้ใครเอาไปทำธุระอื่น (เช่น เปิดซิมการ์ด) และสวมหน้ากากอนามัยเมื่อเข้าโรงพยาบาล',
+    w2:'ห้ามนำอุจจาระหรือปัสสาวะมาเอง โรงพยาบาลจะแจ้งสำนักงานสาธารณสุข และใบอนุญาตทำงานของคุณจะถูกเพิกถอน ถ้าปวดถ่าย ให้รอไปถ่ายที่โรงพยาบาล',
+    w3:'ถ้าต้องการเลื่อนวัน กรุณาแจ้งล่วงหน้า 5 วัน ถ้าไม่แจ้งแล้วไม่มา ยังต้องจ่ายค่ารถ 500 เหรียญไต้หวัน',
+    w4:'อย่าลืมขอใบเสร็จหลังชำระเงิน',
+    onlyZhNote:'รายการนี้มีแต่ภาษาจีน' },
+  en:{ head:'PERIODIC HEALTH CHECK', today:'HEALTH CHECK TODAY',
+    sWho:'WHO', sWhere:'WHERE', sWhat:'WHAT TO BRING',
+    who:'PATIENT', hos:'HOSPITAL', ride:'PICKUP', at:'PICKUP POINT',
+    plate:'PLATE', drv:'DRIVER', bring:'BRING', fee:'FEE',
+    left:'{n} days left', today2:'Today', tmr:'Tomorrow',
+    pend:'The company provides a van. Vehicle details 3 days before.',
+    own:'Please go to the hospital yourself.',
+    onlyZh:'This item is in Chinese only — ask your translator.',
+    lock:'Confirm to see the plate number and driver phone.',
+    cal:'Add to calendar', cal2:"Didn't work? Use Google Calendar",
+    call:'Call the driver',
+    q1:'Your date of birth?', q1z:'So we know it is really you',
+    y:'year', mo:'month', dd:'day', likeArc:'Same as on your ARC',
+    next:'Continue',
+    q2:'Is this number still yours?', have:'The number we have',
+    same:'Yes, correct', changed:'I changed it',
+    only3:'Only the last 3 digits, for your privacy',
+    q2b:'Your phone number?', noPhone:'We do not have your number yet',
+    skip:'No phone',
+    okT:'Confirmed', okS:'Your translator can see it',
+    badT:'Date of birth does not match', badS:'Is this not your notice?',
+    retry:'Try again', callUs:'Or call', askTr:'Please contact your translator.',
+    badDob:'That date is not a date of birth.',
+    inQ:'Have you arrived at the hospital?', inB:'I have arrived',
+    inOk:'Checked in', rQ:'Photo of the payment receipt?',
+    rWhy:'With a receipt we will not need to ask you again.',
+    rB:'Photo of receipt', rSub:'Take one now or pick from your gallery',
+    send:'Send', fin:'All done', closed:'This health check is complete.',
+    inApp:"Won't open? Tap ⋯ at the top, then open in your browser.",
+    board:'board the van', arrive:'arrive at the hospital',
+    pickWait:'Pickup time will be given 3 days before',
+    checkin:'CHECK-IN', phone:'PHONE',
+    mark:'REPORT AT', addr:'ADDRESS', openMap:'Open map',
+    phoneNote:'To change it, tell your translator',
+    sNote:'IMPORTANT',
+    w1:'Show your documents only at the hospital registration desk. Never hand them to anyone for other business (for example, opening a SIM card). Wear a mask inside the hospital.',
+    w2:'Do NOT bring your own stool or urine sample. The hospital reports this to the Health Bureau and your work permit will be revoked. If you need the toilet, wait until you are at the hospital.',
+    w3:'To change the date, tell us at least 5 days ahead. If you cancel late or do not show up, you still pay the NT$500 transport fee.',
+    w4:'Remember to ask for the receipt after paying.',
+    onlyZhNote:'This item is in Chinese only' }
+};
+/* 名冊沒填語別時整頁只出中文（不要猜成英文）；有語別時它是每一行的輔助。 */
+var ZH = { head:'定期體檢通知', today:'今天體檢',
+  sWho:'誰', sWhere:'去哪', sWhat:'帶什麼',
+  who:'受檢人', hos:'醫院', ride:'接送', at:'上車地點',
+  plate:'車牌', drv:'司機', bring:'攜帶', fee:'費用',
+  left:'還有 {n} 天', today2:'就是今天', tmr:'明天',
+  pend:'公司會派車接。車輛資訊體檢前 3 天通知。', own:'你自己前往醫院。',
+  onlyZh:'這一項只有中文', lock:'按下確認後才會顯示車牌與司機電話',
+  cal:'加入行事曆', cal2:'沒反應嗎？改用 Google 日曆', call:'打給司機',
+  q1:'你的出生年月日', q1z:'確認是本人才收得到',
+  y:'年', mo:'月', dd:'日', likeArc:'跟居留證上一樣', next:'下一步',
+  q2:'這支電話還在用嗎？', have:'我們手上的號碼',
+  same:'對，就是這支', changed:'我換號碼了', only3:'只顯示後三碼，保護你的隱私',
+  q2b:'你的手機號碼', noPhone:'我們還沒有你的號碼', skip:'我沒有電話',
+  okT:'已確認', okS:'翻譯那邊看得到了',
+  badT:'生日對不上', badS:'這不是你的通知嗎？',
+  retry:'再試一次', callUs:'或打', askTr:'請聯絡你的翻譯。',
+  badDob:'這個日期不像出生年月日',
+  inQ:'你到醫院了嗎？', inB:'我到了', inOk:'已報到',
+  rQ:'要拍繳費收據嗎？', rWhy:'有收據，公司就不用再回頭問你。可以不傳。',
+  rB:'拍收據照片', rSub:'拍照或從相簿選', send:'送出',
+  fin:'都完成了', closed:'這次體檢已完成',
+  inApp:'打不開的話，按右上角的「⋯」用瀏覽器開啟。',
+  board:'上車', arrive:'到醫院',
+  pickWait:'接人時間　體檢前 3 天通知',
+  checkin:'報到時間', phone:'手機',
+  mark:'報到地點', addr:'地址', openMap:'打開地圖',
+  phoneNote:'要改的話跟你的翻譯說',
+  sNote:'注意事項',
+  w1:'證件只在醫院掛號櫃檯出示。不要交給任何人去辦其他業務（例如開 SIM 卡）。進醫院請戴口罩。',
+  w2:'不可以自己帶檢體（糞便、尿液）。醫院會通報衛生局，聘僱許可會被廢止。想上大號請留到醫院再上。',
+  w3:'要改期請提前 5 天告知。沒有事先說又沒來的，車資 500 元還是要付。',
+  w4:'繳完費記得跟櫃檯拿收據。',
+  onlyZhNote:'這一項只有中文' };
+
+function zhOnly(){ return !D || D.lang === 'zh'; }
+function t(k){ return zhOnly() ? (ZH[k] || '') : ((T[D.lang] || T.en)[k] || ''); }
+/** 欄位名一律「母語 中文」。只出中文時就只有中文。 */
+function lbl(k){
+  return zhOnly() ? esc(ZH[k])
+    : (esc(t(k)) + ' <span class="zh">' + esc(ZH[k]) + '</span>');
+}
+/** 一句話的母語與中文兩行。只出中文時只有一行。 */
+function two(k){
+  return zhOnly() ? esc(t(k))
+    : (esc(t(k)) + '<br><span style="font-family:var(--cjk);color:var(--w62)">' +
+       esc(ZH[k]) + '</span>');
+}
+
+/* ── 表頭與大日期 ───────────────────────────────── */
+function head(){
+  return '<div class="hd"><span class="cx"></span>' +
+    '<div class="c"><span class="k">YU HER MANAGEMENT</span>' +
+    '<b>' + esc(t('head')) + '</b></div>' +
+    (D.caseNo ? '<span class="no">NO.<br>' + esc(D.caseNo) + '</span>' : '') +
+    '</div>';
+}
+function band(){
+  if(D.stage === 'done')
+    return '<div class="band done">✓ ' + esc(t('closed')) + '</div>';
+  if(D.stage === 'today')
+    return '<div class="band">🏥 ' + esc(t('today')) +
+      (D.time ? '<span class="r">' + esc(D.time) + '</span>' : '') + '</div>';
+  return '';
+}
+var DOW_ = {
+  vi:['Chủ Nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'],
+  id:['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'],
+  th:['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'],
+  en:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+  zh:['星期日','星期一','星期二','星期三','星期四','星期五','星期六'] };
+/* Sep 27。
+   ⛔ 不要用純數字。越南、印尼、泰國的習慣都是「日在前」，
+      所以 27/09 他們讀得對——**真正會害他們讀錯的是中文習慣的 9/27**。
+      只要出現文字月份，日月順序就再也不重要了。
+   ⛔ 四個語別統一用英文縮寫（牟佑彬 2026-09-21 選 A）。
+      他們的居留證、機票、醫院單據上本來就是英文月份，認得；
+      而且四則長得一樣，校對的時候錯了看得出來。 */
+var MON_ = ['Jan','Feb','Mar','Apr','May','Jun',
+            'Jul','Aug','Sep','Oct','Nov','Dec'];
+function dparts(){
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(D.date || '');
+  if(!m) return null;
+  var d = new Date(Date.UTC(+m[1], +m[2]-1, +m[3]));
+  return { big: MON_[+m[2]-1] + ' ' + (+m[3]), dow: d.getUTCDay(),
+           zh: (+m[2]) + '月' + (+m[3]) + '日' };
+}
+function leftTxt(){
+  if(D.days === null || D.days === undefined || D.days < 0) return '';
+  if(D.days === 0) return t('today2');
+  if(D.days === 1) return t('tmr');
+  return t('left').replace('{n}', D.days);
+}
+/* 那顆膠囊要回答「我幾點要出門」，不是醫院幾點開門。
+   ⛔ 車還沒定的時候絕對不可以顯示報到時間——
+      他會以為那是上車時間，提早兩小時站在門口。 */
+function timePill(){
+  if(D.ride === '接送'){
+    if(D.car && D.car.at){
+      return '<div class="pill">🚐 ' + esc(D.car.at) + ' ' + esc(t('board')) +
+        '</div>';
+    }
+    return '<div class="pill wait">' + esc(t('pickWait')) +
+      (zhOnly() ? '' : '<span class="z">' + esc(ZH.pickWait) + '</span>') +
+      '</div>';
+  }
+  if(!D.time) return '';
+  return '<div class="pill">🏥 ' + esc(D.time) + ' ' + esc(t('arrive')) + '</div>';
+}
+
+function hero(){
+  var p = dparts();
+  if(!p) return '';
+  var dw = (DOW_[zhOnly() ? 'zh' : D.lang] || DOW_.en)[p.dow];
+  var l = leftTxt();
+  return '<div class="big">' + esc(p.big) + '</div>' +
+    '<div class="sub">' + esc(dw) +
+      (zhOnly() ? '' : ' · ' + esc(DOW_.zh[p.dow])) +
+      '　' + esc(p.zh) +
+      (l ? ('　—　' + esc(l)) : '') + '</div>' +
+    timePill();
+}
+
+/* ── 細線分區。N2 跟舊版的差別就在這裡：標籤用細線，不是灰卡。
+   灰卡會把一張單切成三張，質感就散了。 ── */
+function lab(k){
+  return '<p class="lab">' + esc(t(k)) +
+    (zhOnly() ? '' : ' <span class="zh">' + esc(ZH[k]) + '</span>') + '</p>';
+}
+function row(k, main, sub){
+  if(!main) return '';
+  return '<li><em>' + lbl(k) + '</em><div class="v"><b>' + main + '</b>' +
+    (sub ? '<span>' + esc(sub) + '</span>' : '') + '</div></li>';
+}
+function note(k){
+  return '<li><em>' + lbl(k) + '</em><div class="v">' +
+    '<b style="font-weight:400;font-size:14px;color:var(--w75)">' + two(k === 'ride' &&
+      D.ride !== '接送' ? 'own' : 'pend') + '</b></div></li>';
+}
+
+function secWho(){
+  /* 電話放這一區：這一區本來就是在回答「這是不是我」。
+     ⛔ 只顯示遮罩過的後三碼，而且只在確認之後。
+        本人看得出「對，是我的號碼」就夠了，
+        在頁面上顯示完整號碼沒有任何額外用處。 */
+  var ph = (D.ack && D.phoneTail)
+    ? ('<li><em>' + lbl('phone') + '</em><div class="v">' +
+       '<b class="num">' + esc(D.phoneTail) + '</b>' +
+       '<span>' + esc(t('phoneNote')) + '</span></div></li>')
+    : '';
+  return lab('sWho') + '<ul class="rows">' + row('who', esc(D.name)) +
+    ph + '</ul>';
+}
+function secWhere(){
+  var h = lab('sWhere') + '<ul class="rows">';
+  /* 醫院：拼音在上、中文在下。中文那個一定要在——
+     那是掛號櫃檯與計程車司機看的字。 */
+  if(D.hos){
+    h += '<li><em>' + lbl('hos') + '</em><div class="v"><b>' +
+      esc(D.hosLat || D.hos) + '</b>' +
+      (D.hosLat ? '<span>' + esc(D.hos) + '</span>' : '') + '</div></li>';
+  }
+  /* 報到時間不會不見，只是退到這裡當一列——需要的時候查得到，
+     但不佔最顯眼的位置。接送的場次尤其要分清楚：
+     上車一個時間、報到另一個時間。 */
+  if(D.time) h += row('checkin', '<span class="num">' + esc(D.time) + '</span>');
+  /* 自行前往才有地址與地標（後端只在那種場次回傳）。
+     ⚠ 地標排在地址前面。看不懂中文的人認得出「全家便利商店」，
+       認不出「南平街 61 巷」——地址是給計程車司機看的，
+       地標才是他自己找得到門口的東西。 */
+  if(D.hosMark) h += row('mark', esc(D.hosMark));
+  if(D.hosAddr) h += row('addr', esc(D.hosAddr));
+  if(D.ride !== '接送' || !D.car){
+    h += note('ride');
+  } else {
+    var c = D.car;
+    h += row('ride', '<span class="num">' + esc(c.at) + '</span>');
+    h += row('at', esc(c.where));
+    if(c.locked){
+      h += '<li><em>' + lbl('plate') + '</em><div class="v">' +
+        '<b class="lk">🔒 ●●●-●●●●</b></div></li>' +
+        '<li><em>' + lbl('drv') + '</em><div class="v">' +
+        '<b class="lk">🔒 ●● 0●●●-●●●-●●●</b></div></li>';
+    } else {
+      h += row('plate', '<span class="num">' + esc(c.plate) + '</span>');
+      h += row('drv', esc(c.driver));
+    }
+  }
+  h += '</ul>';
+  /* ⛔ 不可以加 target="_blank"（LINE 內建瀏覽器會吞掉，按了沒反應）。 */
+  if(D.hosMap){
+    h += '<a class="tel" href="' + esc(D.hosMap) + '">' +
+      '<button type="button" class="s">🗺️ ' + esc(t('openMap')) +
+      (zhOnly() ? '' : '<small>' + esc(ZH.openMap) + '</small>') +
+      '</button></a>';
+  }
+  if(D.car && D.car.locked) h += '<div class="note">🔒 ' + two('lock') + '</div>';
+  if(D.car && !D.car.locked && D.car.phone)
+    h += '<a class="tel" href="tel:' + esc(D.car.phone) + '">' +
+      '<button type="button" class="s">📞 ' + esc(t('call')) + '　' +
+      esc(D.car.phone) + (zhOnly() ? '' : '<small>' + esc(ZH.call) + '</small>') +
+      '</button></a>';
+  return h;
+}
+function secWhat(){
+  var items = D.bringList || [];
+  if(!items.length && !D.feeFmt) return '';
+  var anyZh = items.some(function(x){ return !x.t; });
+  var h = lab('sWhat') + '<ul class="rows">';
+  if(items.length){
+    h += '<li><em>' + lbl('bring') + '</em><div class="v"><b>' +
+      items.map(function(x){
+        return x.t ? esc(x.t)
+          : ('<span class="zhonly">' + esc(x.zh) + '</span>'); }).join(' · ') +
+      '</b>' + (zhOnly() ? '' : '<span>' +
+        esc(items.map(function(x){ return x.zh; }).join('・')) + '</span>') +
+      '</div></li>';
+  }
+  if(D.feeFmt){
+    h += '<li><em>' + lbl('fee') + '</em><div class="v">' +
+      '<b class="num">' + esc(D.feeFmt) + '</b>' +
+      (zhOnly() ? '' : '<span>' + esc(D.feeZh) + '</span>') + '</div></li>';
+  }
+  h += '</ul>';
+  if(anyZh && !zhOnly()) h += '<div class="note">· ' + esc(t('onlyZh')) + '</div>';
+  return h + secNote();
+}
+
+/* 注意事項。三條固定的（牟佑彬 9/19 範本裡那幾條）＋ 翻譯自己打的。
+   ⛔ 放在「我知道了」上面。他要按確認一定會捲到這裡，等於強迫看過一次。
+   ⛔ 翻譯打的那一條照樣收，但要標「只有中文」——不要假裝翻譯過。 */
+function secNote(){
+  /* ⛔ w3（改期與 500 車資）只在「我們接送」的場次出現。
+     那是車資，自行前往的人沒有車可以錯過，印出來不成立。
+     ⚠ 措辭寫「車資」不是「罰款」——那是你們多跑一趟的實際成本，
+       寫成罰款在勞動法規上是另一回事。
+
+     ⛔ w2 用 .hot 加重，而且排第二個（不是最後）。
+     2026-09-21 我原本只寫「有糞便檢查，想大號的留到醫院」——
+     只講了不方便。院方的紙本講的是**聘僱許可會被廢止**。
+     那是他整份通知裡後果最重的一句，不能跟「記得拿收據」
+     長得一樣、排在一樣的位置。 */
+  var keys = ['w1', 'w2'];
+  if(D.ride === '接送') keys.push('w3');
+  keys.push('w4');
+  var fixed = keys.map(function(k){
+    return '<p' + (k === 'w2' ? ' class="hot"' : '') + '>' + esc(t(k)) +
+      (zhOnly() ? '' : '<span class="z">' + esc(ZH[k]) + '</span>') + '</p>';
+  }).join('');
+  var mine = D.note
+    ? ('<p class="only">· ' + esc(D.note) +
+       (zhOnly() ? '' : '<span class="oz">' + esc(t('onlyZhNote')) + '</span>') +
+       '</p>')
+    : '';
+  return '<div class="warnbox"><p class="t">' + esc(t('sNote')) +
+    (zhOnly() ? '' : ' <span class="z">' + esc(ZH.sNote) + '</span>') + '</p>' +
+    fixed + mine + '</div>';
+}
+
+/* ── 加入行事曆 ─────────────────────────────────── */
+function calBtn(){
+  if(!D.date || D.stage === 'done') return '';
+  /* ⛔ 不可以加 target="_blank"。
+     2026-09-21 實機：在 LINE 裡按了完全沒反應。
+     LINE 的內建瀏覽器擋掉開新視窗，所以連結根本沒被走到——
+     看起來像按鈕壞了，其實是 _blank 被吞了。同一頁跳轉才走得通。
+
+     ⛔ 兩條路都要給。.ics 是檔案，LINE 內建瀏覽器多半擋下載；
+     Google 日曆那條只是一般網頁跳轉，任何瀏覽器都走得通但要帳號。
+     Android 幾乎都有帳號、iPhone 多半沒有但 Safari 認得 .ics。
+     再加一行「用瀏覽器開」——那是 LINE 裡唯一一定有效的路。 */
+  return '<a href="' + esc(D.icsUrl) + '">' +
+    '<button type="button" class="s">📅 ' + esc(t('cal')) +
+    (zhOnly() ? '' : '<small>' + esc(ZH.cal) + '</small>') + '</button></a>' +
+    (D.gcalUrl ? '<a class="alt" href="' + esc(D.gcalUrl) + '">' +
+      esc(t('cal2')) +
+      (zhOnly() ? '' : '<span class="zh">' + esc(ZH.cal2) + '</span>') + '</a>'
+      : '') +
+    '<p class="why" style="text-align:center">' + esc(t('inApp')) +
+      (zhOnly() ? '' : '<br><span class="zh">' + esc(ZH.inApp) + '</span>') +
+    '</p>';
+}
+
+/* ── 確認 V1：兩步 ──────────────────────────────── */
+var AGE_MIN = 14, AGE_MAX = 80;
+function yrMax(){ return new Date().getFullYear() - AGE_MIN; }
+function yrMin(){ return new Date().getFullYear() - AGE_MAX; }
+
+function step1(){
+  return '<p class="q">' + esc(t('q1')) + '</p>' +
+    (zhOnly() ? '' : '<p class="qz">' + esc(ZH.q1) + '</p>') +
+    '<p class="why">' + esc(t('q1z')) +
+      (zhOnly() ? '' : '　·　<span class="zh">' + esc(ZH.q1z) + '</span>') + '</p>' +
+    '<div class="fld"><div class="three">' +
+      '<label><input id="dy" inputmode="numeric" maxlength="4" placeholder="----">' +
+        '<em>' + esc(t('y')) + (zhOnly() ? '' : ' ' + ZH.y) + '</em></label>' +
+      '<label><input id="dm" inputmode="numeric" maxlength="2" placeholder="--">' +
+        '<em>' + esc(t('mo')) + (zhOnly() ? '' : ' ' + ZH.mo) + '</em></label>' +
+      '<label><input id="dd" inputmode="numeric" maxlength="2" placeholder="--">' +
+        '<em>' + esc(t('dd')) + (zhOnly() ? '' : ' ' + ZH.dd) + '</em></label>' +
+      '</div>' +
+      '<p class="hint">' + esc(t('likeArc')) +
+        (zhOnly() ? '' : '　·　' + esc(ZH.likeArc)) + '</p></div>' +
+    '<div id="er"></div>' +
+    '<button type="button" id="go1">' + esc(t('next')) +
+      (zhOnly() ? '' : '<small>' + esc(ZH.next) + '</small>') + '</button>';
+}
+function showErr(box, k){
+  $(box).innerHTML = '<div class="err">' + esc(t(k)) +
+    (zhOnly() ? '' : '<br><span class="zh">' + esc(ZH[k]) + '</span>') + '</div>';
+}
+function bind1(){
+  /* 打滿就自己跳下一格。老手機上少按兩次，而且看得出來有反應。 */
+  function hop(a, b){
+    $(a).addEventListener('input', function(){
+      $(a).value = $(a).value.replace(/[^0-9]/g, '');
+      if(b && $(a).value.length >= +$(a).getAttribute('maxlength')) $(b).focus();
+    });
+  }
+  hop('dy','dm'); hop('dm','dd'); hop('dd', null);
+  $('go1').addEventListener('click', function(){
+    var y = $('dy').value, m = $('dm').value, d = $('dd').value;
+    if(y.length !== 4 || !m || !d){ $('dy').focus(); return; }
+    if(+y < yrMin() || +y > yrMax()){ showErr('er', 'badDob'); return; }
+    DOB = y + '-' + ('0'+m).slice(-2) + '-' + ('0'+d).slice(-2);
+    var b = $('go1'); b.disabled = true;
+    api('hcVerifyDob', { dob: DOB }, function(r){
+      b.disabled = false;
+      if(r && r.already){ load(); return; }
+      if(r && r.ok){
+        HASP = !!r.hasPhone; TAIL = r.phoneTail || ''; STEP = 2; draw(); return;
+      }
+      if(r && r.gone){ gone(); return; }
+      if(r && r.badDob){ showErr('er', 'badDob'); return; }
+      /* 生日對不上：換成專屬的錯誤畫面，不是一行紅字。
+         ⛔ 不鎖定——鎖定會把真正的本人擋在外面，而他手上沒有別的管道。 */
+      STEP = 'bad'; draw();
+    }, function(){
+      b.disabled = false;
+      $('er').innerHTML = '<div class="err">Network error · 網路不穩，再試一次</div>';
+    });
+  });
+}
+
+function step2(){
+  if(HASP){
+    return '<p class="q">' + esc(t('q2')) + '</p>' +
+      (zhOnly() ? '' : '<p class="qz">' + esc(ZH.q2) + '</p>') +
+      '<div class="hasno"><span class="tz">' + esc(t('have')) +
+        (zhOnly() ? '' : '　·　' + esc(ZH.have)) + '</span>' +
+        '<div class="n">' + esc(TAIL) + '</div></div>' +
+      '<div id="newp"></div>' +
+      '<div class="two">' +
+        '<button type="button" class="s" id="chg">' + esc(t('changed')) +
+          (zhOnly() ? '' : '<small>' + esc(ZH.changed) + '</small>') + '</button>' +
+        '<button type="button" id="same">' + esc(t('same')) + ' ✓' +
+          (zhOnly() ? '' : '<small>' + esc(ZH.same) + '</small>') + '</button>' +
+      '</div>' +
+      '<p class="why">' + esc(t('only3')) +
+        (zhOnly() ? '' : '　·　<span class="zh">' + esc(ZH.only3) + '</span>') + '</p>';
+  }
+  /* 名冊上沒有號碼——這是「收集」那一輪。
+     ⛔ 不要用電話卡住確認：沒留電話照樣算確認過。 */
+  return '<p class="q">' + esc(t('q2b')) + '</p>' +
+    (zhOnly() ? '' : '<p class="qz">' + esc(ZH.q2b) + '</p>') +
+    '<p class="why">' + esc(t('noPhone')) +
+      (zhOnly() ? '' : '　·　<span class="zh">' + esc(ZH.noPhone) + '</span>') + '</p>' +
+    '<div class="fld"><input class="line" id="ph" type="tel" inputmode="tel" ' +
+      'placeholder="09xx-xxx-xxx"></div>' +
+    '<button type="button" id="done">' + esc(t('okT')) + ' ✓' +
+      (zhOnly() ? '' : '<small>' + esc(ZH.okT) + '</small>') + '</button>' +
+    '<a class="alt" id="nop">' + esc(t('skip')) +
+      (zhOnly() ? '' : '<span class="zh">' + esc(ZH.skip) + '</span>') + '</a>';
+}
+function bind2(){
+  function submit(phone){
+    var bs = document.querySelectorAll('#app button');
+    [].forEach.call(bs, function(b){ b.disabled = true; });
+    api('hcAck', { dob: DOB, phone: phone || '' }, function(r){
+      if(r && r.ok){ STEP = 1; load(); return; }
+      [].forEach.call(bs, function(b){ b.disabled = false; });
+      if(r && r.gone){ gone(); return; }
+      STEP = 'bad'; draw();
+    }, function(){
+      [].forEach.call(bs, function(b){ b.disabled = false; });
+    });
+  }
+  if($('same')) $('same').addEventListener('click', function(){ submit(''); });
+  if($('chg')) $('chg').addEventListener('click', function(){
+    /* 第一下換成輸入框，第二下才送出。不要一按就跳走，
+       他可能只是想看看號碼長什麼樣。 */
+    if(!$('ph')){
+      $('newp').innerHTML = '<div class="fld"><input class="line" id="ph" ' +
+        'type="tel" inputmode="tel" placeholder="09xx-xxx-xxx"></div>';
+      $('ph').focus();
+      $('chg').innerHTML = esc(t('send'));
+      return;
+    }
+    submit($('ph').value.trim());
+  });
+  if($('done')) $('done').addEventListener('click', function(){
+    submit($('ph').value.trim()); });
+  if($('nop')) $('nop').addEventListener('click', function(){ submit(''); });
+}
+
+function badPage(){
+  return head() +
+    '<div class="badp"><div class="m">✕</div>' +
+    '<b>' + esc(t('badT')) + '</b>' +
+    '<span>' + (zhOnly() ? '' : esc(ZH.badT) + '<br>') + esc(t('badS')) + '</span>' +
+    (D.tel
+      ? ('<a class="tel" href="tel:' + esc(D.tel) + '"><span class="telno">' +
+         esc(t('callUs')) + ' ' + esc(D.tel) + '</span></a>')
+      : ('<span>' + esc(t('askTr')) +
+         (zhOnly() ? '' : '<br>' + esc(ZH.askTr)) + '</span>')) +
+    '</div><div class="pad">' +
+    '<button type="button" id="retry">' + esc(t('retry')) +
+      (zhOnly() ? '' : '<small>' + esc(ZH.retry) + '</small>') + '</button></div>';
+}
+
+/* ── 當天報到與收據 ─────────────────────────────── */
+function askIn(){
+  return '<p class="q">' + esc(t('inQ')) + '</p>' +
+    (zhOnly() ? '' : '<p class="qz">' + esc(ZH.inQ) + '</p>') +
+    '<button type="button" id="in">' + esc(t('inB')) + ' ✓' +
+      (zhOnly() ? '' : '<small>' + esc(ZH.inB) + '</small>') + '</button>';
+}
+function bindIn(){
+  $('in').addEventListener('click', function(){
+    var b = $('in'); b.disabled = true;
+    api('hcCheckin', {}, function(){ load(); },
+        function(){ b.disabled = false; });
+  });
+}
+function askReceipt(){
+  if(D.receipt)
+    return '<div class="big2"><div class="m">✓</div><b>' + esc(t('fin')) +
+      '</b><span>' + esc(ZH.fin) + '</span></div>';
+  return '<p class="q">' + esc(t('rQ')) + '</p>' +
+    (zhOnly() ? '' : '<p class="qz">' + esc(ZH.rQ) + '</p>') +
+    '<p class="why">' + esc(t('rWhy')) +
+      (zhOnly() ? '' : '<br><span class="zh">' + esc(ZH.rWhy) + '</span>') + '</p>' +
+    '<label class="up" for="f"><div class="ic">📷</div><b>' + esc(t('rB')) +
+      '</b><span>' + esc(t('rSub')) + (zhOnly() ? '' : '<br>' + esc(ZH.rB)) +
+      '</span><input id="f" type="file" accept="image/*" capture="environment">' +
+      '</label><div id="pv"></div><div id="er2"></div>';
+}
+function bindReceipt(){
+  var f = $('f'); if(!f) return;
+  f.addEventListener('change', function(){
+    var file = f.files && f.files[0]; if(!file) return;
+    if(file.size > 6 * 1024 * 1024){
+      $('er2').innerHTML = '<div class="err">Too large · 照片太大，請重拍一張</div>';
+      return;
+    }
+    var rd = new FileReader();
+    rd.onload = function(){
+      SHOT = { mime: file.type, b64: String(rd.result).split(',')[1] };
+      $('pv').innerHTML = '<div class="shot"><img src="' + rd.result + '" alt="">' +
+        '<div><b>' + esc(file.name.slice(0, 22)) + '</b>' +
+        '<span>' + Math.round(file.size / 1024) + ' KB</span></div></div>' +
+        '<button type="button" id="snd">' + esc(t('send')) + '</button>';
+      $('snd').addEventListener('click', send);
+    };
+    rd.readAsDataURL(file);
+  });
+}
+function send(){
+  var b = $('snd'); b.disabled = true; b.textContent = '…';
+  api('hcReceipt', { mime: SHOT.mime, b64: SHOT.b64 }, function(r){
+    if(r && r.ok){ load(); return; }
+    b.disabled = false; b.textContent = t('send');
+    $('er2').innerHTML = '<div class="err">' +
+      (r && r.tooBig ? 'Too large · 照片太大' : 'Failed · 沒傳成功，再試一次') +
+      '</div>';
+  }, function(){
+    b.disabled = false; b.textContent = t('send');
+    $('er2').innerHTML = '<div class="err">Network error · 網路不穩，再試一次</div>';
+  });
+}
+
+/* ── 組裝 ───────────────────────────────────────── */
+function draw(){
+  document.body.className = (D.lang === 'th') ? 'th' : '';
+
+  if(STEP === 'bad'){
+    $('app').innerHTML = '<div class="pg">' + badPage() + '</div>';
+    $('retry').addEventListener('click', function(){ STEP = 1; draw(); });
     return;
   }
-  var url = base + '?s=' + m[1];
-  var a = document.getElementById('go');
-  a.href = url; a.hidden = false;
-  /* replace 而不是 assign：工人按上一頁時應該回到 LINE，不是回到這一頁然後
-     又被轉走一次——那會變成他怎麼按都離不開。 */
-  location.replace(url);
-})();
+  /* 第二步接管整個畫面。已經走到這裡的人，最重要的事是把它按完——
+     底下那一大張通知這時候只會讓他分心。 */
+  if(!D.ack && D.stage !== 'done' && STEP === 2){
+    $('app').innerHTML = '<div class="pg">' + head() +
+      '<div class="bd">' + step2() + '</div>' +
+      '<div class="prog"><i class="on"></i><i class="on"></i></div></div>';
+    bind2(); return;
+  }
+
+  var h = head() + band() + '<div class="bd">';
+  if(D.ack) h += '<div class="ok"><span class="m">✓</span><div><b>' +
+    esc(t('okT')) + '</b><span>' + esc(ZH.okT) + '</span></div></div>';
+
+  if(D.stage === 'done'){
+    h += '<div class="big2"><div class="m">✓</div><b>' + esc(t('closed')) +
+      '</b><span>' + esc(ZH.closed) + '</span></div>' + hero() + '</div>';
+    $('app').innerHTML = '<div class="pg">' + h + '</div>';
+    return;
+  }
+
+  h += hero() + secWho() + secWhere() + secWhat() + '</div>';
+
+  var foot = '';
+  if(!D.ack){
+    foot = '<div class="bd" style="padding-top:0">' + step1() + '</div>' +
+      '<div class="prog"><i class="on"></i><i></i></div>';
+  } else {
+    if(D.stage === 'today' && D.inAt){
+      foot = '<div class="bd" style="padding-top:0">' +
+        '<div class="ok"><span class="m">✓</span><div><b>' + esc(t('inOk')) +
+        '</b><span>' + esc(ZH.inOk) + '</span></div></div>' +
+        askReceipt() + '</div>';
+    } else if(D.stage === 'today' && D.canIn){
+      foot = '<div class="bd" style="padding-top:0">' + askIn() + '</div>';
+    }
+    foot += '<div class="pad">' + calBtn() + '</div>';
+  }
+
+  $('app').innerHTML = '<div class="pg">' + h + foot + '</div>';
+  if($('go1')) bind1();
+  if($('in')) bindIn();
+  if($('f')) bindReceipt();
+}
+function gone(){
+  $('app').innerHTML = '<div class="pg"><div class="badp">' +
+    '<div class="m">!</div><b>Link not valid</b>' +
+    '<span>這個連結無效或已經過期。<br>請聯絡你的翻譯。</span></div></div>';
+}
+function load(){
+  /* 短碼根本不在網址上（有人手打了半截、或連結被截斷）——
+     直接給無效畫面，不要打後端。 */
+  if(!TOKEN){ gone(); return; }
+  api('hcView', null, function(r){
+    if(!r || !r.ok){ gone(); return; }
+    D = r; draw();
+  }, function(){
+    $('app').innerHTML = '<p class="load">網路不穩，請下拉重新整理</p>';
+  });
+}
+load();
 </script>
 </body>
 </html>
