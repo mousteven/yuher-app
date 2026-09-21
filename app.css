@@ -1934,6 +1934,10 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   margin-bottom:11px}
 .hcmsg .h{display:flex;align-items:center;gap:8px;margin:0;padding:8px 11px;
   background:var(--line2);font-size:0.8125rem;font-weight:700}
+.hcmsg .h .lnbtn{margin-left:auto;background:#06C755;color:#fff;
+  border-radius:7px;padding:4px 11px;font-size:0.75rem;font-weight:700;
+  text-decoration:none;white-space:nowrap}
+.hcmsg .h .lnbtn + button{margin-left:6px}
 .hcmsg .h button{margin-left:auto;border:1px solid var(--line);background:var(--card);
   border-radius:7px;padding:3px 11px;font-size:0.75rem;color:var(--brand);
   font-weight:700;font-family:inherit}

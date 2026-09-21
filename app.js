@@ -5778,6 +5778,21 @@ function hcSubmit(){
 
 var HC_LGN_ = { vi:'越南文', id:'印尼文', th:'泰文', en:'英文' };
 
+/* 「傳到 LINE」。
+   ⛔ 用 line.me/R/msg/text/?<編碼過的內容>，跟服務紀錄 PDF 那邊同一套——
+      不要另外發明一種。點下去會開 LINE 讓他挑聊天室，內容已經填好。
+
+   ⚠ 這一頁跑在 Apps Script 的 iframe 裡，所以一定要用 <a target="_blank">，
+     不可以用 window.open()——跨網域的頂層導向會被擋掉，而且是靜默的。
+
+   ⚠ 訊息很長（中文編碼後大約 1500 字元）。真的太長的話 LINE 會截斷，
+     所以「複製」那一顆要留著當備援，不可以拿掉。 */
+function hcLineBtn(text, label){
+  return '<a class="lnbtn" target="_blank" rel="noopener" href="' +
+    'https://line.me/R/msg/text/?' + encodeURIComponent(text) + '">' +
+    esc(label || '傳到 LINE') + '</a>';
+}
+
 function hcShowMsgs(caseId, which){
   $('hcMsgModal').style.display = '';
   $('hcMsgSub').textContent = caseId;
@@ -5798,6 +5813,7 @@ function hcShowMsgs(caseId, which){
       gh = '<div class="hcmsg gm"><p class="h">一則貼群組　' + g.n + ' 位' +
         '<em style="font-style:normal;font-weight:400;color:var(--ink2);' +
         'font-size:0.75rem;margin-left:6px">一條連結，各自認自己</em>' +
+        hcLineBtn(g.text) +
         '<button type="button" id="hcCopyG">複製</button></p>' +
         '<pre>' + esc(g.text) + '</pre></div>' +
         '<p class="hint" style="margin:11px 0 3px">' +
@@ -5822,6 +5838,7 @@ function hcShowMsgs(caseId, which){
           '<em style="font-style:normal;font-weight:400;color:var(--ink2);' +
           'font-size:0.75rem;margin-left:6px">' +
           esc(HC_LGN_[x.lang] || x.lang) + '</em>' +
+          hcLineBtn(x.text) +
           '<button type="button" data-c="'+i+'">複製</button></p>' +
           '<pre>'+esc(x.text)+'</pre></div>';
       }).join('');
