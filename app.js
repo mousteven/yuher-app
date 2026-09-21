@@ -5776,11 +5776,27 @@ function hcShowMsgs(caseId, which){
     if(!m.length){
       $('hcMsgBody').innerHTML = '<div class="mid">沒有要發的人</div>'; return;
     }
+    /* 兩人以上就給一則群組訊息（牟佑彬 2026-09-21 選的 G3）。
+       一條連結，每個人點進去認自己。
+       ⛔ 放在最上面而且是預設要貼的那一則。一人一則留著當備援——
+          有人沒看到群組、或要單獨補發的時候用。 */
+    var g = r && r.group;
+    var gh = '';
+    if(g){
+      gh = '<div class="hcmsg gm"><p class="h">一則貼群組　' + g.n + ' 位' +
+        '<em style="font-style:normal;font-weight:400;color:var(--ink2);' +
+        'font-size:0.75rem;margin-left:6px">一條連結，各自認自己</em>' +
+        '<button type="button" id="hcCopyG">複製</button></p>' +
+        '<pre>' + esc(g.text) + '</pre></div>' +
+        '<p class="hint" style="margin:11px 0 3px">' +
+        '下面這幾則是備援——有人沒看到群組、或要單獨補發的時候才用。</p>';
+    }
+
     /* ⛔ 一人一則，不要合成一大則。2026-09-20 實機發現：
        LINE 會替每一條連結各生一張預覽卡，八個人就掛八張
        「Health Check・體檢通知」，整則被卡片淹掉，
        工人找不到自己那一行。一則一條連結＝一張乾淨的卡。 */
-    $('hcMsgBody').innerHTML =
+    $('hcMsgBody').innerHTML = gh +
       '<p class="hint">一人一則，' + m.length + ' 則。' +
       (which === 'car'
         ? '內容已經換到同一條連結上了，這幾則只是叫他回去看。'
@@ -5799,6 +5815,9 @@ function hcShowMsgs(caseId, which){
       }).join('');
     [].forEach.call($('hcMsgBody').querySelectorAll('button[data-c]'), function(b){
       b.addEventListener('click', function(){ hcCopy(m[+b.dataset.c].text, b); });
+    });
+    if(g) $('hcCopyG').addEventListener('click', function(){
+      hcCopy(g.text, $('hcCopyG'));
     });
     $('hcCopyAll').addEventListener('click', function(){
       hcCopy(m.map(function(x){ return x.text; }).join('\n\n'), $('hcCopyAll'));

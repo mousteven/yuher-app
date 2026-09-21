@@ -164,6 +164,24 @@ input.line{width:100%;background:var(--w08);border:1px solid var(--w16);
 input.line:focus{outline:2px solid var(--med2);outline-offset:1px;
   border-color:transparent}
 input.line::placeholder{color:var(--w28)}
+/* 認自己：一人一列，點的區域是整列不是那幾個字。
+   ⚠ 最小 56px 高——工廠裡站著單手操作，手指不會很準，
+     而點錯人的代價是他去驗一個不是自己的生日、然後被記一次錯。 */
+.who{display:grid;gap:8px;margin:4px 0 14px}
+.pk{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  background:var(--w08);border:1px solid var(--w16);border-radius:12px;
+  padding:11px 13px;min-height:56px;color:var(--w);font:inherit}
+.pk:active{background:var(--w12);border-color:var(--med2)}
+.pk .av{width:32px;height:32px;border-radius:99px;flex:none;
+  background:rgba(95,208,194,.15);color:var(--med2);display:grid;
+  place-items:center;font-size:15px;font-weight:700}
+.pk .nm{min-width:0}
+.pk .nm b{display:block;font-size:16px;font-weight:600;line-height:1.3}
+.pk .nm i{display:block;font-style:normal;font-family:var(--mono);
+  font-size:11.5px;letter-spacing:.02em;color:var(--w45);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 「不是我」：看得到，但不要比主要動作顯眼。 */
+.notme{margin-bottom:13px;font-size:13.5px;padding:11px;color:var(--w62)}
 .prog{display:flex;gap:5px;padding:0 18px 15px}
 .prog i{flex:1;height:3px;border-radius:99px;background:var(--w16)}
 .prog i.on{background:var(--med2)}
@@ -280,19 +298,38 @@ var API_ = 'https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nu
 function api(fn, body, ok, bad){
   var p, url = API_;
   if(body){
-    body.api = fn; body.s = SCODE;
+    body.api = fn;
+    /* 認過人之後一律帶個人短碼；還沒認的帶網址上的代碼。 */
+    if(MYTOK) body.t = MYTOK; else body.s = SCODE;
     p = fetch(url, { method:'POST',
                      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
                      body: JSON.stringify(body) });
   } else {
     p = fetch(url + '?api=' + encodeURIComponent(fn) +
-              '&s=' + encodeURIComponent(SCODE));
+              (MYTOK ? '&t=' + encodeURIComponent(MYTOK)
+                     : '&s=' + encodeURIComponent(SCODE)));
   }
   p.then(function(r){ return r.json(); })
    .then(function(j){ ok(j); })
    .catch(function(){ if(bad) bad(); });
 }
 var D = null, SHOT = null, STEP = 1, DOB = '', TAIL = '', HASP = false;
+
+/* 群組連結認完人之後拿到的個人短碼。
+   ⛔ 記在這台手機上，第二次點同一條連結就直接進自己那一頁。
+   ⚠ 但一定要留一顆「不是我」可以清掉——宿舍會借手機，
+     下一個人點進來看到別人的體檢通知是最難解釋的那種錯。 */
+var MYTOK = '';
+var PICKI = -1;
+function myKey(){ return 'hc.me.' + SCODE; }
+function loadMe(){
+  try { MYTOK = localStorage.getItem(myKey()) || ''; } catch(e){ MYTOK = ''; }
+}
+function saveMe(t){
+  MYTOK = t || '';
+  try { if(t) localStorage.setItem(myKey(), t); else localStorage.removeItem(myKey()); }
+  catch(e){}
+}
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s == null ? '' : s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -336,6 +373,7 @@ var T = {
     pickWait:'Giờ đón sẽ báo trước 3 ngày',
     checkin:'GIỜ ĐĂNG KÝ', phone:'ĐIỆN THOẠI',
     mark:'CHỖ ĐĂNG KÝ', addr:'ĐỊA CHỈ', openMap:'Mở bản đồ',
+    q0:'Bạn là ai?', notme:'Không phải tôi',
     phoneNote:'Muốn đổi số thì báo phiên dịch',
     sNote:'LƯU Ý',
     w1:'Chỉ xuất trình giấy tờ tại quầy đăng ký của bệnh viện. Không đưa cho bất kỳ ai để làm việc khác (ví dụ mở thẻ SIM). Vào bệnh viện nhớ đeo khẩu trang.',
@@ -375,6 +413,7 @@ var T = {
     pickWait:'Jam jemputan diberitahu 3 hari sebelumnya',
     checkin:'JAM DAFTAR', phone:'NOMOR HP',
     mark:'TEMPAT DAFTAR', addr:'ALAMAT', openMap:'Buka peta',
+    q0:'Anda siapa?', notme:'Bukan saya',
     phoneNote:'Mau ganti nomor? Beri tahu penerjemah',
     sNote:'PERHATIAN',
     w1:'Tunjukkan dokumen hanya di loket pendaftaran rumah sakit. Jangan berikan kepada siapa pun untuk urusan lain (misalnya membuat kartu SIM). Pakai masker saat masuk rumah sakit.',
@@ -413,6 +452,7 @@ var T = {
     pickWait:'จะแจ้งเวลารับก่อน 3 วัน',
     checkin:'เวลาลงทะเบียน', phone:'เบอร์โทร',
     mark:'จุดลงทะเบียน', addr:'ที่อยู่', openMap:'เปิดแผนที่',
+    q0:'คุณคือใคร?', notme:'ไม่ใช่ฉัน',
     phoneNote:'ถ้าจะเปลี่ยนเบอร์ แจ้งล่าม',
     sNote:'ข้อควรระวัง',
     w1:'แสดงเอกสารเฉพาะที่เคาน์เตอร์ลงทะเบียนของโรงพยาบาลเท่านั้น ห้ามให้ใครเอาไปทำธุระอื่น (เช่น เปิดซิมการ์ด) และสวมหน้ากากอนามัยเมื่อเข้าโรงพยาบาล',
@@ -453,6 +493,7 @@ var T = {
     pickWait:'Pickup time will be given 3 days before',
     checkin:'CHECK-IN', phone:'PHONE',
     mark:'REPORT AT', addr:'ADDRESS', openMap:'Open map',
+    q0:'Who are you?', notme:'Not me',
     phoneNote:'To change it, tell your translator',
     sNote:'IMPORTANT',
     w1:'Show your documents only at the hospital registration desk. Never hand them to anyone for other business (for example, opening a SIM card). Wear a mask inside the hospital.',
@@ -488,6 +529,8 @@ var ZH = { head:'定期體檢通知', today:'今天體檢',
   pickWait:'接人時間　體檢前 3 天通知',
   checkin:'報到時間', phone:'手機',
   mark:'報到地點', addr:'地址', openMap:'打開地圖',
+  q0:'你是哪一位？', q0z:'點自己的名字，下一步會問你的出生年月日。',
+  notme:'不是我',
   phoneNote:'要改的話跟你的翻譯說',
   sNote:'注意事項',
   w1:'證件只在醫院掛號櫃檯出示。不要交給任何人去辦其他業務（例如開 SIM 卡）。進醫院請戴口罩。',
@@ -744,6 +787,41 @@ function calBtn(){
     '</p>';
 }
 
+/* ── 群組連結：先認自己（牟佑彬 2026-09-21 選的 G3）─────
+   ⛔ 名字不遮。這條連結的用意不是保密，是**留下「確實通知到了」的證據**——
+      同一家工廠的人本來就認識，遮起來只會讓人找不到自己、少一個人確認，
+      跟目的正好相反。
+   ⚠ 這一頁還不知道你是誰，所以每一種語別各印一行提示。
+     只印中文的話，看不懂中文的人第一步就卡住。 */
+function pickPage(){
+  var ls = (D.langs || ['zh']).filter(function(x){ return x !== 'zh'; });
+  var ask = ls.map(function(l){
+    return '<p class="q">' + esc((T[l] || T.en).q0) + '</p>';
+  }).join('') + '<p class="qz">' + esc(ZH.q0) + '</p>';
+
+  return '<div class="pg">' +
+    '<div class="hd"><span class="brand">YU HER MANAGEMENT</span>' +
+      '<span class="no">' + esc(D.client || '') + '　' +
+      (D.list || []).length + ' 位</span></div>' +
+    '<div class="bd">' + ask +
+    '<div class="who">' + (D.list || []).map(function(p){
+      return '<button type="button" class="pk" data-i="' + p.i + '">' +
+        '<span class="av">' + esc(p.name.slice(0, 1)) + '</span>' +
+        '<span class="nm"><b>' + esc(p.name) + '</b>' +
+        (p.orig ? '<i>' + esc(p.orig) + '</i>' : '') + '</span></button>';
+    }).join('') + '</div>' +
+    '<p class="why">' + esc(ZH.q0z) + '</p>' +
+    '</div><div class="prog"><i class="on"></i><i></i></div></div>';
+}
+function bindPick(){
+  [].forEach.call(document.querySelectorAll('.pk'), function(b){
+    b.addEventListener('click', function(){
+      PICKI = +b.dataset.i;
+      STEP = 1; draw();
+    });
+  });
+}
+
 /* ── 確認 V1：兩步 ──────────────────────────────── */
 var AGE_MIN = 14, AGE_MAX = 80;
 function yrMax(){ return new Date().getFullYear() - AGE_MIN; }
@@ -787,8 +865,14 @@ function bind1(){
     if(+y < yrMin() || +y > yrMax()){ showErr('er', 'badDob'); return; }
     DOB = y + '-' + ('0'+m).slice(-2) + '-' + ('0'+d).slice(-2);
     var b = $('go1'); b.disabled = true;
-    api('hcVerifyDob', { dob: DOB }, function(r){
+    /* 群組連結：這一步同時是「認人」與「驗生日」。
+       ⛔ 過了才把個人短碼給他——沒過就什麼都不給，
+          不要回「這個人是誰」之類的線索。 */
+    var fn = (PICKI >= 0 && !MYTOK) ? 'hcPickMe' : 'hcVerifyDob';
+    api(fn, (fn === 'hcPickMe') ? { i: PICKI, dob: DOB } : { dob: DOB },
+        function(r){
       b.disabled = false;
+      if(r && r.t){ saveMe(r.t); PICKI = -1; STEP = 1; load(); return; }
       if(r && r.already){ load(); return; }
       if(r && r.ok){
         HASP = !!r.hasPhone; TAIL = r.phoneTail || ''; STEP = 2; draw(); return;
@@ -942,9 +1026,24 @@ function send(){
   });
 }
 
+function bindNotMe(){
+  var b = $('notme'); if(!b) return;
+  b.addEventListener('click', function(){
+    saveMe(''); PICKI = -1; STEP = 1; D = null;
+    $('app').innerHTML = '<p class="load">…</p>';
+    load();
+  });
+}
+
 /* ── 組裝 ───────────────────────────────────────── */
 function draw(){
   document.body.className = (D.lang === 'th') ? 'th' : '';
+
+  /* 群組連結、還沒認人 → 先出名單。 */
+  if(D.mode === 'pick' && PICKI < 0){
+    $('app').innerHTML = pickPage();
+    bindPick(); return;
+  }
 
   if(STEP === 'bad'){
     $('app').innerHTML = '<div class="pg">' + badPage() + '</div>';
@@ -963,6 +1062,11 @@ function draw(){
   var h = head() + band() + '<div class="bd">';
   if(D.ack) h += '<div class="ok"><span class="m">✓</span><div><b>' +
     esc(t('okT')) + '</b><span>' + esc(ZH.okT) + '</span></div></div>';
+  /* ⛔ 從群組連結進來、而且這台手機記住了某個人的話，
+     一定要留這一顆。宿舍會借手機，下一個人點進來看到別人的
+     體檢通知是最難解釋的那種錯。 */
+  if(MYTOK) h += '<button type="button" id="notme" class="s notme">' +
+    esc(t('notme')) + (zhOnly() ? '' : '　·　' + esc(ZH.notme)) + '</button>';
 
   if(D.stage === 'done'){
     h += '<div class="big2"><div class="m">✓</div><b>' + esc(t('closed')) +
@@ -993,6 +1097,7 @@ function draw(){
   if($('go1')) bind1();
   if($('in')) bindIn();
   if($('f')) bindReceipt();
+  bindNotMe();
 }
 function gone(){
   $('app').innerHTML = '<div class="pg"><div class="badp">' +
@@ -1003,6 +1108,7 @@ function load(){
   /* 短碼根本不在網址上（有人手打了半截、或連結被截斷）——
      直接給無效畫面，不要打後端。 */
   if(!SCODE){ gone(); return; }
+  loadMe();
   api('hcView', null, function(r){
     if(!r || !r.ok){ gone(); return; }
     D = r; draw();
