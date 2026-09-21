@@ -250,6 +250,12 @@ function renderForm(){
     '<button type="button" class="back" id="back">‹ '+esc(t('back'))+'</button>'+
     '<div id="okbar"></div>'+
     '<div class="card"><div class="who" id="who"></div></div>'+
+    /* ⛔ 今天的內容放在簽名**上面**。他簽的是「我到場、我聽過這些」——
+       放在送出鍵下面的話，多數人簽完就走，等於簽了一份自己沒看過的東西。
+       2026-09-21 牟佑彬問「簽名前可以先看嗎」，答案是：本來就該先看。 */
+    '<div class="card" id="cntCard" style="display:none">'+
+      '<label>'+esc(t('todayT'))+'</label>'+
+      '<div id="cnt"></div></div>'+
     '<div class="card" id="signCard">'+
       '<label>'+esc(t('sign'))+'</label>'+
       '<div class="pad" id="pad"><canvas id="cv"></canvas>'+
@@ -260,10 +266,7 @@ function renderForm(){
         '<button type="button" class="act p" id="send">'+esc(t('submit'))+'</button>'+
       '</div>'+
       '<p class="hint">'+esc(t('foot'))+'</p>'+
-    '</div>'+
-    '<div class="card" id="cntCard" style="display:none">'+
-      '<label>'+esc(t('todayT'))+'</label>'+
-      '<div id="cnt"></div></div>';
+    '</div>';
 
   $('back').addEventListener('click', function(){ stopPoll(); pickLang(); });
   initPad();

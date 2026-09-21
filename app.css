@@ -1939,6 +1939,10 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .bf1.on .mk{background:var(--ok-ink);border-color:var(--ok-ink);color:#fff}
 .rvbf .hint{font-size:0.6875rem;color:var(--ink3);margin:9px 0 0}
 
+.bneed{font-size:0.75rem;line-height:1.55;color:var(--warn-ink);
+  background:var(--warn-bg);border:1px solid var(--warn-line);
+  border-radius:10px;padding:9px 11px;margin:10px 0 0}
+
 /* 宣導：把簽到連結傳到工廠群組 */
 .bshare{display:flex;gap:8px;margin-top:10px}
 .bshare a,.bshare button{flex:1;display:block;text-align:center;padding:11px 8px;

@@ -759,9 +759,24 @@ function briefShow(r){
   $('qrUrl').textContent = r.url;
   briefDeadline(r);
   briefShare(r);
+  briefNeedContent();
   pollBrief();
   if(BRIEF_TIMER) clearInterval(BRIEF_TIMER);
   BRIEF_TIMER = setInterval(pollBrief, 8000);
+}
+
+/* 內容還沒填的話，工人那一頁的「今天的內容」是空的——
+   他們等於在簽一份沒有內容的表。
+   ⛔ 這不是錯誤，是「還沒做完」，所以用提醒不用報錯；
+      但一定要講出來，不然沒有人會發現（那一段在工人的手機上，不在他的）。 */
+function briefNeedContent(){
+  var el = $('briefNeed'); if(!el) return;
+  var c = briefContent_();
+  var has = c && (c.big || c.sub || (c.did||[]).length || c.dnote ||
+                  (c.res||[]).length || c.rnote);
+  el.style.display = has ? 'none' : '';
+  el.textContent = has ? '' :
+    '下面的「宣導內容」還沒填——工人簽名前看到的那一段現在是空的。填了會自動同步過去。';
 }
 
 /* 把簽到連結傳到工廠的 LINE 群組。
@@ -871,6 +886,7 @@ function pollBrief(){
       }
       $('briefList').innerHTML = html || '<div class="none">還沒有人簽到</div>';
       briefDeadline(p);
+      briefNeedContent();
       if(p.open === false){ var sb2 = $('briefShare'); if(sb2) sb2.innerHTML = ''; }
       /* 已經結束就別再每 8 秒問一次 */
       if(p.open === false && BRIEF_TIMER){ clearInterval(BRIEF_TIMER); BRIEF_TIMER = null; }
