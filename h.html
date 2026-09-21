@@ -304,23 +304,57 @@ var SCODE = (function(){
       生日不可以出現在網址上：網址會進伺服器記錄，那是個資。 */
 var API_ = 'https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec';
 
+/* ⛔⛔ fetch **沒有預設逾時**。訊號很差的時候，請求會既不回應也不失敗，
+   promise 永遠掛著——畫面就停在「…」，沒有錯誤、沒有重試、什麼都沒有。
+   2026-09-21 23:53 實機就是這樣：後端量到 3.9 秒就回，工人的手機卻卡死。
+   **而這一頁存在的理由就是給工廠裡訊號很差的人用的。**
+
+   所以：每一次呼叫都有時限，逾時就自己重試，連續失敗才放棄並讓人按重試。
+   ⚠ AbortController 在 iOS 12.2 以上都有；沒有的話退回只計時不中斷，
+     至少 bad() 會被叫到，畫面不會死在那裡。 */
+var API_TIMEOUT_ = 15000;     // 單次
+var API_TRIES_ = 3;           // 一共試幾次（含第一次）
+
+function apiFetch_(url, opt, tries, ok, bad){
+  var ctl = null, timer = null, done = false;
+  try { ctl = new AbortController(); } catch(e){}
+  if(ctl) opt = Object.assign({}, opt, { signal: ctl.signal });
+
+  function finish(fn, arg){
+    if(done) return; done = true;
+    clearTimeout(timer);
+    fn(arg);
+  }
+  timer = setTimeout(function(){
+    if(ctl){ try { ctl.abort(); } catch(e2){} }
+    finish(again);
+  }, API_TIMEOUT_);
+
+  function again(){
+    if(tries > 1){ apiFetch_(url, opt, tries - 1, ok, bad); }
+    else if(bad) bad();
+  }
+
+  fetch(url, opt)
+    .then(function(r){ return r.json(); })
+    .then(function(j){ finish(ok, j); })
+    .catch(function(){ finish(again); });
+}
+
 function api(fn, body, ok, bad){
-  var p, url = API_;
+  var url = API_;
   if(body){
     body.api = fn;
     /* 認過人之後一律帶個人短碼；還沒認的帶網址上的代碼。 */
     if(MYTOK) body.t = MYTOK; else body.s = SCODE;
-    p = fetch(url, { method:'POST',
+    apiFetch_(url, { method:'POST',
                      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
-                     body: JSON.stringify(body) });
+                     body: JSON.stringify(body) }, API_TRIES_, ok, bad);
   } else {
-    p = fetch(url + '?api=' + encodeURIComponent(fn) +
+    apiFetch_(url + '?api=' + encodeURIComponent(fn) +
               (MYTOK ? '&t=' + encodeURIComponent(MYTOK)
-                     : '&s=' + encodeURIComponent(SCODE)));
+                     : '&s=' + encodeURIComponent(SCODE)), {}, API_TRIES_, ok, bad);
   }
-  p.then(function(r){ return r.json(); })
-   .then(function(j){ ok(j); })
-   .catch(function(){ if(bad) bad(); });
 }
 var D = null, SHOT = null, STEP = 1, DOB = '', TAIL = '', HASP = false;
 
