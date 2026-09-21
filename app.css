@@ -1408,7 +1408,10 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .ckv{display:grid;grid-template-columns:5.6em 1fr;gap:6px 10px;margin:0;
   font-size:0.8125rem;line-height:1.55}
 .ckv dt{color:var(--ink3);font-size:0.75rem}
-.ckv dd{margin:0;color:var(--ink);font-weight:600}
+/* ⚠ 長字串（網址、沒有空白的外文名）要能折。
+   不折的話那一格會把整張卡撐出螢幕，而且是橫向捲不到的那種。 */
+.ckv dd{margin:0;color:var(--ink);font-weight:600;
+  overflow-wrap:anywhere;word-break:break-word}
 
 /* 連到另一件（異常同時要就醫的那條線） */
 .clink{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:12px;
@@ -2045,7 +2048,10 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   white-space:nowrap}
 .hcdone{display:block;font-style:normal;font-size:0.75rem;color:var(--ok-ink);
   background:var(--ok-bg);border-radius:8px;padding:5px 9px;margin-top:6px}
-.hcbox.top{margin:0 0 10px}
+/* ⛔ 搬到頁首的區塊不可以留 .hcbox 的上框線與上邊距——
+   那條線原本是「跟上面那塊分開」用的，放到最上面就變成
+   一個孤零零的深色橫條浮在標題底下（2026-09-21 實機）。 */
+.hcbox.top{margin:0 0 10px;border-top:0;padding-top:0;background:transparent}
 .hcbox.top .hcal{margin-top:0}
 .hbc{background:var(--card);border:1px solid var(--line);border-radius:12px;
   margin-bottom:8px;position:relative;overflow:hidden}

@@ -4616,8 +4616,13 @@ function caseSummary(c){
     h += '<div class="c6det"><p class="c6dh">' + esc(c.kind) + '的細節' +
       '<button type="button" class="c6edit" id="ckEdit">修改</button></p>' +
       '<dl class="ckv">' + rows.map(function(f){
+        /* ⛔ 醫院那一欄存的是「中文|English|地址|地標|地圖網址」整條，
+           原樣印出來是一條看不完的管線，而且網址撐爆版面。
+           這裡只顯示中文名——要地址地圖的是工人，不是翻譯，
+           那些已經送到工人那一頁上了。 */
+        var v2 = (f.k === 'hos') ? String(d[f.k]).split('|')[0].trim() : d[f.k];
         return '<dt>' + esc(f.l) + '</dt><dd>' +
-          (f.t === 'check' ? '✓' : esc(d[f.k])) + '</dd>';
+          (f.t === 'check' ? '✓' : esc(v2)) + '</dd>';
       }).join('') + '</dl></div>';
   }
   return h;
@@ -6077,10 +6082,19 @@ function hcCaseBlock(caseId){
       al.innerHTML = hcCarAlert(v);
       $('ckBody').insertBefore(al, $('ckBody').firstChild);
     }
+    /* ⛔ 名單也放最上面（牟佑彬 2026-09-21）。
+       這一頁點進來要回答的第一個問題是「誰確認了、誰還沒」，
+       不是「這件案子的細節是什麼」。細節查一次就記住了，
+       名單是每天都要看的。
+       ⚠ 插在接送提醒後面：接送沒填是「我現在就要做的事」，
+         名單是「我要去追的事」，先做再追。 */
     var el = document.createElement('div');
-    el.id = 'hcBox'; el.className = 'hcbox';
+    el.id = 'hcBox'; el.className = 'hcbox top';
     el.innerHTML = hcBoxHtml(v);
-    $('ckBody').appendChild(el);
+    var after = $('hcAl');
+    if(after && after.nextSibling) $('ckBody').insertBefore(el, after.nextSibling);
+    else if(after) $('ckBody').appendChild(el);
+    else $('ckBody').insertBefore(el, $('ckBody').firstChild);
     hcBindBox(v);
   }).withFailureHandler(function(){}).hcCaseView(CODE, caseId);
 }
