@@ -182,6 +182,15 @@ input.line::placeholder{color:var(--w28)}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 「不是我」：看得到，但不要比主要動作顯眼。 */
 .notme{margin-bottom:13px;font-size:13.5px;padding:11px;color:var(--w62)}
+/* 未確認的提醒。用暖色不用紅色——這是提醒不是警告。 */
+.notyet{margin:0 14px 12px;border:1px solid rgba(232,199,131,.28);
+  background:rgba(232,199,131,.08);border-radius:10px;padding:9px 11px;
+  font-size:13px;line-height:1.5;color:#E8C783}
+.notyet span{display:block;font-size:12px;color:var(--w45);margin-top:1px}
+/* 按鈕上面那一句理由。置中、比按鈕小一級，是它的註腳不是另一段內容。 */
+.rs{text-align:center;font-size:13px;color:var(--w62);margin:0 0 10px;
+  line-height:1.5}
+.rs span{color:var(--w45);font-size:12px}
 .prog{display:flex;gap:5px;padding:0 18px 15px}
 .prog i{flex:1;height:3px;border-radius:99px;background:var(--w16)}
 .prog i.on{background:var(--med2)}
@@ -375,6 +384,10 @@ var T = {
     checkin:'GIỜ ĐĂNG KÝ', phone:'ĐIỆN THOẠI',
     mark:'CHỖ ĐĂNG KÝ', addr:'ĐỊA CHỈ', openMap:'Mở bản đồ',
     q0:'Bạn là ai?', notme:'Không phải tôi',
+    iwill:'Tôi đã biết, tôi sẽ đến',
+    whyLater:'Bấm rồi, khi có biển số xe và số tài xế bạn sẽ thấy ngay.',
+    whyNow:'Bấm để xem biển số xe và số tài xế.',
+    notyet:'Bạn chưa xác nhận. Công ty chưa biết bạn có đến không.',
     phoneNote:'Muốn đổi số thì báo phiên dịch',
     sNote:'LƯU Ý',
     w1:'Chỉ xuất trình giấy tờ tại quầy đăng ký của bệnh viện. Không đưa cho bất kỳ ai để làm việc khác (ví dụ mở thẻ SIM). Vào bệnh viện nhớ đeo khẩu trang.',
@@ -415,6 +428,10 @@ var T = {
     checkin:'JAM DAFTAR', phone:'NOMOR HP',
     mark:'TEMPAT DAFTAR', addr:'ALAMAT', openMap:'Buka peta',
     q0:'Anda siapa?', notme:'Bukan saya',
+    iwill:'Saya sudah tahu, saya akan datang',
+    whyLater:'Setelah ditekan, nomor kendaraan dan nomor sopir akan terlihat.',
+    whyNow:'Tekan untuk melihat nomor kendaraan dan nomor sopir.',
+    notyet:'Anda belum konfirmasi. Perusahaan belum tahu Anda datang atau tidak.',
     phoneNote:'Mau ganti nomor? Beri tahu penerjemah',
     sNote:'PERHATIAN',
     w1:'Tunjukkan dokumen hanya di loket pendaftaran rumah sakit. Jangan berikan kepada siapa pun untuk urusan lain (misalnya membuat kartu SIM). Pakai masker saat masuk rumah sakit.',
@@ -454,6 +471,10 @@ var T = {
     checkin:'เวลาลงทะเบียน', phone:'เบอร์โทร',
     mark:'จุดลงทะเบียน', addr:'ที่อยู่', openMap:'เปิดแผนที่',
     q0:'คุณคือใคร?', notme:'ไม่ใช่ฉัน',
+    iwill:'ฉันทราบแล้ว ฉันจะไป',
+    whyLater:'กดแล้ว เมื่อมีทะเบียนรถและเบอร์คนขับจะเห็นทันที',
+    whyNow:'กดเพื่อดูทะเบียนรถและเบอร์คนขับ',
+    notyet:'คุณยังไม่ได้ยืนยัน บริษัทยังไม่ทราบว่าคุณจะไปหรือไม่',
     phoneNote:'ถ้าจะเปลี่ยนเบอร์ แจ้งล่าม',
     sNote:'ข้อควรระวัง',
     w1:'แสดงเอกสารเฉพาะที่เคาน์เตอร์ลงทะเบียนของโรงพยาบาลเท่านั้น ห้ามให้ใครเอาไปทำธุระอื่น (เช่น เปิดซิมการ์ด) และสวมหน้ากากอนามัยเมื่อเข้าโรงพยาบาล',
@@ -495,6 +516,10 @@ var T = {
     checkin:'CHECK-IN', phone:'PHONE',
     mark:'REPORT AT', addr:'ADDRESS', openMap:'Open map',
     q0:'Who are you?', notme:'Not me',
+    iwill:'I understand, I will be there',
+    whyLater:'Tap now, and you will see the plate and driver as soon as we have them.',
+    whyNow:'Tap to see the plate number and the driver.',
+    notyet:'You have not confirmed. The company does not know if you are coming.',
     phoneNote:'To change it, tell your translator',
     sNote:'IMPORTANT',
     w1:'Show your documents only at the hospital registration desk. Never hand them to anyone for other business (for example, opening a SIM card). Wear a mask inside the hospital.',
@@ -531,6 +556,10 @@ var ZH = { head:'定期體檢通知', today:'今天體檢',
   checkin:'報到時間', phone:'手機',
   mark:'報到地點', addr:'地址', openMap:'打開地圖',
   q0:'你是哪一位？', q0z:'點自己的名字，下一步會問你的出生年月日。',
+  iwill:'我知道了，我會到',
+  whyLater:'按了之後，車牌和司機電話出來就看得到。',
+  whyNow:'按了就看得到車牌和司機電話。',
+  notyet:'你還沒確認。公司還不知道你會不會來。',
   notme:'不是我',
   phoneNote:'要改的話跟你的翻譯說',
   sNote:'注意事項',
@@ -798,6 +827,29 @@ function calBtn(){
     '</p>';
 }
 
+/* 還沒確認的時候頂端掛一條。
+   ⛔ 不是嚇他。用字是「公司還不知道你會不會來」——陳述事實，
+      不是「你沒確認會被罰」。要罰的那一條寫在注意事項裡，講一次就夠。 */
+function notYet(){
+  if(D.ack || D.stage === 'done') return '';
+  return '<div class="notyet">' + esc(t('notyet')) +
+    (zhOnly() ? '' : '<span>' + esc(ZH.notyet) + '</span>') + '</div>';
+}
+
+/* 按鈕上面那一句，是整個確認流程唯一的動機。
+   ⛔ 「你是哪一位」是系統在問他，回答對他沒有好處，所以他不回答。
+      理由要講他真的想知道的東西——車牌跟司機電話。
+   ⚠ 車還沒定的時候不能說「按了就看得到」，那是騙人。
+     要說「出來就看得到」。 */
+function whyAck(){
+  var k = (D.ride === '接送')
+    ? ((D.car && D.car.at) ? 'whyNow' : 'whyLater')
+    : '';
+  if(!k) return '';
+  return '<p class="rs">' + esc(t(k)) +
+    (zhOnly() ? '' : '<br><span>' + esc(ZH[k]) + '</span>') + '</p>';
+}
+
 /* ── 群組連結：先認自己（牟佑彬 2026-09-21 選的 G3）─────
    ⛔ 名字不遮。這條連結的用意不是保密，是**留下「確實通知到了」的證據**——
       同一家工廠的人本來就認識，遮起來只會讓人找不到自己、少一個人確認，
@@ -812,15 +864,16 @@ function calBtn(){
    ⚠ 理由不只是安全：就算他懶得認自己，通知也已經到他眼前了，
      而「確實通知到」正是這條連結存在的目的。 */
 function noticePage(){
-  return '<div class="pg">' + head() + band() +
+  return '<div class="pg">' + head() + band() + notYet() +
     /* ⛔ hero() 一定要在。大日期（2.75rem 等寬）、星期、倒數、時段膠囊
        是這一頁的骨架，不是裝飾。
        2026-09-21 我組這一頁的時候漏掉它，整張單子從「一眼看到日期」
        變成「一堆欄位」——跟 9/20 記過的那次一模一樣。
        那次靠牟佑彬拍照才發現，這次是自己截圖看到的。 */
     '<div class="bd">' + hero() + secWhere() + secWhat() +
-      '<button type="button" id="whoami">' + esc(t('q0')) +
-      (zhOnly() ? '' : '<small>' + esc(ZH.q0) + '</small>') + '</button>' +
+      whyAck() +
+      '<button type="button" id="whoami">' + esc(t('iwill')) +
+      (zhOnly() ? '' : '<small>' + esc(ZH.iwill) + '</small>') + '</button>' +
     '</div><div class="prog"><i class="on"></i><i></i><i></i></div></div>';
 }
 
@@ -1111,9 +1164,12 @@ function draw(){
     bind2(); return;
   }
 
-  var h = head() + band() + '<div class="bd">';
+  var h = head() + band() + notYet() + '<div class="bd">';
+  /* ⚠ 時間戳要印出來。這一頁就是「他看過、他按過」的憑證，
+     沒有時間的憑證講不出是什麼時候的事。 */
   if(D.ack) h += '<div class="ok"><span class="m">✓</span><div><b>' +
-    esc(t('okT')) + '</b><span>' + esc(ZH.okT) + '</span></div></div>';
+    esc(t('okT')) + '</b><span>' + esc(ZH.okT) +
+    (D.ackAt ? '　' + esc(D.ackAt) : '') + '</span></div></div>';
   /* ⛔ 從群組連結進來、而且這台手機記住了某個人的話，
      一定要留這一顆。宿舍會借手機，下一個人點進來看到別人的
      體檢通知是最難解釋的那種錯。 */
@@ -1131,8 +1187,8 @@ function draw(){
 
   var foot = '';
   if(!D.ack){
-    foot = '<div class="bd" style="padding-top:0">' + step1() + '</div>' +
-      '<div class="prog"><i class="on"></i><i></i></div>';
+    foot = '<div class="bd" style="padding-top:0">' + whyAck() + step1() +
+      '</div><div class="prog"><i class="on"></i><i></i></div>';
   } else {
     if(D.stage === 'today' && D.inAt){
       foot = '<div class="bd" style="padding-top:0">' +

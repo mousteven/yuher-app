@@ -6108,13 +6108,26 @@ function hcBoxHtml(v){
     /* 生日錯 1 次就要看得到。門檻設在 3 的話，翻譯永遠不知道前兩次
        發生過什麼——而生日存錯的時候（第一輪是工人自己填的，沒人審），
        那個人會一直錯下去，而且他輸入真的生日反而過不了。 */
+    /* ⛔ 「看過沒按」跟「沒讀」要分開，因為要打的電話不一樣：
+       看過沒按 → 他知道有這件事，可能只是嫌麻煩
+       沒讀 → 他可能根本沒收到，或名冊上的手機是舊的 ← 更急 */
+    var call = '';
+    if(!p.ack && !p.inAt){
+      call = p.phone
+        ? ('<a class="hccall" href="tel:' + esc(p.phone) + '" ' +
+           'data-call="' + esc(p.name) + '">📞 打</a>')
+        : '<i class="hcnop">名冊沒電話</i>';
+    }
+    var called = p.called
+      ? ('<i class="hcdone">✓ ' + esc(p.called) + '</i>') : '';
+
     var warn = '';
     if(p.miss > 0){
       warn = '<i class="flag">⚠ 生日輸入錯 ' + p.miss + ' 次' +
         (p.dob ? ('　系統存的是 ' + esc(p.dob)) : '') +
         (p.flagged ? '　可能不是本人' : '') + '</i>';
     }
-    return '<div class="hcrow"><div class="c"><b>' + esc(p.name) +
+    return '<div class="hcrow"><div class="c">' + call + '<b>' + esc(p.name) +
       warn + '</b>' +
       '<span>' + (p.car ? ('第 ' + esc(p.car) + ' 車　') : '') +
         (p.inAt ? hcSrc_(p) : '') +
@@ -6123,7 +6136,7 @@ function hcBoxHtml(v){
         esc(p.name) + '">清生日</button>' : '') +
       (p.receipt ? '<button type="button" class="rcp" data-r="' + esc(p.name) +
         '">收據</button>' : '') +
-      '<span class="st ' + st + '">' + txt + '</span></div>' +
+      '<span class="st ' + st + '">' + txt + '</span></div>' + called +
       /* 他自己填了、而且跟名冊那支不一樣。
          ⛔ 不可以自動覆蓋名冊——手滑打錯一碼、或群組裡有人亂填，
             你會失去一個原本正確的聯絡方式，那比沒收到通知更難救。
@@ -6150,6 +6163,18 @@ function hcBoxHtml(v){
 
 function hcBindBox(v){
   function on(id, fn){ var b = $(id); if(b) b.addEventListener('click', fn); }
+  /* 打電話：撥號的同時就留一筆。
+     ⛔ 不要做成「撥號」＋「另外按一顆已通知」兩步——
+        翻譯講完電話人在工廠裡，第二顆一定會忘記按，
+        然後舉證鏈就缺了那一環。撥號本身就是他做過的證據。 */
+  [].forEach.call(document.querySelectorAll('#hcBox [data-call]'), function(a){
+    a.addEventListener('click', function(){
+      google.script.run
+        .withSuccessHandler(function(){ hcCaseBlock(v.id); })
+        .withFailureHandler(function(e){ toast(e.message, true); })
+        .hcMarkCalled(CODE, v.id, a.dataset.call, '');
+    });
+  });
   on('hcCarBtn', function(){ hcOpenCar(v); });
   on('hcCarBtn2', function(){ hcOpenCar(v); });
   on('hcMsgBtn', function(){ hcShowMsgs(v.id, 'new'); });
@@ -6237,12 +6262,15 @@ function hcNudge(){
     $('tkLede').parentNode.insertBefore(box, $('tkLede'));
   }
   var seq = ++HC_NUDGE_SEQ_;
-  var got = { car: null, due: null };
+  var got = { car: null, due: null, ack: null };
 
   function paint(){
     if(seq !== HC_NUDGE_SEQ_) return;
-    if(got.car === null || got.due === null) return;
-    HC_NUDGE_ = got.car.concat(got.due);
+    if(got.car === null || got.due === null || got.ack === null) return;
+    /* 順序有意思：還沒確認的排最前面。
+       接送沒填是「我還沒做」，還沒確認是「我要去追別人」——
+       後者要花的時間長得多，所以要先看到。 */
+    HC_NUDGE_ = got.ack.concat(got.car, got.due);
     hcDrawNudge();
   }
   function fail(k){ return function(){ got[k] = []; paint(); }; }
@@ -6257,6 +6285,22 @@ function hcNudge(){
       }).join('　·　') }];
     paint();
   }).withFailureHandler(fail('car')).hcCarTodo(CODE);
+
+  /* ⛔ 這一條才是確認率真正的來源。
+     再怎麼改按鈕文案，總有人不按——舉證的完整性不能靠工人的自覺。
+     翻譯打的那一通電話本身也是證據。 */
+  google.script.run.withSuccessHandler(function(r){
+    var l = (r && r.list) || [];
+    var ppl = l.reduce(function(n, x){ return n + x.list.length; }, 0);
+    got.ack = !ppl ? [] : [{
+      bad: l.some(function(x){ return x.days <= 1; }),
+      t: ppl + ' 位還沒確認　要打電話',
+      s: l.slice(0, 3).map(function(x){
+        return esc(x.client) + ' 剩 ' + x.days + ' 天（' +
+               x.list.map(function(p){ return esc(p.name); }).join('、') + '）';
+      }).join('　·　') }];
+    paint();
+  }).withFailureHandler(fail('ack')).hcAckTodo(CODE);
 
   google.script.run.withSuccessHandler(function(r){
     var all = (r && r.list) || [];

@@ -2036,6 +2036,15 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .hcmsg.gm .h{color:var(--brand)}
 
 /* 搬到頁首的接送提示：只有它在上面，所以自己管下方間距。 */
+/* 打電話：放在名字左邊，因為那是「現在要做的動作」，不是狀態。 */
+.hccall{flex:none;background:var(--navy);color:#fff;border-radius:8px;
+  padding:4px 10px;font-size:0.75rem;font-weight:700;text-decoration:none;
+  margin-right:8px;white-space:nowrap}
+.hcnop{flex:none;font-style:normal;font-size:0.6875rem;color:var(--bad-ink);
+  background:var(--bad-bg);border-radius:8px;padding:4px 8px;margin-right:8px;
+  white-space:nowrap}
+.hcdone{display:block;font-style:normal;font-size:0.75rem;color:var(--ok-ink);
+  background:var(--ok-bg);border-radius:8px;padding:5px 9px;margin-top:6px}
 .hcbox.top{margin:0 0 10px}
 .hcbox.top .hcal{margin-top:0}
 .hbc{background:var(--card);border:1px solid var(--line);border-radius:12px;
