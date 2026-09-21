@@ -5641,7 +5641,11 @@ function pkRow_(x, mode, q){
 function pkDraw(o){
   var box = $(o.id + 'Box'); if(!box) return;
   var q = (($(o.id + 'Q') && $(o.id + 'Q').value) || '').trim().toLowerCase();
-  var tab = o.tab || (o.mode === 'hc' ? 'due' : 'recent');
+  /* 注音還沒組完（「ㄔㄤ ㄍ」）就當作他還沒打字：維持原本的清單，
+     不要閃一下「找不到」，更不要冒出「用「ㄔㄤ ㄍ」當雇主名稱」。 */
+  if(pkTyping_(q)) q = '';
+  var tab = o.tab || (o.mode === 'hc' ? 'due'
+                    : (pkRecent_(o.mode).length ? 'recent' : 'all'));
   var all = o.list || [];
 
   /* 服務對象先選了的話，清單跟著變。這一層過濾是免費的——
@@ -5699,7 +5703,7 @@ function pkDraw(o){
        ⛔ 不要只留「找不到」——那等於叫他放棄填這張表。 */
     /* ⚠ 至少兩個字才給。一個字就冒出來，等於他每次打字都看到一列
        「用「全」當雇主名稱」——那是雜訊，而且很容易誤觸。 */
-    ((o.allowNew && q.length >= 2 && !pkTyping_(q) &&
+    ((o.allowNew && q.length >= 2 &&
       !rows.some(function(x){ return x.c === q; }))
       ? '<button type="button" class="epkrow epknew" data-new="1">' +
           '<span class="nm"><b>用「' + esc(q) + '」當雇主名稱</b>' +
@@ -5737,15 +5741,20 @@ function pkWire(o){
     val.classList.toggle('open', on);
     if(on){ pkDraw(o); setTimeout(function(){ q.focus(); }, 40); }
   });
-  var composing = false;
-  q.addEventListener('compositionstart', function(){ composing = true; });
-  q.addEventListener('compositionend', function(){ composing = false; pkDraw(o); });
-  /* ⚠ 每一個字都重畫。309 筆在前端篩，量過是毫秒等級——
+  /* ⛔⛔ 不要用「組字中就跳過 input」的旗標。2026-09-21 第一版這樣寫，
+     結果 iOS 注音打「日瀚」整個清單完全不動——compositionend 沒有照預期
+     送達（或送達時 value 還沒更新），旗標就卡在 true，之後每一個 input
+     事件都被跳過，等於輸入框整個死掉。
+     **擋住輸入的保護，比它本來要防的問題更糟。**
+     改成：永遠重畫，由 pkDraw 自己看「這一串還在組字嗎」。
+     這樣就算 composition 事件一個都沒送到，搜尋照樣會動。
+   ⚠ 每一個字都重畫。309 筆在前端篩，量過是毫秒等級——
      不要做防抖，那會讓打字看起來卡。 */
-  q.addEventListener('input', function(e){
-    /* 有些輸入法只給 e.isComposing、有些只發 compositionstart，兩個都看。 */
-    if(composing || e.isComposing) return;
-    pkDraw(o);
+  q.addEventListener('input', function(){ pkDraw(o); });
+  /* 組完字再補一次：WebKit 在 compositionend 當下 value 有時還沒更新，
+     所以排到下一個 tick 再畫。純粹是補強，沒有它也能動。 */
+  q.addEventListener('compositionend', function(){
+    setTimeout(function(){ pkDraw(o); }, 0);
   });
 }
 
