@@ -132,6 +132,7 @@
 .vrow .bnd.none{left:0;right:0;background:var(--line2)}
 .bnd-ok{background:var(--ok-bar)} .bnd-warn{background:var(--warn-bar)}
 .bnd-bad{background:var(--bad-bar)} .bnd-dim{background:var(--line)}
+.bnd-info{background:var(--info-bar)}
 /* 被時間窗切掉的那一端不做圓角＝「還沒完」。
    ⛔ 不要為了好看補圓——補了就看不出有東西被切掉。 */
 .vrow .bnd.cutl{border-top-left-radius:0;border-bottom-left-radius:0}
@@ -1114,7 +1115,15 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .ev .prog.all .s em,.rv .prog.all .s em,.recprog .prog.all .s em{color:var(--ok-ink);font-weight:700}
 .ev .b[data-rec] .n::after{content:"　›";color:var(--ink3);font-weight:400}
 .ev .b>span{display:block}
-.ev .t{font-size:0.75rem;color:var(--ink3);font-variant-numeric:tabular-nums}
+.ev .t{font-size:0.75rem;color:var(--ink3);font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+/* 階段詞（含倒數）。膠囊講「球在誰手上」，這裡講「現在到哪一步」。
+   ⚠ 字要比膠囊小、色要比它淡——它是註腳，不是第二個標題。 */
+.ev .cdet{font-size:0.7188rem;color:var(--ink3);font-style:normal;
+  text-decoration:none}
+/* 開案日與負責人。第一行擠不下這兩個，也不值得放在第一行。 */
+.ev .cby{font-size:0.6875rem;color:var(--ink3);margin-top:3px;
+  font-variant-numeric:tabular-nums}
 .ev .n{font-size:0.9375rem;font-weight:700;margin-top:1px}
 .ev .m{font-size:0.7812rem;color:var(--ink2);margin-top:1px}
 .ev .acts{display:flex;flex-direction:column;gap:5px;justify-content:center}

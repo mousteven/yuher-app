@@ -1322,7 +1322,10 @@ function drawFilters(langs){
   /* 收起來的時候：兩排都不畫，改成一顆「篩選」。
      ⚠ 有在篩的時候一定攤開——不然他會忘記自己開著篩選，
        然後以為今天真的沒有行程。 */
-  var wraps = document.querySelectorAll('.calfw');
+  /* ⛔ 一定要限定在行事曆那一頁裡面找。.calfw 追蹤頁也有一個
+     （包著 #tkFilt），用 document.querySelectorAll 會把追蹤的篩選
+     一起收掉——2026-09-22 就這樣把追蹤頁的篩選弄不見了一次。 */
+  var wraps = $('p-cal').querySelectorAll('.calfw');
   var show = calFiltShow_();
   [].forEach.call(wraps, function(w){ w.style.display = show ? '' : 'none'; });
   var fb = $('calFiltBtn');
@@ -4769,29 +4772,77 @@ var TK_ST = '';          // 狀態過濾（'' = 全部）
 var TK_ROWS = [];
 var TK_COUNTS = {};
 
-/* 後端的 state.key 對到既有的四組狀態色。
-   ⚠ 不要用 .st——那個類別只活在 .rv 底下，而且修飾詞是 wait/done/back，
-   套到這裡來會變成一個沒有樣式的字。這裡用自己的 .cst。 */
-var TK_TONE = { back: 'bad', late: 'bad', today: 'warn', soon: 'warn',
-                empty: 'warn', open: 'info', closed: 'ok', cancel: 'q' };
+/* ── 三分法（2026-09-22 設計檢視第 7 項）────────────────────
+
+   ⛔ 在這之前，畫面上有**十四個階段詞**（申請中／證件齊／已離境／已回台／
+      待通知／已通知／已預約／已預約・已通知／剛開案／處理中／追蹤中／
+      治療中／追蹤回診，加上逾期與退回），配**五種顏色**，而顏色跟詞
+      各講各的——「還沒排日期」是灰的（看起來可以不管），
+      「已離境」是綠的（看起來沒事），可是這兩件都要你動。
+
+   這十四個詞底下只有一個問題：**球在誰手上。**
+
+     在我手上   你現在就能做一件事把它推進去
+     在等別人   你做完了，在等工人回、等醫院、等他人在國外
+     還沒到我   排好了，時間還沒到，今天不用看它
+
+   ⚠ 詞沒有刪。它們變成小字留在旁邊——要細節的時候還是讀得到，
+     但**要記的只有三種顏色**。
+
+   ⚠ 顏色分兩軸，不要混在一起：
+       膠囊＝球在誰手上（三分法）
+       左邊那條＝有多糟（逾期／被退回才是紅的）
+     混在一起的話，「申請中」會跟「逾期 41 天」一樣紅，
+     那就是 CLAUDE.md 裡那句「會亂叫的警報比沒有警報更糟」。 */
+var BAND_ = {
+  me:    { t: '在我手上', c: 'warn' },
+  them:  { t: '在等別人', c: 'info' },
+  later: { t: '還沒到我', c: 'q'    },
+  done:  { t: '已結束',   c: 'ok'   }
+};
+var BAND_ORDER_ = ['me', 'them', 'later', 'done'];
+
+/* 階段詞 → 三分法。⛔ 這張表就是唯一的事實來源，
+   再多一個階段詞就要在這裡表態它屬於哪一類，不可以留空。 */
+var PHASE_BAND_ = {
+  '申請中': 'me',   '已回台': 'me',   '待通知': 'me',
+  '處理中': 'me',   '剛開案': 'me',
+  '已通知': 'them', '已離境': 'them', '治療中': 'them',
+  '追蹤中': 'them', '追蹤回診': 'them',
+  '證件齊': 'later', '已預約': 'later', '已預約・已通知': 'later'
+};
+
+function tkBand(c){
+  var k = c.state.key;
+  if(k === 'closed' || k === 'cancel') return 'done';
+  /* 逾期、今天、被退回、還沒有服務紀錄——不管階段是什麼，都回到你手上。 */
+  if(k === 'late' || k === 'today' || k === 'back' || k === 'empty') return 'me';
+  /* ⛔ 返鄉問 vtState_，不要問階段詞。條子的顏色是 vtState_ 給的，
+     膠囊與篩選如果改問 c.phase，同一列就會「條子藍、膠囊琥珀」。
+     一個畫面兩套算法遲早有一天對不起來——這裡讓它們同源。 */
+  if(c.kind === '返鄉休假' && typeof vtState_ === 'function'){
+    return VACT_BAND_[vtState_(c, vtParse_(todayStr()))] || 'me';
+  }
+  return PHASE_BAND_[c.phase] || 'me';   // 認不得的階段一律當成要你看
+}
 
 /* 案件真的有變動（開案、結案、改內容）時把快取整個丟掉。
    ⛔ 只清目前那一種不夠：開一件異常事件會讓「異常」的數字變，
       但四個頁籤上的 badge 是同一次呼叫回來的。 */
 function tkBust(){ TK_CACHE = {}; TK_LOADED = ''; TK_ROWS = []; }
 
-function tkPill(st){
-  return '<span class="cst ' + (TK_TONE[st.key] || 'info') + '">' +
-    esc(st.text) + '</span>';
+/* 膠囊上寫的是三分法那三個字，不是十四個階段詞。
+   階段詞（含倒數）由呼叫端當小字印在旁邊。 */
+function tkPill(c){
+  var b = BAND_[tkBand(c)];
+  return '<span class="cst ' + b.c + '">' + esc(b.t) + '</span>';
 }
 
 /* 一筆案件算不算在某個篩選裡。清單與計數兩邊都要問同一個問題，
    分開寫兩份遲早會有一天對不起來。 */
 function tkMatch(c, k){
   if(!k) return true;
-  if(k === 'open') return c.status === '進行中';
-  if(k === 'closed') return c.status !== '進行中';
-  return c.state.key === k;
+  return tkBand(c) === k;
 }
 
 function loadTrack(force){
@@ -4878,15 +4929,18 @@ function drawCases(){
   refreshed();
   var rows = TK_ROWS.filter(function(c){ return tkMatch(c, TK_ST); });
 
-  /* 篩選：只列真的有東西的那幾格。列出 0 的分類是在浪費一排寬度。 */
+  /* 篩選＝三分法那三格，不是七格。
+     ⛔ 原本是「有退回／逾期／今天／快到了／進行中／已結案」——
+        那六個是**兩種不同的問題**混在一排：前四個問「多急」、
+        後兩個問「開著沒」。要選哪一個要先想一下，就已經慢了。
+     現在一排只問一件事：球在誰手上。
+     ⚠ 只列真的有東西的那幾格。列出 0 的分類是在浪費一排寬度。 */
   var defs = [
     { k: '', t: '全部', c: '' },
-    { k: 'back', t: '有退回', c: 'var(--bad-bar)' },
-    { k: 'late', t: '逾期', c: 'var(--bad-bar)' },
-    { k: 'today', t: '今天', c: 'var(--warn-bar)' },
-    { k: 'soon', t: '快到了', c: 'var(--warn-bar)' },
-    { k: 'open', t: '進行中', c: 'var(--info-bar)' },
-    { k: 'closed', t: '已結案', c: 'var(--ok-bar)' }
+    { k: 'me', t: BAND_.me.t, c: 'var(--warn-bar)' },
+    { k: 'them', t: BAND_.them.t, c: 'var(--info-bar)' },
+    { k: 'later', t: BAND_.later.t, c: 'var(--line)' },
+    { k: 'done', t: BAND_.done.t, c: 'var(--ok-bar)' }
   ];
   $('tkFilt').innerHTML = defs.map(function(d){
     var n = TK_ROWS.filter(function(c){ return tkMatch(c, d.k); }).length;
@@ -4922,6 +4976,18 @@ function drawCases(){
   }
   /* 返鄉走航廈看板。這個頁籤唯一要回答的問題是
      「誰快走了、誰還沒回來」——一排日期＋目的地＋狀態燈，比通用卡片直接。 */
+  /* 排序照三分法：要你動的排最上面。同一類裡面維持後端給的順序。
+     ⛔ 用 BAND_ORDER_ 的索引，不要另外寫一組權重數字——
+        兩份排序遲早有一天會對不起來。
+     ⛔ 返鄉不排。那是甘特圖，**時間順序本身就是資訊**，
+        打散了就看不出誰跟誰的假期疊在一起。
+        而且最上面那條「要你處理」已經把急的撈出來了，
+        再排一次是同一件事做兩遍。 */
+  if(TK_CUR !== '返鄉休假'){
+    rows = rows.sort(function(a, b){
+      return BAND_ORDER_.indexOf(tkBand(a)) - BAND_ORDER_.indexOf(tkBand(b));
+    });
+  }
   $('tkBody').innerHTML = (TK_CUR === '返鄉休假')
     ? vacBoard(rows)
     : rows.map(caseCard).join('');
@@ -4953,10 +5019,16 @@ function drawCases(){
 /* ⛔ 顏色交給 CSS，這裡只給 class。寫死色碼等於押注在一種主題上——
    他 2026-09-22 要「日間淺色、夜間深色」，寫死的在另一邊不是刺眼就是看不見。
    st-*  是文字色、bnd-* 是條子的底色，兩組都在 app.css 的 token 區。 */
-var VACT_C_ = { over:'st-bad', out:'st-ok', plan:'st-warn',
-                done:'st-dim', none:'st-dim' };
-var VACT_B_ = { over:'bnd-bad', out:'bnd-ok', plan:'bnd-warn',
-                done:'bnd-dim', none:'bnd-dim' };
+/* ⛔ 2026-09-22 第 7 項：英文標籤留著（氣氛），**顏色改照三分法**。
+   原本 out（人在國外）是綠的、none（還沒排日期）是灰的——
+   看起來都像「沒事」，可是 none 明明就是你要去排。
+   現在：要你動的一律琥珀，在等別人的一律藍，排好了的才是灰。
+   ⚠ 逾期還是紅的——那是嚴重度，不是三分法，見 BAND_ 上面那段。 */
+var VACT_BAND_ = { over:'me', none:'me', out:'them', plan:'later', done:'done' };
+var VACT_C_ = { over:'st-bad', out:'st-info', plan:'st-dim',
+                done:'st-ok', none:'st-warn' };
+var VACT_B_ = { over:'bnd-bad', out:'bnd-info', plan:'bnd-dim',
+                done:'bnd-ok', none:'bnd-warn' };
 var VACT_L_ = { over:'OVERDUE', out:'ABROAD', plan:'PLANNED',
                 done:'ARRIVED', none:'NO DATE' };
 
@@ -5051,10 +5123,14 @@ function vacBoard(rows){
       '<button type="button" class="pri" id="vbIssue">' +
         (VACL_OPEN_ ? '收起來' : '發問卷') + '</button>' +
     '</div>' +
+    /* ⛔ 圖例一定要跟條子同一組 class。2026-09-22 改成三分法配色時
+       這裡忘了跟著改，畫面上「在國外」是藍的、圖例是綠的——
+       圖例錯了比沒有圖例更糟。 */
     '<div class="vtlg">' +
-      '<span><i class="bnd-ok"></i>在國外</span>' +
+      '<span><i class="bnd-warn"></i>' + BAND_.me.t + '</span>' +
+      '<span><i class="bnd-info"></i>' + BAND_.them.t + '</span>' +
+      '<span><i class="bnd-dim"></i>' + BAND_.later.t + '</span>' +
       '<span><i class="bnd-bad"></i>逾期未回</span>' +
-      '<span><i class="bnd-warn"></i>還沒出發</span>' +
       '<span><i class="tdy"></i>今天</span></div>' +
   '</div>' +
   (VACP_OPEN_ ? ('<div id="vgateBox">' + vacGate() + '</div>') : '') +
@@ -5498,6 +5574,8 @@ function vacStamps(d){
 }
 
 function caseCard(c){
+  /* ⛔ 左邊那條是**嚴重度**，不是三分法。只有逾期與被退回才紅——
+     膠囊已經講了球在誰手上，兩個東西講同一件事就沒有一個在講嚴重度了。 */
   var cls = c.state.key === 'back' || c.state.key === 'late' ? 'bad'
           : c.state.key === 'closed' ? 'done'
           : c.state.key === 'cancel' ? 'cancel' : 'plan';
@@ -5509,16 +5587,22 @@ function caseCard(c){
     foot = '<span class="crecs">下一步　<b>' + esc(c.nextDate) + '</b>' +
       (c.nextNote ? '　' + esc(c.nextNote) : '') + '</span>';
   }
+  /* 開案日與負責人從第一行挪到最底下。第一行的位置要留給
+     「球在誰手上」＋「現在到哪一步」，那才是掃過去要看的。 */
+  var by = [];
+  if(c.openedAt) by.push('開案 ' + shortDate_(c.openedAt));
+  if(c.crew) by.push(c.crew);
   return '<div class="ev ' + cls + '" data-case="' + esc(c.id) + '">' +
     '<span class="bar lg-' + esc((c.lang || '').split('、')[0]) + '"></span>' +
     '<span class="b">' +
-      '<span class="t">' + tkPill(c.state) + '　' + esc(c.openedAt) +
-        (c.crew ? '　' + esc(c.crew) : '') + '</span>' +
+      '<span class="t">' + tkPill(c) +
+        '<s class="cdet">' + esc(c.state.text) + '</s></span>' +
       '<span class="n">' + esc(c.workers || c.client) + '</span>' +
       '<span class="m">' + esc(c.title || c.sub || c.kind) +
         (c.workers ? '　·　' + esc(c.client) : '') +
         '　<span class="code">' + esc(c.id) + '</span></span>' +
       foot +
+      (by.length ? ('<span class="cby">' + esc(by.join('　·　')) + '</span>') : '') +
     '</span></div>';
 }
 
