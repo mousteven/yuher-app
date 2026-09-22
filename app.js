@@ -4869,7 +4869,12 @@ function drawCases(){
   $('tkBody').innerHTML = (TK_CUR === '返鄉休假')
     ? vacBoard(rows)
     : rows.map(caseCard).join('');
-  if(TK_CUR === '返鄉休假'){ vaclWire(); vacGateWire(); vacGateLoad(); }
+  if(TK_CUR === '返鄉休假'){
+    vacWire();
+    if(VACL_OPEN_) vaclWire();
+    if(VACP_OPEN_) vacGateWire();
+    vacGateLoad();
+  }
   [].forEach.call($('tkBody').querySelectorAll('[data-case]'), function(el){
     el.addEventListener('click', function(){ openCase(el.dataset.case); });
   });
@@ -4886,69 +4891,9 @@ function drawCases(){
       所以每一列是兩層：上面英文給氣氛，**下面那行小字才是真的階段**。
 
    ⚠ 看板刻意不跟著日夜模式變（見 app.css 的 .fids）。 */
-var VAC_EN_ = { '申請中':'PENDING', '證件齊':'READY',
-                '已離境':'DEPARTED', '已回台':'ARRIVED' };
 
-function vacRow(c){
-  var d = c.detail || {};
-  var late = c.state.key === 'late' || c.state.key === 'back';
-  var closed = c.status !== '進行中';
-  var ph = c.phase || '';
-  /* 逾期壓過階段：人沒回來是這個頁籤最嚴重的事。 */
-  var en = late ? 'OVERDUE' : (VAC_EN_[ph] || (closed ? 'CLOSED' : 'PENDING'));
-  var tone = late ? 'red' : (ph === '已離境' || ph === '已回台' || closed)
-                            ? 'green' : 'amber';
-  /* ⛔ 日期優先顯示「下一個會發生的」：還沒走看離境日，走了看回台日。
-     兩個都沒有就印「未定」——不要拿 nextDate 頂替，那會印出一個
-     看起來像已經訂好票的日期（2026-09-20 踩過同一種錯）。 */
-  var day = (ph === '已離境' || ph === '已回台') ? (d.back || '') : (d.out || '');
-  var tm  = (ph === '已離境' || ph === '已回台') ? (d.backTime || '') : (d.outTime || '');
-  var frm = (ph === '已離境' || ph === '已回台') ? (d.to || '') : (d.from || '');
-  var to  = (ph === '已離境' || ph === '已回台') ? (d.from || '') : (d.to || '');
-  var air = (ph === '已離境' || ph === '已回台') ? (d.rair || '') : (d.air || '');
-  /* 倒數那一段從 state.text 取——後端已經算好「剩 N 天／逾期 N 天／今天」，
-     ⛔ 不要在前端再算一次日期差，算兩次就會有一天對不起來。 */
-  var m = /(?:剩\s*\d+\s*天|逾期\s*\d+\s*天|今天)/.exec(c.state.text || '');
-  var cnt = m ? m[0].replace(/\s+/g, '') : '';
-
-  return '<button type="button" class="vrow" data-case="' + esc(c.id) + '">' +
-    '<span class="d">' + esc(day ? day.slice(5).replace('-', '/') : '未定') +
-      '<s>' + esc(tm || '—') + '</s></span>' +
-    /* ⛔ 機場還沒填就整段寫「目的地未定」，不要印 ??? ——
-       那看起來像系統壞了，而不是「這一格他還沒填」。 */
-    /* ⚠ 自己買票的人問卷不問機場（他已經有票），所以只有國家。
-       印「回菲律賓・未訂機場」比印「目的地未定」誠實——
-       後者看起來像我們什麼都不知道。 */
-    '<span class="m"><span class="rt">' +
-        ((frm && to)
-          ? (esc(frm) + ' <i>›</i> ' + esc(to) +
-             (air ? ' <i>' + esc(air) + '</i>' : ' <i>未訂票</i>'))
-          : (d.toName
-              ? ('回 ' + esc(d.toName) + ' <i>未訂機場</i>')
-              : '<i>目的地未定</i>')) + '</span>' +
-      '<span class="nm">' + esc(c.workers || '（未填移工）') + '</span>' +
-      '<span class="co">' + esc(c.client || '') + '</span></span>' +
-    /* ⛔ 狀態欄只有 88px。整句 state.text（「已離境・剩 3 天」）會被擠成三行。
-       拆開：英文一行、階段一行、倒數一行，每一行都不換行。 */
-    '<span class="s ' + tone + '">' + esc(en) +
-      '<em>' + esc(ph || c.state.text) + '</em>' +
-      (cnt ? '<u>' + esc(cnt) + '</u>' : '') + '</span>' +
-  '</button>';
-}
-
-/* ── 時間軸（出境看板底下）────────────────────────────
-
-   牟佑彬 2026-09-22：「把每一位返鄉休假的期間做一個標示，
-   讓我能一目了然地知道目前誰還在國外」。
-
-   ⛔ 上面那張看板回答的是「下一件事什麼時候發生」（一列一個日期）。
-      「現在誰在國外」是**一個時間點**的問題，一列一個日期答不出來——
-      你要自己把離境日和回台日兜起來跟今天比。
-      所以這裡改成一人一條，把今天畫成一條線：**壓到線的就是在外面的人**。
-
-   ⚠ 沒有日期的也要畫出來（整條灰的寫「日期未定」）。看板上真的有這種人，
-     行事曆假裝他不存在的話，他會以為所有人都排好了。 */
-
+/* 顏色與標籤。⛔ 只有這五種狀態，不要再加——每多一種，
+   工廠裡那台手機上的圖例就多一行。 */
 var VACT_C_ = { over:'#F2678B', out:'#28D07A', plan:'#F0B429',
                 done:'rgba(255,255,255,.22)', none:'rgba(255,255,255,.14)' };
 var VACT_L_ = { over:'OVERDUE', out:'ABROAD', plan:'PLANNED',
@@ -4961,8 +4906,8 @@ function vtParse_(s){
   return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
 }
 
-/* 一條的狀態。⛔ 先看日期再看階段——階段是人工推的，常常忘了推，
-   但日期是工人自己填的，比較可信。 */
+/* 一列的狀態。⛔ 先看日期再看階段——階段是後端從日期算的，
+   但「該回來了卻還沒結案」這件事只有比對今天才看得出來。 */
 function vtState_(c, today){
   var d = c.detail || {};
   var o = vtParse_(d.out), b = vtParse_(d.back);
@@ -4974,89 +4919,233 @@ function vtState_(c, today){
   return 'out';                              // 走了、但沒填回台日
 }
 
-function vacTime(rows){
-  var today = vtParse_(todayStr());
-  var has = rows.filter(function(c){ return vtParse_((c.detail || {}).out); });
-  if(!rows.length) return '';
+/* ── 一人一列：看板與時間軸合而為一 ────────────────
 
-  /* 時間窗**固定**：上個月 1 號 ～ 三個月後的月底。大約五個月。
+   ⛔ 2026-09-22 之前是兩張表：上面「出境看板」一人一列、
+      底下「時間軸」一人一條——**同一批人畫了兩次**，佔兩倍版面，
+      而且兩邊各自算各自的，畫面上出現過「7 人在途中」與
+      「現在在國外 1 人」同時存在。牟佑彬看到就問要相信哪一個。
 
-     ⛔ 2026-09-22 第一版是「把所有人都包進來」，牟佑彬看過之後說
-        「休假三個月、或三個月之後才走的，看不到沒關係」。
-        他是對的——自動延伸的話，只要有一個人訂了半年後的票，
-        **其他所有人的條子就會被壓成一根細線**，整張圖就廢了。
-        固定範圍換來的是：每個人的條子寬度永遠一樣，量得出長短。
+   現在一列就是一個人：左邊航線與人、底下那條是他的休假期間、
+   右邊是狀態與**去程 › 回程**。
 
-     ⚠ 超出範圍的不是消失：兩端會切平（切口那邊不做圓角），
-       完全在範圍外的在底下用一行字交代，不要讓他以為只有這幾個人。 */
+   ⛔ 右邊一定要兩個日期。只印一個的話，「還沒走」印出發日、
+      「已經走了」印回台日——**同一個位置兩種意思**，最容易看錯。
+      而且接機要提前排、逾期未回是最嚴重的事，回台日不能等人走了才出現。
+
+   點一列 → 就地展開（見 vacExp）。⚠ 一次只開一個。 */
+
+var VAC_STEPS_ = ['申請中', '證件齊', '已離境', '已回台'];
+var VACX_ = '';          // 目前展開的是哪一件
+var VACP_OPEN_ = false;  // 待處理問卷那一區展開了沒
+var VACL_OPEN_ = false;  // 發問卷那一區展開了沒
+
+/* 時間窗固定五個月（上個月 1 號 ～ 三個月後月底）。
+   ⛔ 不要改成「把所有人都包進來」。牟佑彬 2026-09-22：
+      「休假三個月、或三個月之後才走的，看不到沒關係」——
+      自動延伸的話，只要有一個人訂了半年後的票，
+      **其他所有人的條子就會被壓成一根細線**。 */
+function vacWin_(today){
   var A = new Date(today.getFullYear(), today.getMonth() - 1, 1);
   var B = new Date(today.getFullYear(), today.getMonth() + 4, 1);
   var span = vtDay_(A, B) || 1;
-  var nowPct = (vtDay_(A, today) / span * 100);
-
-  /* 月份刻度：每個月一格，寬度照那個月的天數分，所以格線對得上條子。 */
   var ticks = '', cur = new Date(A);
   while(cur < B){
     var nx = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
     ticks += '<span style="flex:' + vtDay_(cur, nx) + '">' + (cur.getMonth() + 1) + '月</span>';
     cur = nx;
   }
+  return { A:A, B:B, span:span, ticks:ticks, nowPct: vtDay_(A, today) / span * 100 };
+}
 
-  var nOut = rows.filter(function(c){
-    var k = vtState_(c, today); return k === 'out' || k === 'over';
-  }).length;
-
-  /* 完全落在範圍外的，畫不出來但要講一聲。 */
-  var off = has.filter(function(c){
-    var o = vtParse_(c.detail.out);
-    var b = vtParse_(c.detail.back) || new Date(o.getTime() + 30 * 86400000);
-    return b < A || o >= B;
+function vacBoard(rows){
+  var today = vtParse_(todayStr());
+  var w = vacWin_(today);
+  var nOut = 0, nOver = 0;
+  rows.forEach(function(c){
+    var k = vtState_(c, today);
+    if(k === 'out') nOut++; else if(k === 'over'){ nOut++; nOver++; }
+  });
+  var off = rows.filter(function(c){
+    var o = vtParse_((c.detail || {}).out); if(!o) return false;
+    var bk = vtParse_(c.detail.back) || new Date(o.getTime() + 30 * 86400000);
+    return bk < w.A || o >= w.B;
   });
   var inWin = rows.filter(function(c){ return off.indexOf(c) === -1; });
 
-  return '<div class="vtl">' +
-    '<div class="bar"><b>返鄉 · 時間軸</b>' +
-      '<span class="now">現在在國外 ' + nOut + ' 人　今天 ' +
-        esc(todayStr().slice(5).replace('-', '/')) + '</span></div>' +
-    '<div class="vtax">' + ticks + '</div>' +
-    inWin.map(function(c){ return vtRow_(c, today, A, B, span, nowPct); }).join('') +
-    (off.length ? ('<div class="vtoff">另有 ' + off.length +
-      ' 位不在這五個月裡（' + esc(off.map(function(c){
+  return '<div class="vb">' +
+    '<div class="bar"><b>返鄉</b><span class="now">在國外 ' + nOut +
+      (nOver ? ('　<em class="bad">逾期 ' + nOver + '</em>') : '') +
+      '　今天 ' + esc(todayStr().slice(5).replace('-', '/')) + '</span></div>' +
+    '<div class="vtax">' + w.ticks + '</div>' +
+    (inWin.length ? inWin.map(function(c){ return vacRow(c, today, w); }).join('')
+                  : '<div class="vbempty">這個條件下沒有案件</div>') +
+    (off.length ? ('<div class="vtoff">另有 ' + off.length + ' 位不在這五個月裡（' +
+      esc(off.map(function(c){
         return (c.workers || '?') + ' ' + c.detail.out.slice(0, 7).replace('-', '/');
-      }).join('、')) + '）——在上面的看板上找得到</div>') : '') +
+      }).join('、')) + '）</div>') : '') +
+    '<div class="vbact">' +
+      (VACP_.length ? ('<button type="button" class="gate" id="vbGate">問卷 ' +
+        VACP_.length + ' 筆待處理</button>') : '') +
+      '<button type="button" class="pri" id="vbIssue">' +
+        (VACL_OPEN_ ? '收起來' : '發問卷') + '</button>' +
+    '</div>' +
     '<div class="vtlg">' +
       '<span><i style="background:' + VACT_C_.out + '"></i>在國外</span>' +
       '<span><i style="background:' + VACT_C_.over + '"></i>逾期未回</span>' +
       '<span><i style="background:' + VACT_C_.plan + '"></i>還沒出發</span>' +
       '<span><i class="tdy"></i>今天</span></div>' +
+  '</div>' +
+  (VACP_OPEN_ ? ('<div id="vgateBox">' + vacGate() + '</div>') : '') +
+  (VACL_OPEN_ ? vacIssue() : '');
+}
+
+function vacRow(c, today, w){
+  var d = c.detail || {};
+  var k = vtState_(c, today), col = VACT_C_[k];
+  var open = (VACX_ === c.id);
+
+  /* 航線。⛔ 機場還沒填就寫「回 ○○」或「目的地未定」，不要印 ???——
+     那看起來像系統壞了，而不是「這一格他還沒填」。 */
+  var route = (d.from && d.to)
+    ? (esc(d.from) + ' <i>›</i> ' + esc(d.to) +
+       (d.air ? ' <i>' + esc(d.air) + '</i>' : ' <i>未訂票</i>'))
+    : (d.toName ? ('回 ' + esc(d.toName) + ' <i>未訂機場</i>') : '<i>目的地未定</i>');
+
+  /* 右欄第三行：講「還有幾天」，不要重複上面已經有的日期。 */
+  var o = vtParse_(d.out), bk = vtParse_(d.back);
+  var tail = '';
+  if(k === 'over')      tail = '逾期 ' + vtDay_(bk, today) + ' 天未回';
+  else if(k === 'out')  tail = bk ? ('剩 ' + vtDay_(today, bk) + ' 天回台') : '已離境';
+  else if(k === 'plan') tail = vtDay_(today, o) + ' 天後出發';
+  else if(k === 'done') tail = '已結案';
+  else                  tail = '還沒排';
+
+  var dd = o
+    ? (esc(vtMd_(d.out)) + '<i>›</i>' + (bk ? ('<b>' + esc(vtMd_(d.back)) + '</b>') : '—'))
+    : '—<i>›</i>—';
+
+  return '<div class="vrow' + (open ? ' on' : '') + '" data-vac="' + esc(c.id) + '">' +
+    '<span class="a">' +
+      '<span class="rt' + (d.from && d.to ? '' : ' dim') + '">' + route + '</span>' +
+      '<span class="nm">' + esc(c.workers || '（未填移工）') + '</span>' +
+      '<span class="co">' + esc(c.client || '') + '</span>' +
+      vacTrk_(c, today, w, col, k) +
+    '</span>' +
+    '<span class="b">' +
+      '<span class="st" style="color:' + col + '">' + VACT_L_[k] + '</span>' +
+      '<span class="dd" style="color:' + col + '">' + dd + '</span>' +
+      '<span class="sub2">' + esc(tail) + (open ? '　⌃' : '　⌄') + '</span>' +
+    '</span>' +
+  '</div>' + (open ? vacExp(c, k) : '');
+}
+
+function vtMd_(s){ return String(s || '').slice(5).replace('-', '/'); }
+
+/* 那一條。沒有日期的畫整條灰的——⚠ 看板上真的有這種人，
+   假裝他不存在的話他會以為所有人都排好了。 */
+function vacTrk_(c, today, w, col, k){
+  var d = c.detail || {}, line = '<i class="tdy" style="left:' + w.nowPct.toFixed(2) + '%"></i>';
+  if(k === 'none') return '<span class="trk"><i class="bnd none"></i>' + line + '</span>';
+  var o = vtParse_(d.out);
+  var bk = vtParse_(d.back) || new Date(o.getTime() + 30 * 86400000);
+  var r0 = vtDay_(w.A, o) / w.span * 100, r1 = vtDay_(w.A, bk) / w.span * 100;
+  var s0 = Math.max(0, r0), e0 = Math.min(100, r1);
+  var cut = (r0 < 0 ? ' cutl' : '') + (r1 > 100 ? ' cutr' : '');
+  return '<span class="trk"><i class="bnd' + cut + '" style="left:' + s0.toFixed(2) +
+    '%;width:' + Math.max(5, e0 - s0).toFixed(2) + '%;background:' + col + '"></i>' +
+    line + '</span>';
+}
+
+/* ── 就地展開 ─────────────────────────────────────
+
+   ⛔ 階段那一排是**唯讀**的。後端 casePhase_ 從日期算出來
+      （出發日過了就是已離境、回台日過了就是已回台），
+      **沒有「按一下推進去」這回事**。畫成按鈕的話他會一直按，
+      按了沒反應比沒有這個東西更糟。
+
+   ⚠ 這裡只放他在工廠最常做的四件事。結案、「這件開錯了」、
+     翻服務紀錄留在完整那一頁——少做、而且比較重要，
+     不該跟「改個日期」擺在一起誤觸。 */
+function vacExp(c, k){
+  var d = c.detail || {};
+  var at = VAC_STEPS_.indexOf(c.phase || '');
+  var steps = VAC_STEPS_.map(function(t, i){
+    var cls = i < at ? 'done' : (i === at ? 'cur' : '');
+    return '<span class="' + cls + '">' + esc(t) + (i < at ? ' ✓' : '') + '</span>';
+  }).join('');
+
+  var STP = [['passport', '護照'], ['arc', '居留證'],
+             ['reentry', '重入國'], ['ticket', '機票']];
+  var stamps = STP.map(function(x){
+    return '<span class="' + (d[x[0]] ? '' : 'no') + '">' + x[1] +
+      (d[x[0]] ? ' ✓' : ' ✗') + '</span>';
+  }).join('');
+
+  var kv = [];
+  if(d.from || d.air){
+    kv.push(['去程', [d.air, vtMd_(d.out), d.outTime,
+      (d.fromName || d.from) && ((d.fromName || d.from) + ' › ' + (d.toName || d.to || ''))]
+      .filter(function(x){ return x; }).join('　')]);
+  }
+  if(d.back){
+    kv.push(['回台', [vtMd_(d.back), d.backTime, d.pickup ? '要接機' : '']
+      .filter(function(x){ return x; }).join('　')]);
+  }
+  if(d.book) kv.push(['機票', d.book]);
+  if(d.domConn && d.domAirport) kv.push(['國內轉機', d.domAirport]);
+  if(d.bagKg) kv.push(['加購行李', d.bagKg + ' 公斤']);
+  if(d.con) kv.push(['海外聯絡', d.con]);
+
+  return '<div class="vexp">' +
+    '<div class="vstep">' + steps + '</div>' +
+    '<div class="vstamp">' + stamps + '</div>' +
+    (kv.length ? ('<dl class="vkv">' + kv.map(function(r){
+      return '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>';
+    }).join('') + '</dl>') : '') +
+    '<div class="vacts">' +
+      '<button type="button" data-va="next">' +
+        (c.nextDate ? '改日期' : '排日期') + '</button>' +
+      '<button type="button" data-va="msg">提醒訊息</button>' +
+      '<button type="button" data-va="detail">填細節</button>' +
+      '<button type="button" class="full" data-va="full">' +
+        '打開完整那一頁（結案／開錯了／服務紀錄）</button>' +
+    '</div>' +
   '</div>';
 }
 
-function vtRow_(c, today, A, B, span, nowPct){
-  var d = c.detail || {};
-  var k = vtState_(c, today), col = VACT_C_[k];
-  var line = '<div class="vtnow" style="left:' + nowPct.toFixed(2) + '%"></div>';
-  var body;
-  if(k === 'none'){
-    body = '<div class="vtb none">日期未定</div>';
-  } else {
-    var o = vtParse_(d.out);
-    var b = vtParse_(d.back) || new Date(o.getTime() + 30 * 86400000);
-    var raw0 = vtDay_(A, o) / span * 100, raw1 = vtDay_(A, b) / span * 100;
-    var s = Math.max(0, raw0), e = Math.min(100, raw1);
-    /* 被切掉的那一端不做圓角＝「還沒完」。⚠ 這是唯一的提示，
-       不要為了好看把它補圓，補了就看不出有東西被切掉。 */
-    var cut = (raw0 < 0 ? ' cutl' : '') + (raw1 > 100 ? ' cutr' : '');
-    body = '<div class="vtb' + cut + '" style="left:' + s.toFixed(2) + '%;width:' +
-      Math.max(7, e - s).toFixed(2) + '%;background:' + col + '">' +
-      (raw0 < 0 ? '' : esc(d.out.slice(5).replace('-', '/'))) + '</div>';
-  }
-  return '<button type="button" class="vtrow" data-case="' + esc(c.id) + '">' +
-    '<span class="vth"><b>' + esc(c.workers || '（未填移工）') + '</b>' +
-      '<s>' + esc(c.client || '') + '</s>' +
-      '<u style="color:' + col + '">' + VACT_L_[k] + '</u></span>' +
-    '<span class="vtt">' + body + line + '</span>' +
-  '</button>';
+/* 展開、收合、以及展開區裡那四顆。
+   ⚠ 每次 drawCases 重畫都要重接——整段 innerHTML 換掉了。 */
+function vacWire(){
+  var B = $('tkBody');
+  [].forEach.call(B.querySelectorAll('[data-vac]'), function(el){
+    el.addEventListener('click', function(){
+      /* 一次只開一個。連開三個之後整頁都是細節，就找不到人了。 */
+      VACX_ = (VACX_ === el.dataset.vac) ? '' : el.dataset.vac;
+      drawCases();
+    });
+  });
+  [].forEach.call(B.querySelectorAll('[data-va]'), function(el){
+    el.addEventListener('click', function(ev){
+      ev.stopPropagation();       /* 不要連帶把那一列收起來 */
+      var c = null;
+      TK_ROWS.forEach(function(x){ if(x.id === VACX_) c = x; });
+      if(!c) return;
+      var a = el.dataset.va;
+      if(a === 'full')        openCase(c.id);
+      else if(a === 'next')   caseSetNext(c);
+      else if(a === 'msg')    openMsg(c, '');
+      else if(a === 'detail') openDetailForm(c);
+    });
+  });
+  var g = $('vbGate');
+  if(g) g.addEventListener('click', function(){
+    VACP_OPEN_ = !VACP_OPEN_; VACL_OPEN_ = false; drawCases();
+  });
+  var i = $('vbIssue');
+  if(i) i.addEventListener('click', function(){
+    VACL_OPEN_ = !VACL_OPEN_; VACP_OPEN_ = false; drawCases();
+  });
 }
 
 /* ── 待處理的問卷（GATE）─────────────────────────────
@@ -5134,20 +5223,6 @@ function vacGateWire(){
   });
 }
 
-function vacBoard(rows){
-  var going = rows.filter(function(c){ return c.status === '進行中'; }).length;
-  return vacIssue() +
-  '<div id="vgateBox">' + vacGate() + '</div>' +
-  '<div class="fids">' +
-    '<div class="bar"><b>返鄉 · 出境看板</b>' +
-      '<span class="now">' + going + ' 人在途中　' + esc(todayStr().slice(5)) + '</span></div>' +
-    '<div class="fhdr"><span>DATE</span><span>FLIGHT / 移工</span>' +
-      '<span style="text-align:right">STATUS</span></div>' +
-    rows.map(vacRow).join('') +
-    '<div class="ffoot"><span>往下拉更新</span><span>TERMINAL · YU HER</span></div>' +
-  '</div>' +
-  vacTime(rows);
-}
 
 /* ── 發問卷給工人（CHECK-IN）────────────────────────────
 

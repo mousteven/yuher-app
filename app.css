@@ -1971,62 +1971,131 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 :root{ --fids:#0C1118; --fids2:#161D28; --amber:#F0B429;
        --fgreen:#39C08A; --fred:#E8657F; }
 
-/* ── 登機證存根：發問卷給工人 ─────────────────────────
-   跟下面的 FIDS 看板同一套配色（深藍底＋琥珀）。
-   左邊那條虛線是存根聯的撕線——整塊看起來就是一張登機證。
-   ⚠ 8pt 格線：padding 只用 8/12/16。 */
-/* ── 時間軸（出境看板底下）────────────────────────
-   跟看板同一套（深藍底＋琥珀）。一人一條，白線＝今天。
-   ⚠ 每一條是 button：點下去開那一件，跟看板的列一樣。 */
-.vtl{background:var(--fids);border-radius:13px;overflow:hidden;margin-top:12px;
+/* ── 返鄉：一人一列（看板＋時間軸合而為一）────────
+   ⛔ 2026-09-22 之前是兩張卡片各畫一次同一批人。合併之後
+      頁面短一半，而且不會再有兩個數字互相打架。
+   ⚠ 顏色只有三個：綠＝在國外、紅＝逾期、琥珀＝還沒走。
+      每多一種，工廠裡那台手機上的圖例就多一行。 */
+.vb{background:var(--fids);border-radius:13px;overflow:hidden;margin-bottom:12px;
   box-shadow:inset 0 0 0 1px rgba(240,180,41,.18);
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.vtl .bar{display:flex;align-items:center;gap:8px;padding:9px 13px;
+.vb .bar{display:flex;align-items:center;gap:8px;padding:9px 12px;
   background:var(--fids2);border-bottom:1px solid rgba(240,180,41,.2)}
-.vtl .bar b{color:var(--amber);font-size:0.75rem;letter-spacing:.18em}
-.vtl .bar .now{margin-left:auto;color:rgba(255,255,255,.5);font-size:0.6875rem;
+.vb .bar b{color:var(--amber);font-size:0.75rem;letter-spacing:.16em}
+.vb .bar .now{margin-left:auto;color:rgba(255,255,255,.5);font-size:0.6875rem;
   font-variant-numeric:tabular-nums}
+.vb .bar .now .bad{font-style:normal;color:#F2678B;font-weight:700}
 /* 月份刻度：flex 權重＝那個月的天數，格線才對得上條子 */
-.vtax{display:flex;padding:6px 13px 2px;font-size:0.5625rem;letter-spacing:.1em;
+.vtax{display:flex;padding:6px 12px 2px;font-size:0.5625rem;letter-spacing:.1em;
   color:rgba(240,180,41,.55)}
-.vtrow{display:block;width:100%;text-align:left;background:none;border:0;
-  border-top:1px solid rgba(255,255,255,.07);padding:9px 13px;font:inherit;
-  color:#fff;cursor:pointer}
-.vtrow:active{background:rgba(255,255,255,.06)}
-.vth{display:flex;align-items:baseline;gap:7px;margin-bottom:6px}
-.vth b{font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.8125rem;font-weight:600;color:rgba(255,255,255,.9);white-space:nowrap}
-.vth s{flex:1;min-width:0;text-decoration:none;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+.vbempty{padding:22px 12px;text-align:center;font-size:0.8125rem;
+  font-family:-apple-system,"Microsoft JhengHei",sans-serif;color:rgba(255,255,255,.38)}
+
+/* 一列。⚠ 至少 74px——工廠裡站著單手點。 */
+.vrow{display:grid;grid-template-columns:1fr 96px;gap:8px;padding:9px 12px;
+  border-top:1px solid rgba(255,255,255,.07);align-items:center;cursor:pointer}
+.vrow:active{background:rgba(255,255,255,.06)}
+.vrow.on{background:rgba(255,255,255,.045)}
+.vrow .a{min-width:0}
+.vrow .rt{display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;
+  letter-spacing:.05em;color:rgba(255,255,255,.9)}
+.vrow .rt.dim{color:rgba(255,255,255,.34);font-weight:400}
+.vrow .rt i{font-style:normal;color:rgba(255,255,255,.34);font-weight:400;font-size:0.6875rem}
+/* 中文名字走系統字——等寬字排中文會散 */
+.vrow .nm{display:block;margin-top:1px;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.8125rem;font-weight:600;color:#fff;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vrow .co{display:block;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
   font-size:0.625rem;color:rgba(255,255,255,.34);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vth u{text-decoration:none;font-size:0.5625rem;font-weight:700;letter-spacing:.1em;
-  white-space:nowrap}
-/* 底紋的直線＝一週，眼睛才量得出長度 */
-.vtt{position:relative;display:block;height:20px;border-radius:5px;
+.vrow .b{text-align:right}
+.vrow .st{display:block;font-size:0.5625rem;font-weight:700;letter-spacing:.09em}
+/* ⛔ 去程 › 回程一定要兩個都印。只印一個的話「還沒走」跟「已經走了」
+   共用同一格而意思不同——那是最容易看錯的東西。 */
+.vrow .dd{display:block;font-size:0.6875rem;font-weight:700;white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.vrow .dd i{font-style:normal;font-weight:400;color:rgba(255,255,255,.34);margin:0 2px}
+.vrow .sub2{display:block;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.5625rem;color:rgba(255,255,255,.34);white-space:nowrap}
+
+/* 那一條。底紋的直線＝一週，眼睛才量得出長度。 */
+.vrow .trk{position:relative;display:block;height:9px;border-radius:5px;margin-top:6px;
   background:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 100%);
   background-size:calc(100%/9) 100%}
-.vtb{position:absolute;top:2px;bottom:2px;border-radius:4px;display:flex;
-  align-items:center;padding:0 5px;overflow:hidden;white-space:nowrap;
-  font-size:0.5625rem;font-weight:700;letter-spacing:.04em;color:#0b0f14}
-.vtb.none{left:0;right:0;justify-content:center;color:rgba(255,255,255,.34);
-  background:rgba(255,255,255,.05);font-family:-apple-system,"Microsoft JhengHei",sans-serif}
-/* 被時間窗切掉的那一端不做圓角＝「還沒完，繼續往外」。
-   ⛔ 不要為了好看把它補圓——補了就看不出有東西被切掉。 */
-.vtb.cutl{border-top-left-radius:0;border-bottom-left-radius:0}
-.vtb.cutr{border-top-right-radius:0;border-bottom-right-radius:0}
-.vtoff{padding:9px 13px;border-top:1px solid rgba(255,255,255,.07);
+.vrow .bnd{position:absolute;top:1px;bottom:1px;border-radius:3px}
+.vrow .bnd.none{left:0;right:0;background:rgba(255,255,255,.05)}
+/* 被時間窗切掉的那一端不做圓角＝「還沒完」。
+   ⛔ 不要為了好看補圓——補了就看不出有東西被切掉。 */
+.vrow .bnd.cutl{border-top-left-radius:0;border-bottom-left-radius:0}
+.vrow .bnd.cutr{border-top-right-radius:0;border-bottom-right-radius:0}
+/* 今天：整張圖唯一的參考點，要壓在條子上面而且夠亮。 */
+.vrow .tdy{position:absolute;top:-2px;bottom:-2px;width:2px;background:#fff;
+  border-radius:1px;box-shadow:0 0 6px rgba(255,255,255,.85)}
+
+/* ── 就地展開 ──────────────────────────────────── */
+.vexp{padding:2px 12px 12px;background:rgba(255,255,255,.045);
+  border-top:1px solid rgba(255,255,255,.05)}
+/* 階段是唯讀的（後端從日期算），所以不做成按鈕——
+   ⛔ 看起來像按鈕、按了沒反應，比沒有這個東西更糟。 */
+.vstep{display:flex;gap:4px;margin:8px 0 10px}
+.vstep span{flex:1;text-align:center;padding:6px 2px;border-radius:7px;
+  font-family:-apple-system,"Microsoft JhengHei",sans-serif;font-size:0.625rem;
+  border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.04);
+  color:rgba(255,255,255,.34)}
+.vstep span.done{background:rgba(40,208,122,.12);border-color:rgba(40,208,122,.3);
+  color:#28D07A}
+.vstep span.cur{background:var(--amber);border-color:transparent;color:#0b0f14;
+  font-weight:700}
+.vstamp{display:flex;gap:5px;margin-bottom:10px}
+.vstamp span{flex:1;text-align:center;padding:6px 2px;border-radius:7px;
+  font-family:-apple-system,"Microsoft JhengHei",sans-serif;font-size:0.625rem;
+  background:rgba(40,208,122,.12);color:#28D07A;border:1px solid rgba(40,208,122,.28)}
+.vstamp span.no{background:rgba(242,103,139,.1);color:#F2678B;
+  border-color:rgba(242,103,139,.3)}
+.vkv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0 0 10px;
+  font-family:-apple-system,"Microsoft JhengHei",sans-serif;font-size:0.6875rem}
+.vkv dt{color:rgba(255,255,255,.34)}
+.vkv dd{margin:0;color:rgba(255,255,255,.88);font-weight:600}
+.vacts{display:flex;gap:6px;flex-wrap:wrap}
+.vacts button{flex:1;min-width:88px;min-height:44px;border-radius:9px;
+  border:1px solid rgba(240,180,41,.28);background:rgba(255,255,255,.05);color:#fff;
+  font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.6875rem;font-weight:700;cursor:pointer}
+.vacts button:active{background:rgba(255,255,255,.12)}
+/* 結案／開錯了那些留在完整那一頁——少做、而且比較重要，
+   不該跟「改個日期」擺在一起誤觸。 */
+.vacts .full{flex:0 0 100%;border-color:rgba(255,255,255,.12);
+  color:rgba(255,255,255,.55);font-weight:400}
+
+/* 固定時間窗之外的那幾位：畫不出來，但要交代一聲。
+   ⛔ 不要讓他以為只有畫出來的這幾個人。 */
+.vtoff{padding:9px 12px;border-top:1px solid rgba(255,255,255,.07);
   font-family:-apple-system,"Microsoft JhengHei",sans-serif;
   font-size:0.6875rem;line-height:1.5;color:rgba(255,255,255,.42)}
-/* ⛔ 今天這條線要壓在條子上面，而且要夠亮——它是整張圖唯一的參考點。 */
-.vtnow{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;
-  border-radius:1px;box-shadow:0 0 7px rgba(255,255,255,.8)}
-.vtlg{display:flex;flex-wrap:wrap;gap:10px;padding:9px 13px;
+/* 圖例。⚠ 三個顏色就三行，不要再加第四種狀態。 */
+.vtlg{display:flex;flex-wrap:wrap;gap:10px;padding:9px 12px;
   border-top:1px solid rgba(255,255,255,.07);
   font-family:-apple-system,"Microsoft JhengHei",sans-serif;
   font-size:0.625rem;color:rgba(255,255,255,.55)}
 .vtlg i{display:inline-block;width:18px;height:8px;border-radius:2px;
   margin-right:4px;vertical-align:middle}
 .vtlg i.tdy{width:2px;height:11px;background:#fff;border-radius:1px}
+
+/* 底部動作列：發問卷與待處理問卷收成兩顆 */
+.vbact{display:flex;gap:8px;padding:10px 12px;
+  border-top:1px solid rgba(255,255,255,.07)}
+.vbact button{flex:1;min-height:44px;border-radius:9px;border:0;
+  font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.75rem;font-weight:700;cursor:pointer}
+.vbact .pri{background:#06C755;color:#fff}
+.vbact .gate{background:rgba(6,199,85,.16);color:#28D07A;
+  border:1px solid rgba(6,199,85,.45)}
+.vbact button:active{filter:brightness(1.15)}
+
+/* ── 登機證存根：發問卷給工人 ─────────────────────────
+   跟下面的 FIDS 看板同一套配色（深藍底＋琥珀）。
+   左邊那條虛線是存根聯的撕線——整塊看起來就是一張登機證。
+   ⚠ 8pt 格線：padding 只用 8/12/16。 */
 /* ── GATE：工人填好、還沒開成案件的問卷 ─────────────
    跟登機證與看板同一套（深藍＋琥珀）。用綠色當「要動作」的訊號，
    ⚠ 整個返鄉頁只有這裡是綠的——超過一處就沒有提示作用了。 */
@@ -2101,54 +2170,6 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .bpass .epkpop{background:var(--fids2);border-color:rgba(240,180,41,.25)}
 .bpass .epkpop input{background:rgba(255,255,255,.07);color:#fff;
   border-color:rgba(240,180,41,.25)}
-.fids{background:var(--fids);border-radius:13px;overflow:hidden;
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  box-shadow:inset 0 0 0 1px rgba(240,180,41,.18);margin-bottom:12px}
-.fids .bar{display:flex;align-items:center;gap:8px;padding:9px 13px;
-  background:var(--fids2);border-bottom:1px solid rgba(240,180,41,.2)}
-.fids .bar b{color:var(--amber);font-size:0.75rem;letter-spacing:.18em}
-.fids .bar .now{margin-left:auto;color:rgba(255,255,255,.5);font-size:0.6875rem;
-  font-variant-numeric:tabular-nums}
-.fhdr{display:grid;grid-template-columns:50px 1fr 88px;gap:8px;padding:7px 13px 5px;
-  font-size:0.5625rem;letter-spacing:.14em;color:rgba(240,180,41,.55)}
-/* 一列至少 58px——工廠裡站著單手點。 */
-.vrow{display:grid;grid-template-columns:50px 1fr 88px;gap:8px;padding:10px 13px;
-  align-items:center;border-top:1px solid rgba(255,255,255,.07);color:#fff;
-  width:100%;text-align:left;background:none;border-left:0;border-right:0;
-  border-bottom:0;font:inherit;min-height:58px}
-.vrow:active{background:rgba(255,255,255,.06)}
-.vrow .d{font-size:0.9375rem;font-weight:700;color:var(--amber);
-  font-variant-numeric:tabular-nums;line-height:1.15;
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.vrow .d s{display:block;text-decoration:none;font-size:0.5625rem;
-  color:rgba(240,180,41,.55);letter-spacing:.1em}
-.vrow .m{min-width:0}
-.vrow .m .rt{display:flex;align-items:center;gap:6px;font-size:0.8125rem;font-weight:700;
-  letter-spacing:.06em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.vrow .m .rt i{font-style:normal;color:rgba(255,255,255,.35);font-size:0.75rem}
-/* 中文名字走系統字——等寬字排中文會散。 */
-.vrow .m .nm{font-family:inherit;font-size:0.8125rem;color:rgba(255,255,255,.82);
-  margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
-.vrow .m .co{font-family:inherit;font-size:0.625rem;color:rgba(255,255,255,.4);
-  display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vrow .s{text-align:right;font-size:0.625rem;font-weight:700;letter-spacing:.06em;
-  line-height:1.35;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  white-space:nowrap}
-/* ⛔ 三行各自不換行。整句塞進 88px 會被擠成三行還斷字。 */
-.vrow .s em{font-style:normal;display:block;font-family:inherit;font-size:0.625rem;
-  color:rgba(255,255,255,.55);letter-spacing:0;margin-top:1px;white-space:nowrap}
-.vrow .s u{display:block;text-decoration:none;font-size:0.5625rem;
-  color:rgba(255,255,255,.4);letter-spacing:0;margin-top:1px;white-space:nowrap;
-  font-variant-numeric:tabular-nums}
-.vrow .s.red u{color:var(--fred)}
-.vrow .s.amber{color:var(--amber)}
-.vrow .s.green{color:var(--fgreen)}
-.vrow .s.red{color:var(--fred)}
-.ffoot{padding:9px 13px;border-top:1px solid rgba(255,255,255,.07);
-  font-size:0.625rem;color:rgba(255,255,255,.4);display:flex;
-  justify-content:space-between;
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-
 /* 登機證的撕線打孔與條碼。
    ⚠ 打孔那兩顆圓要跟卡片外面的底色一樣，不然會看到兩個色塊。 */
 .bp .code{padding:0 14px 12px}
