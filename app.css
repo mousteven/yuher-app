@@ -767,6 +767,9 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .pdfbox .lks{display:flex;gap:15px;margin-top:7px;flex-wrap:wrap;align-items:baseline}
 .pdfbox .lks a{color:var(--brand2);font-size:var(--t2);font-weight:700;
   text-decoration:underline;cursor:pointer}
+/* 複製連結沒有 href（是用 JS 複製的），要自己補上可點的樣子。
+   ⚠ .pdfbox .lks a 已經給了顏色與底線，這裡只補它缺的。 */
+.pdfbox .lks a.cp{cursor:pointer}
 /* 重新產生是例外動作：PDF 產好了正常就是拿去用。
    跟「開啟」「分享」一樣大等於在鼓勵多按一次，而每按一次雲端硬碟就多一個檔。 */
 .pdfbox .lks a.re{margin-left:auto;color:var(--ink3);font-weight:600;font-size:var(--t4);
@@ -942,6 +945,8 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .sheet .boss .k{font-size:var(--t6);font-weight:700;letter-spacing:.26em;color:#5A6A70;
   margin-bottom:4px}
 .sheet .boss .o div{margin-top:2px}
+/* 主管批示的方框。⚠ 這張是要列印的 A4，所以寫死深色，不跟主題。 */
+.sheet .boss .bx{display:inline-block;width:1em;margin-right:5px;color:#111}
 .sheet .boss .seal{white-space:nowrap;color:#5A6A70;font-size:var(--t6);letter-spacing:.2em}
 .sheet .boss .seal u{display:inline-block;width:104px;border-bottom:1px solid #111;
   text-decoration:none;margin-left:6px}
@@ -2471,6 +2476,16 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   font-weight:700;font-family:inherit}
 .hcmsg pre{margin:0;padding:11px;font-size:var(--t3);line-height:1.7;
   white-space:pre-wrap;word-break:break-all;font-family:inherit;color:var(--ink)}
+/* ⛔ .gm 本來**完全沒有樣式**。它是「一則貼群組」那一則，
+   程式的註解寫著「放在最上面而且是預設要貼的那一則」，
+   可是畫面上它跟下面的備援長得一模一樣——
+   標成主要的卻沒有任何主要的樣子，等於沒標。 */
+.hcmsg.gm{border-color:var(--fill)}
+.hcmsg.gm .h{background:var(--accent-soft);color:var(--brand)}
+/* 那一行補充（「一條連結，各自認自己」）本來是行內樣式，
+   而且寫死 0.75rem——字級只有 --t0…--t6 那一把尺。 */
+.hcmsg .h .sub{font-style:normal;font-weight:400;color:var(--ink2);
+  font-size:var(--t4);margin-left:6px}
 
 /* 車次 */
 .hccar{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;
@@ -2502,9 +2517,26 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .hcrow .c span{display:block;font-size:var(--t5);color:var(--ink2)}
 .hcrow .flag{display:block;font-style:normal;font-size:var(--t5);
   color:var(--bad-ink);font-weight:600}
-.hcrow .rcp{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
-  padding:3px 9px;font-size:var(--t5);color:var(--brand);font-weight:700;
-  font-family:inherit;flex:none}
+/* 列上的動作鈕。⚠ 44px 是工廠裡站著單手點的最低標，
+   原本 padding:3px 只有 22px 高。 */
+.hcrow .rcp{display:inline-flex;align-items:center;justify-content:center;
+  min-height:2.25rem;padding:0 11px;border:1px solid var(--line);
+  background:var(--card);border-radius:var(--r1);
+  font-size:var(--t5);color:var(--brand);font-weight:700;
+  font-family:inherit;flex:none;cursor:pointer;
+  text-decoration:none;white-space:nowrap}
+/* 打電話是這一列的主要動作——「要打電話」就是待辦條上那句話。
+   ⛔ 它是 <a href="tel:">（OS 才會跳撥號），所以 text-decoration 要自己關掉，
+      不然會是瀏覽器預設的藍色底線——整個 App 沒有別的地方長那樣。 */
+.hcrow .rcp.go{background:var(--accent-soft);border-color:transparent;
+  color:var(--brand)}
+.hcrow .rcp:active{background:var(--line2)}
+/* 名冊上沒有電話。⛔ 這不是動作，是問題，所以印在電話號碼該在的位置。
+   原本它是 <i class="hcnop"> 而 .hcnop 沒有樣式＝瀏覽器預設的斜體。 */
+.hcrow .c span.nop{color:var(--bad-ink);font-weight:600}
+/* 已經打過了。跟著那一列走，縮排對齊名字。 */
+.hcdone{font-size:var(--t5);color:var(--ink3);padding:0 0 8px 1px;
+  margin-top:-4px}
 .hcrow .st{font-size:var(--t6);font-weight:800;border-radius:var(--r2);padding:1px 8px;
   flex:none}
 .hcrow .st.g{background:var(--ok-bg);color:var(--ok-ink)}

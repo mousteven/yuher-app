@@ -7241,8 +7241,7 @@ function hcShowMsgs(caseId, which){
     var gh = '';
     if(g){
       gh = '<div class="hcmsg gm"><p class="h">一則貼群組　' + g.n + ' 位' +
-        '<em style="font-style:normal;font-weight:400;color:var(--ink2);' +
-        'font-size:0.75rem;margin-left:6px">一條連結，各自認自己</em>' +
+        '<em class="sub">一條連結，各自認自己</em>' +
         hcLineBtn(g.text) +
         '<button type="button" id="hcCopyG">複製</button></p>' +
         '<pre>' + esc(g.text) + '</pre></div>' +
@@ -7583,15 +7582,25 @@ function hcBoxHtml(v){
     /* ⛔ 「看過沒按」跟「沒讀」要分開，因為要打的電話不一樣：
        看過沒按 → 他知道有這件事，可能只是嫌麻煩
        沒讀 → 他可能根本沒收到，或名冊上的手機是舊的 ← 更急 */
-    var call = '';
+    /* ⛔ 2026-09-23：這三段本來是 .hccall／.hcnop／.hcdone，
+       **而那三個類別在 app.css 裡一行樣式都沒有**——
+       所以瀏覽器給了預設值：<a> 是藍色底線、<i> 是斜體。
+       整個 App 沒有別的地方是斜體或藍底線，所以這一塊看起來像外來的。
+
+       ⛔ 而且「打」原本畫在名字**上面**。這一列的主角是人，
+          動作應該在最右邊——跟「去處理」「去填」同一個位置。
+       ⚠ 還是要維持 <a href="tel:">，OS 才會跳撥號；只是外觀做成按鈕。 */
+    var call = '', noPhone = false;
     if(!p.ack && !p.inAt){
-      call = p.phone
-        ? ('<a class="hccall" href="tel:' + esc(p.phone) + '" ' +
-           'data-call="' + esc(p.name) + '">📞 打</a>')
-        : '<i class="hcnop">名冊沒電話</i>';
+      if(p.phone){
+        call = '<a class="rcp go" href="tel:' + esc(p.phone) + '" ' +
+               'data-call="' + esc(p.name) + '">打電話</a>';
+      } else {
+        noPhone = true;   /* 不是動作，是問題——印在電話號碼該在的位置 */
+      }
     }
     var called = p.called
-      ? ('<i class="hcdone">✓ ' + esc(p.called) + '</i>') : '';
+      ? ('<div class="hcdone">已打過　' + esc(p.called) + '</div>') : '';
 
     var warn = '';
     if(p.miss > 0){
@@ -7599,16 +7608,22 @@ function hcBoxHtml(v){
         (p.dob ? ('　系統存的是 ' + esc(p.dob)) : '') +
         (p.flagged ? '　可能不是本人' : '') + '</i>';
     }
-    return '<div class="hcrow"><div class="c">' + call + '<b>' + esc(p.name) +
-      warn + '</b>' +
-      '<span>' + (p.car ? ('第 ' + esc(p.car) + ' 車　') : '') +
+    /* 一列的順序固定：人 → 次要動作 → 狀態 → 主要動作（最右邊）。
+       四個頁籤的列都是這個骨架，換頁籤不用重新學。 */
+    return '<div class="hcrow"><div class="c">' +
+      '<b>' + esc(p.name) + warn + '</b>' +
+      '<span' + (noPhone ? ' class="nop"' : '') + '>' +
+        (p.car ? ('第 ' + esc(p.car) + ' 車　') : '') +
         (p.inAt ? hcSrc_(p) : '') +
-        (p.phone ? esc(p.phone) : (p.ack ? '沒留電話' : '')) + '</span></div>' +
+        (noPhone ? '名冊沒電話'
+                 : (p.phone ? esc(p.phone) : (p.ack ? '沒留電話' : ''))) +
+      '</span></div>' +
       (p.miss > 0 ? '<button type="button" class="rcp" data-fix="' +
         esc(p.name) + '">清生日</button>' : '') +
       (p.receipt ? '<button type="button" class="rcp" data-r="' + esc(p.name) +
         '">收據</button>' : '') +
-      '<span class="st ' + st + '">' + txt + '</span></div>' + called +
+      '<span class="st ' + st + '">' + txt + '</span>' +
+      call + '</div>' + called +
       /* 他自己填了、而且跟名冊那支不一樣。
          ⛔ 不可以自動覆蓋名冊——手滑打錯一碼、或群組裡有人亂填，
             你會失去一個原本正確的聯絡方式，那比沒收到通知更難救。
