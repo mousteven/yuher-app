@@ -2266,7 +2266,11 @@ $('calNext').addEventListener('click', function(){ calStep(1); });
 $('calToday').addEventListener('click', function(){
   CAL_SEL = todayStr(); CAL_YM = CAL_SEL.slice(0,7); loadCal();
 });
+/* ⛔ 亮起來的那一顆以 CAL_VIEW 為準，不要靠 Service.html 裡寫死的 class="on"。
+   版面在 GitHub Pages、Service.html 在 Apps Script，兩邊各自推——
+   只推一半的話會變成「畫的是日、亮的是月」。唯一事實來源是 CAL_VIEW。 */
 [].forEach.call($('calViews').querySelectorAll('button'), function(b){
+  b.className = (b.dataset.v === CAL_VIEW) ? 'on' : '';
   b.addEventListener('click', function(){
     CAL_VIEW = b.dataset.v;
     [].forEach.call($('calViews').querySelectorAll('button'), function(x){
