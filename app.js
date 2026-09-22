@@ -2851,20 +2851,35 @@ function obSend(job, ok, bad){
 /* 把手機裡還沒送出去的都送一遍。
    ⚠ 一次只送一筆。工廠的訊號本來就不好，同時送三筆只會三筆一起失敗，
      而且簽名圖都很大。 */
+/* ⛔ 補送成功要講出來。2026-09-22 的檢視發現：成功的時候
+   「待上傳 N 筆」那條列只是 display:none 消失，什麼都不說——
+   **他無法分辨「送成功了」跟「資料不見了」**，而這兩件事的後果差很多。
+   ⚠ 只在整批送完的時候講一次，不要每送一筆跳一次。 */
+var OB_SENT_ = 0;
 function obFlush(){
   if(OB_BUSY_ || !CODE) return;
   OB.all().then(function(list){
     var pend = list.filter(function(j){ return !j.stopped; });
-    if(!pend.length){ obPaint(); return; }
+    if(!pend.length){
+      if(OB_SENT_){
+        toast('補送完成　' + OB_SENT_ + ' 筆已經送出去了');
+        OB_SENT_ = 0;
+      }
+      obPaint(); return;
+    }
     OB_BUSY_ = true;
     var j = pend[0];
     obSend(j, function(){
       OB_BUSY_ = false;
+      OB_SENT_++;
       calBust(); revBust();
       obPaint();
       obFlush();                      // 還有就接著送
     }, function(){
       OB_BUSY_ = false;               // 失敗就停在這裡，等下一次觸發
+      /* ⚠ 停下來就把計數歸零。不歸零的話，下次成功會報
+         「補送完成 8 筆」——那個 8 是跨了好幾次嘗試累積的，是錯的。 */
+      OB_SENT_ = 0;
       obPaint();
     });
   }).catch(function(){ OB_BUSY_ = false; });
@@ -4743,9 +4758,11 @@ function tkMatch(c, k){
 function loadTrack(force){
   if(!$('tkKinds')) return;      // 舊版面沒有這一頁，安靜略過
   drawKinds();
-  /* 體檢的兩條提醒（快到期的人、接送資訊沒填的件）。
-     獨立打，不要塞進 listCases——那支現在就要 2 秒多了。 */
-  if(typeof hcNudge === 'function') hcNudge();
+  /* 四種案件共用的那一條提醒。獨立打，不要塞進 listCases——
+     那支現在就要 2 秒多了。
+     ⛔ 2026-09-22 之前這裡是 hcNudge（只講體檢，卻四個頁籤都出現），
+        而體檢頁另外還有一條 hcTodoBar 講重疊的事。合成一條了。 */
+  if(typeof tkTodo === 'function') tkTodo();
   /* 手上有這一種的快取就直接畫，不要閃「載入中」。 */
   var hit = TK_CACHE[TK_CUR];
   if(!force && hit){
@@ -6813,6 +6830,11 @@ var HC_PK_ = {
     hcLoadWho();
   }
 };
+/* 從待辦條「去開單」跳過來時，那一家先填好，他只要按「產生通知」。 */
+function hcPickClient_(c){
+  if(!c || !$('hcPkVal')) return;
+  HC_PK_.onPick(c);
+}
 function hcPkClear(){
   $('hcClient').value = '';
   $('hcPkVal').textContent = '請選擇…';
@@ -7577,123 +7599,6 @@ function hcReceipt(caseId, name){
 var HC_NUDGE_SEQ_ = 0;
 var HC_NUDGE_ = null;          // 上一次算好的內容，展開時重畫用
 
-function hcNudge(){
-  var box = $('hcNudge');
-  if(!box){
-    box = document.createElement('div');
-    box.id = 'hcNudge';
-    $('tkBody').parentNode.insertBefore(box, $('tkBody'));
-  }
-  var seq = ++HC_NUDGE_SEQ_;
-  var got = { car: null, due: null, ack: null };
-
-  function paint(){
-    if(seq !== HC_NUDGE_SEQ_) return;
-    if(got.car === null || got.due === null || got.ack === null) return;
-    /* 順序有意思：還沒確認的排最前面。
-       接送沒填是「我還沒做」，還沒確認是「我要去追別人」——
-       後者要花的時間長得多，所以要先看到。 */
-    HC_NUDGE_ = got.ack.concat(got.car, got.due);
-    hcDrawNudge();
-  }
-  function fail(k){ return function(){ got[k] = []; paint(); }; }
-
-  google.script.run.withSuccessHandler(function(r){
-    var l = (r && r.list) || [];
-    got.car = !l.length ? [] : [{
-      bad: !!l[0].late,
-      t: '接送資訊還沒填　' + l.length + ' 件',
-      s: l.slice(0, 3).map(function(x){
-        return esc(x.client) + ' ' + esc(x.date) + '（剩 ' + x.days + ' 天）';
-      }).join('　·　') }];
-    paint();
-  }).withFailureHandler(fail('car')).hcCarTodo(CODE);
-
-  /* ⛔ 這一條才是確認率真正的來源。
-     再怎麼改按鈕文案，總有人不按——舉證的完整性不能靠工人的自覺。
-     翻譯打的那一通電話本身也是證據。 */
-  google.script.run.withSuccessHandler(function(r){
-    var l = (r && r.list) || [];
-    var ppl = l.reduce(function(n, x){ return n + x.list.length; }, 0);
-    got.ack = !ppl ? [] : [{
-      bad: l.some(function(x){ return x.days <= 1; }),
-      t: ppl + ' 位還沒確認　要打電話',
-      s: l.slice(0, 3).map(function(x){
-        return esc(x.client) + ' 剩 ' + x.days + ' 天（' +
-               x.list.map(function(p){ return esc(p.name); }).join('、') + '）';
-      }).join('　·　') }];
-    paint();
-  }).withFailureHandler(fail('ack')).hcAckTodo(CODE);
-
-  google.script.run.withSuccessHandler(function(r){
-    var all = (r && r.list) || [];
-    var l = all.filter(function(x){ return !x.noBase; });
-    var nb = all.filter(function(x){ return x.noBase; });
-    var out = [];
-    if(l.length){
-      var late = l.filter(function(x){ return x.late; }).length;
-      out.push({ bad: !!late,
-        t: '體檢快到期　' + l.length + ' 人' +
-           (late ? ('（已逾期 ' + late + ' 人）') : ''),
-        s: l.slice(0, 3).map(function(x){
-             return esc(x.name) + '（' + esc(x.client) + '　' +
-               (x.late ? ('逾期 ' + (-x.days) + ' 天')
-                       : ('剩 ' + x.days + ' 天')) + '）';
-           }).join('　·　') + '　到「填寫 → 體檢通知」開單' });
-    }
-    /* 起算日之前的期別系統沒有紀錄。講出來，不要假裝全部都掌握了。
-       ⛔ 不要報「1365 期」——那是人數 × 三個期別加起來的數字，
-          畫面上沒有人看得懂。要報就報幾個人。 */
-    /* ⛔ 2026-09-21：舊的「N 人的舊期別系統沒有紀錄」整條拿掉。
-       那是在沒有真實體檢日的時候的權宜做法。管理系統匯出的名冊
-       直接帶了實際體檢日（完整度 95%+），不用再叫人自己確認。
-
-       ⚠ 換成「真的漏掉的」——應辦期間整個過完、來源又沒有紀錄。
-         以前這種被當成「不知道」吞掉，現在它是真的漏件，要浮上來。
-         但它不是「去開單」，是「先查清楚他到底做了沒」。 */
-    if(r && r.missed && r.missed.length){
-      out.push({ bad: 1, t: r.missed.length + ' 人的體檢期間已經過完了',
-        s: r.missed.slice(0, 3).map(function(x){
-             return esc(x.name) + '（' + esc(x.client) + '　' + esc(x.term) +
-                    '　應辦到 ' + esc(x.to) + '）';
-           }).join('　·　') + '　先查清楚做了沒，不要直接再帶一次' });
-    }
-    /* 算不出到期日的人要講出來，不要靜靜地漏掉。
-       這是名冊缺資料，不是沒有人到期。 */
-    if(nb.length){
-      out.push({ bad: 0, t: nb.length + ' 人算不出體檢到期日',
-        s: '名冊上沒有許可生效日：' +
-           nb.slice(0, 4).map(function(x){ return esc(x.name); }).join('、') +
-           (nb.length > 4 ? ' 等' : '') +
-           '　·　名冊是從管理系統匯入的，要改請改那邊再重匯' });
-    }
-    got.due = out; paint();
-  }).withFailureHandler(fail('due')).hcDueSoon(CODE, 30);
-}
-
-function hcDrawNudge(){
-  var box = $('hcNudge');
-  if(!box) return;
-  var n = (HC_NUDGE_ || []).length;
-  if(!n){ box.innerHTML = ''; return; }
-  var bad = HC_NUDGE_.some(function(x){ return x.bad; });
-  if(!HC_ALERT_OPEN_){
-    box.innerHTML = '<div class="hcal' + (bad ? ' r' : ' w') +
-      '" id="hcAlertBar"><b>' + n + ' 件要注意</b>' +
-      '<span class="more">看看是什麼 ⌄</span></div>';
-  } else {
-    box.innerHTML = '<div class="hcal' + (bad ? ' r' : ' w') +
-      '" id="hcAlertBar"><b>' + n + ' 件要注意</b>' +
-      '<span class="more">收起來 ⌃</span></div>' +
-      HC_NUDGE_.map(function(x){
-        return '<div class="hcal' + (x.bad ? ' r' : '') + '"><b>' +
-          esc(x.t) + '</b><span>' + x.s + '</span></div>';
-      }).join('');
-  }
-  $('hcAlertBar').addEventListener('click', function(){
-    HC_ALERT_OPEN_ = !HC_ALERT_OPEN_; hcDrawNudge();
-  });
-}
 
 /* ── 設定 ───────────────────────────────────────────── */
 
@@ -7859,29 +7764,213 @@ var HCV_ = {};        // 展開過的就記著，收合再打開不用重抓
 /* 待辦條：把每一批的 hcTodo_ 攤平成一條一件。
    ⛔ 沒有待辦就整條不出現。永遠掛一塊「目前沒有待辦」在那裡，
       兩個禮拜後他就不會再看它了——跟返鄉的 GATE 同一個規矩。 */
-function hcTodoBar(rows){
-  var todos = [];
-  rows.forEach(function(c){
-    var t = hcTodo_(c);
-    if(t) todos.push({ c: c, t: t });
+/* ── 一條提醒，四種案件共用（2026-09-22 設計檢視第 2、3、4 項）──
+
+   ⛔ 在這之前有**兩條**提醒列在講重疊的事：
+      舊的 hcNudge（收合式、掛在 #tkBody 外面，所以四個頁籤都看得到，
+      你在看返鄉它在講體檢的接送車）＋ 我 9/22 新加的 hcTodoBar。
+      兩條文案不同、排序不同、收合狀態不同。**那是我造成的。**
+
+   ⛔ 而且四個頁籤裡**只有體檢有催辦**。返鄉逾期 41 天未回，
+      畫面上只有一行紅字——它應該來找你，不是等你去找它。
+
+   ⛔ 舊的提醒用**文字**指路：「到『填寫 → 體檢通知』開單」。
+      但體檢開單 9/22 已經搬到追蹤頁籤了，那句話沒跟著搬。
+      **文案會過期，按鈕不會**——所以每一條現在都是按鈕。
+
+   ⚠ 沒有待辦就整條不出現。永遠掛一塊「目前沒有待辦」在那裡，
+     兩個禮拜後就沒有人看它了。 */
+
+var TKTODO_ = [];
+var TKTODO_SEQ_ = 0;
+
+/* 從已經載到的案件算出來的待辦（不用再打後端）。
+   ⚠ 只算「現在這一種」——別種的資料還沒載，算出來會是錯的。 */
+function tkTodoLocal_(){
+  var out = [], today = todayStr();
+  (TK_ROWS || []).forEach(function(c){
+    if(c.status !== '進行中') return;
+    var d = c.detail || {};
+    if(c.kind === '返鄉休假'){
+      /* ⛔ 逾期未回是這個業務最嚴重的事之一。
+         本來只有那一列變紅，而你要先打開返鄉頁籤才看得到。 */
+      if(d.back && d.back < today){
+        var late = vtDay_(vtParse_(d.back), vtParse_(today));
+        out.push({ k: c.kind, id: c.id, bad: late > 3,
+          t: (c.workers || c.client) + '　回台日過了 ' + late + ' 天還沒結案',
+          s: c.client + '　回台 ' + d.back });
+      } else if(!d.out && !c.nextDate){
+        out.push({ k: c.kind, id: c.id, bad: 0,
+          t: (c.workers || c.client) + '　還沒排日期',
+          s: c.client + '　開案 ' + (c.openedAt || '') });
+      }
+    } else if(c.kind === '異常事件' || c.kind === '就醫追蹤'){
+      /* 排了下一次卻過期，代表那一天沒有人去做。 */
+      if(c.nextDate && c.nextDate < today){
+        out.push({ k: c.kind, id: c.id, bad: 1,
+          t: (c.workers || c.client) + '　' + c.nextDate + ' 那一次沒有紀錄',
+          s: c.client + '　' + (c.nextNote || c.kind) });
+      } else if(!c.nextDate && !c.recCount){
+        out.push({ k: c.kind, id: c.id, bad: 0,
+          t: (c.workers || c.client) + '　開了案但還沒有任何紀錄',
+          s: c.client + '　開案 ' + (c.openedAt || '') });
+      }
+    }
   });
-  if(!todos.length) return '';
-  return '<div class="htb">' +
-    '<div class="bar"><b>要你處理</b><span class="now">' +
-      todos.length + ' 件</span></div>' +
-    todos.map(function(x){
-      var day = hcDay_(x.c.nextDate);
-      return '<div class="htr" data-hc="' + esc(x.c.id) + '">' +
-        '<i class="dot' + (x.t.bad ? ' r' : '') + '"></i>' +
-        '<span class="tx"><b>' + esc(x.t.t) + '</b>' +
-          '<s>' + esc(x.c.client || '') +
-            (day ? ('　·　' + esc(day.d) + '　剩 ' + day.days + ' 天') : '') +
-          '</s></span>' +
-        '<span class="go">去處理</span>' +
-      '</div>';
+  return out;
+}
+
+function tkTodo(){
+  var box = $('tkTodo');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'tkTodo';
+    $('tkBody').parentNode.insertBefore(box, $('tkBody'));
+  }
+  var seq = ++TKTODO_SEQ_;
+  var got = { car: null, ack: null, due: null };
+
+  function paint(){
+    if(seq !== TKTODO_SEQ_) return;
+    if(got.car === null || got.ack === null || got.due === null) return;
+    /* ⛔ 排序＝「要花多少時間才追得完」，不是嚴重度。
+       「還沒確認」要打電話給好幾個人，最花時間，所以排最前面。
+       「還沒開單」是自己按幾下就好。 */
+    TKTODO_ = got.ack.concat(got.due, got.car, tkTodoLocal_());
+    tkDrawTodo();
+  }
+  function fail(k){ return function(){ got[k] = []; paint(); }; }
+
+  /* 還沒確認的人——通知發了但沒人按。 */
+  google.script.run.withSuccessHandler(function(r){
+    var l = (r && r.list) || [];
+    got.ack = l.map(function(x){
+      return { k: '體檢通知', id: x.caseId || x.id, bad: x.days <= 1,
+        t: x.client + '　' + x.list.length + ' 位還沒確認，要打電話',
+        s: '剩 ' + x.days + ' 天　' +
+           x.list.map(function(p){ return p.name; }).join('、') };
+    });
+    paint();
+  }).withFailureHandler(fail('ack')).hcAckTodo(CODE);
+
+  /* 接送資訊還沒填。 */
+  google.script.run.withSuccessHandler(function(r){
+    var l = (r && r.list) || [];
+    got.car = l.map(function(x){
+      return { k: '體檢通知', id: x.caseId || x.id, bad: !!x.late,
+        t: x.client + '　接送資訊還沒填',
+        s: x.date + '　剩 ' + x.days + ' 天' };
+    });
+    paint();
+  }).withFailureHandler(fail('car')).hcCarTodo(CODE);
+
+  /* ⛔ 這一條是第 2 項：「誰該開體檢單」。
+     資料一直都算得出來（hcDueSoon），但以前只出現在
+     **開單畫面的選擇器裡**——你得先決定要開單，才看得到誰該開單。
+     這是整個 App 唯一會產生罰鍰的環，所以要放到最外面。 */
+  google.script.run.withSuccessHandler(function(r){
+    var all = (r && r.list) || [];
+    var l = all.filter(function(x){ return !x.noBase; });
+    var nb = all.filter(function(x){ return x.noBase; });
+    var out = [];
+    if(l.length){
+      var late = l.filter(function(x){ return x.late; }).length;
+      /* 同一家工廠的人合成一條——他是一家一家開單的，不是一個一個。 */
+      var byC = {}, order = [];
+      l.forEach(function(x){
+        if(!byC[x.client]){ byC[x.client] = []; order.push(x.client); }
+        byC[x.client].push(x);
+      });
+      order.forEach(function(cl){
+        var g = byC[cl], lt = g.filter(function(x){ return x.late; }).length;
+        out.push({ k: '體檢通知', go: 'hcnew', client: cl, bad: !!lt,
+          t: cl + '　' + g.length + ' 人體檢到期還沒開單' +
+             (lt ? ('（逾期 ' + lt + ' 人）') : ''),
+          s: g.slice(0, 3).map(function(x){
+               return x.name + (x.late ? ('　逾期 ' + (-x.days) + ' 天')
+                                       : ('　剩 ' + x.days + ' 天'));
+             }).join('　·　') });
+      });
+    }
+    /* 算不出到期日的人要講出來，不要靜靜地漏掉。
+       這是名冊缺資料，不是沒有人到期。 */
+    if(nb.length){
+      out.push({ k: '體檢通知', bad: 0,
+        t: nb.length + ' 人算不出體檢到期日',
+        s: '名冊上沒有許可生效日：' +
+           nb.slice(0, 4).map(function(x){ return x.name; }).join('、') +
+           (nb.length > 4 ? ' 等' : '') + '　·　要改請改管理系統再重匯' });
+    }
+    got.due = out; paint();
+  }).withFailureHandler(fail('due')).hcDueSoon(CODE, 30);
+}
+
+function tkDrawTodo(){
+  var box = $('tkTodo');
+  if(!box) return;
+  var n = (TKTODO_ || []).length;
+  if(!n){ box.innerHTML = ''; return; }
+  var bad = TKTODO_.some(function(x){ return x.bad; });
+  /* 超過四條就收起來。全部攤開的話，畫面上再也看不到案件本身。 */
+  var show = TKTODO_OPEN_ ? TKTODO_ : TKTODO_.slice(0, 4);
+  var more = n - show.length;
+
+  box.innerHTML = '<div class="tktd' + (bad ? ' bad' : '') + '">' +
+    '<div class="bar"><b>要你處理</b>' +
+      '<span class="now">' + n + ' 件' +
+        (more > 0 ? '　<em class="mo">看全部</em>' :
+         (TKTODO_OPEN_ && n > 4 ? '　<em class="mo">收起來</em>' : '')) +
+      '</span></div>' +
+    show.map(function(x, i){
+      return '<button type="button" class="tktr" data-i="' + i + '">' +
+        '<i class="dot' + (x.bad ? ' r' : '') + '"></i>' +
+        '<span class="tx"><b>' + esc(x.t) + '</b>' +
+          '<s>' + esc(TK_SHORT[x.k] || x.k) + '　' + esc(x.s) + '</s></span>' +
+        '<span class="go">' + (x.go === 'hcnew' ? '去開單' : '去處理') + '</span>' +
+      '</button>';
     }).join('') +
   '</div>';
+
+  var mo = box.querySelector('.mo');
+  if(mo) mo.addEventListener('click', function(ev){
+    ev.stopPropagation(); TKTODO_OPEN_ = !TKTODO_OPEN_; tkDrawTodo();
+  });
+  [].forEach.call(box.querySelectorAll('.tktr'), function(b){
+    b.addEventListener('click', function(){ tkTodoGo_(show[+b.dataset.i]); });
+  });
 }
+var TKTODO_OPEN_ = false;
+
+/* ⛔ 按鈕直接帶過去，不要用文字指路。
+   2026-09-22 之前那句「到『填寫 → 體檢通知』開單」在功能搬家之後
+   就指到空的地方了——**文案會過期，按鈕不會**。 */
+function tkTodoGo_(x){
+  if(!x) return;
+  var goNew = (x.go === 'hcnew');
+  var need = x.k;
+  function arrive(){
+    if(goNew){
+      hcMode(true);
+      /* 那一家先填好，他只要按「產生通知」。 */
+      if(x.client && typeof hcPickClient_ === 'function') hcPickClient_(x.client);
+    } else if(x.id){
+      if(need === '返鄉休假') VACX_ = x.id;
+      if(need === '體檢通知') HCX_ = x.id;
+      drawCases();
+      var el = $('tkBody').querySelector('[data-vac="' + x.id + '"],[data-hc="' + x.id + '"]');
+      if(el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      else openCase(x.id);      /* 異常與就醫還沒有就地展開，開整頁 */
+    }
+  }
+  if(TK_CUR === need){ arrive(); return; }
+  TK_CUR = need; TK_ST = '';
+  hcMode(false);
+  drawKinds();
+  loadTrack();
+  /* loadTrack 有快取就同步畫完，沒有的話要等。兩種都要能到。 */
+  setTimeout(arrive, TK_CACHE[need] ? 60 : 900);
+}
+
 
 /* 一列一批。⚠ 至少 78px——工廠裡站著單手點。 */
 function hcRow(c){
@@ -8038,8 +8127,7 @@ function hcList(rows){
     return s + (c.status === '進行中' ? Math.max(0, (h.n || 0) - (h.ack || 0)) : 0);
   }, 0);
 
-  return hcTodoBar(hit) +
-    '<div class="hb">' +
+  return     '<div class="hb">' +
       '<div class="bar"><b>體檢</b><span class="now">' +
         hit.length + ' 批 · ' + ppl + ' 人' +
         (noAck ? ('　<em>' + noAck + ' 人沒確認</em>') : '') +

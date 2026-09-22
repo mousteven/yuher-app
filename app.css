@@ -195,29 +195,38 @@
 .vbact .pri{background:var(--brand);border-color:transparent;color:#fff}
 .vbact .gate{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
 .vbact button:active{filter:brightness(.96)}
-
-/* ── 待辦條：唯一會用滿版狀態底色的東西 ───────────
-   ⛔ 沒有待辦就整條不出現。永遠掛一塊「目前沒有待辦」在那裡，
-      兩個禮拜後就沒有人看它了。 */
-.htb,.vgate{border-radius:12px;overflow:hidden;margin-bottom:12px}
-.htb{background:var(--bad-bg);border:1px solid var(--bad-line)}
 .vgate{background:var(--ok-bg);border:1px solid var(--ok-line)}
-.htb .bar,.vgate .vg1{display:flex;align-items:baseline;gap:8px;padding:9px 12px;
-  background:none;border:0}
-.htb .bar b{color:var(--bad-ink);font-size:var(--t3);letter-spacing:.12em}
 .vgate .vg1 b{color:var(--ok-ink);font-size:var(--t3);letter-spacing:.12em}
-.htb .bar .now,.vgate .vg1 span{margin-left:auto;color:var(--ink2);font-size:var(--t4)}
-.htr{display:flex;align-items:center;gap:9px;padding:10px 12px;
-  border-top:1px solid var(--bad-line);background:var(--card);cursor:pointer}
-.htr:active{background:var(--sunk)}
-.htr .dot{flex:0 0 7px;height:7px;border-radius:50%;background:var(--warn-bar)}
-.htr .dot.r{background:var(--bad-bar)}
-.htr .tx{flex:1;min-width:0}
-.htr .tx b{display:block;font-size:var(--t3);font-weight:600;color:var(--ink);
+
+/* ── 要你處理：四種案件共用的那一條 ──────────────────
+   ⛔ 2026-09-22 之前有兩條（hcNudge ＋ hcTodoBar）講重疊的事，
+      而且 hcNudge 掛在 #tkBody 外面，四個頁籤都看得到——
+      你在看返鄉，它在講體檢的接送車。合成一條了。
+   ⚠ 沒有待辦就整條不出現（tkDrawTodo 回空字串）。 */
+.tktd{background:var(--warn-bg);border:1px solid var(--warn-line);
+  border-radius:12px;overflow:hidden;margin-bottom:12px}
+.tktd.bad{background:var(--bad-bg);border-color:var(--bad-line)}
+.tktd .bar{display:flex;align-items:baseline;gap:8px;padding:9px 12px}
+.tktd .bar b{font-size:var(--t3);font-weight:700;letter-spacing:.1em;
+  color:var(--warn-ink)}
+.tktd.bad .bar b{color:var(--bad-ink)}
+.tktd .bar .now{margin-left:auto;color:var(--ink2);font-size:var(--t4)}
+.tktd .bar .mo{font-style:normal;color:var(--brand);font-weight:700;cursor:pointer}
+/* 每一條都是按鈕——⛔ 不要用文字指路，文案會過期，按鈕不會。 */
+.tktr{display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+  padding:10px 12px;border:0;border-top:1px solid var(--warn-line);
+  background:var(--card);color:var(--ink);font:inherit;cursor:pointer;
+  min-height:56px}
+.tktd.bad .tktr{border-top-color:var(--bad-line)}
+.tktr:active{background:var(--sunk)}
+.tktr .dot{flex:0 0 7px;height:7px;border-radius:50%;background:var(--warn-bar)}
+.tktr .dot.r{background:var(--bad-bar)}
+.tktr .tx{flex:1;min-width:0}
+.tktr .tx b{display:block;font-size:var(--t3);font-weight:600;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.htr .tx s{display:block;text-decoration:none;font-size:var(--t4);color:var(--ink3);
+.tktr .tx s{display:block;text-decoration:none;font-size:var(--t4);color:var(--ink3);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.htr .go{flex:0 0 auto;font-size:var(--t3);font-weight:700;color:var(--brand)}
+.tktr .go{flex:0 0 auto;font-size:var(--t3);font-weight:700;color:var(--brand)}
 
 /* GATE：工人填好、還沒開成案件的問卷 */
 .vgrow{display:grid;grid-template-columns:56px 1fr;gap:8px;padding:12px;
