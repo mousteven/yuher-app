@@ -594,10 +594,28 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
    2026-09-19 之前是 70，只有 #dateModal 單獨補到 80 治症狀，
    結果 #detailModal 與 #msgModal 又各壞一次。改成從規則面解決。
    ⚠ 只有拖曳殘影 #dragGhost（90）該在這之上。 */
+/* ── 一種中斷：從底部上來（2026-09-22 設計檢視第 9 項）──────
+
+   ⛔ 之前十九個浮層用了**四種殼**：.rvfull（整頁）、.smask（畫面中央的
+      對話框，11 個）、.smask.sheetmask（底部彈出，2 個）、.pvmask（預覽）。
+      同一個動作（打斷你、要你看一眼）長出三種不同的樣子，
+      而且**其中 11 個停在畫面中央**——翻譯單手拿手機，
+      拇指只搆得到下半部，中央的按鈕要換手才按得到。
+      底部彈出這件事 2026-09-19 就決定了，只是當時只改了兩個。
+
+   現在只有兩種中斷：
+      **就地展開**  不遮畫面，在原地長出來（返鄉、體檢的列）
+      **從底部上來** 遮畫面，要你回答一句話才走（這個殼）
+      ＋整頁（.rvfull／.pvmask）那是「換一個畫面」，不是中斷。
+
+   ⛔ 用 margin-top:auto 把它推到底，**不要用 justify-content:flex-end**。
+      內容比螢幕高的時候，justify-content 會讓它往上溢出而且捲不到——
+      margin auto 不會。 */
 .smask{position:fixed;inset:0;background:rgba(12,22,26,.55);z-index:78;
-  display:block;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px}
-.smbox{background:var(--card);border-radius:var(--r2);padding:14px;margin:14px auto;width:100%;
-  max-width:640px;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+  display:flex;flex-direction:column;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;padding:14px}
+.smbox{background:var(--card);border-radius:var(--r2);padding:14px;width:100%;
+  margin:auto auto 0;max-width:640px;box-shadow:0 18px 50px rgba(0,0,0,.3)}
 .smbox h4{margin:0 0 2px;font-size:var(--t1)}
 .smbox p{margin:0 0 10px;color:var(--ink3);font-size:var(--t4)}
 .smpad{border:1.5px solid var(--brand);border-radius:var(--r2);background:#fff;
@@ -1922,14 +1940,14 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 /* ── 底部彈出選單（他挑的 M1）────────────────────────────
    翻譯是單手拿手機，拇指只搆得到螢幕下半部。
    選單出現在上半部等於要換手，所以一律從底部上來。 */
-/* ⛔ 一定要一起寫 display:flex。上面的 .smask 是 display:block，
-   只寫 align-items 完全沒有作用——彈窗會停在畫面最上面，
-   而底部彈出視窗的全部意義就是拇指搆得到。
-   2026-09-19 才發現，而且我早先的測試還「通過」了，因為它斷言的是
-   getComputedStyle().alignItems==='flex-end'——那個值算得出來，只是不生效。
-   斷言要驗看得到的結果（位置），不是 CSS 屬性值。 */
-.sheetmask{display:flex;align-items:flex-end;padding:0}
-.btmsheet{width:100%;padding:8px 8px calc(env(safe-area-inset-bottom,0px) + 8px)}
+/* ⛔ .sheetmask 2026-09-22 拿掉了。它做的事（把彈窗推到底部）
+   現在是 .smask 本身的行為，不需要另一個類別去修正它。
+   ⚠ 歷史教訓留著：它當初存在是因為 .smask 是 display:block，
+     只寫 align-items 完全沒有作用，而我早先的測試還「通過」了——
+     它斷言 getComputedStyle().alignItems==='flex-end'，那個值算得出來，
+     只是不生效。**斷言要驗看得到的結果（位置），不是 CSS 屬性值。** */
+.btmsheet{width:100%;margin:auto 0 0;
+  padding:0 0 calc(env(safe-area-inset-bottom,0px))}
 /* ⛔ 一定要把 width 與 min-height 覆寫掉。
    上面那條通用的 .sheet 是**列印用的服務紀錄表**，寫死 794×1123（A4 @96dpi）。
    不覆寫的話所有底部彈出視窗都會變成 A4 大小——2026-09-19 實機量到
