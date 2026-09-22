@@ -583,8 +583,14 @@ function applyLangTexts(code) {
   $('domesticAirport').addEventListener('change', updateConditionals);
   $('extraBaggage').addEventListener('change', updateConditionals);
   $('pickupService').addEventListener('change', updateConditionals);
-  $('departureDate').addEventListener('change', updateLeaveDays);
-  $('returnDate').addEventListener('change', updateLeaveDays);
+  /* input 與 change 都要聽。2026-09-22 實機測出來：Safari（iPhone）在
+     日期選好之後只發 input，change 要等欄位失焦才補發——工人選完返台日
+     直接按送出的話，休假天數是空的。Android 兩個都發。
+     ⚠ 這兩支都只是重算，多跑一次沒有副作用。 */
+  ['departureDate', 'returnDate'].forEach(function (id) {
+    $(id).addEventListener('change', updateLeaveDays);
+    $(id).addEventListener('input', updateLeaveDays);
+  });
   /* ⚠ 不要在這裡跑 updateConditionals()——資料還沒回來，
      AIRPORTS 是空的。vacInit 回來之後才跑。 */
 
