@@ -128,6 +128,13 @@
   <input type="email" id="email" required>
   <div class="hint" data-i18n="vacEmailHint"></div>
 
+  <!-- 台灣手機。⛔ type=tel 不要用 type=number——
+       0912 開頭的號碼在 number 欄位會被吃掉前面那個 0，
+       而且 number 在手機上跳出來的是有加減號的計算機鍵盤。 -->
+  <label data-i18n="vacPhone"></label>
+  <input type="tel" id="twPhone" inputmode="tel" autocomplete="tel" required>
+  <div class="hint" data-i18n="vacPhoneHint"></div>
+
   <fieldset>
     <legend data-i18n="vacTypeLegend"></legend>
     <div class="radio-row">
@@ -320,7 +327,9 @@ function api(fn, body, ok, bad) {
       body: JSON.stringify(body) }, API_TRIES_, ok, bad);
   } else {
     apiFetch_(API_ + '?api=' + encodeURIComponent(fn) +
-      '&lang=' + encodeURIComponent(currentLang), {}, API_TRIES_, ok, bad);
+      '&lang=' + encodeURIComponent(currentLang) +
+      (INV_TOKEN ? ('&t=' + encodeURIComponent(INV_TOKEN)) : ''),
+      {}, API_TRIES_, ok, bad);
   }
 }
 
@@ -330,6 +339,10 @@ function qs(k) {
   return m ? decodeURIComponent(m[1]) : '';
 }
 var currentLang = qs('lang') || 'en';
+/* ⛔ ?t= 是「這一條連結就是你本人的」。跟 ?employer= 不一樣：
+   employer 只是先幫他選好雇主，t 會把他的姓名與名冊上的手機帶進來。
+   ⚠ 外國人編號不寫在網址上——那是流水號，加一就是別人。 */
+var INV_TOKEN = qs('t') || '';
 var presetEmployer = qs('employer') || '';
 var presetCat = qs('cat') || '';
 var I18N = {}, AIRPORTS = {}, RELATIONS = {}, COUNTRIES = {}, LANG_LABELS = {};
@@ -371,7 +384,27 @@ function bootFail() {
   applyLangTexts(currentLang);
   updateAirports(true);
   updateConditionals();
+  vacWhoAmI();
 }, bootFail);
+
+/* 邀請連結：把他的姓名與名冊上的手機帶進來。
+
+   ⛔ 兩個都**不要鎖死**。名字可能拼錯、手機常常是舊的——
+      這一頁的目的之一就是讓他改。鎖起來的話他只能放棄。
+   ⚠ 查不到（連結太舊、或那個人不在名冊上了）就當作沒有這回事，
+     整份表照樣填得完。絕對不要因此擋住他。 */
+function vacWhoAmI() {
+  if (!INV_TOKEN) return;
+  api('vacWho', null, function (r) {
+    if (!r || !r.ok) return;
+    if (r.name && !$('name').value) $('name').value = r.name;
+    if (r.phone && !$('twPhone').value) $('twPhone').value = r.phone;
+    if (r.employer) {
+      setActiveCat(r.cat === 'caretaker' ? 'caretaker' : 'factory');
+      activeEmployerSelect().value = r.employer;
+    }
+  }, function () {});
+}
 
 function buildLangBar(langs) {
   $('langLabel').textContent = T('langSwitchLabel') + '：';
@@ -685,6 +718,9 @@ function applyLangTexts(code) {
         employer: activeEmployerSelect().value,
         name: $('name').value,
         email: $('email').value,
+        twPhone: $('twPhone').value,
+        /* 邀請連結來的才有。後端拿它蓋「送出時間」，讓翻譯知道他填完了。 */
+        t: INV_TOKEN,
         type: type,
         askedBoss: $('askedBoss').value,
         departureDate: $('departureDate').value,

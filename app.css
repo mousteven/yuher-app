@@ -2153,6 +2153,13 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:26px}
 .bpass select option{background:#161D28;color:#fff}
 .bpass .epkval.has{color:var(--amber);font-weight:700}
+/* 指定給誰的那一行。⚠ 「沒帶到電話」不是錯誤，是提醒——
+   用琥珀不用紅，紅色要留給真的出事的東西。 */
+.bpass .bpwho{font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.6875rem;color:rgba(255,255,255,.62);margin-bottom:8px;line-height:1.5}
+.bpass .bpwho b{color:var(--amber);font-weight:700}
+.bpass .bpwho i{font-style:normal;color:rgba(255,255,255,.4)}
+.bpass .bpwho i.warn{color:var(--amber)}
 .bpass .bp3{padding:0 12px 12px}
 .bpass .bphint{font-family:inherit;font-size:0.6875rem;color:rgba(255,255,255,.4)}
 .bpass .bpurl{display:block;word-break:break-all;font-size:0.6875rem;

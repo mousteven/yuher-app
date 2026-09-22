@@ -5234,23 +5234,66 @@ function vacGateWire(){
       不用等一次往返（工廠訊號差的時候那一次往返就是放棄的理由）。
    ⚠ 版面跟著航廈走：這一塊是登機證的存根聯。 */
 var VAC_PAGE_ = 'https://mousteven.github.io/yuher-app/vac.html';
-var VACL_ = { cat: 'factory', name: '' };
+/* eid＝名冊上的外國人編號。⛔ 指定給某個人的連結要它才發得出來，
+   而它**不會出現在網址上**（流水號，加一就是別人）。 */
+var VACL_ = { cat: 'factory', name: '', eid: '', who: '', url: '' };
 
 var VACL_PK_ = {
   id: 'vaclPk', mode: 'svc', list: [], allowNew: false,
   onPick: function(c){
     VACL_.name = c;
+    VACL_.eid = ''; VACL_.who = ''; VACL_.url = '';
     var v = $('vaclPkVal');
     v.textContent = c; v.classList.add('has'); v.classList.remove('open');
     $('vaclPkPop').style.display = 'none';
+    vaclWorkers();
     vaclPaint();
   }
 };
 
+/* 這一家名冊上有哪些人。⚠ 名單來自 PRESETS（每月匯入一次），
+   這個月新接的雇主還不在裡面——那時候只能發整家共用的。 */
+function vaclWorkers(){
+  var sel = $('vaclWho'); if(!sel) return;
+  var pz = presetOf(VACL_.name);
+  var ws = (pz && pz.w) || [];
+  sel.innerHTML = '<option value="">不指定（整家共用）</option>' +
+    ws.filter(function(w){ return w.e; }).map(function(w){
+      return '<option value="' + esc(w.e) + '">' + esc(w.n) +
+        (w.o ? ('　' + esc(w.o)) : '') + '</option>';
+    }).join('');
+  if(!ws.length){
+    sel.innerHTML = '<option value="">名冊上這家沒有人</option>';
+  }
+}
+
+/* 整家共用的那一條在前端就組得出來（問卷頁自己讀 ?employer=）。
+   ⛔ 指定給某個人的那一條**一定要向後端拿**——網址上只放一組
+      猜不到的代碼，姓名與手機由後端憑代碼給。 */
 function vaclUrl(){
+  if(VACL_.eid) return VACL_.url;          // 後端給的那一條
   if(!VACL_.name) return '';
   return VAC_PAGE_ + '?employer=' + encodeURIComponent(VACL_.name) +
          '&cat=' + VACL_.cat;
+}
+
+/* 選了某個人 → 跟後端要一條他專用的。 */
+function vaclMint(){
+  var box = $('vaclOut');
+  if(box) box.innerHTML = '<span class="bphint">產生連結中…</span>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!r || !r.ok){ VACL_.eid = ''; vaclPaint(); return; }
+      VACL_.url = r.url;
+      VACL_.who = r.name || VACL_.who;
+      vaclPaint(r.phone);
+    })
+    .withFailureHandler(function(e){
+      VACL_.eid = ''; VACL_.url = '';
+      toast((e && e.message) || '產生連結失敗', true);
+      vaclPaint();
+    })
+    .vacInvite(CODE, VACL_.eid);
 }
 
 function vacIssue(){
@@ -5268,6 +5311,14 @@ function vacIssue(){
         '<select id="vaclCat"><option value="factory">工廠</option>' +
         '<option value="caretaker">家庭雇主</option></select></div>' +
     '</div>' +
+    /* ⛔ 指定移工之後，連結就是「他本人的」——打開來姓名與手機
+       已經帶好了。不指定的話是整家共用的空白表。
+       ⚠ 兩種都要留：他常常是先傳給整個工廠群組，
+         但也常常是某個人當面跟他講「我十一月要回家」。 */
+    '<div class="bp2"><div class="bpf" style="flex:1">' +
+      '<label>NAME / 移工（可不選）</label>' +
+      '<select id="vaclWho"><option value="">先選雇主…</option></select>' +
+    '</div></div>' +
     '<div class="bp3" id="vaclOut"></div>' +
   '</div>';
 }
@@ -5280,7 +5331,7 @@ function vaclWire(){
   $('vaclCat').value = VACL_.cat;
   $('vaclCat').addEventListener('change', function(){
     VACL_.cat = this.value;
-    VACL_.name = '';
+    VACL_.name = ''; VACL_.eid = ''; VACL_.who = ''; VACL_.url = '';
     $('vaclPkVal').textContent = '請選擇…';
     $('vaclPkVal').classList.remove('has');
     vaclFill(); vaclPaint();
@@ -5288,7 +5339,15 @@ function vaclWire(){
   if(VACL_.name){
     $('vaclPkVal').textContent = VACL_.name;
     $('vaclPkVal').classList.add('has');
+    vaclWorkers();
+    if(VACL_.eid) $('vaclWho').value = VACL_.eid;
   }
+  $('vaclWho').addEventListener('change', function(){
+    VACL_.eid = this.value;
+    VACL_.who = this.value ? this.options[this.selectedIndex].textContent.split('　')[0] : '';
+    VACL_.url = '';
+    if(VACL_.eid) vaclMint(); else vaclPaint();
+  });
   vaclPaint();
 }
 
@@ -5298,19 +5357,27 @@ function vaclFill(){
                          .map(pkFromPreset_);
 }
 
-function vaclPaint(){
+function vaclPaint(phone){
   var box = $('vaclOut'); if(!box) return;
   var url = vaclUrl();
   if(!url){
     box.innerHTML = '<span class="bphint">選一家雇主，就會產生那一家專用的連結</span>';
     return;
   }
+  /* 指定給某個人的時候講清楚兩件事：這條是誰的、他的電話帶到了沒。
+     ⚠ 沒帶到不是錯——名冊上本來就有人沒留電話，問卷會讓他自己填。 */
+  var tag = VACL_.eid
+    ? ('<div class="bpwho"><b>' + esc(VACL_.who || '這一位') + '</b> 專用' +
+       (phone ? ('　<i>手機 ' + esc(phone) + ' 已帶入</i>')
+              : '　<i class="warn">名冊上沒有手機，會請他自己填</i>') + '</div>')
+    : '';
   /* ⛔ 文字要中英雙語。工人收到的是這一段，不是我們看的介面。 */
   var txt = '【返鄉休假 / 期滿離境問卷】\n' +
+    (VACL_.who ? (VACL_.who + '\n') : '') +
     'Vacation / Final Departure Questionnaire\n' +
     '請點連結，選你的語言後填寫。\n' +
     'Please tap the link, choose your language and fill it in.\n' + url;
-  box.innerHTML =
+  box.innerHTML = tag +
     '<code class="bpurl">' + esc(url) + '</code>' +
     '<div class="bpbtn">' +
       '<a class="line" target="_blank" rel="noopener" ' +
