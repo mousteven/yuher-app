@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vacation Questionnaire · 返鄉休假問卷</title>
+<!--
+  返鄉休假 / 期滿離境問卷：移工自己填的那一頁
+
+  ⛔ 這一頁住在 GitHub Pages，不在 Apps Script（2026-09-22 搬過來）。
+     原因跟 h.html（體檢通知）、sign.html（宣導簽到）一模一樣：
+     Apps Script 代管的網頁，Google 會在最上面掛一條
+     「這個應用程式是由 Google Apps Script 的使用者建立　檢舉濫用情形」。
+     填這份問卷的是要回國的移工，「檢舉濫用情形」六個字等於「這是詐騙」。
+     它在我們的頁面外層，程式裡移不掉——只能不要住在那裡。
+
+  ⛔ 所以沒有 google.script.run，改用 fetch 打 JSON 介面
+     （後端 VacationPub.gs 的 vacInit / vacSubmit，經由 hcApi_）。
+     ⚠ POST 一定要用 text/plain。用 application/json 會觸發 preflight，
+       而 Apps Script 沒有 doOptions，整個請求會被瀏覽器擋掉。
+
+  ⛔ fetch **沒有預設逾時**。訊號差的時候請求會既不回應也不失敗，
+     畫面就永遠卡在「載入中」。2026-09-21 在 sign.html 踩過，
+     這裡一開始就把逾時與重試放進去。
+
+  ⛔ 檔名 vac.html 與參數不要改。舊的 ?page=vacation 由 Code.gs 轉址過來。
+
+  六種語言：中／英／他加祿／越南／泰／印尼。
+  ⚠ 越、泰、印三本是 2026-09-22 新加的，**還沒有人審過**。
+-->
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", "PingFang TC", "Noto Sans", sans-serif; background:#F4F6FA; margin:0; padding:0; color:#1a1a1a; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 24px 16px; }
+  .wrap.wide { max-width: 960px; }
+  .card { background:#fff; border-radius:12px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+  h1 { font-size:20px; margin:0 0 12px; }
+  h2 { font-size:16px; margin:28px 0 12px; border-top:1px solid #eee; padding-top:20px; }
+  label { display:block; font-size:13px; color:#555; margin:14px 0 4px; }
+  input, select, textarea { width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; font-size:15px; font-family:inherit; }
+  textarea { min-height:80px; }
+  .btn { display:inline-block; margin-top:20px; padding:12px 20px; background:#1B3B6F; color:#fff; border:none; border-radius:8px; font-size:15px; cursor:pointer; text-decoration:none; text-align:center; }
+  .btn.secondary { background:#64748b; }
+  .menu { display:flex; flex-direction:column; gap:10px; margin-top:20px; }
+  .menu .btn { margin:0; }
+  .langbar { margin-top:16px; font-size:13px; }
+  .langbar a { margin-right:10px; color:#1B3B6F; text-decoration:none; }
+  .langbar a.active { font-weight:bold; text-decoration:underline; }
+  .home-btn { display:inline-block; margin-bottom:16px; font-size:13px; color:#1B3B6F; text-decoration:none; }
+  .result { margin-top:16px; padding:14px; background:#ecfdf5; border-radius:8px; color:#065f46; }
+  .announcement { padding:14px 0; border-bottom:1px solid #eee; }
+  .announcement .tag { font-size:12px; color:#1B3B6F; font-weight:bold; }
+  table { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+  th, td { border:1px solid #e5e7eb; padding:6px 8px; text-align:left; vertical-align:top; }
+  pre { white-space:pre-wrap; margin:0; font-size:12px; }
+  .navlink { font-size:13px; margin-bottom:16px; display:inline-block; }
+  .copyable { cursor:pointer; }
+  .copyable:hover { background:#eff6ff; }
+  #search { margin-bottom:4px; }
+  .hint { color:#888; font-size:12px; margin:0 0 12px; }
+  .submitted-cell { white-space:pre-line; min-width:220px; }
+  .badge { display:inline-block; background:#fef3c7; color:#92400e; border-radius:6px; padding:1px 6px; font-size:11px; margin-left:6px; }
+  .actions button { margin:2px 0; display:block; width:100%; }
+  details.owwa-detail summary { cursor:pointer; color:#1B3B6F; font-size:12px; }
+  details.owwa-detail pre { margin-top:6px; }
+  .status-未處理 { color:#b45309; font-weight:bold; }
+  .status-已處理 { color:#15803d; font-weight:bold; }
+  .img-link { display:inline-block; margin-top:6px; font-size:12px; color:#1B3B6F; }
+  .reminder-cell button { margin-top:4px; font-size:12px; padding:4px 8px; }
+  .reply-cell { font-size:12px; }
+  .mode-row { display: flex; gap: 16px; margin-top: 6px; }
+  .mode-row label { font-weight: normal; margin-top: 0; display: flex; align-items: center; gap: 4px; font-size: 14px; }
+  .mode-row input { width: auto; }
+</style>
+<style>
+  body { max-width: 640px; margin: 0 auto; padding: 20px; }
+  .radio-row { display: flex; gap: 16px; margin-top: 6px; }
+  .radio-row label { font-weight: normal; margin-top: 0; display: flex; align-items: center; gap: 4px; }
+  .radio-row input { width: auto; }
+  .hint-warn { color: #9E3B52; background: #fdecea; padding: 8px 10px; border-radius: 6px; margin-top: 8px; font-size: 0.85em; line-height: 1.6; border: 1px solid #f3c6c1; }
+  #submitBtn { margin-top: 24px; width: 100%; padding: 12px; background: #2a6; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+  #submitBtn:disabled { background: #aaa; }
+  #msg { margin-top: 16px; padding: 12px; border-radius: 8px; display: none; }
+  #msg.ok { display: block; background: #e6f7ec; color: #1a7a3d; }
+  #msg.err { display: block; background: #fdecea; color: #9E3B52; }
+  .conditional { display: none; }
+  fieldset { border: 1px solid #ddd; border-radius: 8px; margin-top: 16px; padding: 12px; }
+  legend { font-weight: bold; padding: 0 6px; }
+  .cat-tabs { display:flex; gap:8px; margin-top:6px; }
+  .cat-tab { flex:1 1 auto; padding:8px 10px; border:1px solid #ccc; border-radius:8px; background:#fff; font-size:14px; cursor:pointer; }
+  .cat-tab.active { background:#2a6; color:#fff; border-color:#2a6; }
+  .employer-select { margin-top:10px; }
+  .locked-employer-name { margin-top:6px; padding:10px 12px; background:#eff6f7; border:1px solid #b8d7dc; border-radius:8px; font-weight:bold; }
+  .photo-thumbs { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .photo-thumb { position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:1px solid #ddd; }
+  .photo-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+  .photo-thumb button { position:absolute; top:2px; right:2px; width:20px; height:20px; line-height:18px; padding:0; border-radius:50%; border:none; background:rgba(0,0,0,0.6); color:#fff; font-size:14px; cursor:pointer; }
+</style></head>
+<body>
+<div class="card">
+<div class="langbar" id="langbar"><span id="langLabel"></span><br></div>
+<h1 data-i18n="vacPageTitle"></h1>
+
+<div id="boot" style="padding:40px 0;text-align:center;color:#888">…</div>
+<div id="wrap" style="display:none">
+<form id="vacForm">
+  <div id="employerPickerWrap">
+    <label data-i18n="formEmployer"></label>
+    <div class="cat-tabs">
+      <button type="button" class="cat-tab active" id="catTabFactory" data-cat="factory" data-i18n="factoryGroup"></button>
+      <button type="button" class="cat-tab" id="catTabCaretaker" data-cat="caretaker" data-i18n="caretakerGroup"></button>
+    </div>
+    <select id="employerFactory" class="employer-select" required><option value="" data-i18n="vacAirportSelect"></option></select>
+    <select id="employerCaretaker" class="employer-select" style="display:none;"><option value="" data-i18n="vacAirportSelect"></option></select>
+  </div>
+  <div id="employerLockedWrap" style="display:none">
+    <label data-i18n="formEmployer"></label>
+    <div class="locked-employer-name" id="employerLockedName"></div>
+  </div>
+
+  <label data-i18n="vacName"></label>
+  <input type="text" id="name" required>
+  <div class="hint" data-i18n="vacNameHint"></div>
+
+  <label data-i18n="vacEmail"></label>
+  <input type="email" id="email" required>
+  <div class="hint" data-i18n="vacEmailHint"></div>
+
+  <fieldset>
+    <legend data-i18n="vacTypeLegend"></legend>
+    <div class="radio-row">
+      <label><input type="radio" name="type" value="vacation" checked required> <span data-i18n="vacTypeVacation"></span></label>
+    </div>
+    <div class="radio-row">
+      <label><input type="radio" name="type" value="departure" required> <span data-i18n="vacTypeDeparture"></span></label>
+    </div>
+    <div class="hint" data-i18n="vacTypeHint"></div>
+  </fieldset>
+
+  <label data-i18n="vacAskedBoss"></label>
+  <select id="askedBoss" required>
+    <option value="yes" data-i18n="yesLabel"></option>
+    <option value="no" data-i18n="noLabel"></option>
+  </select>
+  <div class="hint" data-i18n="vacAskedBossHint"></div>
+
+  <label data-i18n="vacDepartureDate"></label>
+  <input type="date" id="departureDate" required>
+  <div class="hint" data-i18n="vacDepartureDateHint"></div>
+
+  <label id="returnDateLabel" data-i18n="vacReturnDateLabel"></label>
+  <input type="date" id="returnDate">
+  <div id="returnDateHint" class="hint" data-i18n="vacReturnDateHint"></div>
+
+  <label id="leaveDaysLabel" class="conditional" data-i18n="vacLeaveDaysLabel"></label>
+  <input type="text" id="leaveDays" class="conditional" readonly>
+  <div id="leaveDaysHint" class="hint conditional" data-i18n="vacLeaveDaysHint"></div>
+
+  <!-- ⛔ 機場清單看「要回哪一個國家」，不是看語言。
+       菲籍工人用英文介面，但他要飛的是菲律賓；越南籍也可能因為看得懂而選英文。
+       綁在語言上的話，選英文的越南人會看到一整排菲律賓機場。 -->
+  <label data-i18n="vacCountryLabel"></label>
+  <select id="country" required>
+    </select>
+  <div class="hint" data-i18n="vacCountryHint"></div>
+
+  <label data-i18n="vacTicketArrangement"></label>
+  <select id="ticketArrangement" required>
+    <option value="self" data-i18n="vacTicketSelf"></option>
+    <option value="agency" data-i18n="vacTicketAgency"></option>
+  </select>
+  <div class="hint" data-i18n="vacTicketHint"></div>
+
+  <div id="agencyFields" class="conditional">
+    <label data-i18n="vacAirportLabel"></label>
+    <!-- 選項由 updateAirports() 依「要回哪一個國家」填。
+         ⛔ 不要寫死在這裡——四個國家四份清單，寫死就是四份要各自維護。 -->
+    <select id="ticketAirport"></select>
+    <div id="ticketAirportOtherWrap" class="conditional">
+      <input type="text" id="ticketAirportOther" data-i18n-ph="vacAirportOtherPlaceholder" placeholder="">
+    </div>
+    <div class="hint" data-i18n="vacAirportHint"></div>
+
+    <label data-i18n="vacDomesticConn"></label>
+    <select id="domesticConnection">
+      <option value="no" data-i18n="noLabel"></option>
+      <option value="yes" data-i18n="yesLabel"></option>
+    </select>
+    <div class="hint" data-i18n="vacDomesticConnHint"></div>
+
+    <div id="domesticAirportWrap" class="conditional">
+      <label data-i18n="vacDomesticAirportLabel"></label>
+      <select id="domesticAirport"></select>
+      <div id="domesticAirportOtherWrap" class="conditional">
+        <input type="text" id="domesticAirportOther" data-i18n-ph="vacDomesticAirportOtherPlaceholder" placeholder="">
+      </div>
+    </div>
+
+    <label data-i18n="vacExtraBaggage"></label>
+    <select id="extraBaggage">
+      <option value="no" data-i18n="noLabel"></option>
+      <option value="yes" data-i18n="yesLabel"></option>
+    </select>
+    <div class="hint" data-i18n="vacExtraBaggageHint"></div>
+
+    <label id="extraBaggageKgLabel" class="conditional" data-i18n="vacExtraBaggageKgLabel"></label>
+    <select id="extraBaggageKg" class="conditional">
+      <option value="" data-i18n="vacAirportSelect"></option>
+      <option value="5">+5 kg</option>
+      <option value="10">+10 kg</option>
+      <option value="15">+15 kg</option>
+      <option value="20">+20 kg</option>
+      <option value="25">+25 kg</option>
+      <option value="30">+30 kg</option>
+    </select>
+    <div id="extraBaggageKgHint" class="hint conditional" data-i18n="vacExtraBaggageKgHint"></div>
+  </div>
+
+  <label data-i18n="vacPickupLabel"></label>
+  <select id="pickupService" required>
+    <option value="yes" data-i18n="vacPickupNeed"></option>
+    <option value="no" data-i18n="vacPickupSelf"></option>
+  </select>
+  <div id="pickupWarnSelf" class="hint-warn conditional" data-i18n="vacPickupWarnSelf"></div>
+
+  <div id="oecSection">
+    <label data-i18n="vacOecLabel"></label>
+    <select id="knowsOEC">
+      <option value="yes" data-i18n="vacOecYes"></option>
+      <option value="no" data-i18n="vacOecNo"></option>
+    </select>
+    <div class="hint" data-i18n="vacOecHint"></div>
+  </div>
+
+  <label data-i18n="vacPassportLabel"></label>
+  <select id="passportValid" required>
+    <option value="yes" data-i18n="yesLabel"></option>
+    <option value="no" data-i18n="noLabel"></option>
+    <option value="unsure" data-i18n="unsureLabel"></option>
+  </select>
+  <div class="hint" data-i18n="vacPassportHint"></div>
+
+  <label id="arcValidLabel" data-i18n="vacArcValidLabel"></label>
+  <select id="arcValid">
+    <option value="yes" data-i18n="yesLabel"></option>
+    <option value="no" data-i18n="noLabel"></option>
+    <option value="na" data-i18n="naLabel"></option>
+  </select>
+  <div id="arcValidHint" class="hint" data-i18n="vacArcValidHint"></div>
+
+  <label id="arcMultipleEntryLabel" data-i18n="vacArcMultipleLabel"></label>
+  <select id="arcMultipleEntry">
+    <option value="yes" data-i18n="yesLabel"></option>
+    <option value="no" data-i18n="noLabel"></option>
+    <option value="unsure" data-i18n="unsureLabel"></option>
+  </select>
+  <div id="arcMultipleEntryHint" class="hint" data-i18n="vacArcMultipleHint"></div>
+
+  <label data-i18n="vacRelationLabel"></label>
+  <select id="overseasContactRelation" required>
+    <option value="" data-i18n="vacRelSelect"></option>
+    </select>
+
+  <label data-i18n="vacPhoneLabel"></label>
+  <input type="tel" id="overseasContactPhone" required>
+  <div class="hint" data-i18n="vacPhoneHint"></div>
+
+  <div id="photoSection" class="conditional">
+    <label data-i18n="vacPhotoLabel"></label>
+    <input type="file" id="photo" accept="image/*" multiple>
+    <div class="hint" data-i18n="vacPhotoHint"></div>
+    <div id="photoThumbs" class="photo-thumbs"></div>
+  </div>
+
+  <button type="submit" id="submitBtn" data-i18n="vacSubmitBtn"></button>
+</form>
+</div>
+</div>
+<canvas id="resizeCanvas" style="display:none"></canvas>
+
+<script>
+/* ── 後端 ─────────────────────────────────────────────
+   ⛔ fetch 沒有預設逾時。訊號很差的時候請求會既不回應也不失敗，
+      promise 永遠掛著，畫面停在「…」——沒有錯誤、沒有重試。
+      每次 15 秒，自動重試共 3 次，全部失敗才放棄。 */
+var API_ = 'https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec';
+var API_TIMEOUT_ = 15000, API_TRIES_ = 3;
+
+function apiFetch_(url, opt, tries, ok, bad) {
+  var ctl = null, timer = null, done = false;
+  try { ctl = new AbortController(); } catch (e) {}
+  if (ctl) opt = Object.assign({}, opt, { signal: ctl.signal });
+  function finish(fn, arg) { if (done) return; done = true; clearTimeout(timer); fn(arg); }
+  function again() { if (tries > 1) apiFetch_(url, opt, tries - 1, ok, bad); else if (bad) bad(); }
+  timer = setTimeout(function () {
+    if (ctl) { try { ctl.abort(); } catch (e2) {} }
+    finish(again);
+  }, API_TIMEOUT_);
+  fetch(url, opt).then(function (r) { return r.json(); })
+    .then(function (j) { finish(ok, j); })
+    .catch(function () { finish(again); });
+}
+function api(fn, body, ok, bad) {
+  if (body) {
+    body.api = fn;
+    apiFetch_(API_, { method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body) }, API_TRIES_, ok, bad);
+  } else {
+    apiFetch_(API_ + '?api=' + encodeURIComponent(fn) +
+      '&lang=' + encodeURIComponent(currentLang), {}, API_TRIES_, ok, bad);
+  }
+}
+
+/* 網址上的 ?lang= / ?employer= / ?cat=，跟搬家前一樣。 */
+function qs(k) {
+  var m = new RegExp('[?&]' + k + '=([^&]*)').exec(location.search || '');
+  return m ? decodeURIComponent(m[1]) : '';
+}
+var currentLang = qs('lang') || 'en';
+var presetEmployer = qs('employer') || '';
+var presetCat = qs('cat') || '';
+var I18N = {}, AIRPORTS = {}, RELATIONS = {}, COUNTRIES = {}, LANG_LABELS = {};
+var T_SELECT = '', T_OTHER = '';
+function T(k) {
+  var d = I18N[currentLang] || I18N.zh || {};
+  return d[k] || (I18N.zh || {})[k] || k;
+}
+
+/* ⛔ 載入失敗不要只寫一句話就結束——移工在工廠，訊號是一陣一陣的，
+   要給他一顆按得下去的按鈕，不然他只能關掉頁面走人。 */
+function bootFail() {
+  $('boot').innerHTML =
+    '<div class="hint-warn">連不上，訊號可能不穩<br>' +
+    'Connection problem. Please try again.</div>' +
+    '<button type="button" id="rt" style="width:100%;margin-top:12px;padding:12px;' +
+    'background:#2a6;color:#fff;border:none;border-radius:8px;font-size:16px">' +
+    '再試一次　Try again</button>';
+  $('rt').addEventListener('click', function () { location.reload(); });
+}
+
+api('vacInit', null, function (r) {
+  if (!r || !r.ok) { bootFail(); return; }
+  I18N = r.i18n; AIRPORTS = r.airports; RELATIONS = r.relations;
+  COUNTRIES = r.countries; LANG_LABELS = r.labels;
+  if (r.langs.indexOf(currentLang) === -1) currentLang = 'en';
+  buildLangBar(r.langs);
+  buildCountries();
+  buildRelations();
+  T_SELECT = T('vacAirportSelect'); T_OTHER = T('relOther');
+  fillEmployers(r.employers);
+  $('boot').style.display = 'none';
+  $('wrap').style.display = '';
+  applyLangTexts(currentLang);
+  updateAirports(true);
+  updateConditionals();
+}, bootFail);
+
+function buildLangBar(langs) {
+  $('langLabel').textContent = T('langSwitchLabel') + '：';
+  var bar = $('langbar');
+  langs.forEach(function (c) {
+    var a = document.createElement('a');
+    a.href = '#'; a.setAttribute('data-lang', c);
+    a.textContent = LANG_LABELS[c] || c;
+    if (c === currentLang) a.className = 'active';
+    a.addEventListener('click', function (e) { e.preventDefault(); setLang(c); });
+    bar.appendChild(a);
+  });
+}
+function buildCountries() {
+  var sel = $('country');
+  (COUNTRIES[currentLang] || []).forEach(function (c) {
+    var o = document.createElement('option');
+    o.value = c.value; o.textContent = c.label; sel.appendChild(o);
+  });
+}
+function buildRelations() {
+  var sel = $('overseasContactRelation');
+  var o0 = document.createElement('option');
+  o0.value = ''; o0.setAttribute('data-i18n', 'vacRelSelect'); sel.appendChild(o0);
+  (RELATIONS[currentLang] || []).forEach(function (x) {
+    var o = document.createElement('option');
+    o.value = x.value; o.setAttribute('data-i18n', x.key); sel.appendChild(o);
+  });
+}
+
+
+/* 四個國家的機場清單。⛔ 從 I18n.gs 的 VAC_AIRPORTS_ 來，
+   一份來源——後台摘要的中文機場名也讀同一張表。 */
+function applyLangTexts(code) {
+    var dict = I18N[code] || I18N.zh;
+    document.querySelectorAll('[data-i18n]').forEach(function(el) {
+      var key = el.getAttribute('data-i18n');
+      el.textContent = dict[key] || I18N.zh[key] || key;
+    });
+    document.querySelectorAll('[data-i18n-ph]').forEach(function(el) {
+      var key = el.getAttribute('data-i18n-ph');
+      el.placeholder = dict[key] || I18N.zh[key] || key;
+    });
+    document.querySelectorAll('#langbar a[data-lang]').forEach(function(a) {
+      if (a.getAttribute('data-lang') === code) a.classList.add('active');
+      else a.classList.remove('active');
+    });
+  }
+
+  function setLang(code) {
+    if (!I18N[code]) return;
+    currentLang = code;
+    applyLangTexts(code);
+    /* ⛔ 國家、關係、機場三個選單的文字是資料不是 data-i18n，
+       applyLangTexts 碰不到——換語言要自己重建，
+       不然越南人切到英文之後那三個選單還是越南文。 */
+    T_SELECT = T('vacAirportSelect'); T_OTHER = T('relOther');
+    var keepC = $('country').value;
+    $('country').innerHTML = ''; buildCountries(); $('country').value = keepC;
+    var keepR = $('overseasContactRelation').value;
+    $('overseasContactRelation').innerHTML = ''; buildRelations();
+    $('overseasContactRelation').value = keepR;
+    applyLangTexts(code);
+    updateAirports(true);
+    updateLeaveDays();
+    var url = new URL(window.location.href);
+    url.searchParams.set('lang', code);
+    history.replaceState(null, '', url.toString());
+  }
+
+  /* 語言列的點擊在 buildLangBar() 裡就綁好了——那些 <a> 是 JS 生的。 */
+
+  var employerFactorySel = document.getElementById('employerFactory');
+  var employerCaretakerSel = document.getElementById('employerCaretaker');
+  var currentCat = 'factory';
+
+  function activeEmployerSelect() {
+    return currentCat === 'caretaker' ? employerCaretakerSel : employerFactorySel;
+  }
+
+  function setActiveCat(cat) {
+    currentCat = (cat === 'caretaker') ? 'caretaker' : 'factory';
+    document.getElementById('catTabFactory').classList.toggle('active', currentCat === 'factory');
+    document.getElementById('catTabCaretaker').classList.toggle('active', currentCat === 'caretaker');
+    employerFactorySel.style.display = (currentCat === 'factory') ? 'block' : 'none';
+    employerCaretakerSel.style.display = (currentCat === 'caretaker') ? 'block' : 'none';
+    employerFactorySel.required = (currentCat === 'factory');
+    employerCaretakerSel.required = (currentCat === 'caretaker');
+  }
+
+  document.getElementById('catTabFactory').addEventListener('click', function() {
+    employerCaretakerSel.value = '';
+    setActiveCat('factory');
+  });
+  document.getElementById('catTabCaretaker').addEventListener('click', function() {
+    employerFactorySel.value = '';
+    setActiveCat('caretaker');
+  });
+
+  /* 雇主名單在 vacInit 一次拿回來，這裡只負責填。 */
+  function fillEmployers(opts){
+    function fillSelect(sel, items) {
+      (items || []).forEach(function(it) {
+        var o = document.createElement('option');
+        o.value = it.value; o.textContent = it.label; sel.appendChild(o);
+      });
+    }
+    fillSelect(employerFactorySel, opts.factory);
+    fillSelect(employerCaretakerSel, opts.caretaker);
+    if (presetEmployer) {
+      setActiveCat(presetCat);
+      activeEmployerSelect().value = presetEmployer;
+    }
+  }
+
+
+  function $(id) { return document.getElementById(id); }
+
+  function updateLeaveDays() {
+    var dict = I18N[currentLang] || I18N.zh;
+    var type = document.querySelector('input[name="type"]:checked').value;
+    var dep = $('departureDate').value;
+    var ret = $('returnDate').value;
+    if (type === 'departure' || !dep || !ret) { $('leaveDays').value = ''; return; }
+    var d1 = new Date(dep + 'T00:00:00');
+    var d2 = new Date(ret + 'T00:00:00');
+    var diff = Math.round((d2 - d1) / 86400000);
+    $('leaveDays').value = diff > 0 ? (diff + ' ' + dict.vacDaysUnit) : '';
+  }
+
+  /* 依「要回哪一個國家」重填兩個機場選單。
+     ⚠ 重填會清掉已選的值——所以只在國家真的換掉的時候重填，
+       不要每次 updateConditionals 都跑一遍。 */
+  var AIR_FILLED_ = '';
+  function updateAirports(force){
+    var c = $('country').value;
+    if(!force && c === AIR_FILLED_) return;
+    AIR_FILLED_ = c;
+    var g = (AIRPORTS[c] && AIRPORTS[c][currentLang]) || { intl: [], dom: [] };
+    function fill(el, list){
+      var keep = el.value;
+      el.innerHTML = '<option value="">' + T_SELECT + '</option>' +
+        list.map(function(a){
+          return '<option value="' + a.value + '">' + a.label + '</option>';
+        }).join('') +
+        '<option value="other">' + T_OTHER + '</option>';
+      /* 換國家之後原本選的那個機場多半不在新清單裡，留著會送出錯的代碼。 */
+      el.value = [].some.call(el.options, function(o){ return o.value === keep; })
+        ? keep : '';
+    }
+    fill($('ticketAirport'), g.intl);
+    fill($('domesticAirport'), g.dom);
+  }
+
+  function updateConditionals() {
+    var type = document.querySelector('input[name="type"]:checked').value;
+    var isDeparture = (type === 'departure');
+    updateAirports();
+    $('returnDateLabel').style.display = isDeparture ? 'none' : 'block';
+    $('returnDate').style.display = isDeparture ? 'none' : 'block';
+    $('returnDateHint').style.display = isDeparture ? 'none' : 'block';
+    $('returnDate').required = !isDeparture;
+    $('arcValidLabel').style.display = isDeparture ? 'none' : 'block';
+    $('arcValid').style.display = isDeparture ? 'none' : 'block';
+    $('arcValidHint').style.display = isDeparture ? 'none' : 'block';
+    $('arcValid').required = !isDeparture;
+    $('arcMultipleEntryLabel').style.display = isDeparture ? 'none' : 'block';
+    $('arcMultipleEntry').style.display = isDeparture ? 'none' : 'block';
+    $('arcMultipleEntryHint').style.display = isDeparture ? 'none' : 'block';
+    $('arcMultipleEntry').required = !isDeparture;
+    /* ⛔ OEC 是菲律賓政府的規定，越／泰／印完全不適用——整題不出現，
+       不是留著給他選「不適用」。條件是兩層：菲律賓 **且** 返鄉休假
+       （期滿離境本來就不用辦）。 */
+    var showOec = (!isDeparture && $('country').value === 'ph');
+    $('oecSection').style.display = showOec ? 'block' : 'none';
+    $('knowsOEC').required = showOec;
+
+    var showLeaveDays = !isDeparture;
+    $('leaveDaysLabel').style.display = showLeaveDays ? 'block' : 'none';
+    $('leaveDays').style.display = showLeaveDays ? 'block' : 'none';
+    $('leaveDaysHint').style.display = showLeaveDays ? 'block' : 'none';
+
+    var ticket = $('ticketArrangement').value;
+    var showAgency = (ticket === 'agency');
+    $('agencyFields').style.display = showAgency ? 'block' : 'none';
+    $('ticketAirport').required = showAgency;
+    $('domesticConnection').required = showAgency;
+    $('extraBaggage').required = showAgency;
+
+    var airport = $('ticketAirport').value;
+    var showAirportOther = (showAgency && airport === 'other');
+    $('ticketAirportOtherWrap').style.display = showAirportOther ? 'block' : 'none';
+    $('ticketAirportOther').required = showAirportOther;
+
+    var domConn = $('domesticConnection').value;
+    var showDomesticAirport = (showAgency && domConn === 'yes');
+    $('domesticAirportWrap').style.display = showDomesticAirport ? 'block' : 'none';
+    $('domesticAirport').required = showDomesticAirport;
+
+    var domAirport = $('domesticAirport').value;
+    var showDomesticAirportOther = (showAgency && domConn === 'yes' && domAirport === 'other');
+    $('domesticAirportOtherWrap').style.display = showDomesticAirportOther ? 'block' : 'none';
+    $('domesticAirportOther').required = showDomesticAirportOther;
+
+    var baggage = $('extraBaggage').value;
+    var showKg = showAgency && (baggage === 'yes');
+    $('extraBaggageKgLabel').style.display = showKg ? 'block' : 'none';
+    $('extraBaggageKg').style.display = showKg ? 'block' : 'none';
+    $('extraBaggageKgHint').style.display = showKg ? 'block' : 'none';
+    $('extraBaggageKg').required = showKg;
+
+    var showPhoto = (ticket === 'self');
+    $('photoSection').style.display = showPhoto ? 'block' : 'none';
+
+    var pickup = $('pickupService').value;
+    var showPickupWarn = (pickup === 'yes' && ticket === 'self');
+    $('pickupWarnSelf').style.display = showPickupWarn ? 'block' : 'none';
+
+    updateLeaveDays();
+  }
+  document.querySelectorAll('input[name="type"]').forEach(function(r){ r.addEventListener('change', updateConditionals); });
+  $('country').addEventListener('change', function(){ updateAirports(true); updateConditionals(); });
+  $('ticketArrangement').addEventListener('change', updateConditionals);
+  $('ticketAirport').addEventListener('change', updateConditionals);
+  $('domesticConnection').addEventListener('change', updateConditionals);
+  $('domesticAirport').addEventListener('change', updateConditionals);
+  $('extraBaggage').addEventListener('change', updateConditionals);
+  $('pickupService').addEventListener('change', updateConditionals);
+  $('departureDate').addEventListener('change', updateLeaveDays);
+  $('returnDate').addEventListener('change', updateLeaveDays);
+  /* ⚠ 不要在這裡跑 updateConditionals()——資料還沒回來，
+     AIRPORTS 是空的。vacInit 回來之後才跑。 */
+
+  function readPhotoAsBase64(file) {
+    return new Promise(function(resolve, reject) {
+      if (!file) { resolve(''); return; }
+      var img = new Image();
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        img.onload = function() {
+          var canvas = $('resizeCanvas');
+          var maxDim = 1280;
+          var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/png').split(',')[1]);
+        };
+        img.onerror = function() { reject(new Error('image read failed')); };
+        img.src = e.target.result;
+      };
+      reader.onerror = function() { reject(new Error('file read failed')); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  var selectedPhotos = [];
+  function renderPhotoThumbs() {
+    var wrap = $('photoThumbs');
+    wrap.innerHTML = selectedPhotos.map(function(p, idx) {
+      return '<div class="photo-thumb"><img src="data:image/png;base64,' + p + '"><button type="button" data-idx="' + idx + '">×</button></div>';
+    }).join('');
+    wrap.querySelectorAll('button').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        selectedPhotos.splice(parseInt(btn.getAttribute('data-idx'), 10), 1);
+        renderPhotoThumbs();
+      });
+    });
+  }
+  $('photo').addEventListener('change', function(e) {
+    var files = Array.prototype.slice.call(e.target.files);
+    if (!files.length) return;
+    Promise.all(files.map(readPhotoAsBase64)).then(function(base64s) {
+      base64s.forEach(function(b64) { if (b64) selectedPhotos.push(b64); });
+      renderPhotoThumbs();
+      e.target.value = '';
+    });
+  });
+
+  $('vacForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var btn = $('submitBtn');
+    var msg = $('msg');
+    var dict = I18N[currentLang] || I18N.zh;
+    msg.className = '';
+    btn.disabled = true; btn.textContent = dict.vacSubmittingBtn;
+
+    var type = document.querySelector('input[name="type"]:checked').value;
+    var isDeparture = (type === 'departure');
+    var ticket = $('ticketArrangement').value;
+
+    if (ticket === 'self' && !selectedPhotos.length) {
+      msg.textContent = dict.vacErrorPrefix + dict.vacPhotoLabel;
+      msg.className = 'err';
+      btn.disabled = false; btn.textContent = dict.vacSubmitBtn;
+      return;
+    }
+
+    Promise.resolve(ticket === 'self' ? selectedPhotos : []).then(function(imagesBase64) {
+      var payload = {
+        employer: activeEmployerSelect().value,
+        name: $('name').value,
+        email: $('email').value,
+        type: type,
+        askedBoss: $('askedBoss').value,
+        departureDate: $('departureDate').value,
+        returnDate: isDeparture ? '' : $('returnDate').value,
+        leaveDays: $('leaveDays').value,
+        ticketArrangement: ticket,
+        ticketAirport: $('ticketAirport').value,
+        ticketAirportOther: $('ticketAirportOther').value,
+        domesticConnection: $('domesticConnection').value,
+        domesticAirport: $('domesticAirport').value,
+        domesticAirportOther: $('domesticAirportOther').value,
+        extraBaggage: $('extraBaggage').value,
+        extraBaggageKg: $('extraBaggageKg').value,
+        pickupService: $('pickupService').value,
+        country: $('country').value,
+        /* ⛔ 非菲律賓籍送 'na'。送 'no' 的話後台會看到
+           「不知道，需要協助」——然後有人真的跑去幫越南籍工人辦 OEC。 */
+        knowsOEC: (isDeparture || $('country').value !== 'ph')
+                    ? 'na' : $('knowsOEC').value,
+        passportValid: $('passportValid').value,
+        arcValid: isDeparture ? 'na' : $('arcValid').value,
+        arcMultipleEntry: isDeparture ? 'na' : $('arcMultipleEntry').value,
+        overseasContactRelation: $('overseasContactRelation').value,
+        overseasContactPhone: $('overseasContactPhone').value,
+        imagesBase64: imagesBase64
+      };
+
+      /* ⛔ 送不出去的時候**不要清掉表單**——他填了十分鐘。
+         按鈕放回去，讓他再按一次就好。 */
+      api('vacSubmit', { payload: payload }, function (r) {
+        if (r && r.ok) {
+          msg.textContent = dict.vacSuccessMsg;
+          msg.className = 'ok';
+          $('vacForm').style.display = 'none';
+          window.scrollTo(0, 0);
+        } else {
+          msg.textContent = dict.vacErrorPrefix + ((r && r.err) || '?');
+          msg.className = 'err';
+          btn.disabled = false; btn.textContent = dict.vacSubmitBtn;
+        }
+      }, function () {
+        msg.textContent = dict.vacErrorPrefix + (dict.vacNetBad || 'network');
+        msg.className = 'err';
+        btn.disabled = false; btn.textContent = dict.vacSubmitBtn;
+      });
+    }).catch(function(err) {
+      msg.textContent = dict.vacErrorPrefix + err.message;
+      msg.className = 'err';
+      btn.disabled = false; btn.textContent = dict.vacSubmitBtn;
+    });
+  });
+
+</script>
+</body>
+</html>
