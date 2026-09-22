@@ -407,6 +407,9 @@ function buildRelations() {
    一份來源——後台摘要的中文機場名也讀同一張表。 */
 function applyLangTexts(code) {
     var dict = I18N[code] || I18N.zh;
+    /* ⛔ 這一行本來只在 buildLangBar 跑（開場一次），所以切語言之後
+       左上角的「語言：」還停在剛進來那個語言。 */
+    $('langLabel').textContent = (dict.langSwitchLabel || I18N.zh.langSwitchLabel) + '：';
     document.querySelectorAll('[data-i18n]').forEach(function(el) {
       var key = el.getAttribute('data-i18n');
       el.textContent = dict[key] || I18N.zh[key] || key;
