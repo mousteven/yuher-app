@@ -28,8 +28,41 @@
   --board:var(--card); --board2:#F6F8FB; --board-line:var(--line);
   --sunk:#F6F8FB; --accent:#1B3B6F; --accent-soft:#EAF0F9;
   --grid:rgba(20,30,50,.07);
-  /* 字級四級。⛔ 不要第五級——七種字級就是「文字有大有小」的來源。 */
-  --t1:1rem; --t2:0.875rem; --t3:0.75rem; --t4:0.6875rem;
+  /* ── 兩把尺（2026-09-22 設計檢視第 8 項）─────────────────
+
+     他的原話：「不要像一台拼裝車，風格都不一致，格式有大有小，
+     文字有大有小。」拆開來看，拼裝感的來源可以量：
+
+       字級   51 種     8.5px、9px、0.5625rem、0.72rem、0.7188rem、
+                        0.78rem、0.8125rem、0.82rem、0.8438rem、0.865rem…
+       圓角   24 種     1px、1.5px、2px、3px…13px、15px、16px、
+                        .8rem、1.15rem…
+
+     **沒有人決定過這些值。** 它們是十個月裡一次加一個長出來的，
+     每一個單看都合理，擺在一起就是拼裝車。
+
+     現在只有兩把尺。要加新的一格之前先問：
+     它跟現有的哪一格差多少？差不到 2px 就用那一格——
+     差 1px 的兩種字級，畫面上只會看起來像沒對齊。 */
+
+  /* 字級。--td 以上是「一頁只有一個」的大東西。 */
+  --td2:2rem;   /* 32  導覽頁的大標 */
+  --td:1.5rem;  /* 24  大數字、登機證的機場代碼 */
+  --t0:1.25rem; /* 20  區塊標題 */
+  --t1:1rem;    /* 16  標題、名字 */
+  --t2:0.875rem;  /* 14  內文 */
+  --t3:0.8125rem; /* 13  次要內文（清單第二行） */
+  --t4:0.75rem;   /* 12  補充說明 */
+  --t5:0.6875rem; /* 11  標籤、膠囊 */
+  --t6:0.625rem;  /* 10  機場代碼那種極小字，只給等寬字用 */
+
+  /* 圓角三級。每一級回答一個結構問題：
+       --r0 細條（圓角只是為了不要尖角）
+       --r1 容器**裡面**的東西：按鈕、輸入框、標記
+       --r2 容器**本身**：卡片、面板、浮層、看板
+     外圈一定比內圈大，層次才看得出來。
+     ⚠ 膠囊 99px 與圓 50% 不是圓角，是形狀，維持寫死。 */
+  --r0:3px; --r1:8px; --r2:12px;
 }
 
 /* ═══ 追蹤頁籤的共用元件 ═══════════════════════════════
@@ -45,18 +78,18 @@
 
 /* ── 看板外框 ─────────────────────────────────── */
 .vb,.hb{background:var(--board);border:1px solid var(--board-line);
-  border-radius:12px;overflow:hidden;margin-bottom:12px}
+  border-radius:var(--r2);overflow:hidden;margin-bottom:12px}
 .vb .bar,.hb .bar{display:flex;align-items:baseline;gap:8px;padding:10px 12px;
   background:var(--board2);border-bottom:1px solid var(--board-line)}
-.vb .bar b,.hb .bar b{color:var(--accent);font-size:var(--t3);
+.vb .bar b,.hb .bar b{color:var(--accent);font-size:var(--t4);
   letter-spacing:.12em;font-weight:700}
-.vb .bar .now,.hb .bar .now{margin-left:auto;color:var(--ink2);font-size:var(--t4);
+.vb .bar .now,.hb .bar .now{margin-left:auto;color:var(--ink2);font-size:var(--t5);
   font-variant-numeric:tabular-nums}
 .vb .bar .now em,.hb .bar .now em{font-style:normal;color:var(--bad-ink);font-weight:700}
 /* 月份刻度：flex 權重＝那個月的天數，格線才對得上條子 */
-.vtax{display:flex;padding:6px 12px 2px;font-size:var(--t4);letter-spacing:.08em;
+.vtax{display:flex;padding:6px 12px 2px;font-size:var(--t5);letter-spacing:.08em;
   color:var(--ink3);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.vbempty{padding:22px 12px;text-align:center;font-size:var(--t3);color:var(--ink3)}
+.vbempty{padding:22px 12px;text-align:center;font-size:var(--t4);color:var(--ink3)}
 
 /* ── 一列 ──────────────────────────────────────
    ⚠ 至少 74px——工廠裡站著單手點。 */
@@ -68,7 +101,7 @@
   border-top:1px solid var(--line2);align-items:center;cursor:pointer}
 .lrow:first-of-type{border-top:0}
 .lrow:active,.lrow.on{background:var(--sunk)}
-.vrow{grid-template-columns:1fr 92px}
+.vrow{grid-template-columns:1fr 104px}   /* 104 = 「逾期 41 天未回」剛好一行 */
 .hrow{grid-template-columns:46px 1fr 70px}
 /* 有急的待辦就在左邊留一條紅邊——不用讀字就知道這一列要動。 */
 .hrow.bad{box-shadow:inset 3px 0 0 var(--bad-bar)}
@@ -76,13 +109,13 @@
 /* 左欄：日期（體檢用）。⚠ 等寬字＋固定寬度，上下對得齊。 */
 .hrow .d{font-size:var(--t2);font-weight:700;color:var(--ink);line-height:1.2;
   font-variant-numeric:tabular-nums}
-.hrow .d s{display:block;text-decoration:none;font-size:var(--t4);
+.hrow .d s{display:block;text-decoration:none;font-size:var(--t5);
   font-weight:400;color:var(--ink3)}
 
 /* 中欄 */
 .vrow .a,.hrow .m{min-width:0}
 /* 第一行：機場代碼／醫院——等寬字，這是航廈味道的來源之一。 */
-.vrow .rt,.hrow .t1{display:block;font-size:var(--t4);color:var(--ink2);
+.vrow .rt,.hrow .t1{display:block;font-size:var(--t5);color:var(--ink2);
   letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .vrow .rt{display:flex;align-items:center;gap:5px;font-weight:700;color:var(--ink)}
@@ -91,9 +124,9 @@
 .vrow .nm,.hrow .nm{display:block;margin-top:1px;font-size:var(--t2);
   font-weight:600;color:var(--ink);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hrow .nm em{font-style:normal;font-size:var(--t4);font-weight:700;margin-left:6px;
-  padding:1px 6px;border-radius:5px;background:var(--accent-soft);color:var(--accent)}
-.vrow .co,.hrow .co{display:block;font-size:var(--t4);color:var(--ink3);
+.hrow .nm em{font-style:normal;font-size:var(--t5);font-weight:700;margin-left:6px;
+  padding:1px 6px;border-radius:var(--r0);background:var(--accent-soft);color:var(--accent)}
+.vrow .co,.hrow .co{display:block;font-size:var(--t5);color:var(--ink3);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 名單是空的要看得出來——那一批不會有任何人收到通知，
    而畫面上它跟正常的長得一模一樣。 */
@@ -101,21 +134,25 @@
 
 /* 右欄 */
 .vrow .b,.hrow .b{text-align:right}
-.vrow .st,.hrow .st{display:block;font-size:var(--t4);font-weight:700;
+.vrow .st,.hrow .st{display:block;font-size:var(--t5);font-weight:700;
   letter-spacing:.06em;font-variant-numeric:tabular-nums}
 /* ⛔ 去程 › 回程一定要兩個都印。只印一個的話「還沒走」跟「已經走了」
    共用同一格而意思不同——那是最容易看錯的東西。 */
-.vrow .dd{display:block;font-size:var(--t4);font-weight:700;white-space:nowrap;
+.vrow .dd{display:block;font-size:var(--t5);font-weight:700;white-space:nowrap;
   font-variant-numeric:tabular-nums}
 .vrow .dd i{font-style:normal;font-weight:400;color:var(--ink3);margin:0 2px}
 .hrow .big{display:block;font-size:var(--t1);font-weight:700;line-height:1.1;
   font-variant-numeric:tabular-nums}
-.vrow .sub2,.hrow .s2{display:block;font-size:var(--t4);color:var(--ink3);
-  white-space:nowrap}
+.hrow .s2{display:block;font-size:var(--t5);color:var(--ink3);white-space:nowrap}
+/* ⛔ 這一格不可以 nowrap。右欄只有 92px，而「申請中　剩 8 天回台」
+   排成一行是 130px 左右——會被卡片的 overflow:hidden 切掉，
+   而且切掉的剛好是**還有幾天**那一半。
+   階段自己一行、倒數自己一行，兩行都靠右，就不會有人讀不到。 */
+.vrow .sub2{display:block;font-size:var(--t5);color:var(--ink3);line-height:1.45}
 /* 真正的階段（申請中／證件齊／已離境／已回台）。
    ⛔ 英文只是氣氛——「申請中」跟「證件齊」在上面都算 PLANNED，
       沒有這一段他分不出證件辦好了沒。 */
-.vrow .sub2 em{font-style:normal;color:var(--ink2);font-weight:600}
+.vrow .sub2 em{display:block;font-style:normal;color:var(--ink2);font-weight:600}
 /* 狀態四色。⚠ 一個畫面只會出現這四種，不要再加第五種。 */
 .st-ok{color:var(--ok-ink)} .st-warn{color:var(--warn-ink)}
 .st-bad{color:var(--bad-ink)} .st-info{color:var(--info-ink)}
@@ -123,12 +160,12 @@
 
 /* ── 時間條／進度條 ────────────────────────────
    返鄉放休假期間、體檢放確認人數。同一個元件，兩種意思。 */
-.vrow .trk,.hrow .pg{position:relative;display:block;height:6px;border-radius:3px;
+.vrow .trk,.hrow .pg{position:relative;display:block;height:6px;border-radius:var(--r0);
   margin-top:6px;background:var(--line2);overflow:hidden}
 .vrow .trk{overflow:visible;background:
   repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 100%);
   background-size:calc(100%/9) 100%}
-.vrow .bnd,.hrow .pg i{position:absolute;top:0;bottom:0;border-radius:3px}
+.vrow .bnd,.hrow .pg i{position:absolute;top:0;bottom:0;border-radius:var(--r0)}
 .vrow .bnd.none{left:0;right:0;background:var(--line2)}
 .bnd-ok{background:var(--ok-bar)} .bnd-warn{background:var(--warn-bar)}
 .bnd-bad{background:var(--bad-bar)} .bnd-dim{background:var(--line)}
@@ -138,7 +175,7 @@
 .vrow .bnd.cutl{border-top-left-radius:0;border-bottom-left-radius:0}
 .vrow .bnd.cutr{border-top-right-radius:0;border-bottom-right-radius:0}
 /* 今天：整張圖唯一的參考點。⚠ 深色用亮線、淺色用暗線，都要壓得住底下的條子。 */
-.vrow .tdy{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:1px;
+.vrow .tdy{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:var(--r0);
   background:var(--ink)}
 
 /* ── 展開：凹一層，不換配色 ────────────────────
@@ -148,28 +185,28 @@
 /* 階段是唯讀的（後端從日期算）。
    ⛔ 看起來像按鈕、按了沒反應，比沒有這個東西更糟。 */
 .vstep{display:flex;gap:4px;margin-bottom:12px}
-.vstep span{flex:1;text-align:center;padding:6px 2px;border-radius:8px;
-  font-size:var(--t4);background:var(--card);border:1px solid var(--line);
+.vstep span{flex:1;text-align:center;padding:6px 2px;border-radius:var(--r1);
+  font-size:var(--t5);background:var(--card);border:1px solid var(--line);
   color:var(--ink3)}
 .vstep span.done{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
 .vstep span.cur{background:var(--brand);border-color:transparent;color:#fff;font-weight:700}
 .vstamp{display:flex;gap:5px;margin-bottom:12px}
-.vstamp span{flex:1;text-align:center;padding:6px 2px;border-radius:8px;
-  font-size:var(--t4);background:var(--ok-bg);color:var(--ok-ink);
+.vstamp span{flex:1;text-align:center;padding:6px 2px;border-radius:var(--r1);
+  font-size:var(--t5);background:var(--ok-bg);color:var(--ok-ink);
   border:1px solid var(--ok-line)}
 .vstamp span.no{background:var(--bad-bg);color:var(--bad-ink);border-color:var(--bad-line)}
 .vkv,.hkv{display:grid;grid-template-columns:52px 1fr;gap:3px 8px;margin:0 0 12px;
-  font-size:var(--t3)}
+  font-size:var(--t4)}
 .vkv dt,.hkv dt{color:var(--ink3)}
 .vkv dd,.hkv dd{margin:0;color:var(--ink);font-weight:500;word-break:break-word}
 /* 醫院那一格拆成三層：名稱（主）、地址與地標（次）、開地圖（連結）。 */
-.hkv dd .sub{color:var(--ink2);font-weight:400;font-size:var(--t4)}
+.hkv dd .sub{color:var(--ink2);font-weight:400;font-size:var(--t5)}
 .hkv dd .lnk{display:inline-block;margin-top:3px;color:var(--brand);
   font-weight:700;text-decoration:none}
 .vacts,.hacts{display:flex;gap:8px;flex-wrap:wrap}
-.vacts button,.hacts button{flex:1;min-width:88px;min-height:44px;border-radius:8px;
+.vacts button,.hacts button{flex:1;min-width:88px;min-height:44px;border-radius:var(--r1);
   border:1px solid var(--line);background:var(--card);color:var(--ink);
-  font:inherit;font-size:var(--t3);font-weight:600;cursor:pointer}
+  font:inherit;font-size:var(--t4);font-weight:600;cursor:pointer}
 .vacts button:active,.hacts button:active{background:var(--sunk)}
 .vacts .pri,.hacts .pri{background:var(--brand);border-color:transparent;color:#fff}
 /* 結案／開錯了那些留在完整那一頁——少做、而且比較重要，
@@ -179,25 +216,25 @@
 
 /* ── 圖例與範圍外那一行 ─────────────────────── */
 .vtlg,.hlg{display:flex;flex-wrap:wrap;gap:10px;padding:9px 12px;
-  border-top:1px solid var(--line2);font-size:var(--t4);color:var(--ink2)}
-.vtlg i,.hlg i{display:inline-block;width:16px;height:6px;border-radius:2px;
+  border-top:1px solid var(--line2);font-size:var(--t5);color:var(--ink2)}
+.vtlg i,.hlg i{display:inline-block;width:16px;height:6px;border-radius:var(--r0);
   margin-right:4px;vertical-align:middle}
-.vtlg i.tdy{width:2px;height:11px;background:var(--ink);border-radius:1px}
+.vtlg i.tdy{width:2px;height:11px;background:var(--ink);border-radius:var(--r0)}
 /* 固定時間窗之外的那幾位：畫不出來，但要交代一聲。
    ⛔ 不要讓他以為只有畫出來的這幾個人。 */
 .vtoff{padding:9px 12px;border-top:1px solid var(--line2);
-  font-size:var(--t4);line-height:1.5;color:var(--ink3)}
+  font-size:var(--t5);line-height:1.5;color:var(--ink3)}
 
 /* ── 底部動作列 ────────────────────────────── */
 .vbact{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line2)}
-.vbact button{flex:1;min-height:44px;border-radius:8px;border:1px solid var(--line);
+.vbact button{flex:1;min-height:44px;border-radius:var(--r1);border:1px solid var(--line);
   background:var(--card);color:var(--ink);font:inherit;
-  font-size:var(--t3);font-weight:700;cursor:pointer}
+  font-size:var(--t4);font-weight:700;cursor:pointer}
 .vbact .pri{background:var(--brand);border-color:transparent;color:#fff}
 .vbact .gate{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
 .vbact button:active{filter:brightness(.96)}
 .vgate{background:var(--ok-bg);border:1px solid var(--ok-line)}
-.vgate .vg1 b{color:var(--ok-ink);font-size:var(--t3);letter-spacing:.12em}
+.vgate .vg1 b{color:var(--ok-ink);font-size:var(--t4);letter-spacing:.12em}
 
 /* ── 要你處理：四種案件共用的那一條 ──────────────────
    ⛔ 2026-09-22 之前有兩條（hcNudge ＋ hcTodoBar）講重疊的事，
@@ -205,13 +242,13 @@
       你在看返鄉，它在講體檢的接送車。合成一條了。
    ⚠ 沒有待辦就整條不出現（tkDrawTodo 回空字串）。 */
 .tktd{background:var(--warn-bg);border:1px solid var(--warn-line);
-  border-radius:12px;overflow:hidden;margin-bottom:12px}
+  border-radius:var(--r2);overflow:hidden;margin-bottom:12px}
 .tktd.bad{background:var(--bad-bg);border-color:var(--bad-line)}
 .tktd .bar{display:flex;align-items:baseline;gap:8px;padding:9px 12px}
-.tktd .bar b{font-size:var(--t3);font-weight:700;letter-spacing:.1em;
+.tktd .bar b{font-size:var(--t4);font-weight:700;letter-spacing:.1em;
   color:var(--warn-ink)}
 .tktd.bad .bar b{color:var(--bad-ink)}
-.tktd .bar .now{margin-left:auto;color:var(--ink2);font-size:var(--t4)}
+.tktd .bar .now{margin-left:auto;color:var(--ink2);font-size:var(--t5)}
 .tktd .bar .mo{font-style:normal;color:var(--brand);font-weight:700;cursor:pointer}
 /* 每一條都是按鈕——⛔ 不要用文字指路，文案會過期，按鈕不會。 */
 .tktr{display:flex;align-items:center;gap:9px;width:100%;text-align:left;
@@ -223,26 +260,26 @@
 .tktr .dot{flex:0 0 7px;height:7px;border-radius:50%;background:var(--warn-bar)}
 .tktr .dot.r{background:var(--bad-bar)}
 .tktr .tx{flex:1;min-width:0}
-.tktr .tx b{display:block;font-size:var(--t3);font-weight:600;
+.tktr .tx b{display:block;font-size:var(--t4);font-weight:600;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tktr .tx s{display:block;text-decoration:none;font-size:var(--t4);color:var(--ink3);
+.tktr .tx s{display:block;text-decoration:none;font-size:var(--t5);color:var(--ink3);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tktr .go{flex:0 0 auto;font-size:var(--t3);font-weight:700;color:var(--brand)}
+.tktr .go{flex:0 0 auto;font-size:var(--t4);font-weight:700;color:var(--brand)}
 
 /* GATE：工人填好、還沒開成案件的問卷 */
 .vgrow{display:grid;grid-template-columns:56px 1fr;gap:8px;padding:12px;
   border-top:1px solid var(--ok-line);background:var(--card)}
 .vgrow .gd,.vgrow .d{font-size:var(--t2);font-weight:700;color:var(--ok-ink);
   line-height:1.2;font-variant-numeric:tabular-nums}
-.vgrow .d s{display:block;text-decoration:none;font-size:var(--t4);
+.vgrow .d s{display:block;text-decoration:none;font-size:var(--t5);
   font-weight:400;color:var(--ink3)}
 .vgrow .m b,.vgrow .gn{display:block;font-size:var(--t2);font-weight:600;color:var(--ink)}
-.vgrow .m i,.vgrow .gc{display:block;font-style:normal;font-size:var(--t4);color:var(--ink2)}
-.vgrow .m u,.vgrow .gx{display:block;text-decoration:none;font-size:var(--t4);
+.vgrow .m i,.vgrow .gc{display:block;font-style:normal;font-size:var(--t5);color:var(--ink2)}
+.vgrow .m u,.vgrow .gx{display:block;text-decoration:none;font-size:var(--t5);
   color:var(--ink3);margin-top:2px}
 .vgrow .a,.vgrow .ga{grid-column:1/-1;display:flex;gap:8px;margin-top:8px}
-.vgrow .a button,.vgrow .ga button{flex:1;min-height:44px;border-radius:8px;border:0;
-  font:inherit;font-size:var(--t3);font-weight:700;background:var(--ok-bar);color:#fff;
+.vgrow .a button,.vgrow .ga button{flex:1;min-height:44px;border-radius:var(--r1);border:0;
+  font:inherit;font-size:var(--t4);font-weight:700;background:var(--ok-bar);color:#fff;
   cursor:pointer}
 .vgrow .a .vno,.vgrow .ga .no{flex:0 0 84px;background:var(--card);color:var(--ink2);
   border:1px solid var(--line)}
@@ -250,41 +287,41 @@
 
 /* ── 登機證存根：發問卷給工人 ─────────────────
    ⚠ 撕線那條虛線是它的識別，淺色深色都要看得到。 */
-.bpass{background:var(--board);border:1px solid var(--board-line);border-radius:12px;
+.bpass{background:var(--board);border:1px solid var(--board-line);border-radius:var(--r2);
   overflow:hidden;margin-bottom:12px}
 .bpass .bp1{display:flex;align-items:baseline;gap:8px;padding:9px 12px;
   background:var(--board2);border-bottom:1px dashed var(--line)}
-.bpass .bp1 b{color:var(--accent);font-size:var(--t3);letter-spacing:.12em;
+.bpass .bp1 b{color:var(--accent);font-size:var(--t4);letter-spacing:.12em;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.bpass .bp1 span{color:var(--ink2);font-size:var(--t4)}
+.bpass .bp1 span{color:var(--ink2);font-size:var(--t5)}
 .bpass .bp2{display:flex;gap:8px;padding:12px 12px 0}
 .bpass .bp2:last-of-type{padding-bottom:0}
 .bpass .bpf{flex:1;min-width:0}
 .bpass .bp2 .bpf:last-child:not(:only-child){flex:0 0 108px}
-.bpass .bpf label{display:block;font-size:var(--t4);letter-spacing:.1em;
+.bpass .bpf label{display:block;font-size:var(--t5);letter-spacing:.1em;
   color:var(--ink3);margin-bottom:4px;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .bpass select,.bpass .epkval{width:100%;background:var(--card);color:var(--ink);
-  border:1px solid var(--line);border-radius:8px;padding:8px;
-  font:inherit;font-size:var(--t3);min-height:44px;text-align:left}
+  border:1px solid var(--line);border-radius:var(--r1);padding:8px;
+  font:inherit;font-size:var(--t4);min-height:44px;text-align:left}
 .bpass .epkval.has{color:var(--accent);font-weight:700}
 .bpass select{font-weight:600}
 .bpass select option{background:var(--card);color:var(--ink)}
 .bpass .bp3{padding:12px}
-.bpass .bphint{font-size:var(--t4);color:var(--ink3)}
+.bpass .bphint{font-size:var(--t5);color:var(--ink3)}
 /* 指定給誰的那一行。⚠「沒帶到電話」不是錯誤，是提醒——
    用琥珀不用紅，紅色要留給真的出事的東西。 */
-.bpass .bpwho{font-size:var(--t4);color:var(--ink2);margin-bottom:8px;line-height:1.5}
+.bpass .bpwho{font-size:var(--t5);color:var(--ink2);margin-bottom:8px;line-height:1.5}
 .bpass .bpwho b{color:var(--accent);font-weight:700}
 .bpass .bpwho i{font-style:normal;color:var(--ink3)}
 .bpass .bpwho i.warn{color:var(--warn-ink)}
-.bpass .bpurl{display:block;word-break:break-all;font-size:var(--t4);
+.bpass .bpurl{display:block;word-break:break-all;font-size:var(--t5);
   color:var(--ink2);background:var(--sunk);border:1px solid var(--line);
-  border-radius:8px;padding:8px;line-height:1.5;user-select:all;
+  border-radius:var(--r1);padding:8px;line-height:1.5;user-select:all;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .bpass .bpbtn{display:flex;gap:8px;margin-top:8px}
-.bpass .bpbtn>*{flex:1;min-height:44px;border-radius:8px;font:inherit;
-  font-size:var(--t3);font-weight:700;border:0;display:flex;
+.bpass .bpbtn>*{flex:1;min-height:44px;border-radius:var(--r1);font:inherit;
+  font-size:var(--t4);font-weight:700;border:0;display:flex;
   align-items:center;justify-content:center;text-decoration:none;cursor:pointer}
 .bpass .bpbtn .line{background:#06C755;color:#fff}
 .bpass .bpbtn button{background:var(--card);color:var(--ink);border:1px solid var(--line)}
@@ -337,7 +374,7 @@ html,body{margin:0;padding:0}
 html,body{overflow-x:clip;max-width:100%;overscroll-behavior-x:none;
   /* 關掉 iOS 自己的上下回彈，不然會跟我們的下拉更新互相打架 */
   overscroll-behavior-y:contain}
-body{background:var(--bg);color:var(--ink);font-size:0.9375rem;line-height:1.65;
+body{background:var(--bg);color:var(--ink);font-size:var(--t2);line-height:1.65;
   font-family:-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
   padding-bottom:80px}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -360,18 +397,18 @@ body.hidechrome{--stick:0px}
    所以不假裝有百分比，只表示「它在做事」。 */
 #upbar{position:sticky;top:0;z-index:31;height:3px;background:var(--line2);
   overflow:hidden}
-#upbar i{display:block;height:100%;width:40%;border-radius:99px;
+#upbar i{display:block;height:100%;width:40%;border-radius:var(--r2);
   background:var(--brand);animation:upslide 1.1s cubic-bezier(.45,0,.55,1) infinite}
 @keyframes upslide{0%{transform:translateX(-110%)}100%{transform:translateX(320%)}}
 @media (prefers-reduced-motion:reduce){
   #upbar i{animation:none;width:100%;opacity:.6}
 }
 #newver{position:sticky;top:0;z-index:30;background:var(--brand2);color:#fff;
-  padding:10px 14px;font-size:0.875rem;font-weight:700;text-align:center;cursor:pointer;
+  padding:10px 14px;font-size:var(--t2);font-weight:700;text-align:center;cursor:pointer;
   letter-spacing:.02em}
-.top b{font-size:0.9375rem;letter-spacing:.01em;white-space:nowrap;overflow:hidden;
+.top b{font-size:var(--t2);letter-spacing:.01em;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;min-width:0}
-.top small{opacity:.85;font-size:0.75rem}
+.top small{opacity:.85;font-size:var(--t4)}
 .tabs{display:flex;background:var(--card);border-bottom:1px solid var(--line)}
 .tabs svg,.tabs .plus{display:none}
 
@@ -403,7 +440,7 @@ body.tabsbottom.hidechrome #toTop{
 
 body.tabsbottom .tabs button{flex-direction:column;align-items:center;gap:3px;
   height:auto;padding:4px 0 2px;border-bottom:0;border-radius:0;position:relative;
-  font-size:0.6875rem;font-weight:500;letter-spacing:.05em;color:var(--ink2);
+  font-size:var(--t5);font-weight:500;letter-spacing:.05em;color:var(--ink2);
   transition:color .16s ease}
 body.tabsbottom .tabs button.on{color:var(--ink);font-weight:700;
   border-bottom-color:transparent}
@@ -428,7 +465,7 @@ body.tabsbottom .tabs .plus{display:block;position:relative;
              box-shadow .2s ease,background .2s ease}
 body.tabsbottom .tabs .plus::before,
 body.tabsbottom .tabs .plus::after{content:"";position:absolute;left:50%;top:50%;
-  background:#fff;border-radius:1.5px;transform:translate(-50%,-50%)}
+  background:#fff;border-radius:var(--r0);transform:translate(-50%,-50%)}
 body.tabsbottom .tabs .plus::before{width:1rem;height:2.3px}
 body.tabsbottom .tabs .plus::after{width:2.3px;height:1rem}
 body.tabsbottom .tabs button[data-t=new]:active .plus{transform:scale(.9)}
@@ -454,98 +491,98 @@ body.tabsbottom #toTop{bottom:calc(var(--sab, env(safe-area-inset-bottom, 0px)) 
   body.tabsbottom .tabs .plus,body.tabsbottom #toTop{transition:none}
   body.tabsbottom .tabs button[data-t=new]:active .plus{transform:none}
 }
-.tabs button{flex:1;border:0;background:transparent;padding:12px 4px;font-size:0.875rem;
+.tabs button{flex:1;border:0;background:transparent;padding:12px 4px;font-size:var(--t2);
   font-weight:700;color:var(--ink3);cursor:pointer;border-bottom:2.5px solid transparent}
 .tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
 .pane{display:none;padding:14px}
 .pane.on{display:block}
 
-.card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px;margin-bottom:12px}
-h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);padding:15px;margin-bottom:12px}
+h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:560px){.g2{grid-template-columns:1fr}}
 .f{margin-bottom:11px}
 .f:last-child{margin-bottom:0}
-.f label{display:block;font-size:0.7812rem;font-weight:700;color:var(--ink2);margin-bottom:5px}
+.f label{display:block;font-size:var(--t4);font-weight:700;color:var(--ink2);margin-bottom:5px}
 .f input,.f select,.f textarea{width:100%;padding:11px 12px;border:1px solid var(--line);
-  border-radius:9px;background:var(--bg)}
+  border-radius:var(--r1);background:var(--bg)}
 .f textarea{min-height:52px;resize:vertical;line-height:1.6}
 .f input:focus,.f select:focus,.f textarea:focus{outline:2px solid var(--brand);outline-offset:-1px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
-.chips label{display:inline-flex;align-items:center;gap:5px;font-size:0.8125rem;font-weight:600;
-  border:1px solid var(--line);background:var(--bg);border-radius:99px;padding:8px 13px;
+.chips label{display:inline-flex;align-items:center;gap:5px;font-size:var(--t3);font-weight:600;
+  border:1px solid var(--line);background:var(--bg);border-radius:var(--r2);padding:8px 13px;
   cursor:pointer;margin:0}
 .chips input{width:auto;margin:0;accent-color:var(--brand)}
 .chips label:has(input:checked){background:var(--brand);border-color:var(--brand);color:#fff}
-.chips .ph{font-size:0.7812rem;color:var(--ink3);padding:8px 2px}
-.hint{font-size:0.7188rem;color:var(--ink3);margin:0 0 4px}
+.chips .ph{font-size:var(--t4);color:var(--ink3);padding:8px 2px}
+.hint{font-size:var(--t4);color:var(--ink3);margin:0 0 4px}
 
-.wk{border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:11px;background:var(--bg)}
+.wk{border:1px solid var(--line);border-radius:var(--r2);padding:13px;margin-bottom:11px;background:var(--bg)}
 .wkh{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.wkh b{font-size:0.875rem;color:var(--brand)}
-.wkh button{border:1px solid var(--line);background:var(--card);border-radius:8px;
-  padding:5px 11px;font-size:0.7812rem;font-weight:700;cursor:pointer;margin-left:6px}
+.wkh b{font-size:var(--t2);color:var(--brand)}
+.wkh button{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
+  padding:5px 11px;font-size:var(--t4);font-weight:700;cursor:pointer;margin-left:6px}
 .wkh button.del{color:var(--warn)}
 .add{width:100%;padding:13px;border:1.5px dashed var(--line);background:transparent;
-  color:var(--brand);border-radius:11px;font-weight:700;cursor:pointer;margin-bottom:12px}
+  color:var(--brand);border-radius:var(--r2);font-weight:700;cursor:pointer;margin-bottom:12px}
 .btns{display:flex;gap:8px}
-.btns button{flex:1;padding:14px;border-radius:11px;border:1px solid var(--line);
+.btns button{flex:1;padding:14px;border-radius:var(--r2);border:1px solid var(--line);
   background:var(--card);font-weight:700;cursor:pointer}
 .btns button.p{background:var(--brand);border-color:var(--brand);color:#fff}
 .btns button:disabled{opacity:.55}
 
-.rec{background:var(--card);border:1px solid var(--line);border-radius:12px;
+.rec{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
   padding:12px 14px;margin-bottom:9px}
-.rec .h{display:flex;justify-content:space-between;gap:10px;font-size:0.7812rem;color:var(--ink3)}
-.rec .n{font-weight:700;font-size:0.9062rem;color:var(--ink);margin:3px 0}
-.rec .c{display:inline-block;background:var(--brand-soft);color:var(--brand);font-size:0.7188rem;
-  font-weight:700;padding:2px 9px;border-radius:99px;margin-bottom:5px}
-.rec p{margin:3px 0;font-size:0.8125rem;color:var(--ink2)}
-.rec .fu{display:inline-block;background:var(--warn-soft);color:var(--warn);font-size:0.7188rem;
-  font-weight:700;padding:2px 9px;border-radius:99px;margin-top:4px}
+.rec .h{display:flex;justify-content:space-between;gap:10px;font-size:var(--t4);color:var(--ink3)}
+.rec .n{font-weight:700;font-size:var(--t2);color:var(--ink);margin:3px 0}
+.rec .c{display:inline-block;background:var(--brand-soft);color:var(--brand);font-size:var(--t4);
+  font-weight:700;padding:2px 9px;border-radius:var(--r2);margin-bottom:5px}
+.rec p{margin:3px 0;font-size:var(--t3);color:var(--ink2)}
+.rec .fu{display:inline-block;background:var(--warn-soft);color:var(--warn);font-size:var(--t4);
+  font-weight:700;padding:2px 9px;border-radius:var(--r2);margin-top:4px}
 
 .stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:1px;
-  background:var(--line);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:12px}
+  background:var(--line);border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;margin-bottom:12px}
 .stat div{background:var(--card);padding:12px 13px}
-.stat b{display:block;font-size:1.375rem;font-weight:900;color:var(--brand);line-height:1.2}
-.stat span{font-size:0.7188rem;color:var(--ink3)}
+.stat b{display:block;font-size:var(--t0);font-weight:900;color:var(--brand);line-height:1.2}
+.stat span{font-size:var(--t4);color:var(--ink3)}
 .bars{margin-bottom:16px}
 .bars .r{margin-bottom:7px}
-.bars .l{display:flex;justify-content:space-between;font-size:0.8125rem;margin-bottom:3px}
+.bars .l{display:flex;justify-content:space-between;font-size:var(--t3);margin-bottom:3px}
 .bars .l span{color:var(--ink3);font-weight:700}
-.bars .b{height:7px;background:var(--line2);border-radius:99px;overflow:hidden}
-.bars .b i{display:block;height:100%;background:var(--brand);border-radius:99px}
+.bars .b{height:7px;background:var(--line2);border-radius:var(--r2);overflow:hidden}
+.bars .b i{display:block;height:100%;background:var(--brand);border-radius:var(--r2)}
 
 /* 預覽：中文一行、移工母語一行，讓他看得懂自己簽的是什麼 */
 .out{margin-top:14px;background:var(--card);border:1px solid var(--line);
-  border-radius:12px;padding:14px}
+  border-radius:var(--r2);padding:14px}
 .pvw{border-bottom:1px solid var(--line2);padding-bottom:11px;margin-bottom:11px}
 .pvw:last-child{border-bottom:0;padding-bottom:0;margin-bottom:0}
-.pvw .who{font-weight:700;font-size:0.9062rem;margin-bottom:2px}
-.pvw .cat{font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:1px}
-.pvw .catTr{font-size:0.7812rem;font-weight:700;color:var(--brand);margin-bottom:6px}
-.pvw .lbl{font-size:0.7188rem;color:var(--ink3);font-weight:700;margin-top:9px}
-.pvw .zh{font-size:0.8438rem;line-height:1.6}
-.pvw .tr{font-size:0.8438rem;color:var(--brand);line-height:1.6;
+.pvw .who{font-weight:700;font-size:var(--t2);margin-bottom:2px}
+.pvw .cat{font-size:var(--t3);font-weight:700;color:var(--ink);margin-bottom:1px}
+.pvw .catTr{font-size:var(--t4);font-weight:700;color:var(--brand);margin-bottom:6px}
+.pvw .lbl{font-size:var(--t4);color:var(--ink3);font-weight:700;margin-top:9px}
+.pvw .zh{font-size:var(--t2);line-height:1.6}
+.pvw .tr{font-size:var(--t2);color:var(--brand);line-height:1.6;
   padding-left:10px;border-left:2px solid var(--brand-soft);margin-top:2px}
-.pvw .none{color:var(--ink3);font-size:0.7812rem}
+.pvw .none{color:var(--ink3);font-size:var(--t4)}
 
 /* 簽名板：手指直接畫。高度夠大才簽得出名字，太窄會擠成一團。 */
 .sig{margin-bottom:11px}
 .sig .lb{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
-.sig .lb label{font-size:0.7812rem;font-weight:700;color:var(--ink2);margin:0}
-.sig .lb button{border:1px solid var(--line);background:var(--card);border-radius:8px;
-  padding:4px 11px;font-size:0.75rem;font-weight:700;cursor:pointer;color:var(--ink2)}
+.sig .lb label{font-size:var(--t4);font-weight:700;color:var(--ink2);margin:0}
+.sig .lb button{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
+  padding:4px 11px;font-size:var(--t4);font-weight:700;cursor:pointer;color:var(--ink2)}
 /* 平常只是一塊預覽，touch-action 讓頁面照常捲動，不會再誤畫到；
    要簽名是點一下跳出整頁的簽名板。 */
-.sig .pad{position:relative;border:1.5px dashed var(--line);border-radius:10px;
+.sig .pad{position:relative;border:1.5px dashed var(--line);border-radius:var(--r1);
   background:var(--card);height:110px;overflow:hidden;cursor:pointer;touch-action:auto}
 .sig .pad.on{border-style:solid;border-color:var(--brand)}
 .sig .pad img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .sig .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  color:var(--ink3);font-size:0.8125rem;pointer-events:none}
+  color:var(--ink3);font-size:var(--t3);pointer-events:none}
 .sig .pad.on .ph{display:none}
-.sig img{width:100%;border:1px solid var(--line);border-radius:8px;background:#fff}
+.sig img{width:100%;border:1px solid var(--line);border-radius:var(--r1);background:#fff}
 
 /* 全螢幕簽名板：頁面本身不捲，所以 touch-action:none 只作用在這裡，
    不會再影響到填表時的捲動。 */
@@ -559,16 +596,16 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    ⚠ 只有拖曳殘影 #dragGhost（90）該在這之上。 */
 .smask{position:fixed;inset:0;background:rgba(12,22,26,.55);z-index:78;
   display:block;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px}
-.smbox{background:var(--card);border-radius:16px;padding:14px;margin:14px auto;width:100%;
+.smbox{background:var(--card);border-radius:var(--r2);padding:14px;margin:14px auto;width:100%;
   max-width:640px;box-shadow:0 18px 50px rgba(0,0,0,.3)}
-.smbox h4{margin:0 0 2px;font-size:1rem}
-.smbox p{margin:0 0 10px;color:var(--ink3);font-size:0.7812rem}
-.smpad{border:1.5px solid var(--brand);border-radius:12px;background:#fff;
+.smbox h4{margin:0 0 2px;font-size:var(--t1)}
+.smbox p{margin:0 0 10px;color:var(--ink3);font-size:var(--t4)}
+.smpad{border:1.5px solid var(--brand);border-radius:var(--r2);background:#fff;
   height:44vh;min-height:200px;overflow:hidden;touch-action:none}
 .smpad canvas{display:block;width:100%;height:100%}
 .smbtns{display:flex;gap:8px;margin-top:12px}
-.smbtns button{flex:1;padding:13px;border-radius:11px;border:1px solid var(--line);
-  background:var(--card);font-size:0.9375rem;font-weight:700;cursor:pointer;color:var(--ink2)}
+.smbtns button{flex:1;padding:13px;border-radius:var(--r2);border:1px solid var(--line);
+  background:var(--card);font-size:var(--t2);font-weight:700;cursor:pointer;color:var(--ink2)}
 .smbtns button.p{background:var(--brand);border-color:var(--brand);color:#fff}
 
 /* ── 骨架：還沒回來的那幾格 ───────────────────────────────
@@ -576,7 +613,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    但客戶、日期、翻譯、服務項目、移工名單、審核狀態本來就在列表上，
    立刻畫得出來；真正要等的只有處理經過、結果、費用與簽名。
    那幾格畫成灰條，讓人知道「這裡還在補」，而不是「這裡是空的」。 */
-.sk{display:inline-block;height:0.9em;border-radius:5px;vertical-align:-1px;
+.sk{display:inline-block;height:0.9em;border-radius:var(--r0);vertical-align:-1px;
   background:linear-gradient(90deg,var(--line2) 0%,var(--line) 50%,var(--line2) 100%);
   background-size:200% 100%;animation:skw 1.1s ease-in-out infinite}
 .sk.w1{width:4.5em} .sk.w2{width:8em} .sk.w3{width:12em}
@@ -590,7 +627,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
    紅色壓在下面，卡片本身往左滑才露出來。破壞性的動作藏在手勢後面，
    比擺一顆隨時按得到的「取消」安全——這一排卡片是用拇指在捲的。 */
-.swwrap{position:relative;border-radius:12px;overflow:hidden;margin-bottom:8px}
+.swwrap{position:relative;border-radius:var(--r2);overflow:hidden;margin-bottom:8px}
 /* 卡片要明確壓在按鈕上面。不寫 z-index 的話，
    絕對定位的按鈕會畫在非定位的卡片上面（CSS 的繪製順序），
    2026-09-18 實機上就是這樣——「追蹤」兩個字蓋在客戶名稱上。 */
@@ -606,8 +643,8 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .swst{width:52px;flex:none;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:2px;background:var(--line2);color:var(--ink2);
   border-left:1px solid var(--line);transition:background .13s,color .13s}
-.swst i{font-style:normal;font-size:0.9375rem;line-height:1}
-.swst b{font-size:0.625rem;font-weight:800;letter-spacing:.02em}
+.swst i{font-style:normal;font-size:var(--t2);line-height:1}
+.swst b{font-size:var(--t6);font-weight:800;letter-spacing:.02em}
 .swst.hot{background:var(--brand);color:#fff}
 .swst.bad{color:var(--danger)}
 .swst.bad.hot{background:var(--danger);color:#fff}
@@ -636,8 +673,8 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .bkbar:active{background:var(--brand-soft)}
 /* 全螢幕的服務紀錄視窗裡：它本來就在最上面，不用黏、也沒有 .pane 的內距要抵銷 */
 .bkbar.plain{position:static;margin:0;border-radius:0;flex:none}
-.bkbar .cv{font-size:1.25rem;line-height:1;margin-top:-2px;flex:none}
-.bkbar .to{color:var(--ink2);font-weight:600;font-size:0.875rem;min-width:0;
+.bkbar .cv{font-size:var(--t0);line-height:1;margin-top:-2px;flex:none}
+.bkbar .to{color:var(--ink2);font-weight:600;font-size:var(--t2);min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* 回來的時候讓那一張卡片自己亮一下。
@@ -657,7 +694,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 /* 常駐的確認行。toast 一秒多就消失，人在工廠低頭做別的事會錯過。
    刻意不做成卡片——它是狀態，不是可以按的東西。 */
 .savedln{display:flex;gap:7px;align-items:baseline;margin:0 0 10px;
-  font-size:0.8125rem;color:var(--ink2);line-height:1.5}
+  font-size:var(--t3);color:var(--ink2);line-height:1.5}
 .savedln .tick{color:var(--ok-ink);font-weight:800;flex:none}
 .savedln b{color:var(--ink)}
 .savedln .wh{color:var(--ink3)}
@@ -665,20 +702,20 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 /* 存過之後又改了東西：綠色的「已儲存」變成橘色的「改了還沒存」。
    不是只換個字——整條底色變掉，滑過去的人也擋得下來。 */
 .savedln.warn{background:var(--warn-bg);border:1px solid var(--warn-line);
-  border-radius:11px;padding:9px 11px;margin-bottom:9px}
+  border-radius:var(--r2);padding:9px 11px;margin-bottom:9px}
 .savedln.warn .tick{color:var(--warn-ink)}
-.svdone .note{font-size:0.75rem;color:var(--ink3);margin:7px 0 0;line-height:1.5}
+.svdone .note{font-size:var(--t4);color:var(--ink3);margin:7px 0 0;line-height:1.5}
 
 /* 送審之後：灰底上鎖。不是只把欄位變灰——上面要講原因與怎麼辦，
    不然人會以為是壞掉了。 */
 .savedln.lock{background:var(--line2);border:1px solid var(--line);
-  border-radius:11px;padding:9px 11px;margin-bottom:9px}
+  border-radius:var(--r2);padding:9px 11px;margin-bottom:9px}
 .savedln.lock .tick{color:var(--ink2)}
 
 /* 主要動作一列、次要一列、出口並排。一個畫面只放一個填色按鈕。 */
 .stack{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .stack>.full{grid-column:1/-1}
-.stack button{padding:14px 8px;border-radius:11px;border:1px solid var(--line);
+.stack button{padding:14px 8px;border-radius:var(--r2);border:1px solid var(--line);
   background:var(--card);font:inherit;font-weight:700;color:var(--ink2);cursor:pointer;
   transition:transform .12s ease-out}
 .stack button:active{transform:scale(.97)}
@@ -691,19 +728,19 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
 /* PDF 那一格：還沒產生時是一顆按鈕，產生後就地變成檔案本身。
    同一件事只佔一個位置，不要一個按鈕再配一塊結果。 */
-.pdfbox{border:1px solid var(--ok-line);background:var(--ok-bg);border-radius:11px;
+.pdfbox{border:1px solid var(--ok-line);background:var(--ok-bg);border-radius:var(--r2);
   padding:11px 13px;text-align:left}
-.pdfbox .fn{font-size:0.75rem;color:var(--ink2);word-break:break-all;line-height:1.5}
+.pdfbox .fn{font-size:var(--t4);color:var(--ink2);word-break:break-all;line-height:1.5}
 .pdfbox .fn b{color:var(--ink)}
 .pdfbox .lks{display:flex;gap:15px;margin-top:7px;flex-wrap:wrap;align-items:baseline}
-.pdfbox .lks a{color:var(--brand2);font-size:0.875rem;font-weight:700;
+.pdfbox .lks a{color:var(--brand2);font-size:var(--t2);font-weight:700;
   text-decoration:underline;cursor:pointer}
 /* 重新產生是例外動作：PDF 產好了正常就是拿去用。
    跟「開啟」「分享」一樣大等於在鼓勵多按一次，而每按一次雲端硬碟就多一個檔。 */
-.pdfbox .lks a.re{margin-left:auto;color:var(--ink3);font-weight:600;font-size:0.75rem;
+.pdfbox .lks a.re{margin-left:auto;color:var(--ink3);font-weight:600;font-size:var(--t4);
   text-decoration:none;border-bottom:1px solid var(--line)}
-.pdfbox .wait{margin:0;font-size:0.8125rem;color:var(--ink3)}
-.pdfbox .err{margin:0;font-size:0.8125rem;color:var(--danger)}
+.pdfbox .wait{margin:0;font-size:var(--t3);color:var(--ink3)}
+.pdfbox .err{margin:0;font-size:var(--t3);color:var(--danger)}
 @media (prefers-reduced-motion:reduce){ .stack button:active{transform:none} }
 
 /* ── 存檔完成面板 ─────────────────────────────────────────
@@ -716,7 +753,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    一個畫面只放一個填色按鈕，多了就等於沒有主次。
    只改 #doneModal，其他對話框維持原本的 flex 排法。 */
 #doneModal .smbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-#doneModal .smbtns button{flex:none;padding:14px 12px;border-radius:12px;
+#doneModal .smbtns button{flex:none;padding:14px 12px;border-radius:var(--r2);
   transition:transform .12s ease-out,background-color .12s ease-out,opacity .12s ease-out}
 #dnSubmit,#dnPdf{grid-column:1/-1}
 #dnSubmit{order:1} #dnPdf{order:2} #dnCal{order:3} #dnClose{order:4}
@@ -739,7 +776,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 #doneModal.on .smbox{transform:none;opacity:1}
 /* 標題那一行：左邊是狀態，右邊是編號，不要擠在一起 */
 #doneModal h4{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-#doneModal .fct{margin:2px 0 12px;color:var(--ink2);font-size:0.8125rem}
+#doneModal .fct{margin:2px 0 12px;color:var(--ink2);font-size:var(--t3)}
 
 @media (prefers-reduced-motion:reduce){
   #doneModal .smbox{transition:opacity .18s ease;transform:none}
@@ -752,8 +789,8 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .pvscroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:12px}
 .pvbar{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);
   background:var(--card)}
-.pvbar button{flex:1;padding:13px;border-radius:11px;border:1px solid var(--line);
-  background:var(--card);font-size:0.9375rem;font-weight:700;cursor:pointer;color:var(--ink2)}
+.pvbar button{flex:1;padding:13px;border-radius:var(--r2);border:1px solid var(--line);
+  background:var(--card);font-size:var(--t2);font-weight:700;cursor:pointer;color:var(--ink2)}
 .pvbar button.p{background:var(--brand);border-color:var(--brand);color:#fff}
 .fit{position:relative}
 /* ── 客戶服務紀錄表 ────────────────────────────────────────
@@ -765,19 +802,19 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
       不靠加粗線條，這樣既分得出來、線又維持同一個粗細。 */
 .sheet{background:#fff;color:#111;border:1px solid #111;padding:16px 16px 14px;
   width:794px;min-height:1123px;display:flex;flex-direction:column;
-  font-size:13px;line-height:1.62;
+  font-size:var(--t3);line-height:1.62;
   font-family:"Noto Sans TC",-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif}
 .sheet>*{flex:none}
 .sheet .en{font-family:Georgia,"Times New Roman",serif}
 
 .sheet .sh{display:grid;grid-template-columns:1fr auto 1fr;align-items:baseline;
   padding:2px 2px 12px;gap:10px}
-.sheet .sh b{grid-column:2;text-align:center;font-size:25px;font-weight:700;
+.sheet .sh b{grid-column:2;text-align:center;font-size:var(--td);font-weight:700;
   letter-spacing:.3em;text-indent:.3em;
   font-family:"Noto Serif TC",Georgia,"Songti TC",serif}
-.sheet .sh span{grid-column:3;text-align:right;font-size:10.5px;color:#6A757A;
+.sheet .sh span{grid-column:3;text-align:right;font-size:var(--t6);color:#6A757A;
   white-space:nowrap;letter-spacing:.14em}
-.sheet .sh span u{text-decoration:none;color:#A3111B;font-size:16px;margin-left:7px;
+.sheet .sh span u{text-decoration:none;color:#A3111B;font-size:var(--t1);margin-left:7px;
   font-family:Georgia,"Times New Roman",serif;font-variant-numeric:tabular-nums;
   letter-spacing:.02em}
 
@@ -785,12 +822,12 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .sheet .strip{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 40px;
   border-top:1px solid #111;border-bottom:1px solid #111;padding:9px 4px}
 .sheet .strip .it{display:flex;align-items:baseline;gap:11px}
-.sheet .strip .lb{font-size:10px;font-weight:700;letter-spacing:.26em;color:#5A6A70;
+.sheet .strip .lb{font-size:var(--t6);font-weight:700;letter-spacing:.26em;color:#5A6A70;
   white-space:nowrap}
-.sheet .strip .vl{font-size:16px;font-weight:500;letter-spacing:.04em;
+.sheet .strip .vl{font-size:var(--t1);font-weight:500;letter-spacing:.04em;
   font-variant-numeric:tabular-nums}
 .sheet .strip .mode{display:flex;gap:14px;align-items:baseline}
-.sheet .strip .mode span{font-size:13.5px;color:#8B959A}
+.sheet .strip .mode span{font-size:var(--t3);color:#8B959A}
 .sheet .strip .mode span.on{color:#111;font-weight:700}
 .sheet .strip .mode i{font-style:normal;font-family:Georgia,serif;margin-right:4px}
 
@@ -799,11 +836,11 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .sheet .hd th,.sheet .hd td{border:1px solid #111;padding:7px 10px;
   text-align:left;vertical-align:middle}
 .sheet .hd th{width:82px;background:#F5F7F7;font-weight:400;line-height:1.25}
-.sheet .hd th i{display:block;font-style:normal;font-size:12px;font-weight:700;
+.sheet .hd th i{display:block;font-style:normal;font-size:var(--t4);font-weight:700;
   letter-spacing:.22em;text-indent:.22em}
-.sheet .hd th s{display:block;text-decoration:none;font-size:9px;color:#5A6A70;
+.sheet .hd th s{display:block;text-decoration:none;font-size:var(--t6);color:#5A6A70;
   font-family:Georgia,"Times New Roman",serif;letter-spacing:.02em}
-.sheet .hd td{font-size:14px;font-weight:500;word-break:break-word}
+.sheet .hd td{font-size:var(--t2);font-weight:500;word-break:break-word}
 
 /* ── 移工區塊 ──────────────────────────────────
    分段靠留白與字級落差，不再每一段都用整條線框起來。
@@ -811,31 +848,31 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .sheet .wsec{border:1px solid #111;margin-top:-1px;padding:15px 16px 13px}
 .sheet .wsec .band{display:flex;align-items:baseline;gap:11px;
   padding-bottom:11px;border-bottom:1px solid #111;margin-bottom:14px}
-.sheet .wsec .band i{font-style:normal;font-weight:700;font-size:11px;background:#111;
+.sheet .wsec .band i{font-style:normal;font-weight:700;font-size:var(--t5);background:#111;
   color:#fff;width:20px;height:20px;display:inline-flex;align-items:center;
   justify-content:center;flex:none;align-self:center}
-.sheet .wsec .band b{font-size:19px;letter-spacing:.04em;line-height:1.2}
-.sheet .wsec .band .orig{font-size:12.5px;color:#4A5A60;letter-spacing:.02em;
+.sheet .wsec .band b{font-size:var(--t0);letter-spacing:.04em;line-height:1.2}
+.sheet .wsec .band .orig{font-size:var(--t4);color:#4A5A60;letter-spacing:.02em;
   margin-left:9px;align-self:center}
-.sheet .wsec .band em{margin-left:auto;font-style:normal;font-size:11px;color:#4A5A60;
+.sheet .wsec .band em{margin-left:auto;font-style:normal;font-size:var(--t5);color:#4A5A60;
   letter-spacing:.18em;align-self:center}
 
 .sheet .wsec .seg{margin-bottom:13px}
-.sheet .wsec .seg .k{font-size:10px;font-weight:700;letter-spacing:.26em;color:#5A6A70;
+.sheet .wsec .seg .k{font-size:var(--t6);font-weight:700;letter-spacing:.26em;color:#5A6A70;
   margin-bottom:3px}
-.sheet .wsec .seg .k s{text-decoration:none;font-weight:400;font-size:8.5px;color:#8B959A;
+.sheet .wsec .seg .k s{text-decoration:none;font-weight:400;font-size:var(--t6);color:#8B959A;
   font-family:Georgia,serif;letter-spacing:.04em;margin-left:8px}
-.sheet .wsec .seg .v{font-size:14.5px;line-height:1.62;font-weight:500}
-.sheet .wsec .seg .t{font-size:11.5px;line-height:1.55;color:#59636A;margin-top:5px;
+.sheet .wsec .seg .v{font-size:var(--t2);line-height:1.62;font-weight:500}
+.sheet .wsec .seg .t{font-size:var(--t5);line-height:1.55;color:#59636A;margin-top:5px;
   padding-left:11px;border-left:1px solid #C9D4D6}
-.sheet .wsec .seg .t em{font-style:normal;font-weight:700;font-size:10px;
+.sheet .wsec .seg .t em{font-style:normal;font-weight:700;font-size:var(--t6);
   letter-spacing:.1em;color:#8A959B;margin-right:7px}
-.sheet .wsec .seg .t.hi{color:#2E7D8A;font-weight:700;font-size:12px;
+.sheet .wsec .seg .t.hi{color:#2E7D8A;font-weight:700;font-size:var(--t4);
   border-left-color:#2E7D8A}
 
 /* 追蹤狀態做成標籤，比「一行小字」清楚，也比再開一格清爽 */
 .sheet .wsec .tags{display:flex;flex-wrap:wrap;gap:8px;align-items:center;
-  margin:0 0 14px;font-size:11.5px}
+  margin:0 0 14px;font-size:var(--t5)}
 .sheet .wsec .tags .chip{border:1px solid #111;padding:2px 11px;letter-spacing:.1em}
 .sheet .wsec .tags .chip.on{background:#111;color:#fff}
 .sheet .wsec .tags .ex{color:#59636A}
@@ -845,17 +882,17 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .sheet .wsec .wsig .ln{border-bottom:1px solid #111;height:60px;position:relative}
 .sheet .wsec .wsig .ln img{position:absolute;left:4px;bottom:2px;height:56px;width:auto;
   max-width:calc(100% - 8px);object-fit:contain;object-position:left bottom}
-.sheet .wsec .wsig .k{font-size:10px;font-weight:700;letter-spacing:.24em;color:#5A6A70;
+.sheet .wsec .wsig .k{font-size:var(--t6);font-weight:700;letter-spacing:.24em;color:#5A6A70;
   margin-top:4px}
-.sheet .wsec .wsig .k s{text-decoration:none;font-weight:400;font-size:8.5px;color:#8B959A;
+.sheet .wsec .wsig .k s{text-decoration:none;font-weight:400;font-size:var(--t6);color:#8B959A;
   font-family:Georgia,serif;letter-spacing:.04em;margin-left:8px}
 
 /* 內容結束後的留白把簽名區推到頁尾，整張才是完整的一頁 */
 .sheet .blank{flex:1;display:flex;flex-direction:column;justify-content:center;
   align-items:center;gap:9px;padding:20px 10px;text-align:center;
-  color:#2A2A2A;font-size:12px;border:1px solid #111;margin-top:-1px}
+  color:#2A2A2A;font-size:var(--t4);border:1px solid #111;margin-top:-1px}
 .sheet .blank hr{border:0;border-top:1px solid #111;width:46%;margin:0}
-.sheet .blank span{letter-spacing:.5em;text-indent:.5em;font-size:11.5px}
+.sheet .blank span{letter-spacing:.5em;text-indent:.5em;font-size:var(--t5)}
 
 .sheet .srow{margin-top:-1px;display:grid;grid-template-columns:1fr 1fr;
   border:1px solid #111}
@@ -864,93 +901,93 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .sheet .srow .ln{border-bottom:1px solid #111;height:76px;position:relative}
 .sheet .srow .ln img{position:absolute;left:4px;bottom:2px;height:72px;width:auto;
   max-width:calc(100% - 8px);object-fit:contain;object-position:left bottom}
-.sheet .srow .k{font-size:10px;font-weight:700;letter-spacing:.24em;color:#5A6A70;
+.sheet .srow .k{font-size:var(--t6);font-weight:700;letter-spacing:.24em;color:#5A6A70;
   margin-top:4px}
-.sheet .srow .k s{text-decoration:none;font-weight:400;font-size:8.5px;color:#8B959A;
+.sheet .srow .k s{text-decoration:none;font-weight:400;font-size:var(--t6);color:#8B959A;
   font-family:Georgia,serif;letter-spacing:.04em;margin-left:8px}
 .sheet .boss{margin-top:-1px;border:1px solid #111;padding:11px 16px 12px;
-  display:flex;justify-content:space-between;gap:16px;align-items:flex-end;font-size:11.5px}
-.sheet .boss .k{font-size:10px;font-weight:700;letter-spacing:.26em;color:#5A6A70;
+  display:flex;justify-content:space-between;gap:16px;align-items:flex-end;font-size:var(--t5)}
+.sheet .boss .k{font-size:var(--t6);font-weight:700;letter-spacing:.26em;color:#5A6A70;
   margin-bottom:4px}
 .sheet .boss .o div{margin-top:2px}
-.sheet .boss .seal{white-space:nowrap;color:#5A6A70;font-size:10px;letter-spacing:.2em}
+.sheet .boss .seal{white-space:nowrap;color:#5A6A70;font-size:var(--t6);letter-spacing:.2em}
 .sheet .boss .seal u{display:inline-block;width:104px;border-bottom:1px solid #111;
   text-decoration:none;margin-left:6px}
 
 /* 參加人員勾選：一場宣導常常只找部分人（20 個裡面找 13 個），
    先圈出應到名單，之後的進度與「應到／實到」才有意義。 */
 .pickHead{display:flex;justify-content:space-between;align-items:center;
-  font-size:0.8438rem;color:var(--ink2);margin-bottom:9px}
-.pickHead b{color:var(--brand);font-size:1.0625rem}
-.pickHead button{border:1px solid var(--line);background:var(--card);border-radius:8px;
-  padding:5px 11px;font-size:0.75rem;font-weight:700;color:var(--ink2);cursor:pointer;
+  font-size:var(--t2);color:var(--ink2);margin-bottom:9px}
+.pickHead b{color:var(--brand);font-size:var(--t1)}
+.pickHead button{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
+  padding:5px 11px;font-size:var(--t4);font-weight:700;color:var(--ink2);cursor:pointer;
   margin-left:6px}
 /* 國籍篩選：一次要挑「全部泰國工」時，逐個勾太慢 */
 .pickFilter{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px}
-.pickFilter button{border:1px solid var(--line);background:var(--card);border-radius:99px;
-  padding:5px 14px;font-size:0.8125rem;font-weight:700;color:var(--ink2);cursor:pointer}
+.pickFilter button{border:1px solid var(--line);background:var(--card);border-radius:var(--r2);
+  padding:5px 14px;font-size:var(--t3);font-weight:700;color:var(--ink2);cursor:pointer}
 .pickFilter button.on{background:var(--brand);border-color:var(--brand);color:#fff}
-.picks .o{display:block;font-size:0.75rem;color:var(--ink3);margin-top:1px}
-.picks{max-height:290px;overflow-y:auto;border:1px solid var(--line);border-radius:11px;
+.picks .o{display:block;font-size:var(--t4);color:var(--ink3);margin-top:1px}
+.picks{max-height:290px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--r2);
   background:var(--card)}
 .picks label{display:flex;align-items:center;gap:11px;padding:9px 13px;
-  border-top:1px solid var(--line2);font-size:0.9375rem;margin:0;font-weight:400;color:var(--ink)}
+  border-top:1px solid var(--line2);font-size:var(--t2);margin:0;font-weight:400;color:var(--ink)}
 .picks label:first-child{border-top:none}
 .picks input{width:20px;height:20px;accent-color:var(--brand);flex:none}
-.picks .lg{margin-left:auto;font-size:0.7188rem;color:var(--ink3);border:1px solid var(--line);
-  border-radius:99px;padding:1px 9px}
-.picks .empty{padding:18px;text-align:center;color:var(--ink3);font-size:0.875rem}
+.picks .lg{margin-left:auto;font-size:var(--t4);color:var(--ink3);border:1px solid var(--line);
+  border-radius:var(--r2);padding:1px 9px}
+.picks .empty{padding:18px;text-align:center;color:var(--ink3);font-size:var(--t2)}
 
 /* 簽到進度：現場要一眼看出「還差幾個人」，所以先給數字與進度條，
    細節（誰簽了、誰還沒）收在可展開的名單裡，不要一開始就洗版。 */
 .prog{display:flex;align-items:center;gap:12px;margin-top:14px}
 .prog .pn{display:flex;align-items:baseline;gap:3px;white-space:nowrap}
-.prog .pn b{font-size:1.75rem;color:var(--brand);font-weight:800;line-height:1}
-.prog .pn span{font-size:0.875rem;color:var(--ink3)}
-.prog .pb{flex:1;height:8px;background:var(--line2);border-radius:99px;overflow:hidden}
-.prog .pb i{display:block;height:100%;background:var(--brand);border-radius:99px;
+.prog .pn b{font-size:var(--td);color:var(--brand);font-weight:800;line-height:1}
+.prog .pn span{font-size:var(--t2);color:var(--ink3)}
+.prog .pb{flex:1;height:8px;background:var(--line2);border-radius:var(--r2);overflow:hidden}
+.prog .pb i{display:block;height:100%;background:var(--brand);border-radius:var(--r2);
   transition:width .3s ease}
-.prog button{border:1px solid var(--line);background:var(--card);border-radius:9px;
-  padding:7px 12px;font-size:0.7812rem;font-weight:700;color:var(--ink2);cursor:pointer;
+.prog button{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
+  padding:7px 12px;font-size:var(--t4);font-weight:700;color:var(--ink2);cursor:pointer;
   white-space:nowrap}
 
 .rosterHead{width:100%;margin-top:12px;display:flex;align-items:center;
   justify-content:space-between;border:1px solid var(--line);background:var(--card);
-  border-radius:11px;padding:11px 14px;font-size:0.875rem;font-weight:700;color:var(--ink2);
+  border-radius:var(--r2);padding:11px 14px;font-size:var(--t2);font-weight:700;color:var(--ink2);
   font-family:inherit;cursor:pointer}
-.rosterHead .caret{font-size:1rem;color:var(--ink3);transition:transform .2s}
+.rosterHead .caret{font-size:var(--t1);color:var(--ink3);transition:transform .2s}
 .rosterHead.open .caret{transform:rotate(180deg)}
-.roster{border:1px solid var(--line);border-top:none;border-radius:0 0 11px 11px;
+.roster{border:1px solid var(--line);border-top:none;border-radius:0 0 var(--r2) var(--r2);
   background:var(--card);overflow:hidden}
 .roster .it{display:flex;align-items:center;gap:11px;padding:11px 14px;
   border-top:1px solid var(--line2)}
 .roster .it:first-child{border-top:none}
 /* 有簽：實心勾＋深色粗體；沒簽：空心圈＋淺灰。不用讀文字就分得出來 */
 .roster .mk{width:22px;height:22px;border-radius:50%;flex:none;display:grid;
-  place-items:center;font-size:0.75rem;font-weight:800;
+  place-items:center;font-size:var(--t4);font-weight:800;
   border:1.5px solid var(--line);color:transparent;background:var(--card)}
 .roster .it.on .mk{background:var(--brand);border-color:var(--brand);color:#fff}
-.roster .nm{flex:1;font-size:0.9375rem;color:var(--ink3)}
+.roster .nm{flex:1;font-size:var(--t2);color:var(--ink3)}
 .roster .it.on .nm{color:var(--ink);font-weight:700}
-.roster .tm{font-size:0.75rem;color:var(--ink3);font-variant-numeric:tabular-nums}
-.roster .grp{padding:8px 14px;background:var(--bg);font-size:0.7188rem;font-weight:700;
+.roster .tm{font-size:var(--t4);color:var(--ink3);font-variant-numeric:tabular-nums}
+.roster .grp{padding:8px 14px;background:var(--bg);font-size:var(--t4);font-weight:700;
   letter-spacing:.1em;color:var(--ink3);border-top:1px solid var(--line2)}
-.roster .none{padding:16px 14px;color:var(--ink3);font-size:0.875rem;text-align:center}
+.roster .none{padding:16px 14px;color:var(--ink3);font-size:var(--t2);text-align:center}
 
 /* 宣導簽到：QR 要夠大，工廠光線差、距離遠也掃得到 */
-.qrbox{background:#fff;border:1px solid var(--line);border-radius:14px;
+.qrbox{background:#fff;border:1px solid var(--line);border-radius:var(--r2);
   padding:18px;display:flex;flex-direction:column;align-items:center;gap:10px}
 .qrbox #qr img,.qrbox #qr canvas{display:block;width:230px;height:230px}
-.qrurl{font-size:0.7188rem;color:var(--ink3);word-break:break-all;text-align:center;
+.qrurl{font-size:var(--t4);color:var(--ink3);word-break:break-all;text-align:center;
   font-family:ui-monospace,monospace}
-.prog{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:0.875rem;color:var(--ink2)}
-.prog b{font-size:1.625rem;color:var(--brand);font-weight:800}
+.prog{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:var(--t2);color:var(--ink2)}
+.prog b{font-size:var(--td);color:var(--brand);font-weight:800}
 .prog button{margin-left:auto;border:1px solid var(--line);background:var(--card);
-  border-radius:9px;padding:6px 12px;font-size:0.7812rem;font-weight:700;color:var(--ink2);
+  border-radius:var(--r1);padding:6px 12px;font-size:var(--t4);font-weight:700;color:var(--ink2);
   cursor:pointer}
 .signed{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
-.signed span{border:1px solid var(--line);background:var(--card);border-radius:99px;
-  padding:4px 12px;font-size:0.8125rem}
+.signed span{border:1px solid var(--line);background:var(--card);border-radius:var(--r2);
+  padding:4px 12px;font-size:var(--t3)}
 .signed .none{border:0;background:none;color:var(--ink3);padding:4px 0}
 
 /* 往下捲時「月／週／日」與月份導覽釘在頂端：
@@ -963,57 +1000,57 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   background:linear-gradient(rgba(0,0,0,.07),transparent);pointer-events:none}
 
 /* 檢視切換：月看全貌與空檔、週看排程密度、日是現場用的清單 */
-.segs{display:flex;gap:0;border:1px solid var(--line);border-radius:11px;
+.segs{display:flex;gap:0;border:1px solid var(--line);border-radius:var(--r2);
   overflow:hidden;margin-bottom:13px;background:var(--card)}
 .segs button{flex:1;padding:9px 0;border:0;background:transparent;font-family:inherit;
-  font-size:0.875rem;font-weight:700;color:var(--ink3);cursor:pointer;
+  font-size:var(--t2);font-weight:700;color:var(--ink3);cursor:pointer;
   border-right:1px solid var(--line)}
 .segs button:last-child{border-right:0}
 .segs button.on{background:var(--brand);color:#fff}
 
 /* 週檢視：手機上七欄太窄，改成一天一列，橫向看得到那天有誰 */
-.wk{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+.wk{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;background:var(--card)}
 .wk .r{display:flex;gap:11px;padding:11px 12px;border-top:1px solid var(--line2);
   cursor:pointer;align-items:flex-start}
 .wk .r:first-child{border-top:0}
 .wk .r.sel{background:color-mix(in oklab,var(--brand) 8%,transparent)}
 .wk .r.today .dd{color:var(--brand)}
 .wk .dd{width:46px;flex:none;text-align:center}
-.wk .dd b{display:block;font-size:1.1875rem;font-variant-numeric:tabular-nums;line-height:1.15}
-.wk .dd span{font-size:0.6875rem;color:var(--ink3)}
+.wk .dd b{display:block;font-size:var(--t0);font-variant-numeric:tabular-nums;line-height:1.15}
+.wk .dd span{font-size:var(--t5);color:var(--ink3)}
 .wk .es{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:5px;padding-top:2px}
 /* 一列一筆，看得到服務項目——只給客戶名字的話，週檢視等於只是彩色點點 */
 .wk .es{flex-direction:column;gap:6px}
 .wk .es .e{display:flex;align-items:flex-start;gap:7px;border:1px solid var(--line);
-  border-radius:10px;padding:6px 10px;font-size:0.8125rem;width:100%}
+  border-radius:var(--r1);padding:6px 10px;font-size:var(--t3);width:100%}
 .wk .es .e i{width:7px;height:7px;border-radius:50%;flex:none;margin-top:6px}
 .wk .es .e .x{flex:1;min-width:0}
 .wk .es .e .x span{display:block}
 .wk .es .e .h{font-weight:700}
-.wk .es .e .h b{font-weight:400;color:var(--ink3);font-size:0.7188rem;margin-left:6px}
-.wk .es .e .p{font-size:0.75rem;color:var(--ink2);margin-top:1px}
+.wk .es .e .h b{font-weight:400;color:var(--ink3);font-size:var(--t4);margin-left:6px}
+.wk .es .e .p{font-size:var(--t4);color:var(--ink2);margin-top:1px}
 .wk .es .e.done{background:color-mix(in oklab,var(--brand) 7%,transparent);
   border-color:transparent}
-.wk .es .none{color:var(--ink3);font-size:0.7812rem;padding:3px 0}
+.wk .es .none{color:var(--ink3);font-size:var(--t4);padding:3px 0}
 
 /* ── 行事曆 ────────────────────────────────────────
    顏色管語別、形狀管狀態，兩層獨立：
    工廠光線常常很差，只靠顏色分不夠；實心／空心是形狀差異，
    縮到 5px 的小圓點都還看得出來，斜體底線在這個字級是看不出來的。 */
 .calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.calhead .mo{font-size:1.1875rem;font-weight:700;letter-spacing:.02em}
+.calhead .mo{font-size:var(--t0);font-weight:700;letter-spacing:.02em}
 .calhead .nav{display:flex;gap:6px}
-.calhead .nav button{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;
-  background:var(--card);color:var(--ink2);font-size:0.9375rem;font-weight:700;cursor:pointer;
+.calhead .nav button{width:34px;height:34px;border:1px solid var(--line);border-radius:var(--r1);
+  background:var(--card);color:var(--ink2);font-size:var(--t2);font-weight:700;cursor:pointer;
   font-family:inherit;padding:0}
 /* 篩選列
    原本三排 pill 會各自換行，五行擠在一起看不出誰跟誰是一組。
    改成兩排不換行、各自橫向捲動：上排是狀態（做事看的），
    下排是語別與人員（找人看的）。右緣留一道漸層提示還可以往右滑。 */
 /* 日檢視收起來時的那一顆。⚠ 44px——工廠裡站著單手點。 */
-.calfb{min-height:44px;padding:0 16px;border-radius:99px;
+.calfb{min-height:44px;padding:0 16px;border-radius:var(--r2);
   border:1px solid var(--line);background:var(--card);color:var(--ink2);
-  font:inherit;font-size:0.8125rem;font-weight:600;margin:0 0 9px;cursor:pointer}
+  font:inherit;font-size:var(--t3);font-weight:600;margin:0 0 9px;cursor:pointer}
 .calfb:active{background:var(--line2)}
 .calfw{position:relative}
 .calfw::after{content:"";position:absolute;right:0;top:0;bottom:8px;width:24px;
@@ -1024,31 +1061,31 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   overscroll-behavior-x:contain}
 .calf::-webkit-scrollbar{display:none}
 .calf button{flex:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
-  border:1px solid var(--line);border-radius:99px;padding:6px 13px;background:var(--card);
-  font-size:0.8125rem;font-family:inherit;color:var(--ink2);cursor:pointer}
+  border:1px solid var(--line);border-radius:var(--r2);padding:6px 13px;background:var(--card);
+  font-size:var(--t3);font-family:inherit;color:var(--ink2);cursor:pointer}
 .calf button b{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink3)}
 .calf button.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
 .calf button.on b{color:rgba(255,255,255,.72)}
 .calf button.clr{border-style:dashed;background:none;color:var(--ink3)}
-.calf.sub button{padding:5px 11px;font-size:0.7812rem}
+.calf.sub button{padding:5px 11px;font-size:var(--t4)}
 .calf .dot{width:8px;height:8px;border-radius:50%;flex:none}
-.calf .sq{width:9px;height:9px;border-radius:3px;flex:none;border:1px solid rgba(0,0,0,.12)}
+.calf .sq{width:9px;height:9px;border-radius:var(--r0);flex:none;border:1px solid rgba(0,0,0,.12)}
 .calf button.on .sq{border-color:rgba(255,255,255,.5)}
 
 .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}
-.filters button{border:1px solid var(--line);border-radius:99px;padding:5px 13px;
-  font-size:0.7812rem;color:var(--ink2);background:var(--card);cursor:pointer;
+.filters button{border:1px solid var(--line);border-radius:var(--r2);padding:5px 13px;
+  font-size:var(--t4);color:var(--ink2);background:var(--card);cursor:pointer;
   font-family:inherit;display:inline-flex;align-items:center;gap:6px}
 .filters button.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
 .filters .dot{width:8px;height:8px;border-radius:50%;display:block}
 .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:4px 0}
-.dow span{text-align:center;font-size:0.6875rem;color:var(--ink3);font-weight:700}
+.dow span{text-align:center;font-size:var(--t5);color:var(--ink3);font-weight:700}
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cell{aspect-ratio:1;border-radius:10px;padding:4px 3px 3px;display:flex;
+.cell{aspect-ratio:1;border-radius:var(--r1);padding:4px 3px 3px;display:flex;
   flex-direction:column;align-items:center;gap:3px;border:1px solid transparent;
   cursor:pointer;background:var(--card)}
 .cell.dim{opacity:.3}
-.cell .d{font-size:0.8125rem;color:var(--ink2);font-variant-numeric:tabular-nums}
+.cell .d{font-size:var(--t3);color:var(--ink2);font-variant-numeric:tabular-nums}
 .cell.today{border-color:var(--brand)}
 .cell.today .d{color:var(--brand);font-weight:800}
 .cell.sel{background:var(--brand);border-color:var(--brand)}
@@ -1066,12 +1103,12 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    --calh 是上面那塊「月/週/日＋月份導覽」的高度，由 fixStick() 量出來。 */
 .daylist h4{position:sticky;top:calc(var(--stick,92px) + var(--calh,0px));z-index:14;
   margin:0 -14px 10px;padding:9px 14px;background:var(--bg);
-  font-size:0.875rem;color:var(--ink2);display:flex;
+  font-size:var(--t2);color:var(--ink2);display:flex;
   justify-content:space-between;align-items:baseline;
   transition:top .22s cubic-bezier(.32,.72,0,1)}
 .daylist h4::after{content:"";position:absolute;left:0;right:0;bottom:-8px;height:8px;
   background:linear-gradient(rgba(0,0,0,.055),transparent);pointer-events:none}
-.daylist h4 em{font-style:normal;font-size:0.7812rem;color:var(--ink3)}
+.daylist h4 em{font-style:normal;font-size:var(--t4);color:var(--ink3)}
 /* 當日清單分兩段：先看還沒跑的，跑完的收在下面當作當日成果 */
 /* 「待處理 12」「已完成 9」這兩行釘在當天標題下面。
    捲到已完成時，它會把待處理那一行頂出去——
@@ -1080,25 +1117,25 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .grp{position:sticky;z-index:12;
   top:calc(var(--stick,92px) + var(--calh,0px) + var(--dayh,0px));
   display:flex;align-items:center;gap:9px;margin:16px -14px 9px;
-  padding:7px 14px 6px;background:var(--bg);font-size:0.75rem;
+  padding:7px 14px 6px;background:var(--bg);font-size:var(--t4);
   font-weight:700;letter-spacing:.1em;color:var(--ink3);
   transition:top .22s cubic-bezier(.32,.72,0,1)}
 .grp:first-child{margin-top:0}
 .grp::after{content:"";flex:1;height:1px;background:var(--line)}
-.grp b{background:var(--brand);color:#fff;border-radius:99px;padding:1px 9px;
-  font-size:0.7188rem;letter-spacing:0}
+.grp b{background:var(--brand);color:#fff;border-radius:var(--r2);padding:1px 9px;
+  font-size:var(--t4);letter-spacing:0}
 .grp.done b{background:var(--ink3)}
-.ev{display:flex;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;
+.ev{display:flex;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:var(--r2);
   margin-bottom:8px;background:var(--card);align-items:stretch}
-.ev .bar{width:3px;border-radius:99px;flex:none}
+.ev .bar{width:3px;border-radius:var(--r2);flex:none}
 .ev .b{flex:1;min-width:0}
 .ev .b[data-rec]{cursor:pointer;-webkit-tap-highlight-color:transparent}
 /* 審核進度條：四等份，走到哪亮到哪 */
 .ev .b>span.prog,.rv .b>span.prog,.recprog>span.prog{display:flex;gap:4px;margin-top:9px}
 .recprog{margin-top:2px}
 .ev .prog .s,.rv .prog .s,.recprog .s{flex:1;min-width:0}
-.ev .prog i,.rv .prog i,.recprog .prog i{display:block;height:4px;border-radius:99px;background:var(--line)}
-.ev .prog em,.rv .prog em,.recprog .prog em{display:block;font-style:normal;font-size:0.6875rem;line-height:1.3;margin-top:4px;
+.ev .prog i,.rv .prog i,.recprog .prog i{display:block;height:4px;border-radius:var(--r2);background:var(--line)}
+.ev .prog em,.rv .prog em,.recprog .prog em{display:block;font-style:normal;font-size:var(--t5);line-height:1.3;margin-top:4px;
   color:var(--ink3);white-space:nowrap;letter-spacing:.02em}
 .ev .prog .s.done i,.rv .prog .s.done i,.recprog .s.done i{background:var(--brand)}
 .ev .prog .s.done em,.rv .prog .s.done em,.recprog .s.done em{color:var(--ink2)}
@@ -1115,22 +1152,22 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .ev .prog.all .s em,.rv .prog.all .s em,.recprog .prog.all .s em{color:var(--ok-ink);font-weight:700}
 .ev .b[data-rec] .n::after{content:"　›";color:var(--ink3);font-weight:400}
 .ev .b>span{display:block}
-.ev .t{font-size:0.75rem;color:var(--ink3);font-variant-numeric:tabular-nums;
+.ev .t{font-size:var(--t4);color:var(--ink3);font-variant-numeric:tabular-nums;
   display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 /* 階段詞（含倒數）。膠囊講「球在誰手上」，這裡講「現在到哪一步」。
    ⚠ 字要比膠囊小、色要比它淡——它是註腳，不是第二個標題。 */
-.ev .cdet{font-size:0.7188rem;color:var(--ink3);font-style:normal;
+.ev .cdet{font-size:var(--t4);color:var(--ink3);font-style:normal;
   text-decoration:none}
 /* 開案日與負責人。第一行擠不下這兩個，也不值得放在第一行。 */
-.ev .cby{font-size:0.6875rem;color:var(--ink3);margin-top:3px;
+.ev .cby{font-size:var(--t5);color:var(--ink3);margin-top:3px;
   font-variant-numeric:tabular-nums}
-.ev .n{font-size:0.9375rem;font-weight:700;margin-top:1px}
-.ev .m{font-size:0.7812rem;color:var(--ink2);margin-top:1px}
+.ev .n{font-size:var(--t2);font-weight:700;margin-top:1px}
+.ev .m{font-size:var(--t4);color:var(--ink2);margin-top:1px}
 .ev .acts{display:flex;flex-direction:column;gap:5px;justify-content:center}
 /* 手指按得到才算數：卡片上的動作鈕給一個最小高度，
    字級放大時它也跟著長，不會變成一條細細的東西 */
-.ev .acts button{border:1px solid var(--line);background:var(--card);border-radius:8px;
-  padding:5px 11px;min-height:2.25rem;font-size:0.75rem;font-weight:700;
+.ev .acts button{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
+  padding:5px 11px;min-height:2.25rem;font-size:var(--t4);font-weight:700;
   color:var(--ink2);cursor:pointer;font-family:inherit;white-space:nowrap}
 .ev .acts button.p{background:var(--brand);border-color:var(--brand);color:#fff}
 /* ⚠ 一定要跟 var(--card) 混，不可以跟 transparent 混。
@@ -1140,7 +1177,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .ev.plan .n{font-weight:600}
 .ev.cancel{opacity:.45}
 .ev.cancel .n{text-decoration:line-through}
-.ev .code{font-size:0.6875rem;color:var(--ink3);font-family:ui-monospace,monospace}
+.ev .code{font-size:var(--t5);color:var(--ink3);font-family:ui-monospace,monospace}
 
 /* 巡迴訪視提醒：把評鑑從「事後補紀錄」變成「本來就不會斷」。
    點名字就直接排行程——看到問題的當下就能處理，才不會看過就算了。 */
@@ -1148,55 +1185,55 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .dropok{outline:2px solid var(--brand);outline-offset:-2px;
   background:color-mix(in oklab,var(--brand) 16%,transparent)!important}
 #dragGhost{position:fixed;z-index:90;pointer-events:none;background:var(--card);
-  border:1px solid var(--brand);border-radius:10px;padding:7px 12px;font-size:0.8125rem;
+  border:1px solid var(--brand);border-radius:var(--r1);padding:7px 12px;font-size:var(--t3);
   font-weight:700;box-shadow:0 10px 26px rgba(0,0,0,.22);white-space:nowrap;
   transform:translate(-50%,-140%)}
-.draghint{font-size:0.75rem;color:var(--ink3);margin:8px 0 0;text-align:center}
+.draghint{font-size:var(--t4);color:var(--ink3);margin:8px 0 0;text-align:center}
 
 /* ── 從 LINE 貼上 ──────────────────────────────────
    實際量過兩年、14,183 列派給翻譯的行程：大類猜得到 82.9%、
    細項也確定的 70.8%、客戶對得上名單 62.5%。
    所以這個畫面的重點不是「自動建立」，是「讓人快速確認」——
    猜到的先填好，猜不到的標出來，一列一列看過再按建立。 */
-#pasteBox{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:11px;
-  font-family:inherit;font-size:0.85rem;line-height:1.6;background:var(--card);
+#pasteBox{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:var(--r2);
+  font-family:inherit;font-size:var(--t2);line-height:1.6;background:var(--card);
   color:var(--ink);resize:vertical}
 #pasteOut{margin-top:14px}
-.psum{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px;font-size:0.8rem}
-.psum span{border-radius:99px;padding:3px 11px;background:var(--line2);color:var(--ink2)}
+.psum{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px;font-size:var(--t3)}
+.psum span{border-radius:var(--r2);padding:3px 11px;background:var(--line2);color:var(--ink2)}
 .psum span.ok{background:var(--ok-bg);color:var(--ok-ink);font-weight:700}
 .psum span.warn{background:var(--warn-bg);color:var(--warn-ink);font-weight:700}
 .psum span.dup{background:var(--info-bg);color:var(--info-ink)}
 
-.prow{border:1px solid var(--line);border-radius:12px;background:var(--card);
+.prow{border:1px solid var(--line);border-radius:var(--r2);background:var(--card);
   padding:10px 11px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start}
 .prow.bad{border-color:var(--warn-line);background:var(--warn-bg)}
 .prow.dup{opacity:.55}
 .prow input[type=checkbox]{width:1.25rem;height:1.25rem;accent-color:var(--brand);
   flex:none;margin-top:2px}
 .prow .b{flex:1;min-width:0}
-.prow .t{font-size:0.78rem;color:var(--ink3);font-variant-numeric:tabular-nums}
-.prow .n{font-size:0.95rem;font-weight:700;margin-top:1px}
-.prow .n em{font-style:normal;font-weight:400;font-size:0.8rem;color:var(--warn-ink)}
-.prow .m{font-size:0.8rem;color:var(--ink2);margin-top:2px}
-.prow .src{font-size:0.72rem;color:var(--ink3);margin-top:5px;line-height:1.5;
+.prow .t{font-size:var(--t4);color:var(--ink3);font-variant-numeric:tabular-nums}
+.prow .n{font-size:var(--t1);font-weight:700;margin-top:1px}
+.prow .n em{font-style:normal;font-weight:400;font-size:var(--t3);color:var(--warn-ink)}
+.prow .m{font-size:var(--t3);color:var(--ink2);margin-top:2px}
+.prow .src{font-size:var(--t4);color:var(--ink3);margin-top:5px;line-height:1.5;
   border-left:2px solid var(--line);padding-left:8px}
 .prow select{width:100%;margin-top:5px;padding:7px 9px;border:1px solid var(--line);
-  border-radius:9px;font-family:inherit;font-size:0.82rem;background:var(--card);
+  border-radius:var(--r1);font-family:inherit;font-size:var(--t3);background:var(--card);
   color:var(--ink)}
 
 /* ── 修改中的橫幅 ──────────────────────────────────
    用退回那個紅色系，跟「這是被退回來要補的」對得起來。 */
 .editbar{border:1px solid var(--warn-line,#D9A8B4);background:var(--warn-bg,#FBEFF2);
-  border-radius:12px;padding:11px 12px;margin-bottom:12px}
-.eb-h{display:flex;align-items:center;gap:8px;font-size:0.9rem}
+  border-radius:var(--r2);padding:11px 12px;margin-bottom:12px}
+.eb-h{display:flex;align-items:center;gap:8px;font-size:var(--t2)}
 .eb-h b{color:var(--bad-ink,#9E3B52)}
-.eb-h span{font-family:ui-monospace,monospace;font-size:0.8rem;color:var(--ink2)}
+.eb-h span{font-family:ui-monospace,monospace;font-size:var(--t3);color:var(--ink2)}
 .eb-h button{margin-left:auto;border:1px solid var(--line);background:var(--card);
-  color:var(--ink2);border-radius:8px;padding:5px 11px;font-family:inherit;
-  font-size:0.8rem;cursor:pointer}
-.eb-why{font-size:0.85rem;color:var(--bad-ink,#9E3B52);margin-top:6px;line-height:1.6}
-.eb-note{font-size:0.78rem;color:var(--ink3);margin-top:5px}
+  color:var(--ink2);border-radius:var(--r1);padding:5px 11px;font-family:inherit;
+  font-size:var(--t3);cursor:pointer}
+.eb-why{font-size:var(--t2);color:var(--bad-ink,#9E3B52);margin-top:6px;line-height:1.6}
+.eb-note{font-size:var(--t4);color:var(--ink3);margin-top:5px}
 
 
 /* ── 操作說明 ──────────────────────────────────────
@@ -1222,15 +1259,15 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   padding:11px 8px;
   transition:transform .26s cubic-bezier(.32,.72,0,1)}
 #help.hpdn .hp-bar{transform:translateY(-101%)}
-.hp-bar b{grid-column:2;font-size:1rem;font-weight:600;letter-spacing:.02em}
+.hp-bar b{grid-column:2;font-size:var(--t1);font-weight:600;letter-spacing:.02em}
 .hp-bar button{display:inline-flex;align-items:center;gap:2px;
   background:none;border:0;color:var(--chrome-ink);font-family:inherit;
-  font-size:0.95rem;padding:3px 8px 3px 2px;cursor:pointer;
+  font-size:var(--t1);padding:3px 8px 3px 2px;cursor:pointer;
   -webkit-tap-highlight-color:transparent}
 .hp-bar button svg{width:1.25rem;height:1.25rem}
 .hp-bar button:active{opacity:.55}
 
-.hp-load{padding:40px 0;text-align:center;color:var(--ink3);font-size:0.95rem;line-height:1.9}
+.hp-load{padding:40px 0;text-align:center;color:var(--ink3);font-size:var(--t1);line-height:1.9}
 /* 內容整片鋪滿，標題列浮在上面。上緣留的高度由 JS 量出來寫進 --hpbar，
    因為字級設定會改變標題列的高度，寫死會壓到第一行字。 */
 .hp-body{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -1239,69 +1276,69 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
           calc(env(safe-area-inset-bottom, 0px) + 32px)}
 /* 蘋果的說明頁是靠留白與字級層次撐起來的，不是框線與色塊。
    開頭一句話講完這一頁是什麼，然後大量留白，讓眼睛知道從哪裡開始。 */
-.hp-title{margin:0 0 10px;font-size:2rem;line-height:1.25;
+.hp-title{margin:0 0 10px;font-size:var(--td2);line-height:1.25;
   letter-spacing:-.02em;font-weight:700}
-.hp-lead{margin:0 0 30px;color:var(--ink2);font-size:1.0625rem;line-height:1.9;
+.hp-lead{margin:0 0 30px;color:var(--ink2);font-size:var(--t1);line-height:1.9;
   letter-spacing:.01em;max-width:34rem}
 
 /* 自己的登入資訊。放最上面——換手機、重灌的時候第一個要找的就是它。 */
 .hp-me{background:var(--brand-soft);border:1px solid var(--line);
-  border-radius:15px;padding:16px 17px;margin-bottom:38px;font-size:0.9375rem;
+  border-radius:var(--r2);padding:16px 17px;margin-bottom:38px;font-size:var(--t2);
   max-width:34rem}
-.hp-me b{display:block;color:var(--brand);margin-bottom:6px;font-size:0.95rem}
+.hp-me b{display:block;color:var(--brand);margin-bottom:6px;font-size:var(--t1)}
 .hp-me p{margin:0;color:var(--ink2);line-height:1.8}
 .hp-me code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  background:var(--card);border:1px solid var(--line);border-radius:6px;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r1);
   padding:1px 7px;color:var(--ink);letter-spacing:.08em}
-.hp-me button{margin-top:9px;width:100%;padding:9px;border-radius:9px;
+.hp-me button{margin-top:9px;width:100%;padding:9px;border-radius:var(--r1);
   border:1px solid var(--brand);background:var(--card);color:var(--brand);
-  font-family:inherit;font-size:0.875rem;font-weight:700;cursor:pointer}
+  font-family:inherit;font-size:var(--t2);font-weight:700;cursor:pointer}
 .hp-me button:active{background:var(--brand-soft)}
 
 /* 全體同仁的登入碼。名單是從後端拿的（登入後才給），
    不在任何前端檔案裡——app.js 是公開的。 */
 .hp-dir{margin-top:13px;padding-top:12px;border-top:1px solid var(--line)}
 .hp-dir > b{display:block;color:var(--brand);margin-bottom:3px}
-.hp-dir-note{margin:0 0 8px;color:var(--ink3);font-size:0.8rem;line-height:1.7}
-.hp-dir table{width:100%;border-collapse:collapse;font-size:0.85rem}
+.hp-dir-note{margin:0 0 8px;color:var(--ink3);font-size:var(--t3);line-height:1.7}
+.hp-dir table{width:100%;border-collapse:collapse;font-size:var(--t2)}
 .hp-dir td{padding:6px 4px;border-top:1px solid var(--line2);vertical-align:middle}
 .hp-dir tr.me td{background:var(--card)}
-.hp-dir td em{font-style:normal;font-size:0.72rem;color:var(--brand);
-  background:var(--brand-soft);border-radius:4px;padding:1px 5px;margin-left:5px}
-.hp-dir .ro{color:var(--ink3);font-size:0.8rem;white-space:nowrap}
+.hp-dir td em{font-style:normal;font-size:var(--t4);color:var(--brand);
+  background:var(--brand-soft);border-radius:var(--r0);padding:1px 5px;margin-left:5px}
+.hp-dir .ro{color:var(--ink3);font-size:var(--t3);white-space:nowrap}
 .hp-dir .cd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   letter-spacing:.1em;color:var(--ink);white-space:nowrap}
-.hp-dir button{padding:4px 9px;border-radius:7px;border:1px solid var(--line);
+.hp-dir button{padding:4px 9px;border-radius:var(--r1);border:1px solid var(--line);
   background:var(--card);color:var(--brand);font-family:inherit;
-  font-size:0.75rem;cursor:pointer;white-space:nowrap}
+  font-size:var(--t4);cursor:pointer;white-space:nowrap}
 
-.hp-warn{margin:9px 0 0;padding:9px 11px;border-radius:9px;
+.hp-warn{margin:9px 0 0;padding:9px 11px;border-radius:var(--r1);
   background:var(--warn-bg);border:1px solid var(--warn-line);
-  color:var(--warn-ink);font-size:0.865rem;line-height:1.75}
+  color:var(--warn-ink);font-size:var(--t2);line-height:1.75}
 
 /* 分節用留白，不用線也不用卡片。
    步驟編號縮成一個小數字擺在標題上方——它是序號，不該比標題還搶眼。 */
 .hp-s{margin-bottom:40px;max-width:34rem}
 .hp-s h3{display:block;margin:0 0 12px;
-  font-size:1.375rem;line-height:1.45;letter-spacing:-.01em;font-weight:700}
+  font-size:var(--t0);line-height:1.45;letter-spacing:-.01em;font-weight:700}
 .hp-s h3 i{display:block;font-style:normal;font-weight:600;
-  font-size:0.75rem;letter-spacing:.14em;color:var(--brand);
+  font-size:var(--t4);letter-spacing:.14em;color:var(--brand);
   margin-bottom:5px;text-transform:uppercase}
-.hp-s > p{margin:0 0 12px;color:var(--ink2);font-size:1rem;line-height:1.9}
+.hp-s > p{margin:0 0 12px;color:var(--ink2);font-size:var(--t1);line-height:1.9}
 .hp-s ul{margin:0;padding:0;list-style:none;display:grid;gap:14px}
-.hp-s li{color:var(--ink2);font-size:1rem;line-height:1.85;
+.hp-s li{color:var(--ink2);font-size:var(--t1);line-height:1.85;
   padding-left:1.05rem;position:relative}
 .hp-s li::before{content:"";position:absolute;left:0;top:.82em;
   width:5px;height:5px;border-radius:50%;background:var(--ink3)}
 .hp-s b{color:var(--ink);font-weight:600}
 
 .hp-q{margin:0}
-.hp-q dt{font-size:1rem;font-weight:600;color:var(--ink);margin-top:22px}
+.hp-q dt{font-size:var(--t1);font-weight:600;color:var(--ink);margin-top:22px}
 .hp-q dt:first-child{margin-top:0}
-.hp-q dd{margin:5px 0 0;color:var(--ink2);font-size:1rem;line-height:1.85}
+.hp-q dd{margin:5px 0 0;color:var(--ink2);font-size:var(--t1);line-height:1.85}
 
 .hp-end{margin:14px 0 0;padding-top:26px;border-top:1px solid var(--line2);
-  color:var(--ink3);font-size:0.9375rem;text-align:center;letter-spacing:.01em}
+  color:var(--ink3);font-size:var(--t2);text-align:center;letter-spacing:.01em}
 
 @media (prefers-reduced-motion:reduce){
   #help{transition:visibility .01s}
@@ -1312,12 +1349,12 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    評鑑委員核對的就是「這個人、這幾個月、有沒有表」。
    所以畫面直接做成移工 × 月份的核對表，一格一個月。 */
 .evsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));
-  gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;
+  gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r2);
   overflow:hidden;margin-bottom:11px}
 .evsum div{background:var(--card);padding:10px 11px}
-.evsum b{display:block;font-size:1.25rem;font-weight:800;line-height:1.2;
+.evsum b{display:block;font-size:var(--t0);font-weight:800;line-height:1.2;
   font-variant-numeric:tabular-nums}
-.evsum span{display:block;font-size:0.6875rem;color:var(--ink3);font-weight:700;
+.evsum span{display:block;font-size:var(--t5);color:var(--ink3);font-weight:700;
   letter-spacing:.06em;margin-top:2px}
 .evsum .bad b{color:var(--danger)}
 .evsum .due b{color:var(--warn-ink)}
@@ -1329,46 +1366,46 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .evsticky::after{content:"";position:absolute;left:0;right:0;bottom:-9px;height:9px;
   background:linear-gradient(rgba(0,0,0,.07),transparent);pointer-events:none}
 .evsticky .calf{padding-bottom:6px}
-.evnote{font-size:0.75rem;color:var(--ink3);line-height:1.7;margin:11px 0 13px}
+.evnote{font-size:var(--t4);color:var(--ink3);line-height:1.7;margin:11px 0 13px}
 .evnote i{font-style:normal;display:inline-flex;align-items:center;gap:4px;
   margin-right:11px;white-space:nowrap}
-.evnote u{text-decoration:none;width:12px;height:12px;border-radius:3px;display:block}
+.evnote u{text-decoration:none;width:12px;height:12px;border-radius:var(--r0);display:block}
 
-.evw{border:1px solid var(--line);border-radius:12px;background:var(--card);
+.evw{border:1px solid var(--line);border-radius:var(--r2);background:var(--card);
   padding:11px 12px;margin-bottom:9px}
 .evw.bad{border-color:var(--bad-line)}
 .evw .hd{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin-bottom:3px}
-.evw .hd b{font-size:0.9688rem}
-.evw .hd .or{font-size:0.7188rem;color:var(--ink3)}
-.evw .hd .kd{font-size:0.6875rem;font-weight:700;border-radius:5px;padding:1px 6px;
+.evw .hd b{font-size:var(--t1)}
+.evw .hd .or{font-size:var(--t4);color:var(--ink3)}
+.evw .hd .kd{font-size:var(--t5);font-weight:700;border-radius:var(--r0);padding:1px 6px;
   background:var(--brand-soft);color:var(--brand2)}
 .evw .hd .kd.re{background:var(--info-bg);color:var(--info-ink)}
-.evw .hd .st{margin-left:auto;font-size:0.6875rem;color:var(--ink3)}
-.evw .sub{font-size:0.75rem;color:var(--ink2);margin-bottom:9px}
+.evw .hd .st{margin-left:auto;font-size:var(--t5);color:var(--ink3)}
+.evw .sub{font-size:var(--t4);color:var(--ink2);margin-bottom:9px}
 .evw .sub em{font-style:normal;color:var(--ink3)}
 
 .evgrid{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}
-.evgrid span{position:relative;height:26px;border-radius:5px;display:grid;
-  place-items:center;font-size:0.6875rem;font-weight:700;
+.evgrid span{position:relative;height:26px;border-radius:var(--r0);display:grid;
+  place-items:center;font-size:var(--t5);font-weight:700;
   background:var(--line2);color:var(--ink3)}
 .evgrid span.na{background:transparent;color:transparent}
 .evgrid span.ok{background:var(--ok-bg);color:var(--ok-ink)}
 .evgrid span.miss{background:var(--bad-bg);color:var(--danger)}
 .evgrid span.due{background:var(--warn-bg);color:var(--warn-ink)}
 .evgrid span.start::after{content:"";position:absolute;left:3px;right:3px;bottom:2px;
-  height:2px;border-radius:2px;background:currentColor;opacity:.6}
+  height:2px;border-radius:var(--r0);background:currentColor;opacity:.6}
 .evmon{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;margin-bottom:3px}
-.evmon span{text-align:center;font-size:0.6875rem;color:var(--ink3);
+.evmon span{text-align:center;font-size:var(--t5);color:var(--ink3);
   font-variant-numeric:tabular-nums}
 
-.evre{margin-top:8px;font-size:0.75rem;border-radius:8px;padding:6px 9px}
+.evre{margin-top:8px;font-size:var(--t4);border-radius:var(--r1);padding:6px 9px}
 .evre.ok{background:var(--ok-bg);color:var(--ok-ink)}
 .evre.miss{background:var(--bad-bg);color:var(--danger)}
 .evre.due{background:var(--warn-bg);color:var(--warn-ink)}
 
 .statbox{margin-top:26px;border-top:1px solid var(--line);padding-top:16px}
-.statbox>button{width:100%;padding:13px;border-radius:12px;border:1px dashed var(--line);
-  background:none;font-family:inherit;font-size:0.875rem;color:var(--ink2);cursor:pointer}
+.statbox>button{width:100%;padding:13px;border-radius:var(--r2);border:1px dashed var(--line);
+  background:none;font-family:inherit;font-size:var(--t2);color:var(--ink2);cursor:pointer}
 
 /* ── 審閱 ────────────────────────────────────────
    紙本流程是翻譯跑完 → 副理批示 → 總經理核准 → 歸檔。
@@ -1376,7 +1413,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    退回一定要寫原因、每一關都留時間戳（評鑑要看的就是這個）。 */
 .top button#whoBtn{background:none;border:0;color:var(--chrome-ink);font-family:inherit;
   display:flex;align-items:center;gap:3px;padding:4px 0 4px 8px;cursor:pointer}
-.top button#whoBtn i{font-style:normal;font-size:0.75rem;opacity:.8}
+.top button#whoBtn i{font-style:normal;font-size:var(--t4);opacity:.8}
 
 /* 新手上路：擺在名字左邊。margin-left:auto 把它和名字一起推到右側，
    公司名維持在左邊。用圖示不用文字——標題列已經有公司名跟人名了。
@@ -1389,8 +1426,8 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .top #guideBtn:active{opacity:.6}
 
 .badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;
-  height:18px;padding:0 5px;margin-left:5px;border-radius:99px;background:var(--danger);
-  color:#fff;font-size:0.6875rem;font-weight:800;font-style:normal;vertical-align:1px}
+  height:18px;padding:0 5px;margin-left:5px;border-radius:var(--r2);background:var(--danger);
+  color:#fff;font-size:var(--t5);font-weight:800;font-style:normal;vertical-align:1px}
 /* ── 送審頁的頁首 ──────────────────────────────────
    原本是「待我審閱　5」——一個分類名加一個數字，
    使用者還要自己想「所以我要先處理哪一筆」。
@@ -1399,53 +1436,53 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    卡片用 1px 淺邊框不用陰影、間距走 8pt、
    左邊一個深色小方塊放圖示（這套的簽名式手法）。 */
 .rvhead{display:flex;gap:12px;align-items:flex-start;
-  background:var(--card);border:1px solid var(--line2);border-radius:12px;
+  background:var(--card);border:1px solid var(--line2);border-radius:var(--r2);
   padding:16px;margin-bottom:8px}
 .rvhead.act{border-color:var(--bad-line);background:var(--bad-bg)}
-.rvhead .ic{flex:none;width:28px;height:28px;border-radius:8px;
+.rvhead .ic{flex:none;width:28px;height:28px;border-radius:var(--r1);
   background:var(--ink);color:var(--card);display:grid;place-items:center}
 .rvhead.act .ic{background:var(--bad-ink);color:#fff}
 .rvhead .ic svg{width:16px;height:16px}
 .rvhead .tx{flex:1;min-width:0}
-.rvhead .tx b{display:block;font-size:0.9375rem;line-height:1.5;color:var(--ink);
+.rvhead .tx b{display:block;font-size:var(--t2);line-height:1.5;color:var(--ink);
   font-weight:600}
 .rvhead.act .tx b{color:var(--bad-ink)}
-.rvhead .tx em{display:block;font-style:normal;font-size:0.8125rem;line-height:1.7;
+.rvhead .tx em{display:block;font-style:normal;font-size:var(--t3);line-height:1.7;
   color:var(--ink2);margin-top:4px}
 .rvhead.act .tx em{color:var(--bad-ink);opacity:.85}
-.rvhead .who{display:block;font-size:0.75rem;color:var(--ink3);margin-top:6px}
-.rvhead b{font-size:1rem}
-.rvhead em{font-style:normal;font-size:0.7812rem;color:var(--ink3)}
+.rvhead .who{display:block;font-size:var(--t4);color:var(--ink3);margin-top:6px}
+.rvhead b{font-size:var(--t1)}
+.rvhead em{font-style:normal;font-size:var(--t4);color:var(--ink3)}
 .rvbar{display:flex;gap:8px;margin-bottom:11px}
-.rvbar button{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);
-  background:var(--card);font-size:0.8438rem;font-weight:700;color:var(--ink2);cursor:pointer;
+.rvbar button{flex:1;padding:10px;border-radius:var(--r1);border:1px solid var(--line);
+  background:var(--card);font-size:var(--t2);font-weight:700;color:var(--ink2);cursor:pointer;
   font-family:inherit}
 .rvbar button.p{background:var(--brand);border-color:var(--brand);color:#fff}
 .rvbar button:disabled{opacity:.45}
-.rv{display:flex;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px;
+.rv{display:flex;gap:10px;padding:12px;border:1px solid var(--line);border-radius:var(--r2);
   margin-bottom:9px;background:var(--card);align-items:flex-start}
 .rv input[type=checkbox]{width:20px;height:20px;accent-color:var(--brand);flex:none;
   margin-top:2px}
 .rv .b{flex:1;min-width:0}
 .rv .b>span{display:block}
 .rv{position:relative}
-.rv .t{font-size:0.75rem;color:var(--ink3);font-variant-numeric:tabular-nums}
-.rv .n{font-size:0.9375rem;font-weight:700;margin-top:1px}
-.rv .m{font-size:0.7812rem;color:var(--ink2);margin-top:1px}
-.rv .code{font-family:ui-monospace,monospace;font-size:0.6875rem;color:var(--ink3)}
-.rv .st{font-size:0.7188rem;border-radius:99px;padding:2px 9px;white-space:nowrap;
+.rv .t{font-size:var(--t4);color:var(--ink3);font-variant-numeric:tabular-nums}
+.rv .n{font-size:var(--t2);font-weight:700;margin-top:1px}
+.rv .m{font-size:var(--t4);color:var(--ink2);margin-top:1px}
+.rv .code{font-family:ui-monospace,monospace;font-size:var(--t5);color:var(--ink3)}
+.rv .st{font-size:var(--t4);border-radius:var(--r2);padding:2px 9px;white-space:nowrap;
   border:1px solid var(--line);color:var(--ink3);align-self:center}
 .rv .st.wait{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn-ink);font-weight:700}
 .rv .st.done{background:color-mix(in oklab,var(--brand) 12%,transparent);
   border-color:transparent;color:var(--brand2);font-weight:700}
 .rv .st.back{background:var(--bad-bg);border-color:var(--bad-line);color:var(--danger);font-weight:700}
-.rv .rej{margin-top:6px;font-size:0.7812rem;color:var(--danger);background:var(--bad-bg);
-  border-radius:8px;padding:6px 9px}
+.rv .rej{margin-top:6px;font-size:var(--t4);color:var(--danger);background:var(--bad-bg);
+  border-radius:var(--r1);padding:6px 9px}
 /* 送審頁的區段標題，同上。釘在篩選列下面。 */
 .rvgrp{position:sticky;z-index:12;
   top:calc(var(--stick,92px) + var(--revh,0px));
   display:flex;align-items:center;gap:9px;margin:16px -14px 9px;
-  padding:7px 14px 6px;background:var(--bg);font-size:0.75rem;
+  padding:7px 14px 6px;background:var(--bg);font-size:var(--t4);
   font-weight:700;letter-spacing:.1em;color:var(--ink3);
   transition:top .22s cubic-bezier(.32,.72,0,1)}
 .rvgrp:first-child{margin-top:0}
@@ -1456,54 +1493,54 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .rvtop{padding:12px 14px;border-bottom:1px solid var(--line);background:var(--card);
   display:flex;align-items:center;gap:10px}
 .rvtop .tt{flex:1;min-width:0}
-.rvtop b{font-size:1rem;display:block}
-.rvtop .tt>span{font-size:0.7812rem;color:var(--ink3);display:block}
-.rvtop button{flex:none;border:1px solid var(--line);background:var(--card);border-radius:99px;
-  padding:6px 13px;font-size:0.7812rem;font-weight:700;color:var(--ink2);font-family:inherit;
+.rvtop b{font-size:var(--t1);display:block}
+.rvtop .tt>span{font-size:var(--t4);color:var(--ink3);display:block}
+.rvtop button{flex:none;border:1px solid var(--line);background:var(--card);border-radius:var(--r2);
+  padding:6px 13px;font-size:var(--t4);font-weight:700;color:var(--ink2);font-family:inherit;
   cursor:pointer}
 
 /* 審閱看的是內容，不是那張紙。手機上一天要看十幾筆，
    排版就照手機來——欄位左標右值，選項是印出來的字，動不了。 */
 .rvbody{flex:1;min-height:0;overflow-y:auto;padding:13px 14px 20px;background:var(--bg)}
 .rvmeta{display:grid;grid-template-columns:1fr 1fr;gap:9px 12px;padding:12px 13px;
-  border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:11px}
+  border:1px solid var(--line);border-radius:var(--r2);background:var(--card);margin-bottom:11px}
 .rvmeta>div{min-width:0}
 .rvmeta .w{grid-column:1/-1}
-.rvmeta span{display:block;font-size:0.6875rem;letter-spacing:.1em;color:var(--ink3);font-weight:700}
-.rvmeta b{display:block;font-size:0.9062rem;margin-top:2px;word-break:break-word}
-.rvrej{border:1px solid var(--bad-line);background:var(--bad-bg);color:var(--danger);border-radius:12px;
-  padding:11px 13px;font-size:0.8438rem;margin-bottom:11px}
-.rvrej b{display:block;font-size:0.75rem;letter-spacing:.1em;margin-bottom:3px}
-.rvw{border:1px solid var(--line);border-radius:12px;background:var(--card);
+.rvmeta span{display:block;font-size:var(--t5);letter-spacing:.1em;color:var(--ink3);font-weight:700}
+.rvmeta b{display:block;font-size:var(--t2);margin-top:2px;word-break:break-word}
+.rvrej{border:1px solid var(--bad-line);background:var(--bad-bg);color:var(--danger);border-radius:var(--r2);
+  padding:11px 13px;font-size:var(--t2);margin-bottom:11px}
+.rvrej b{display:block;font-size:var(--t4);letter-spacing:.1em;margin-bottom:3px}
+.rvw{border:1px solid var(--line);border-radius:var(--r2);background:var(--card);
   padding:12px 13px 11px;margin-bottom:10px}
 .rvw .hd{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
   padding-bottom:9px;border-bottom:1px solid var(--line);margin-bottom:10px}
-.rvw .hd i{font-style:normal;font-size:0.6875rem;font-weight:800;background:var(--ink);color:#fff;
-  border-radius:4px;padding:2px 6px}
-.rvw .hd b{font-size:1.0625rem;letter-spacing:.03em}
-.rvw .hd .or{font-size:0.7812rem;color:var(--ink3)}
-.rvw .hd em{margin-left:auto;font-style:normal;font-size:0.7188rem;color:var(--ink3)}
+.rvw .hd i{font-style:normal;font-size:var(--t5);font-weight:800;background:var(--ink);color:#fff;
+  border-radius:var(--r0);padding:2px 6px}
+.rvw .hd b{font-size:var(--t1);letter-spacing:.03em}
+.rvw .hd .or{font-size:var(--t4);color:var(--ink3)}
+.rvw .hd em{margin-left:auto;font-style:normal;font-size:var(--t4);color:var(--ink3)}
 .rvf{display:flex;gap:11px;margin-bottom:9px}
-.rvf>span{flex:none;width:62px;font-size:0.7188rem;font-weight:700;color:var(--ink3);
+.rvf>span{flex:none;width:62px;font-size:var(--t4);font-weight:700;color:var(--ink3);
   letter-spacing:.06em;padding-top:2px}
-.rvf>b{flex:1;min-width:0;font-size:0.9062rem;font-weight:500;line-height:1.5;
+.rvf>b{flex:1;min-width:0;font-size:var(--t2);font-weight:500;line-height:1.5;
   word-break:break-word}
 .rvw .sg{display:flex;align-items:center;gap:11px;border-top:1px dashed var(--line);
   padding-top:9px;margin-top:2px}
-.rvw .sg span{font-size:0.7188rem;font-weight:700;color:var(--ink3);letter-spacing:.06em}
+.rvw .sg span{font-size:var(--t4);font-weight:700;color:var(--ink3);letter-spacing:.06em}
 .rvw .sg img{height:34px}
-.rvw .sg em{font-style:normal;font-size:0.7812rem;color:var(--ink3)}
+.rvw .sg em{font-style:normal;font-size:var(--t4);color:var(--ink3)}
 .rvsig{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px}
-.rvsig>div{border:1px solid var(--line);border-radius:12px;background:var(--card);
+.rvsig>div{border:1px solid var(--line);border-radius:var(--r2);background:var(--card);
   padding:10px 12px;min-height:64px;display:flex;flex-direction:column;justify-content:space-between}
-.rvsig span{font-size:0.6875rem;font-weight:700;letter-spacing:.1em;color:var(--ink3)}
+.rvsig span{font-size:var(--t5);font-weight:700;letter-spacing:.1em;color:var(--ink3)}
 .rvsig img{height:36px;align-self:flex-start;margin-top:4px}
-.rvsig em{font-style:normal;font-size:0.7812rem;color:var(--ink3);margin-top:4px}
-.rvsteps{border:1px solid var(--line);border-radius:12px;background:var(--card);
-  padding:11px 13px;font-size:0.8125rem;color:var(--ink2);margin-bottom:11px;line-height:1.7}
+.rvsig em{font-style:normal;font-size:var(--t4);color:var(--ink3);margin-top:4px}
+.rvsteps{border:1px solid var(--line);border-radius:var(--r2);background:var(--card);
+  padding:11px 13px;font-size:var(--t3);color:var(--ink2);margin-bottom:11px;line-height:1.7}
 .rvsteps b{color:var(--ink)}
-#rvSeePdf{width:100%;padding:12px;border:1px dashed var(--line);border-radius:12px;
-  background:none;font-family:inherit;font-size:0.8438rem;color:var(--ink2);cursor:pointer}
+#rvSeePdf{width:100%;padding:12px;border:1px dashed var(--line);border-radius:var(--r2);
+  background:none;font-family:inherit;font-size:var(--t2);color:var(--ink2);cursor:pointer}
 .rvpdf{flex:1;background:var(--line2);min-height:0}
 .rvpdf{flex:1;background:var(--line2);min-height:0}
 .rvpdf iframe{width:100%;height:100%;border:0;display:block}
@@ -1527,8 +1564,8 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 #ptr .ring{width:1.8rem;height:1.8rem;border-radius:50%;
   border:2.5px solid var(--line);border-top-color:var(--brand);
   background:var(--card);box-shadow:0 2px 10px rgba(19,26,38,.16)}
-#ptr em{font-style:normal;font-size:.72rem;font-weight:700;color:var(--ink3);
-  background:var(--card);padding:1px 9px;border-radius:99px;
+#ptr em{font-style:normal;font-size:var(--t4);font-weight:700;color:var(--ink3);
+  background:var(--card);padding:1px 9px;border-radius:var(--r2);
   box-shadow:0 2px 10px rgba(19,26,38,.12)}
 #ptr.go .ring{border-color:var(--brand-soft);border-top-color:var(--brand)}
 #ptr.spin .ring{animation:ptrspin .7s linear infinite}
@@ -1539,7 +1576,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    一路往上滑太久。右下角給一顆，按了直接回最上面並把頁籤放回來。 */
 #toTop{position:fixed;right:16px;bottom:calc(var(--sab, env(safe-area-inset-bottom, 0px)) + 18px);
   width:46px;height:46px;border-radius:50%;border:0;background:var(--brand);color:#fff;
-  font-size:1.3125rem;line-height:1;cursor:pointer;z-index:40;font-family:inherit;
+  font-size:var(--t0);line-height:1;cursor:pointer;z-index:40;font-family:inherit;
   box-shadow:0 6px 18px rgba(19,26,38,.3);
   opacity:0;transform:translateY(14px) scale(.9);pointer-events:none;
   transition:opacity .18s ease,transform .24s cubic-bezier(.32,.72,0,1)}
@@ -1552,11 +1589,11 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 }
 
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(14px);
-  background:var(--ink);color:var(--bg);padding:11px 20px;border-radius:99px;font-size:0.875rem;
+  background:var(--ink);color:var(--bg);padding:11px 20px;border-radius:var(--r2);font-size:var(--t2);
   font-weight:700;opacity:0;transition:.18s;pointer-events:none;z-index:60;max-width:88vw;text-align:center}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.bad{background:var(--danger);color:#fff}
-.mid{padding:44px 20px;text-align:center;color:var(--ink3);font-size:0.875rem;line-height:1.9}
+.mid{padding:44px 20px;text-align:center;color:var(--ink3);font-size:var(--t2);line-height:1.9}
 /* ── 登入 ──────────────────────────────────────────
    登入碼是四位數字，所以不用文字輸入框，直接給數字鍵盤——
    就是 iPhone 解鎖那一套：四個點加大顆的數字鍵。
@@ -1581,13 +1618,13 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
 .lg-top{text-align:center;margin-bottom:2rem}
 .lg-mark{display:inline-grid;place-items:center;width:4rem;height:4rem;
-  border-radius:1.15rem;background:var(--brand);color:#fff;
-  font-size:1.2rem;font-weight:700;letter-spacing:.06em;
+  border-radius:var(--r2);background:var(--brand);color:#fff;
+  font-size:var(--t0);font-weight:700;letter-spacing:.06em;
   box-shadow:0 10px 26px -10px color-mix(in oklab,var(--brand) 70%,transparent)}
 /* 公司名退一階當落款，App 名稱才是主角——
    每天要開的是「服務紀錄」，不是公司名片 */
-.login .lg-co{color:var(--ink3);font-size:0.78rem;margin:1rem 0 0;letter-spacing:.02em}
-.login h1{font-size:1.45rem;font-weight:700;letter-spacing:.06em;margin:.3rem 0 0}
+.login .lg-co{color:var(--ink3);font-size:var(--t4);margin:1rem 0 0;letter-spacing:.02em}
+.login h1{font-size:var(--td);font-weight:700;letter-spacing:.06em;margin:.3rem 0 0}
 .login p{margin:0}
 
 /* 四個點就是這家公司做的四種語言：越、泰、印、英。
@@ -1635,7 +1672,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(4px)}
   30%,50%,70%{transform:translateX(-8px)} 40%,60%{transform:translateX(8px)}}
 
-.lg-msg{color:var(--ink3);font-size:0.8rem;margin:0 0 1.6rem;min-height:1.2rem;
+.lg-msg{color:var(--ink3);font-size:var(--t3);margin:0 0 1.6rem;min-height:1.2rem;
   letter-spacing:.04em;text-align:center}
 .lg-msg.bad{color:var(--bad-ink);font-weight:700}
 
@@ -1645,13 +1682,13 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   width:min(17rem, 82vw)}
 .lg-pad button{width:100%;aspect-ratio:1;border-radius:50%;border:0;
   background:color-mix(in oklab,var(--brand) 7%,var(--card));
-  color:var(--ink);font-family:inherit;font-size:1.6rem;font-weight:400;
+  color:var(--ink);font-family:inherit;font-size:var(--td);font-weight:400;
   letter-spacing:.02em;cursor:pointer;
   box-shadow:0 1px 2px rgba(19,26,38,.07),0 0 0 .5px var(--line);
   transition:transform .11s cubic-bezier(.32,.72,0,1),background .14s ease}
 .lg-pad button:active{transform:scale(.9);
   background:color-mix(in oklab,var(--brand) 20%,var(--card))}
-.lg-pad button.ghost{background:none;box-shadow:none;font-size:0.9rem;
+.lg-pad button.ghost{background:none;box-shadow:none;font-size:var(--t2);
   color:var(--ink3);font-weight:600}
 .lg-pad button.ghost:active{background:color-mix(in oklab,var(--brand) 9%,transparent)}
 
@@ -1659,11 +1696,11 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .lg-alt{display:none;width:100%;max-width:19rem;margin-top:1.6rem;gap:.5rem;
   flex-direction:column}
 .lg-alt.on{display:flex}
-.lg-alt input{padding:.85rem .9rem;border:1px solid var(--line);border-radius:.8rem;
-  font-family:inherit;font-size:1rem;text-align:center;letter-spacing:.3em;
+.lg-alt input{padding:.85rem .9rem;border:1px solid var(--line);border-radius:var(--r2);
+  font-family:inherit;font-size:var(--t1);text-align:center;letter-spacing:.3em;
   background:var(--card);color:var(--ink)}
-.lg-alt button{padding:.85rem;border-radius:.8rem;border:1px solid var(--brand);
-  background:var(--brand);color:#fff;font-family:inherit;font-size:1rem;
+.lg-alt button{padding:.85rem;border-radius:var(--r2);border:1px solid var(--brand);
+  background:var(--brand);color:#fff;font-family:inherit;font-size:var(--t1);
   font-weight:700;cursor:pointer}
 
 @media (prefers-reduced-motion:reduce){
@@ -1686,29 +1723,29 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
 /* 案件卡沿用行程卡 .ev，多一條底下的統計 */
 .crecs{display:block;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);
-  font-size:0.6875rem;color:var(--ink3)}
+  font-size:var(--t5);color:var(--ink3)}
 .crecs b{color:var(--ink2);font-variant-numeric:tabular-nums}
 .crecs em{font-style:normal;color:var(--danger);font-weight:700}
 
 /* 案件詳情。沿用 revModal 那個整頁浮層，裡面的區塊用同一種盒子 */
-.cbox{background:var(--card);border:1px solid var(--line);border-radius:13px;
+.cbox{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
   padding:13px;margin-bottom:11px}
-.cbox h4{margin:0 0 9px;font-size:0.6875rem;font-weight:800;letter-spacing:.14em;
+.cbox h4{margin:0 0 9px;font-size:var(--t5);font-weight:800;letter-spacing:.14em;
   color:var(--ink3)}
 .ckv{display:grid;grid-template-columns:5.6em 1fr;gap:6px 10px;margin:0;
-  font-size:0.8125rem;line-height:1.55}
-.ckv dt{color:var(--ink3);font-size:0.75rem}
+  font-size:var(--t3);line-height:1.55}
+.ckv dt{color:var(--ink3);font-size:var(--t4)}
 /* ⚠ 長字串（網址、沒有空白的外文名）要能折。
    不折的話那一格會把整張卡撐出螢幕，而且是橫向捲不到的那種。 */
 .ckv dd{margin:0;color:var(--ink);font-weight:600;
   overflow-wrap:anywhere;word-break:break-word}
 
 /* 連到另一件（異常同時要就醫的那條線） */
-.clink{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:12px;
+.clink{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:var(--r2);
   border:1px solid var(--info-line);background:var(--info-bg);margin-bottom:11px;
   cursor:pointer}
-.clink .k{font-size:0.625rem;letter-spacing:.12em;color:var(--info-ink);font-weight:800}
-.clink b{display:block;font-size:0.8125rem;color:var(--ink);margin-top:2px}
+.clink .k{font-size:var(--t6);letter-spacing:.12em;color:var(--info-ink);font-weight:800}
+.clink b{display:block;font-size:var(--t3);color:var(--ink);margin-top:2px}
 .clink .go{margin-left:auto;color:var(--info-ink);font-weight:800}
 
 /* 案件的時間軸。每一筆都掛著自己的審核狀態，
@@ -1721,46 +1758,46 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .ctl .it::before{content:"";position:absolute;left:-19px;top:5px;width:11px;height:11px;
   border-radius:50%;background:var(--card);border:2px solid var(--warn-bar)}
 .ctl .it.done::before{background:var(--ok-bar);border-color:var(--ok-bar)}
-.ctl .d{font-size:0.6875rem;color:var(--ink3);font-variant-numeric:tabular-nums}
-.ctl .h{font-size:0.8125rem;font-weight:700;margin:1px 0 2px}
-.ctl .h .qq{font-weight:400;font-size:0.6875rem;color:var(--ink3);margin-left:6px}
-.ctl .x{font-size:0.75rem;color:var(--ink2);line-height:1.55}
+.ctl .d{font-size:var(--t5);color:var(--ink3);font-variant-numeric:tabular-nums}
+.ctl .h{font-size:var(--t3);font-weight:700;margin:1px 0 2px}
+.ctl .h .qq{font-weight:400;font-size:var(--t5);color:var(--ink3);margin-left:6px}
+.ctl .x{font-size:var(--t4);color:var(--ink2);line-height:1.55}
 .ctl .x b{color:var(--ink)}
-.ctl .lk{display:inline-block;margin-top:5px;font-size:0.6875rem;color:var(--brand);
+.ctl .lk{display:inline-block;margin-top:5px;font-size:var(--t5);color:var(--brand);
   font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums}
 
 /* ── 登機證：返鄉休假 ───────────────────────────────
    機票長什麼樣大家都認得，不用再教一次怎麼讀。
    中間那條剪票線兩側的圓孔是紙票的記號，有它就一眼知道在講飛機。 */
-.bp{background:var(--brand);color:#fff;border-radius:13px;overflow:hidden;
+.bp{background:var(--brand);color:#fff;border-radius:var(--r2);overflow:hidden;
   margin-bottom:11px}
 .bp .hd{display:flex;align-items:center;gap:8px;padding:11px 14px 0;
-  font-size:0.6875rem;letter-spacing:.14em;opacity:.78}
-.bp .hd b{margin-left:auto;letter-spacing:.04em;opacity:1;font-size:0.75rem}
+  font-size:var(--t5);letter-spacing:.14em;opacity:.78}
+.bp .hd b{margin-left:auto;letter-spacing:.04em;opacity:1;font-size:var(--t4)}
 .bp .leg{display:flex;align-items:center;gap:10px;padding:8px 14px 14px}
 .bp .ap{text-align:center}
-.bp .ap b{display:block;font-size:1.5rem;font-weight:800;letter-spacing:.04em;
+.bp .ap b{display:block;font-size:var(--td);font-weight:800;letter-spacing:.04em;
   line-height:1.1;font-variant-numeric:tabular-nums}
-.bp .ap span{display:block;font-size:0.6875rem;opacity:.7;margin-top:1px}
+.bp .ap span{display:block;font-size:var(--t5);opacity:.7;margin-top:1px}
 .bp .arw{flex:1;position:relative;height:16px}
 .bp .arw::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;
   background:rgba(255,255,255,.34)}
 .bp .arw::after{content:"\2708";position:absolute;left:50%;top:50%;
-  transform:translate(-50%,-52%);font-size:0.8125rem;background:var(--brand);
+  transform:translate(-50%,-52%);font-size:var(--t3);background:var(--brand);
   padding:0 5px}
-.bp .dt{padding:0 14px 12px;display:flex;gap:16px;font-size:0.75rem}
-.bp .dt div span{display:block;opacity:.64;font-size:0.625rem;letter-spacing:.1em;
+.bp .dt{padding:0 14px 12px;display:flex;gap:16px;font-size:var(--t4)}
+.bp .dt div span{display:block;opacity:.64;font-size:var(--t6);letter-spacing:.1em;
   margin-bottom:1px}
-.bp .dt div b{font-variant-numeric:tabular-nums;font-size:0.8125rem;font-weight:700}
+.bp .dt div b{font-variant-numeric:tabular-nums;font-size:var(--t3);font-weight:700}
 .bp .cut{position:relative;height:1px;margin:0 14px;
   background:repeating-linear-gradient(90deg,rgba(255,255,255,.4) 0 5px,transparent 5px 10px)}
 .bp .cut::before,.bp .cut::after{content:"";position:absolute;top:-8px;width:16px;
   height:16px;border-radius:50%;background:var(--bg)}
 .bp .cut::before{left:-22px} .bp .cut::after{right:-22px}
-.bp .rt{padding:11px 14px 13px;font-size:0.75rem;opacity:.92;display:flex;
+.bp .rt{padding:11px 14px 13px;font-size:var(--t4);opacity:.92;display:flex;
   align-items:center;gap:8px}
 .bp .rt b{font-variant-numeric:tabular-nums}
-.bp .rt .tag{margin-left:auto;font-size:0.625rem;padding:2px 8px;border-radius:99px;
+.bp .rt .tag{margin-left:auto;font-size:var(--t6);padding:2px 8px;border-radius:var(--r2);
   background:rgba(255,255,255,.18);font-weight:700}
 /* 逾期未回整張換色。這種事不該只是一行小字。 */
 .bp.late{background:var(--bad-ink)}
@@ -1776,22 +1813,22 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
 /* 右滑之後那個選單裡的選項 */
 .pk{display:block;width:100%;text-align:left;padding:12px;border:1px solid var(--line);
-  border-radius:12px;background:var(--card);font-family:inherit;cursor:pointer;
+  border-radius:var(--r2);background:var(--card);font-family:inherit;cursor:pointer;
   margin-bottom:8px}
 .pk:active{border-color:var(--brand);background:var(--brand-soft)}
-.pk b{display:block;font-size:0.875rem;color:var(--ink);margin-bottom:2px}
-.pk em{display:block;font-style:normal;font-size:0.75rem;color:var(--ink3);
+.pk b{display:block;font-size:var(--t2);color:var(--ink);margin-bottom:2px}
+.pk em{display:block;font-style:normal;font-size:var(--t4);color:var(--ink3);
   line-height:1.5}
 .pk.ex{border-color:var(--info-line);background:var(--info-bg)}
 
 /* 前後文那一條的第三行：前幾次做了什麼。副理要判斷費用合不合理，
    靠的就是這一行——四趟加起來的數字，單看一筆看不到。 */
-.clink .pv{display:block;font-size:0.6875rem;color:var(--ink3);margin-top:3px;
+.clink .pv{display:block;font-size:var(--t5);color:var(--ink3);margin-top:3px;
   line-height:1.5}
 
 /* 追蹤的狀態膠囊。⚠ 不要改用 .st——那個類別只活在 .rv 底下，
    而且修飾詞是 wait/done/back，跟這裡的五種對不起來。 */
-.cst{display:inline-flex;align-items:center;font-size:0.7188rem;border-radius:99px;
+.cst{display:inline-flex;align-items:center;font-size:var(--t4);border-radius:var(--r2);
   padding:2px 9px;white-space:nowrap;border:1px solid var(--line);
   color:var(--ink3);font-weight:700}
 .cst.ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
@@ -1809,15 +1846,15 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
 /* 行事曆卡片上的追蹤標記。已經在追蹤的那一趟要看得出來，
    不然人會以為沒開過，又開一件。 */
-.evtk{display:inline-flex;align-items:center;gap:3px;font-size:0.625rem;
+.evtk{display:inline-flex;align-items:center;gap:3px;font-size:var(--t6);
   font-weight:800;color:var(--brand);background:var(--brand-soft);
-  border-radius:99px;padding:1px 7px}
+  border-radius:var(--r2);padding:1px 7px}
 
 /* 階段條。一格一格往前走的東西，用狀態欄的三個值表達不了。
    點一下就換，按錯再點回去——擋住只會逼人去試算表手改，那更糟。 */
 .steps{display:flex;gap:5px;flex-wrap:wrap}
-.stp{flex:1;min-width:4.6em;padding:8px 6px;border-radius:9px;border:1px solid var(--line);
-  background:var(--card);font-family:inherit;font-size:0.75rem;color:var(--ink3);
+.stp{flex:1;min-width:4.6em;padding:8px 6px;border-radius:var(--r1);border:1px solid var(--line);
+  background:var(--card);font-family:inherit;font-size:var(--t4);color:var(--ink3);
   cursor:pointer;white-space:nowrap}
 .stp.done{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
 .stp.now{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:800}
@@ -1825,8 +1862,8 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 @media (prefers-reduced-motion:reduce){ .stp:active{transform:none} }
 
 /* 訊息視窗裡那塊可以改的文字 */
-#msgText{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px;
-  font-family:inherit;font-size:0.8125rem;line-height:1.7;background:var(--bg);
+#msgText{width:100%;border:1px solid var(--line);border-radius:var(--r2);padding:11px;
+  font-family:inherit;font-size:var(--t3);line-height:1.7;background:var(--bg);
   color:var(--ink);margin-top:10px;resize:vertical}
 
 /* ── 行程卡 F4③（2026-09-19 改版）────────────────────────
@@ -1843,35 +1880,35 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .ev .b>span.c4nm{display:flex;align-items:baseline;gap:6px;margin-top:2px;min-width:0}
 .ev .b>span.c4wk{display:flex;align-items:baseline;gap:6px;margin-top:1px;min-width:0}
 
-.c4eye .sv{flex:1;min-width:0;font-size:0.6875rem;letter-spacing:.04em;
+.c4eye .sv{flex:1;min-width:0;font-size:var(--t5);letter-spacing:.04em;
   color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ev .c4nm .n{flex:1;min-width:0;margin:0;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap}
 /* 紀錄代碼：只在有代碼的時候佔位置，預排的卡片完全不受影響 */
-.c4code{flex:none;font-size:0.5625rem;color:var(--ink2);background:var(--line2);
-  border-radius:5px;padding:1px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+.c4code{flex:none;font-size:var(--t6);color:var(--ink2);background:var(--line2);
+  border-radius:var(--r0);padding:1px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   letter-spacing:-.02em;white-space:nowrap}
 /* 移工名自然截斷，人數標永遠不縮。
    ⚠ 不要用「幾個人」決定要不要截斷——兩個菲籍原文名就爆版，
    兩個中文譯名卻很短。這是寬度的事，交給 CSS。 */
-.c4ws{flex:1;min-width:0;font-size:0.75rem;color:var(--ink2);
+.c4ws{flex:1;min-width:0;font-size:var(--t4);color:var(--ink2);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.c4cnt{flex:none;font-size:0.625rem;font-weight:800;color:var(--ink2);
-  background:var(--line2);border-radius:99px;padding:1px 6px;white-space:nowrap}
-.ev .b>span.c4who{display:block;margin-top:3px;font-size:0.6875rem;color:var(--ink3)}
+.c4cnt{flex:none;font-size:var(--t6);font-weight:800;color:var(--ink2);
+  background:var(--line2);border-radius:var(--r2);padding:1px 6px;white-space:nowrap}
+.ev .b>span.c4who{display:block;margin-top:3px;font-size:var(--t5);color:var(--ink3)}
 
 /* 追蹤標 K1：眉標右邊寫「◷ 就醫 3/4」 */
-.c4tk{flex:none;display:inline-flex;align-items:center;gap:3px;font-size:0.625rem;
+.c4tk{flex:none;display:inline-flex;align-items:center;gap:3px;font-size:var(--t6);
   font-weight:800;color:var(--brand);background:var(--brand-soft);
-  border-radius:99px;padding:1px 7px;white-space:nowrap}
+  border-radius:var(--r2);padding:1px 7px;white-space:nowrap}
 
 /* 進度 P2：四段細條。取代四格長條＋四個字，省掉一整行。 */
 .c4pg{flex:none;display:inline-flex;gap:2px;align-items:center}
-.c4pg i{width:10px;height:3px;border-radius:99px;background:var(--line);display:block}
+.c4pg i{width:10px;height:3px;border-radius:var(--r2);background:var(--line);display:block}
 .c4pg i.on{background:var(--brand)}
 .c4pg i.now{background:var(--warn-bar)}
 .c4pg i.bad{background:var(--bad-bar)}
-.c4st{flex:none;font-size:0.6875rem;font-weight:700;color:var(--warn-ink);
+.c4st{flex:none;font-size:var(--t5);font-weight:700;color:var(--warn-ink);
   white-space:nowrap}
 .c4st.bad{color:var(--danger)} .c4st.pass{color:var(--ok-ink)}
 
@@ -1879,7 +1916,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    狀態詞先讓位——進度條那四格已經講了同一件事。 */
 @media (max-width:380px){
   .c4st{display:none}
-  .c4tk{font-size:0.5625rem;padding:1px 5px}
+  .c4tk{font-size:var(--t6);padding:1px 5px}
 }
 
 /* ── 底部彈出選單（他挑的 M1）────────────────────────────
@@ -1897,38 +1934,38 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    上面那條通用的 .sheet 是**列印用的服務紀錄表**，寫死 794×1123（A4 @96dpi）。
    不覆寫的話所有底部彈出視窗都會變成 A4 大小——2026-09-19 實機量到
    393px 的螢幕上超出右邊 409px、下面 279px，長按選單那一大片空白也是這個。 */
-.btmsheet .sheet{background:var(--card);border-radius:16px;padding:6px;
+.btmsheet .sheet{background:var(--card);border-radius:var(--r2);padding:6px;
   width:auto;min-height:0;max-height:min(72vh,560px);
   overflow-y:auto;overscroll-behavior:contain;
   box-shadow:0 -10px 34px -14px rgba(10,16,28,.45)}
 .btmsheet .shd{padding:10px 12px 9px;border-bottom:1px solid var(--line2)}
-.btmsheet .shd .k{display:block;font-size:0.625rem;letter-spacing:.12em;font-weight:800;
+.btmsheet .shd .k{display:block;font-size:var(--t6);letter-spacing:.12em;font-weight:800;
   color:var(--brand)}
-.btmsheet .shd b{display:block;font-size:0.9375rem;color:var(--ink);margin-top:2px;
+.btmsheet .shd b{display:block;font-size:var(--t2);color:var(--ink);margin-top:2px;
   letter-spacing:-.01em}
-.btmsheet .shd span{display:block;font-size:0.6875rem;color:var(--ink3);margin-top:2px;
+.btmsheet .shd span{display:block;font-size:var(--t5);color:var(--ink3);margin-top:2px;
   line-height:1.5}
 .cmi{display:flex;align-items:center;gap:11px;width:100%;text-align:left;border:0;
-  background:transparent;font-family:inherit;font-size:0.9375rem;color:var(--ink);
-  padding:12px;border-radius:11px;cursor:pointer;min-height:2.75rem}
+  background:transparent;font-family:inherit;font-size:var(--t2);color:var(--ink);
+  padding:12px;border-radius:var(--r2);cursor:pointer;min-height:2.75rem}
 .cmi:active{background:var(--brand-soft)}
 .cmi.red{color:var(--danger)}
-.cmi i{font-style:normal;width:28px;height:28px;border-radius:9px;flex:none;
+.cmi i{font-style:normal;width:28px;height:28px;border-radius:var(--r1);flex:none;
   background:var(--line2);display:flex;align-items:center;justify-content:center;
-  font-size:0.875rem}
+  font-size:var(--t2)}
 .cmi.red i{background:var(--bad-bg)}
-.cmi em{font-style:normal;font-size:0.625rem;color:var(--ink3);margin-left:auto;
+.cmi em{font-style:normal;font-size:var(--t6);color:var(--ink3);margin-left:auto;
   font-family:ui-monospace,Menlo,monospace}
 /* 上鎖要講原因與怎麼辦。只把按鈕拿掉，人會以為系統壞了。 */
-.swhy{margin:4px 12px 6px;font-size:0.6875rem;color:var(--ink3);line-height:1.6}
-.scancel{width:100%;margin-top:7px;background:var(--card);border:0;border-radius:15px;
-  padding:14px;font-family:inherit;font-weight:800;font-size:0.9375rem;color:var(--ink2);
+.swhy{margin:4px 12px 6px;font-size:var(--t5);color:var(--ink3);line-height:1.6}
+.scancel{width:100%;margin-top:7px;background:var(--card);border:0;border-radius:var(--r2);
+  padding:14px;font-family:inherit;font-weight:800;font-size:var(--t2);color:var(--ink2);
   cursor:pointer;box-shadow:0 -6px 20px -14px rgba(10,16,28,.4)}
 
 /* ── 追蹤的整串服務（他挑的 L1 時間軸清單）── */
 .chl{padding:6px 2px 2px;max-height:56vh;overflow-y:auto}
 .ci{position:relative;display:block;width:100%;text-align:left;border:0;
-  background:transparent;font-family:inherit;padding:8px 9px 8px 32px;border-radius:11px;
+  background:transparent;font-family:inherit;padding:8px 9px 8px 32px;border-radius:var(--r2);
   cursor:pointer}
 .ci:active{background:var(--brand-soft)}
 .ci::before{content:"";position:absolute;left:13px;top:0;bottom:0;width:0;
@@ -1937,65 +1974,65 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .chl .ci:last-of-type::before{height:15px}
 .ci .no{position:absolute;left:6px;top:11px;width:16px;height:16px;border-radius:50%;
   background:var(--card);border:1.5px solid var(--brand);color:var(--brand);
-  font-size:0.5625rem;font-weight:800;display:flex;align-items:center;
+  font-size:var(--t6);font-weight:800;display:flex;align-items:center;
   justify-content:center;font-variant-numeric:tabular-nums;z-index:1}
 /* 目前這一筆要標出來。不然點進去看完第一筆，回來就不知道自己原本在哪。 */
 .ci.cur{background:var(--brand-soft)}
 .ci.cur .no{background:var(--brand);color:#fff}
 .ci .top{display:flex;align-items:baseline;gap:6px;min-width:0}
-.ci .d{font-size:0.8125rem;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
-.ci .me{font-size:0.5625rem;font-weight:800;color:var(--brand);background:var(--card);
-  border:1px solid var(--info-line);border-radius:99px;padding:0 6px;flex:none}
-.ci .cd{font-size:0.5625rem;color:var(--ink3);font-family:ui-monospace,Menlo,monospace;
+.ci .d{font-size:var(--t3);font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.ci .me{font-size:var(--t6);font-weight:800;color:var(--brand);background:var(--card);
+  border:1px solid var(--info-line);border-radius:var(--r2);padding:0 6px;flex:none}
+.ci .cd{font-size:var(--t6);color:var(--ink3);font-family:ui-monospace,Menlo,monospace;
   margin-left:auto;flex:none}
-.ci .s{display:block;font-size:0.75rem;color:var(--ink2);margin-top:1px;
+.ci .s{display:block;font-size:var(--t4);color:var(--ink2);margin-top:1px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ci .r{display:block;font-size:0.6875rem;color:var(--ink3);margin-top:1px;
+.ci .r{display:block;font-size:var(--t5);color:var(--ink3);margin-top:1px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 看到這一列就知道這一串還會繼續長。比任何說明文字都有效。 */
 .cadd{display:block;width:100%;text-align:left;padding:11px 9px 11px 32px;border:0;
-  background:transparent;font-family:inherit;font-size:0.8125rem;color:var(--brand);
-  font-weight:700;cursor:pointer;border-radius:11px}
+  background:transparent;font-family:inherit;font-size:var(--t3);color:var(--brand);
+  font-weight:700;cursor:pointer;border-radius:var(--r2)}
 .cadd:active{background:var(--brand-soft)}
 
 /* ── 加入追蹤：挑一件 ── */
-.mgsec{font-size:0.5625rem;letter-spacing:.14em;font-weight:800;color:var(--ink3);
+.mgsec{font-size:var(--t6);letter-spacing:.14em;font-weight:800;color:var(--ink3);
   padding:10px 12px 5px}
 .mgi{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;
-  background:transparent;font-family:inherit;padding:10px 12px;border-radius:11px;
+  background:transparent;font-family:inherit;padding:10px 12px;border-radius:var(--r2);
   cursor:pointer}
 .mgi:active{background:var(--brand-soft)}
-.mgi .ic{flex:none;width:30px;height:30px;border-radius:10px;background:var(--info-bg);
-  display:flex;align-items:center;justify-content:center;font-size:0.875rem;color:var(--brand)}
+.mgi .ic{flex:none;width:30px;height:30px;border-radius:var(--r1);background:var(--info-bg);
+  display:flex;align-items:center;justify-content:center;font-size:var(--t2);color:var(--brand)}
 .mgi .tx{flex:1;min-width:0}
-.mgi b{display:block;font-size:0.8125rem;color:var(--ink)}
-.mgi span{display:block;font-size:0.6875rem;color:var(--ink3);margin-top:1px;
+.mgi b{display:block;font-size:var(--t3);color:var(--ink)}
+.mgi span{display:block;font-size:var(--t5);color:var(--ink3);margin-top:1px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mgi .hit{display:inline-block;font-size:0.5625rem;font-weight:800;color:var(--ok-ink);
-  background:var(--ok-bg);border-radius:99px;padding:0 6px;margin-left:6px}
-.mgnone{margin:14px 12px;font-size:0.8125rem;color:var(--ink3)}
+.mgi .hit{display:inline-block;font-size:var(--t6);font-weight:800;color:var(--ok-ink);
+  background:var(--ok-bg);border-radius:var(--r2);padding:0 6px;margin-left:6px}
+.mgnone{margin:14px 12px;font-size:var(--t3);color:var(--ink3)}
 
 /* ── 合併確認：序號會怎麼重排 ──
    這一步不能省。清單照日期排，後補的紀錄插在中間會把後面往後推，
    不先算給人看，他會以為系統把資料弄亂了。 */
 .mgwarn{margin:8px 12px 0;background:var(--warn-bg);border:1px solid var(--warn-line);
-  border-radius:12px;padding:10px 12px;font-size:0.75rem;line-height:1.65;
+  border-radius:var(--r2);padding:10px 12px;font-size:var(--t4);line-height:1.65;
   color:var(--warn-ink)}
-.mgwarn b{display:block;font-size:0.8125rem;margin-bottom:2px}
-.mgmini{margin:10px 12px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.mgmini .r{display:flex;align-items:center;gap:9px;padding:8px 11px;font-size:0.75rem;
+.mgwarn b{display:block;font-size:var(--t3);margin-bottom:2px}
+.mgmini{margin:10px 12px 0;border:1px solid var(--line);border-radius:var(--r2);overflow:hidden}
+.mgmini .r{display:flex;align-items:center;gap:9px;padding:8px 11px;font-size:var(--t4);
   border-bottom:1px solid var(--line2);color:var(--ink2)}
 .mgmini .r:last-child{border-bottom:0}
 .mgmini .r.new{background:var(--ok-bg);color:var(--ok-ink);font-weight:700}
 .mgmini .no{flex:none;width:17px;height:17px;border-radius:50%;background:var(--line2);
-  color:var(--ink2);font-size:0.5625rem;font-weight:800;display:flex;align-items:center;
+  color:var(--ink2);font-size:var(--t6);font-weight:800;display:flex;align-items:center;
   justify-content:center;font-variant-numeric:tabular-nums}
 .mgmini .r.new .no{background:var(--ok-bar);color:#fff}
-.mgmini .d{flex:none;font-variant-numeric:tabular-nums;font-weight:700;font-size:0.6875rem}
+.mgmini .d{flex:none;font-variant-numeric:tabular-nums;font-weight:700;font-size:var(--t5)}
 .mgmini .s{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mgmini .was{flex:none;font-size:0.5625rem;color:var(--ink3)}
+.mgmini .was{flex:none;font-size:var(--t6);color:var(--ink3)}
 .mggo{display:flex;gap:8px;margin:12px 12px 6px}
-.mggo button{flex:1;padding:13px;border-radius:12px;font-family:inherit;font-size:0.875rem;
+.mggo button{flex:1;padding:13px;border-radius:var(--r2);font-family:inherit;font-size:var(--t2);
   font-weight:800;cursor:pointer;border:1px solid var(--line);background:var(--card);
   color:var(--ink2)}
 .mggo button.p{background:var(--brand);border-color:var(--brand);color:#fff}
@@ -2005,14 +2042,14 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    ⚠ 前綴一律 c5。這個檔案裡 .st .wk .rvw .eye .cnt 都已經有人用了，
    2026-09-19 早上才因為撞名排版全爛過一次。 */
 .c5{display:block;background:var(--card);border:1px solid var(--line);
-  border-top:3px solid var(--brand);border-radius:12px;
+  border-top:3px solid var(--brand);border-radius:var(--r2);
   padding:12px 13px 11px;margin-bottom:10px;cursor:pointer}
 .c5:active{background:var(--line2)}
-.c5line{margin:0 0 11px;font-size:0.875rem;letter-spacing:-.005em}
+.c5line{margin:0 0 11px;font-size:var(--t2);letter-spacing:-.005em}
 .c5line b{color:var(--brand)}
 .c5k{display:inline-block;font-weight:800;color:var(--brand);
-  background:var(--brand-soft);border-radius:99px;padding:1px 8px;
-  font-size:0.75rem;margin-right:6px}
+  background:var(--brand-soft);border-radius:var(--r2);padding:1px 8px;
+  font-size:var(--t4);margin-right:6px}
 /* 進度：一格一次服務，最後補一格「下一次」 */
 .c5rail{display:flex;align-items:flex-start;gap:0}
 .c5stp{flex:1;min-width:0;position:relative;padding-top:15px;text-align:center}
@@ -2022,142 +2059,142 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .c5stp:last-child::before{right:50%}
 .c5stp.done::before,.c5stp.now::before{background:var(--brand)}
 .c5stp i{position:absolute;top:0;left:50%;transform:translateX(-50%);
-  width:12px;height:12px;border-radius:99px;background:var(--line);
+  width:12px;height:12px;border-radius:var(--r2);background:var(--line);
   border:2px solid var(--card);box-shadow:0 0 0 1px var(--line)}
 .c5stp.done i{background:var(--brand);box-shadow:0 0 0 1px var(--brand)}
 .c5stp.now i{background:var(--brand);box-shadow:0 0 0 1px var(--brand),
   0 0 0 5px var(--brand-soft)}
-.c5stp em{display:block;font-style:normal;font-size:0.625rem;color:var(--ink3);
+.c5stp em{display:block;font-style:normal;font-size:var(--t6);color:var(--ink3);
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.c5stp span{display:block;font-size:0.6875rem;color:var(--ink2);
+.c5stp span{display:block;font-size:var(--t5);color:var(--ink2);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .c5stp.now em,.c5stp.now span{color:var(--brand);font-weight:700}
 .c5foot{display:flex;align-items:center;gap:8px;margin-top:11px;padding-top:9px;
-  border-top:1px solid var(--line2);font-size:0.75rem;color:var(--ink2)}
-.c5id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.625rem;
-  color:var(--ink3);border:1px solid var(--line);border-radius:5px;padding:0 5px}
+  border-top:1px solid var(--line2);font-size:var(--t4);color:var(--ink2)}
+.c5id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--t6);
+  color:var(--ink3);border:1px solid var(--line);border-radius:var(--r0);padding:0 5px}
 .c5go{margin-left:auto;font-weight:700;color:var(--brand);white-space:nowrap}
 
 /* ── 追蹤案件頁 c6（2026-09-19，他挑的 C）─────────────────────
    整件事就是一條線：開案 → 每一次服務 → 下一次 → 結案。
    動作掛在對應的那一格旁邊，底下只留一顆主要按鈕。 */
-.c6sum{background:var(--card);border:1px solid var(--line);border-radius:12px;
+.c6sum{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
   border-top:3px solid var(--brand);padding:13px;margin-bottom:10px}
-.c6who{font-size:1.0625rem;font-weight:800;letter-spacing:-.01em;line-height:1.3}
-.c6at{font-size:0.8125rem;color:var(--ink2);margin-top:1px}
+.c6who{font-size:var(--t1);font-weight:800;letter-spacing:-.01em;line-height:1.3}
+.c6at{font-size:var(--t3);color:var(--ink2);margin-top:1px}
 /* 現在走到哪一步。系統自己算的，不是人手動切的——
    原本那三顆手動按鈕 2026-09-19 拿掉了，理由寫在 app.js 的 caseSummary 裡。 */
-.c6now{display:inline-block;margin-top:9px;font-size:0.875rem;font-weight:700;
-  color:var(--warn-ink);background:var(--warn-bg);border-radius:99px;padding:4px 13px}
+.c6now{display:inline-block;margin-top:9px;font-size:var(--t2);font-weight:700;
+  color:var(--warn-ink);background:var(--warn-bg);border-radius:var(--r2);padding:4px 13px}
 .c6meta{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:9px;
-  font-size:0.75rem;color:var(--ink3)}
+  font-size:var(--t4);color:var(--ink3)}
 .c6meta b{color:var(--ink2);font-weight:600}
 .c6link{display:flex;align-items:center;gap:8px;background:var(--brand-soft);
-  border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:0.8125rem;
+  border-radius:var(--r1);padding:9px 12px;margin-bottom:10px;font-size:var(--t3);
   color:var(--ink2);cursor:pointer}
 .c6link .go{margin-left:auto;color:var(--ink3)}
-.c6det{background:var(--card);border:1px solid var(--line);border-radius:12px;
+.c6det{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
   padding:11px 13px;margin-bottom:10px}
-.c6dh{margin:0 0 7px;font-size:0.75rem;font-weight:800;color:var(--ink3);
+.c6dh{margin:0 0 7px;font-size:var(--t4);font-weight:800;color:var(--ink3);
   display:flex;align-items:center}
 .c6edit{margin-left:auto;border:1px solid var(--line);background:none;
-  border-radius:8px;padding:2px 10px;font-family:inherit;font-size:0.6875rem;
+  border-radius:var(--r1);padding:2px 10px;font-family:inherit;font-size:var(--t5);
   font-weight:700;color:var(--brand);cursor:pointer}
 
-.c6line{background:var(--card);border:1px solid var(--line);border-radius:12px;
+.c6line{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
   padding:11px 13px}
 .c6i{display:flex;gap:10px;padding:9px 0;position:relative}
 .c6i:not(:last-child)::after{content:'';position:absolute;left:6px;top:28px;
   bottom:-4px;width:2px;background:var(--line)}
-.c6i .d{width:14px;height:14px;border-radius:99px;flex:none;margin-top:4px;
-  display:grid;place-items:center;font-size:0.5rem;font-weight:700;color:#fff;
+.c6i .d{width:14px;height:14px;border-radius:var(--r2);flex:none;margin-top:4px;
+  display:grid;place-items:center;font-size:var(--t6);font-weight:700;color:#fff;
   background:var(--line)}
 .c6i.ok .d{background:var(--ok-ink)}
 .c6i.now .d{background:var(--brand)}
 .c6i.next .d{background:var(--warn-ink)}
 .c6i .c{flex:1;min-width:0}
-.c6i .c em{font-style:normal;font-size:0.625rem;color:var(--ink3);
+.c6i .c em{font-style:normal;font-size:var(--t6);color:var(--ink3);
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em}
-.c6i .c b{display:block;font-size:0.875rem;letter-spacing:-.005em}
-.c6i .c p{margin:1px 0 0;font-size:0.75rem;color:var(--ink2);word-break:break-word}
+.c6i .c b{display:block;font-size:var(--t2);letter-spacing:-.005em}
+.c6i .c p{margin:1px 0 0;font-size:var(--t4);color:var(--ink2);word-break:break-word}
 .c6a{margin-top:7px;display:flex;gap:6px;flex-wrap:wrap}
-.c6a a{font-size:0.6875rem;font-weight:700;color:var(--brand);
-  border:1px solid var(--line);border-radius:8px;padding:4px 10px;cursor:pointer}
+.c6a a{font-size:var(--t5);font-weight:700;color:var(--brand);
+  border:1px solid var(--line);border-radius:var(--r1);padding:4px 10px;cursor:pointer}
 .c6a a:active{background:var(--line2)}
 .c6a a.rm{color:var(--danger);border-color:var(--bad-bg);background:var(--bad-bg)}
 
 .c6sug{display:flex;align-items:center;gap:11px;background:var(--warn-bg);
-  border-radius:11px;padding:10px 12px;margin-top:10px;cursor:pointer}
-.c6sug .ic{width:28px;height:28px;border-radius:9px;background:rgba(0,0,0,.06);
+  border-radius:var(--r2);padding:10px 12px;margin-top:10px;cursor:pointer}
+.c6sug .ic{width:28px;height:28px;border-radius:var(--r1);background:rgba(0,0,0,.06);
   display:grid;place-items:center;flex:none;color:var(--warn-ink)}
 .c6sug .c{flex:1;min-width:0}
-.c6sug .c b{display:block;font-size:0.8125rem;color:var(--warn-ink)}
-.c6sug .c span{display:block;font-size:0.75rem;color:var(--ink2)}
-.c6sug .go{font-size:0.75rem;font-weight:800;color:var(--warn-ink);flex:none}
+.c6sug .c b{display:block;font-size:var(--t3);color:var(--warn-ink)}
+.c6sug .c span{display:block;font-size:var(--t4);color:var(--ink2)}
+.c6sug .go{font-size:var(--t4);font-weight:800;color:var(--warn-ink);flex:none}
 
 /* ── 挑選還沒歸案的服務 lp（2026-09-19）───────────────────── */
 .lptally{display:flex;flex-wrap:wrap;gap:3px 12px;margin:0 0 10px;
-  font-size:0.75rem;color:var(--ink3);background:var(--card);
-  border:1px solid var(--line);border-radius:10px;padding:8px 11px}
+  font-size:var(--t4);color:var(--ink3);background:var(--card);
+  border:1px solid var(--line);border-radius:var(--r1);padding:8px 11px}
 .lptally b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
 .lptally .hi b{color:var(--brand)}
 .lpsr{margin-bottom:10px}
-.lpsr input{width:100%;border:1px solid var(--line);border-radius:10px;
-  padding:9px 12px;font-family:inherit;font-size:0.875rem;background:var(--card);
+.lpsr input{width:100%;border:1px solid var(--line);border-radius:var(--r1);
+  padding:9px 12px;font-family:inherit;font-size:var(--t2);background:var(--card);
   color:var(--ink)}
 .lpgrp{display:flex;align-items:baseline;gap:8px;margin:14px 0 6px}
-.lpgrp b{font-size:0.75rem;font-weight:800;color:var(--brand)}
-.lpgrp span{font-size:0.6875rem;color:var(--ink3)}
+.lpgrp b{font-size:var(--t4);font-weight:800;color:var(--brand)}
+.lpgrp span{font-size:var(--t5);color:var(--ink3)}
 .lpgrp::after{content:'';flex:1;height:1px;background:var(--line)}
-.lprw{display:flex;gap:10px;border:1px solid var(--line);border-radius:11px;
+.lprw{display:flex;gap:10px;border:1px solid var(--line);border-radius:var(--r2);
   padding:10px 12px;background:var(--card);margin-bottom:8px;cursor:pointer}
 .lprw.on{border-color:var(--brand);background:var(--brand-soft)}
 .lprw.lock{opacity:.62;background:var(--line2);cursor:default}
-.lprw .ck{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);
-  flex:none;display:grid;place-items:center;font-size:0.6875rem;color:#fff;
+.lprw .ck{width:20px;height:20px;border-radius:var(--r1);border:1.5px solid var(--line);
+  flex:none;display:grid;place-items:center;font-size:var(--t5);color:#fff;
   margin-top:2px}
 .lprw.on .ck{background:var(--brand);border-color:var(--brand)}
 .lprw.lock .ck{border-style:dashed}
 .lprw .c{flex:1;min-width:0;display:block}
 .lprw .r1{display:flex;align-items:baseline;gap:8px}
-.lprw .r1 b{font-size:0.875rem;letter-spacing:-.005em;flex:1;min-width:0;
+.lprw .r1 b{font-size:var(--t2);letter-spacing:-.005em;flex:1;min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lprw .r1 em{font-style:normal;font-size:0.6875rem;color:var(--brand);
+.lprw .r1 em{font-style:normal;font-size:var(--t5);color:var(--brand);
   font-weight:600;flex:none;white-space:nowrap}
 .lprw .r2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
-  overflow:hidden;font-size:0.75rem;color:var(--ink2);margin-top:1px}
+  overflow:hidden;font-size:var(--t4);color:var(--ink2);margin-top:1px}
 .lprw .r3{display:flex;flex-wrap:wrap;gap:3px 9px;margin-top:4px;
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.625rem;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--t6);
   color:var(--ink3)}
 .lprw .r3 i{font-style:normal}
-.lprw .r3 .pill{font-family:inherit;font-weight:700;border-radius:99px;
+.lprw .r3 .pill{font-family:inherit;font-weight:700;border-radius:var(--r2);
   padding:0 7px;background:var(--line2);color:var(--ink2)}
 .lprw .r3 .pill.lk{background:var(--ok-bg);color:var(--ok-ink)}
-.lpmore{width:100%;text-align:center;font-size:0.8125rem;font-weight:700;
-  color:var(--brand);border:1px dashed var(--line);border-radius:10px;
+.lpmore{width:100%;text-align:center;font-size:var(--t3);font-weight:700;
+  color:var(--brand);border:1px dashed var(--line);border-radius:var(--r1);
   padding:10px;background:var(--card);font-family:inherit;cursor:pointer}
 .lpbar{display:flex;align-items:center;gap:10px}
-.lpn{font-size:0.8125rem;color:var(--ink2)}
+.lpn{font-size:var(--t3);color:var(--ink2)}
 .lpbar .p{margin-left:auto}
-.lppv{border:1px solid var(--line);border-radius:11px;overflow:hidden;
+.lppv{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;
   background:var(--card)}
 .lppv .pvi{display:flex;align-items:center;gap:10px;padding:9px 12px;
-  font-size:0.8125rem;border-bottom:1px solid var(--line2)}
+  font-size:var(--t3);border-bottom:1px solid var(--line2)}
 .lppv .pvi:last-child{border-bottom:0}
-.lppv .k{width:22px;height:22px;border-radius:99px;background:var(--line2);
+.lppv .k{width:22px;height:22px;border-radius:var(--r2);background:var(--line2);
   display:grid;place-items:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  font-size:0.6875rem;font-weight:600;color:var(--ink2);flex:none}
+  font-size:var(--t5);font-weight:600;color:var(--ink2);flex:none}
 .lppv .pvi.add .k{background:var(--brand);color:#fff}
 .lppv .pvi .c{flex:1;min-width:0}
 .lppv .pvi .c b{display:block;font-weight:600}
 .lppv .pvi .c span{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  font-size:0.625rem;color:var(--ink3)}
-.lppv .t{font-size:0.625rem;font-weight:800;border-radius:99px;padding:1px 8px;
+  font-size:var(--t6);color:var(--ink3)}
+.lppv .t{font-size:var(--t6);font-weight:800;border-radius:var(--r2);padding:1px 8px;
   flex:none;background:var(--brand-soft);color:var(--brand)}
 
 /* 追蹤案件自己排的行程，在行事曆卡片上要標出來 */
-.c4auto{flex:none;font-size:0.5625rem;font-weight:800;color:var(--ink2);
-  background:var(--line2);border-radius:99px;padding:1px 6px;white-space:nowrap}
+.c4auto{flex:none;font-size:var(--t6);font-weight:800;color:var(--ink2);
+  background:var(--line2);border-radius:var(--r2);padding:1px 6px;white-space:nowrap}
 @media (max-width:380px){ .c4auto{display:none} }
 
 
@@ -2166,88 +2203,88 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    ⚠ 補充那兩列要上底色——罐頭選項每一筆都長得幾乎一樣，
    補充才分得出這一趟發生什麼事。這是整個排法的重點，不要拿掉。 */
 .c6g{display:grid;grid-template-columns:2.6em 1fr;gap:3px 8px;
-  margin:5px 0 0;font-size:0.75rem}
-.c6g dt{color:var(--ink3);font-size:0.6875rem;font-weight:700;line-height:1.5}
+  margin:5px 0 0;font-size:var(--t4)}
+.c6g dt{color:var(--ink3);font-size:var(--t5);font-weight:700;line-height:1.5}
 .c6g dd{margin:0;color:var(--ink2);word-break:break-word}
-.c6g dd.hi{color:var(--ink);font-weight:700;font-size:0.875rem;
-  background:var(--warn-bg);border-radius:7px;padding:3px 8px;margin:-2px 0}
+.c6g dd.hi{color:var(--ink);font-weight:700;font-size:var(--t2);
+  background:var(--warn-bg);border-radius:var(--r1);padding:3px 8px;margin:-2px 0}
 
 /* ── 體檢通知（2026-09-20）─────────────────────────────
    類別一律 hc 開頭，跟既有的 c4/c5/c6/lp/sw 都不撞。 */
 
 /* 開單：怎麼去（三選一，整塊可點） */
 .hcride{display:grid;gap:7px;margin-top:6px}
-.hcride label{display:block;border:1px solid var(--line);border-radius:10px;
+.hcride label{display:block;border:1px solid var(--line);border-radius:var(--r1);
   padding:11px 12px;cursor:pointer}
 .hcride label:has(input:checked){border-color:var(--brand);border-width:2px;
   padding:10px 11px;background:var(--brand-soft)}
 .hcride input{margin-right:7px}
-.hcride b{font-size:0.9375rem}
-.hcride span{display:block;font-size:0.75rem;color:var(--ink2);margin-top:2px;
+.hcride b{font-size:var(--t2)}
+.hcride span{display:block;font-size:var(--t4);color:var(--ink2);margin-top:2px;
   padding-left:22px}
 
 /* 案件細節裡工人上傳的檔案（機票照片）。
    ⛔ 一條 Drive 網址沒有人看得懂，給一顆點得開的。 */
 .dflink{display:inline-block;background:var(--brand-soft);color:var(--brand);
-  border:1px solid var(--line);border-radius:9px;padding:8px 16px;
-  font-size:0.8125rem;font-weight:700;text-decoration:none}
+  border:1px solid var(--line);border-radius:var(--r1);padding:8px 16px;
+  font-size:var(--t3);font-weight:700;text-decoration:none}
 
 /* 還沒送出去的服務表。
    ⚠ 用「提醒」的顏色不是「錯誤」的顏色——東西沒有不見，只是還在手機裡。
       真的送不出去（.bad）才轉紅。 */
 .obbar{border:1px solid var(--warn-line);background:var(--warn-bg);
-  border-radius:12px;padding:11px 12px;margin:0 0 12px}
+  border-radius:var(--r2);padding:11px 12px;margin:0 0 12px}
 .obbar.bad{border-color:var(--bad-line);background:var(--bad-bg)}
 .obh{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.obh b{font-size:0.875rem;color:var(--warn-ink)}
+.obh b{font-size:var(--t2);color:var(--warn-ink)}
 .obbar.bad .obh b{color:var(--bad-ink)}
 .obh button{flex:none;border:1px solid var(--line);background:var(--card);
-  border-radius:8px;padding:6px 12px;font:inherit;font-size:0.75rem;
+  border-radius:var(--r1);padding:6px 12px;font:inherit;font-size:var(--t4);
   font-weight:700;color:var(--ink2)}
 .ob1{display:flex;justify-content:space-between;gap:10px;margin-top:7px;
-  font-size:0.75rem;color:var(--ink2)}
+  font-size:var(--t4);color:var(--ink2)}
 .ob1 .c{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ob1 .s{flex:none;color:var(--ink3);font-family:ui-monospace,Menlo,monospace}
-.obbar .hint{font-size:0.6875rem;color:var(--ink3);margin:8px 0 0}
+.obbar .hint{font-size:var(--t5);color:var(--ink3);margin:8px 0 0}
 
 /* 審核詳情裡的宣導簽到名單。
    ⛔ 一對多的移工簽名不在服務紀錄那一列上，而是在簽到表裡——
       沒有這一段，畫面會印「未簽名」，看起來整場都沒人簽。 */
-.rvbf{border:1px solid var(--line);border-radius:12px;padding:12px 13px;
+.rvbf{border:1px solid var(--line);border-radius:var(--r2);padding:12px 13px;
   margin:0 0 12px;background:var(--card)}
 .rvbf .hd{display:flex;align-items:baseline;justify-content:space-between;
   margin-bottom:9px}
-.rvbf .hd b{font-size:0.9375rem}
-.rvbf .hd em{font-style:normal;font-size:0.75rem;color:var(--ink3)}
+.rvbf .hd b{font-size:var(--t2)}
+.rvbf .hd em{font-style:normal;font-size:var(--t4);color:var(--ink3)}
 .bf1{display:flex;align-items:center;gap:9px;padding:7px 0;
-  border-bottom:1px solid var(--line2);font-size:0.875rem;color:var(--ink3)}
+  border-bottom:1px solid var(--line2);font-size:var(--t2);color:var(--ink3)}
 .bf1:last-of-type{border-bottom:0}
 .bf1 .mk{width:20px;height:20px;border-radius:50%;flex:none;
   border:1.5px solid var(--line);display:grid;place-items:center;
-  font-size:0.6875rem;color:transparent}
+  font-size:var(--t5);color:transparent}
 .bf1 .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap}
-.bf1 .lg{flex:none;font-size:0.6875rem;color:var(--ink3)}
-.bf1 .tm{flex:none;font-family:ui-monospace,Menlo,monospace;font-size:0.6875rem}
+.bf1 .lg{flex:none;font-size:var(--t5);color:var(--ink3)}
+.bf1 .tm{flex:none;font-family:ui-monospace,Menlo,monospace;font-size:var(--t5)}
 .bf1.on{color:var(--ink)}
 .bf1.on .nm{font-weight:700}
 .bf1.on .mk{background:var(--ok-ink);border-color:var(--ok-ink);color:#fff}
-.rvbf .hint{font-size:0.6875rem;color:var(--ink3);margin:9px 0 0}
+.rvbf .hint{font-size:var(--t5);color:var(--ink3);margin:9px 0 0}
 
-.bneed{font-size:0.75rem;line-height:1.55;color:var(--warn-ink);
+.bneed{font-size:var(--t4);line-height:1.55;color:var(--warn-ink);
   background:var(--warn-bg);border:1px solid var(--warn-line);
-  border-radius:10px;padding:9px 11px;margin:10px 0 0}
+  border-radius:var(--r1);padding:9px 11px;margin:10px 0 0}
 
 /* 宣導：把簽到連結傳到工廠群組 */
 .bshare{display:flex;gap:8px;margin-top:10px}
 .bshare a,.bshare button{flex:1;display:block;text-align:center;padding:11px 8px;
-  border-radius:10px;font:inherit;font-size:0.8125rem;font-weight:700;
+  border-radius:var(--r1);font:inherit;font-size:var(--t3);font-weight:700;
   text-decoration:none;border:1px solid var(--line);background:var(--card);
   color:var(--ink2)}
 .bshare a.line{background:#06C755;border-color:#06C755;color:#fff}
 
 /* 宣導：補簽期限那一行 */
-.bdue{font-size:0.75rem;color:var(--ink2);text-align:center;margin:8px 0 0;
+.bdue{font-size:var(--t4);color:var(--ink2);text-align:center;margin:8px 0 0;
   line-height:1.5}
 .bdue.off{color:var(--bad-ink);font-weight:600}
 
@@ -2263,21 +2300,21 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 /* 登機證的撕線打孔與條碼。
    ⚠ 打孔那兩顆圓要跟卡片外面的底色一樣，不然會看到兩個色塊。 */
 .bp .code{padding:0 14px 12px}
-.bp .code .bars{height:26px;border-radius:3px;
+.bp .code .bars{height:26px;border-radius:var(--r0);
   background:repeating-linear-gradient(90deg,#fff 0 2px,transparent 2px 4px,
     #fff 4px 5px,transparent 5px 9px,#fff 9px 12px,transparent 12px 13px)}
 .bp .code .id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  font-size:0.5625rem;letter-spacing:.2em;opacity:.6;margin-top:4px;text-align:center}
+  font-size:var(--t6);letter-spacing:.2em;opacity:.6;margin-top:4px;text-align:center}
 
 /* 證件通關章。四張都蓋到才進「證件齊」，缺哪一張一眼看到。 */
 .stamps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:11px 0 0}
-.stp{aspect-ratio:1;border-radius:10px;border:2px dashed var(--line);display:grid;
+.stp{aspect-ratio:1;border-radius:var(--r1);border:2px dashed var(--line);display:grid;
   place-items:center;text-align:center;padding:6px;background:var(--card)}
-.stp b{display:block;font-size:0.625rem;color:var(--ink3);line-height:1.3;font-weight:700}
+.stp b{display:block;font-size:var(--t6);color:var(--ink3);line-height:1.3;font-weight:700}
 .stp.on{border-style:solid;border-color:var(--ok-bar);background:var(--ok-bg);
   transform:rotate(-3deg)}
 .stp.on b{color:var(--ok-ink)}
-.stp.on::before{content:"\2713";display:block;font-size:1.05rem;color:var(--ok-bar);
+.stp.on::before{content:"\2713";display:block;font-size:var(--t1);color:var(--ok-bar);
   font-weight:800;line-height:1}
 .stp.miss{border-color:var(--bad-bar)}
 .stp.miss b{color:var(--bad-ink)}
@@ -2285,19 +2322,19 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
 /* 行李條。⚠ 只有勾了加購才畫得出來——空的元件比沒有元件難看。 */
 .tag2{display:flex;align-items:center;gap:9px;margin-top:9px;background:var(--card);
-  border:1px solid var(--line);border-radius:8px;padding:8px 11px;
+  border:1px solid var(--line);border-radius:var(--r1);padding:8px 11px;
   border-left:5px solid var(--warn-bar)}
-.tag2 .n{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:1.0625rem;
+.tag2 .n{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--t1);
   font-weight:800;color:var(--warn-ink);font-variant-numeric:tabular-nums}
-.tag2 .t{font-size:0.6875rem;color:var(--ink2);line-height:1.4}
-.tag2 .t b{display:block;color:var(--ink);font-size:0.75rem}
+.tag2 .t{font-size:var(--t5);color:var(--ink2);line-height:1.4}
+.tag2 .t b{display:block;color:var(--ink);font-size:var(--t4)}
 
 /* ══ 雇主選擇器 ══════════════════════════════════
    309 家。原生 select 在手機上要捲三十次，而且看不出哪一家有事。 */
 .epk{position:relative}
-.epkval{width:100%;text-align:left;border:1px solid var(--line);border-radius:10px;
+.epkval{width:100%;text-align:left;border:1px solid var(--line);border-radius:var(--r1);
   padding:11px 34px 11px 13px;background:var(--card);color:var(--ink3);font:inherit;
-  font-size:0.9375rem;position:relative}
+  font-size:var(--t2);position:relative}
 .epkval.has{color:var(--ink);font-weight:600}
 /* ⛔ 沒有這個箭頭，它看起來就是一個「已經填好的文字框」，
    2026-09-21 實機：使用者看不出來那一格可以點。 */
@@ -2309,18 +2346,18 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .epkval.open{border-bottom-left-radius:0;border-bottom-right-radius:0;
   border-bottom-color:transparent;border-color:var(--brand)}
 .epkpop{margin-top:-1px;border:1px solid var(--brand);
-  border-radius:0 0 12px 12px;
+  border-radius:0 0 var(--r2) var(--r2);
   background:var(--card);padding:9px 10px;max-height:58vh;overflow-y:auto}
-.epkpop > input{width:100%;border:1.5px solid var(--brand);border-radius:10px;
-  padding:9px 11px;font:inherit;font-size:0.9375rem;background:var(--card);
+.epkpop > input{width:100%;border:1.5px solid var(--brand);border-radius:var(--r1);
+  padding:9px 11px;font:inherit;font-size:var(--t2);background:var(--card);
   color:var(--ink)}
 .epkchips{display:flex;gap:6px;flex-wrap:wrap;margin:9px 0 2px}
-.epkchip{font-size:0.75rem;border:1px solid var(--line);border-radius:99px;
+.epkchip{font-size:var(--t4);border:1px solid var(--line);border-radius:var(--r2);
   padding:3px 10px;color:var(--ink2);background:var(--card);font-family:inherit;
   white-space:nowrap}
 .epkchip.on{background:var(--brand);border-color:var(--brand);color:#fff;
   font-weight:700}
-.epkhd{font-size:0.6875rem;color:var(--ink3);margin:10px 0 2px;
+.epkhd{font-size:var(--t5);color:var(--ink3);margin:10px 0 2px;
   font-family:ui-monospace,Menlo,monospace;letter-spacing:.06em}
 /* 一列至少 52px——工廠裡站著單手點，手指不準。 */
 .epkrow{display:flex;align-items:center;gap:9px;width:100%;text-align:left;
@@ -2331,21 +2368,21 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .epkrow .nm{flex:1;min-width:0}
 /* 核心名放大、後綴縮小：309 家拿掉後綴之後 0 撞名，83% 只剩 3-4 字。
    能分辨的就是前面那幾個字，埋在長字串裡等於沒有。 */
-.epkrow .nm b{display:block;font-size:0.9375rem;font-weight:700;line-height:1.3}
-.epkrow .nm b em{font-style:normal;font-weight:400;font-size:0.6875rem;
+.epkrow .nm b{display:block;font-size:var(--t2);font-weight:700;line-height:1.3}
+.epkrow .nm b em{font-style:normal;font-weight:400;font-size:var(--t5);
   color:var(--ink3);margin-left:4px}
-.epkrow .nm i{display:block;font-style:normal;font-size:0.6875rem;
+.epkrow .nm i{display:block;font-style:normal;font-size:var(--t5);
   color:var(--ink3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap}
 .epkrow .due{flex:none;text-align:right;font-family:ui-monospace,Menlo,monospace;
-  font-size:0.625rem;color:var(--ink2);line-height:1.3}
-.epkrow .due b{display:block;font-size:0.9375rem;color:var(--warn-ink)}
+  font-size:var(--t6);color:var(--ink2);line-height:1.3}
+.epkrow .due b{display:block;font-size:var(--t2);color:var(--warn-ink)}
 .epkrow .due.r b{color:var(--bad-ink)}
-.epkrow .due.g b{color:var(--ink3);font-weight:400;font-size:0.8125rem}
+.epkrow .due.g b{color:var(--ink3);font-weight:400;font-size:var(--t3)}
 /* 名單上沒有的雇主。虛線＝「這一列不是名單上的東西」。 */
 .epknew{border-top:1px dashed var(--line);border-bottom:0;margin-top:4px}
 .epknew .nm b{color:var(--brand)}
-.epkempty,.epkmore{font-size:0.8125rem;color:var(--ink3);text-align:center;
+.epkempty,.epkmore{font-size:var(--t3);color:var(--ink3);text-align:center;
   padding:14px 0 6px;margin:0}
 
 /* 開單：通知誰
@@ -2362,73 +2399,73 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .hcw label.p{display:grid;grid-template-columns:auto 1fr;gap:3px 9px;
   align-items:start}
 .hcw label.p > input[type=checkbox]{grid-row:1/3;align-self:start;margin-top:3px}
-.hcw .n{grid-column:2;font-size:0.9375rem;font-weight:600;min-width:0}
-.hcw .n em{font-style:normal;font-size:0.6875rem;color:var(--ink3);
+.hcw .n{grid-column:2;font-size:var(--t2);font-weight:600;min-width:0}
+.hcw .n em{font-style:normal;font-size:var(--t5);color:var(--ink3);
   font-weight:400;margin-left:5px}
 /* 原文名：中文名會撞（1781 人裡 198 個重複），勾人的時候靠它確定是哪一個。 */
 .hcw .n .og{display:block;font-style:normal;font-weight:400;
-  font-family:ui-monospace,Menlo,monospace;font-size:0.6875rem;
+  font-family:ui-monospace,Menlo,monospace;font-size:var(--t5);
   color:var(--ink3);letter-spacing:.01em}
-.hcw .w{grid-column:2;font-size:0.75rem;color:var(--ink2);line-height:1.55}
-.hcw .w i{display:block;font-style:normal;font-size:0.625rem;color:var(--ink3)}
+.hcw .w{grid-column:2;font-size:var(--t4);color:var(--ink2);line-height:1.55}
+.hcw .w i{display:block;font-style:normal;font-size:var(--t6);color:var(--ink3)}
 .hcw.late .w{color:var(--bad-ink);font-weight:600}
 /* 應辦期間整個過完、來源又沒紀錄＝真的漏了。不要跟一般逾期同色。 */
 .hcw .w.miss{color:var(--bad-ink);font-weight:700}
 .hcw .hcph{width:100%;margin-top:8px;border:1px solid var(--line);
-  border-radius:9px;padding:9px 11px;font-size:0.875rem;
+  border-radius:var(--r1);padding:9px 11px;font-size:var(--t2);
   font-family:ui-monospace,Menlo,monospace;
   background:var(--card);color:var(--ink)}
-.hcw .hcph::placeholder{font-family:inherit;color:var(--ink3);font-size:0.8125rem}
+.hcw .hcph::placeholder{font-family:inherit;color:var(--ink3);font-size:var(--t3)}
 
 /* 要貼出去的訊息 */
-.hcmsg{border:1px solid var(--line);border-radius:11px;overflow:hidden;
+.hcmsg{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;
   margin-bottom:11px}
 .hcmsg .h{display:flex;align-items:center;gap:8px;margin:0;padding:8px 11px;
-  background:var(--line2);font-size:0.8125rem;font-weight:700}
+  background:var(--line2);font-size:var(--t3);font-weight:700}
 .hcmsg .h .lnbtn{margin-left:auto;background:#06C755;color:#fff;
-  border-radius:7px;padding:4px 11px;font-size:0.75rem;font-weight:700;
+  border-radius:var(--r1);padding:4px 11px;font-size:var(--t4);font-weight:700;
   text-decoration:none;white-space:nowrap}
 .hcmsg .h .lnbtn + button{margin-left:6px}
 .hcmsg .h button{margin-left:auto;border:1px solid var(--line);background:var(--card);
-  border-radius:7px;padding:3px 11px;font-size:0.75rem;color:var(--brand);
+  border-radius:var(--r1);padding:3px 11px;font-size:var(--t4);color:var(--brand);
   font-weight:700;font-family:inherit}
-.hcmsg pre{margin:0;padding:11px;font-size:0.8125rem;line-height:1.7;
+.hcmsg pre{margin:0;padding:11px;font-size:var(--t3);line-height:1.7;
   white-space:pre-wrap;word-break:break-all;font-family:inherit;color:var(--ink)}
 
 /* 車次 */
-.hccar{border:1px solid var(--line);border-radius:12px;overflow:hidden;
+.hccar{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;
   margin-bottom:11px}
 .hccar .h{display:flex;align-items:center;gap:8px;margin:0;padding:8px 12px;
-  background:var(--line2);font-size:0.8125rem;font-weight:700}
-.hccar .h em{font-style:normal;font-weight:400;color:var(--ink2);font-size:0.75rem}
-.hccar .h button{margin-left:auto;border:0;background:none;font-size:0.75rem;
+  background:var(--line2);font-size:var(--t3);font-weight:700}
+.hccar .h em{font-style:normal;font-weight:400;color:var(--ink2);font-size:var(--t4)}
+.hccar .h button{margin-left:auto;border:0;background:none;font-size:var(--t4);
   color:var(--bad-ink);font-family:inherit}
 .hccar .b{padding:11px 12px}
 .hcwho{display:flex;flex-wrap:wrap;gap:6px}
-.hcwho button{border:1px solid var(--line);background:var(--card);border-radius:8px;
-  padding:5px 11px;font-size:0.8125rem;color:var(--ink2);font-family:inherit}
+.hcwho button{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
+  padding:5px 11px;font-size:var(--t3);color:var(--ink2);font-family:inherit}
 .hcwho button.on{background:var(--brand);border-color:var(--brand);color:#fff;
   font-weight:700}
 
 /* 案件頁的體檢區塊 */
 .hcbox{margin-top:14px;border-top:1px solid var(--line2);padding-top:12px}
 .hcbox .h{display:flex;align-items:baseline;gap:8px;margin:0 0 9px;
-  font-size:0.875rem;font-weight:700}
+  font-size:var(--t2);font-weight:700}
 .hcbox .h em{margin-left:auto;font-style:normal;font-weight:400;
-  font-size:0.75rem;color:var(--ink2)}
-.hclist{border:1px solid var(--line);border-radius:11px;padding:2px 11px}
+  font-size:var(--t4);color:var(--ink2)}
+.hclist{border:1px solid var(--line);border-radius:var(--r2);padding:2px 11px}
 .hcrow{display:flex;align-items:center;gap:9px;padding:9px 0;
   border-bottom:1px solid var(--line2)}
 .hcrow:last-child{border-bottom:0}
 .hcrow .c{flex:1;min-width:0}
-.hcrow .c b{display:block;font-size:0.875rem}
-.hcrow .c span{display:block;font-size:0.6875rem;color:var(--ink2)}
-.hcrow .flag{display:block;font-style:normal;font-size:0.6875rem;
+.hcrow .c b{display:block;font-size:var(--t2)}
+.hcrow .c span{display:block;font-size:var(--t5);color:var(--ink2)}
+.hcrow .flag{display:block;font-style:normal;font-size:var(--t5);
   color:var(--bad-ink);font-weight:600}
-.hcrow .rcp{border:1px solid var(--line);background:var(--card);border-radius:7px;
-  padding:3px 9px;font-size:0.6875rem;color:var(--brand);font-weight:700;
+.hcrow .rcp{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
+  padding:3px 9px;font-size:var(--t5);color:var(--brand);font-weight:700;
   font-family:inherit;flex:none}
-.hcrow .st{font-size:0.625rem;font-weight:800;border-radius:99px;padding:1px 8px;
+.hcrow .st{font-size:var(--t6);font-weight:800;border-radius:var(--r2);padding:1px 8px;
   flex:none}
 .hcrow .st.g{background:var(--ok-bg);color:var(--ok-ink)}
 .hcrow .st.b{background:var(--info-bg);color:var(--info-ink)}
@@ -2440,7 +2477,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
 /* 報到來源。強弱要分得出來——翻譯點名與收據是證據，
    工人自己按只是訊號，不可以拿來當缺席扣款的依據。 */
-.src{font-size:0.5625rem;font-weight:800;border-radius:5px;padding:0 5px;
+.src{font-size:var(--t6);font-weight:800;border-radius:var(--r0);padding:0 5px;
   margin-right:5px}
 .src.a{background:var(--ok-bg);color:var(--ok-ink)}
 .src.b{background:var(--info-bg);color:var(--info-ink)}
@@ -2448,62 +2485,62 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 
 /* 點名的到／沒到 */
 .seg2{display:flex;gap:6px;flex:none}
-.seg2 button{border:1px solid var(--line);background:var(--card);border-radius:8px;
-  padding:6px 13px;font-size:0.8125rem;color:var(--ink2);font-family:inherit}
+.seg2 button{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
+  padding:6px 13px;font-size:var(--t3);color:var(--ink2);font-family:inherit}
 .seg2 button.on{background:var(--ok-ink);border-color:var(--ok-ink);color:#fff;
   font-weight:700}
 .seg2 button.no.on{background:var(--bad-ink);border-color:var(--bad-ink)}
 
 /* 提醒條（追蹤頁頂端與案件頁共用） */
 .hcal{display:flex;flex-wrap:wrap;align-items:center;gap:4px 9px;
-  border-radius:11px;padding:10px 12px;margin-bottom:9px;background:var(--line2)}
+  border-radius:var(--r2);padding:10px 12px;margin-bottom:9px;background:var(--line2)}
 .hcal.w{background:var(--warn-bg)}
 .hcal.r{background:var(--bad-bg)}
-.hcal b{font-size:0.8125rem;flex:none}
+.hcal b{font-size:var(--t3);flex:none}
 .hcal.w b{color:var(--warn-ink)}
 .hcal.r b{color:var(--bad-ink)}
-.hcal span{font-size:0.75rem;color:var(--ink2);flex:1 1 100%}
-.hcal button{border:1px solid var(--line);background:var(--card);border-radius:8px;
-  padding:5px 13px;font-size:0.8125rem;font-weight:700;color:var(--brand);
+.hcal span{font-size:var(--t4);color:var(--ink2);flex:1 1 100%}
+.hcal button{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
+  padding:5px 13px;font-size:var(--t3);font-weight:700;color:var(--brand);
   font-family:inherit;margin-left:auto;flex:none}
 
 .hcacts{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
 .hcacts button{flex:1 1 auto;border:1px solid var(--line);background:var(--card);
-  border-radius:10px;padding:11px;font-size:0.875rem;font-weight:600;
+  border-radius:var(--r1);padding:11px;font-size:var(--t2);font-weight:600;
   color:var(--ink2);font-family:inherit}
 .hcacts button.p{background:var(--brand);border-color:var(--brand);color:#fff;
   font-weight:700}
 
 /* 體檢：要帶什麼（點選的會翻成工人的母語） */
 .hcbring{display:flex;flex-wrap:wrap;gap:6px}
-.hcbring button{border:1px solid var(--line);background:var(--card);border-radius:8px;
-  padding:6px 12px;font-size:0.8125rem;color:var(--ink2);font-family:inherit}
+.hcbring button{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
+  padding:6px 12px;font-size:var(--t3);color:var(--ink2);font-family:inherit}
 .hcbring button.on{background:var(--brand);border-color:var(--brand);color:#fff;
   font-weight:700}
 
 /* 體檢：移工自己回報的號碼跟名冊不一樣 */
-.hcdiff{background:var(--warn-bg);border-radius:9px;padding:9px 11px;margin:0 0 9px}
-.hcdiff b{display:block;font-size:0.75rem;color:var(--warn-ink)}
-.hcdiff span{display:block;font-size:0.75rem;color:var(--ink2);margin-top:2px}
+.hcdiff{background:var(--warn-bg);border-radius:var(--r1);padding:9px 11px;margin:0 0 9px}
+.hcdiff b{display:block;font-size:var(--t4);color:var(--warn-ink)}
+.hcdiff span{display:block;font-size:var(--t4);color:var(--ink2);margin-top:2px}
 .hcdiff s{font-family:ui-monospace,Menlo,monospace;opacity:.6}
 .hcdiff em{font-style:normal;font-family:ui-monospace,Menlo,monospace;
   font-weight:700;color:var(--ink)}
 .hcdiff .act{display:flex;gap:6px;margin-top:7px}
 .hcdiff .act button{border:1px solid var(--line);background:var(--card);
-  border-radius:8px;padding:4px 11px;font-size:0.75rem;font-weight:700;
+  border-radius:var(--r1);padding:4px 11px;font-size:var(--t4);font-weight:700;
   color:var(--brand);font-family:inherit}
 
 /* ── 體檢頁籤：搜尋、日期分組、批次卡（2026-09-21 排法 A）──
    ⛔ 卡片的主角是日期與進度，不是把一批 17 個名字印出來。 */
 .hsr{padding:0 0 9px}
 .hsr input{width:100%;border:1px solid var(--line);background:var(--card);
-  border-radius:10px;padding:10px 12px;font-size:0.9375rem;color:var(--ink);
+  border-radius:var(--r1);padding:10px 12px;font-size:var(--t2);color:var(--ink);
   font-family:inherit}
 .hsr input:focus{outline:2px solid var(--brand);outline-offset:1px;
   border-color:transparent}
 
 /* 收合的提醒條 */
 #hcAlertBar{cursor:pointer}
-#hcAlertBar .more{margin-left:auto;font-size:0.75rem;color:var(--ink2);
+#hcAlertBar .more{margin-left:auto;font-size:var(--t4);color:var(--ink2);
   flex:none}
 
