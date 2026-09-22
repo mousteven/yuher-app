@@ -5012,7 +5012,12 @@ function vacRow(c, today, w){
        (d.air ? ' <i>' + esc(d.air) + '</i>' : ' <i>未訂票</i>'))
     : (d.toName ? ('回 ' + esc(d.toName) + ' <i>未訂機場</i>') : '<i>目的地未定</i>');
 
-  /* 右欄第三行：講「還有幾天」，不要重複上面已經有的日期。 */
+  /* 右欄第三行：**真正的階段** ＋ 還有幾天。
+     ⛔ 不可以只印英文。ABROAD／PLANNED 是借航廈的氣氛，
+        但「申請中」跟「證件齊」在這裡都算 PLANNED——只印英文的話
+        他分不出證件辦好了沒。2026-09-22 合併時漏掉這一條，
+        svc_smoke 的「真正的階段還印得出來」把它抓回來了。
+     ⚠ 英文給氣氛，下面那行小字才是真的階段。 */
   var o = vtParse_(d.out), bk = vtParse_(d.back);
   var tail = '';
   if(k === 'over')      tail = '逾期 ' + vtDay_(bk, today) + ' 天未回';
@@ -5035,7 +5040,9 @@ function vacRow(c, today, w){
     '<span class="b">' +
       '<span class="st" style="color:' + col + '">' + VACT_L_[k] + '</span>' +
       '<span class="dd" style="color:' + col + '">' + dd + '</span>' +
-      '<span class="sub2">' + esc(tail) + (open ? '　⌃' : '　⌄') + '</span>' +
+      '<span class="sub2">' +
+        (c.phase ? ('<em>' + esc(c.phase) + '</em>　') : '') +
+        esc(tail) + (open ? '　⌃' : '　⌄') + '</span>' +
     '</span>' +
   '</div>' + (open ? vacExp(c, k) : '');
 }
@@ -7821,65 +7828,158 @@ function hcPill_(c){
       當天在醫院門口點名、打電話給他，用得到的是原文那個。
 
    日期不在卡片上，在上面那條分組標題（同一天的排在一起）。 */
-function hcBatchCard(c){
+/* ── 體檢：一列一批 ＋ 待辦條（牟佑彬選的 ①＋②）────────
+
+   ⛔ 2026-09-22 之前是「一批一張票根卡」，一張佔 190px，
+      三批就要捲兩個畫面；而且要點進去才知道誰沒讀、接送車填了沒。
+      他說：「盡量塞在一個頁面，看起來非常精簡俐落乾淨」。
+
+   體檢跟返鄉問的問題不一樣：
+     返鄉 → 「誰還在國外」＝一個時間點
+     體檢 → 「還有誰沒確認、我要打給誰」＝一份待辦
+   所以版型同構，但**右邊那一欄放的是確認進度**，不是日期區間。
+   逾期受罰的是雇主，而罰的原因幾乎都是「通知發了但沒人確認」。
+
+   ⚠ 展開裡面的東西**完全重用案件頁那兩支**（hcCarAlert / hcBoxHtml /
+     hcBindBox）——它們已經會畫每個人的沒讀／沒電話／打電話／
+     生日錯／他自己填的號碼。不要再寫第二份。 */
+
+var HCX_ = '';        // 目前展開的是哪一批
+var HCV_ = {};        // 展開過的就記著，收合再打開不用重抓
+
+/* 待辦條：把每一批的 hcTodo_ 攤平成一條一件。
+   ⛔ 沒有待辦就整條不出現。永遠掛一塊「目前沒有待辦」在那裡，
+      兩個禮拜後他就不會再看它了——跟返鄉的 GATE 同一個規矩。 */
+function hcTodoBar(rows){
+  var todos = [];
+  rows.forEach(function(c){
+    var t = hcTodo_(c);
+    if(t) todos.push({ c: c, t: t });
+  });
+  if(!todos.length) return '';
+  return '<div class="htb">' +
+    '<div class="bar"><b>要你處理</b><span class="now">' +
+      todos.length + ' 件</span></div>' +
+    todos.map(function(x){
+      var day = hcDay_(x.c.nextDate);
+      return '<div class="htr" data-hc="' + esc(x.c.id) + '">' +
+        '<i class="dot' + (x.t.bad ? ' r' : '') + '"></i>' +
+        '<span class="tx"><b>' + esc(x.t.t) + '</b>' +
+          '<s>' + esc(x.c.client || '') +
+            (day ? ('　·　' + esc(day.d) + '　剩 ' + day.days + ' 天') : '') +
+          '</s></span>' +
+        '<span class="go">去處理</span>' +
+      '</div>';
+    }).join('') +
+  '</div>';
+}
+
+/* 一列一批。⚠ 至少 78px——工廠裡站著單手點。 */
+function hcRow(c){
   var h = c.hc || {}, day = hcDay_(c.nextDate), p = hcPill_(c);
+  var open = (HCX_ === c.id);
   var todo = hcTodo_(c);
-  var cls = c.status === '已結案' ? 'done'
-          : (todo && todo.bad) ? 'bad' : (todo ? 'warn' : '');
-  var pct = h.n ? Math.round((h.ack / h.n) * 100) : 0;
   /* 當天之後看的是報到，不是確認——那時候「誰確認了」已經沒有意義。 */
   var after = day && day.days <= 0 && h.n;
-  if(after) pct = Math.round((h.inn / h.n) * 100);
+  var got = after ? h.inn : h.ack;
+  var pct = h.n ? Math.round((got / h.n) * 100) : 0;
+  var tone = !h.n ? 'dim' : (got >= h.n ? 'g' : (got === 0 ? 'rd' : 'am'));
 
-  var ride = h.ride === '自行前往';
-  var big, sub;
-  if(ride){
-    big = (h.time || '時間未定') + ' <em>報到</em>';
-    sub = '<b>' + esc(h.hos || '醫院未填') + '</b>';
-  } else if(h.at){
-    big = esc(h.at) + ' <em>上車</em>';
-    sub = '<b>' + esc(h.where || '地點未填') + '</b>　→　' +
-          esc(h.hos || '醫院未填') +
-          (h.time ? '　報到 ' + esc(h.time) : '') +
-          (h.nCar > 1 ? '　· ' + h.nCar + ' 台車' : '');
-  } else {
-    big = '<span class="wait">上車時間未定</span>';
-    sub = '<b>' + esc(h.hos || '醫院未填') + '</b>' +
-          (h.time ? '　報到 ' + esc(h.time) : '');
+  var ride = (h.ride === '自行前往');
+  var line2 = (ride ? '自行前往' : '接送') +
+    (h.hos ? ('　' + h.hos) : '　醫院未填') +
+    (h.time ? ('　報到 ' + h.time) : '');
+
+  /* 名字：前三個，多的寫「等 N 人」。⚠ 名單是空的要講出來——
+     那一批不會有任何人收到通知，而畫面上看起來跟正常的一樣。 */
+  var who = (h.who || []);
+  var nm = h.n ? (who.join('、') + (h.n > who.length ? (' 等 ' + h.n + ' 人') : ''))
+               : '名單是空的，這批不會有人收到通知';
+
+  return '<div class="hrow' + (open ? ' on' : '') + (todo && todo.bad ? ' bad' : '') +
+      '" data-hc="' + esc(c.id) + '">' +
+    '<span class="d">' + (day ? esc(day.d) : '—') +
+      '<s>' + (day ? esc(day.w.slice(1)) : '沒日期') + '</s></span>' +
+    '<span class="m">' +
+      '<span class="t1">' + esc(line2) + '</span>' +
+      '<span class="nm' + (h.n ? '' : ' none') + '">' + esc(c.client || '') +
+        /* 今天開的標一下。⛔ 不要拿掉——這是他開完單找不到自己
+           那一張的解法（清單照體檢日排，新開的可能排在很後面）。 */
+        (hcIsNew_(c) ? '<em class="new">剛開的</em>' : '') + '</span>' +
+      '<span class="co">' + esc(nm) + '</span>' +
+      (h.n ? ('<span class="pg"><i style="width:' + Math.max(3, pct) +
+              '%;background:' + (tone === 'g' ? 'var(--fgreen)'
+                               : tone === 'rd' ? 'var(--fred)' : 'var(--amber)') +
+              '"></i></span>') : '') +
+    '</span>' +
+    '<span class="b">' +
+      (h.n ? ('<span class="st ' + tone + '">' + got + ' / ' + h.n + '</span>') : '') +
+      '<span class="big ' + p[0] + '">' +
+        (day && day.days !== null ? Math.abs(day.days) : '—') + '</span>' +
+      '<span class="s2">' +
+        (!day ? '沒設日期'
+              : day.days === 0 ? '今天'
+              : day.days < 0 ? '天前' : '天後') +
+        (open ? '　⌃' : '　⌄') + '</span>' +
+    '</span>' +
+  '</div>' + (open ? hcExp(c) : '');
+}
+
+/* 展開。內容要跟後端要（誰沒讀、誰沒電話那些不在清單的資料裡），
+   所以先放一個殼，拿到再填。 */
+function hcExp(c){
+  return '<div class="hexp" id="hcExp-' + esc(c.id) + '">' +
+    '<div class="mid" style="padding:18px;font-size:0.8125rem">載入中…</div></div>';
+}
+
+/* 把案件頁那兩塊搬進展開區。⛔ 不要重寫——hcBoxHtml 已經處理了
+   沒讀／看過沒按／名冊沒電話／生日錯／他自己填了新號碼那五種狀況。 */
+function hcExpFill(c){
+  var box = $('hcExp-' + c.id);
+  if(!box) return;
+  function draw(v){
+    if(!v || !v.has){ box.innerHTML =
+      '<div class="mid" style="padding:18px;font-size:0.8125rem">這一批沒有名單</div>';
+      return; }
+    var d = v.detail || {};
+    var kv = [];
+    if(d.hos)  kv.push(['醫院', d.hos + (d.time ? ('　報到 ' + d.time) : '')]);
+    if(d.ride === '接送'){
+      kv.push(['接送車', v.needCar ? '上車時間未定'
+        : ((d.at || '') + '　' + (d.where || ''))]);
+    }
+    if(d.bring) kv.push(['要帶', d.bring]);
+    box.innerHTML =
+      (v.needCar ? ('<div class="hcbox">' + hcCarAlert(v) + '</div>') : '') +
+      '<div class="hcbox">' + hcBoxHtml(v) + '</div>' +
+      (kv.length ? ('<dl class="hkv">' + kv.map(function(r){
+        return '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>';
+      }).join('') + '</dl>') : '') +
+      '<div class="hacts">' +
+        '<button type="button" data-ha="next">改日期</button>' +
+        '<button type="button" data-ha="detail">填細節</button>' +
+        '<button type="button" class="full" data-ha="full">' +
+          '打開完整那一頁（結案／開錯了／服務紀錄）</button>' +
+      '</div>';
+    hcBindBox(v);
+    [].forEach.call(box.querySelectorAll('[data-ha]'), function(el){
+      el.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var a = el.dataset.ha;
+        if(a === 'full') openCase(c.id);
+        else if(a === 'next') caseSetNext(c);
+        else if(a === 'detail') openDetailForm(c);
+      });
+    });
   }
-
-  /* 名字：中文三個 ＋ 原文三個。超過就「等 N 人」。
-     ⚠ 原文名可能是空的（名冊沒填），空的就不佔位置，
-       不要印一串「·　·　·」讓人以為資料壞了。 */
-  var who = (h.who || []), wo = (h.wo || []).filter(String);
-  var nm = who.join('、') + (h.n > who.length ? ' 等 ' + h.n + ' 人' : '');
-
-  return '<div class="hbc ' + cls + (hcIsNew_(c) ? ' nw' : '') +
-      '" data-case="' + esc(c.id) + '">' +
-    (hcIsNew_(c) ? '<span class="new">剛開的</span>' : '') +
-    '<div class="th">' + (ride ? '🚶 自行前往' : '🚐 接送') +
-      '　·　' + esc(c.client) +
-      '<span class="no">' + esc(c.id) + '</span></div>' +
-    '<div class="big"><div class="t">' + big + '</div>' +
-      '<div class="p">' + sub + '</div></div>' +
-    '<div class="tear"><i class="l"></i><i class="r"></i></div>' +
-    '<div class="stub">' +
-      (h.n ? '<div class="pax"><span class="n">' + h.n + ' 人</span>' +
-             '<span class="who">' + esc(nm) +
-             (wo.length ? '<i>' + esc(wo.join(' · ')) + '</i>' : '') +
-             '</span></div>'
-           : '<div class="pax"><span class="who nobody">名單是空的　' +
-             '這批不會有人收到通知</span></div>') +
-      (h.n ? '<div class="bar"><i style="width:' + pct + '%"></i></div>' : '') +
-      '<div class="r4">' +
-        (h.n ? '<span>' + (after ? '已報到 ' : '已確認 ') +
-               '<b>' + (after ? h.inn : h.ack) + '</b>/' + h.n + '</span>' : '') +
-        '<span class="pill ' + p[0] + '">' + esc(p[1]) + '</span>' +
-        (c.crew ? '<span class="code">' + esc(c.crew) + '</span>' : '') +
-      '</div></div>' +
-    (todo ? '<div class="todo' + (todo.bad ? ' r' : '') + '">' +
-       esc(todo.t) + '</div>' : '') +
-  '</div>';
+  if(HCV_[c.id]) { draw(HCV_[c.id]); return; }
+  google.script.run
+    .withSuccessHandler(function(v){ HCV_[c.id] = v; draw(v); })
+    .withFailureHandler(function(e){
+      box.innerHTML = '<div class="mid" style="padding:18px;font-size:0.8125rem">' +
+        esc((e && e.message) || '讀不到') + '</div>';
+    })
+    .hcCaseView(CODE, c.id);
 }
 
 /* ── 搜尋 ──────────────────────────────────────────
@@ -7890,39 +7990,40 @@ function hcHit_(c, q){
     .join(' ').toLowerCase().indexOf(q) !== -1;
 }
 
-/* ── 依體檢日分組（牟佑彬選的 A）────────────────────
-   同一天的排在一起，符合「那天要出幾台車」的想法。 */
-function hcGroups(rows){
+/* 一份清單，照體檢日排。⛔ 不要再依日期分組——
+   2026-09-22 之前是分組的，但一天通常只有一批，那個標題等於白佔一行。
+   日期已經印在每一列的左邊了。 */
+function hcList(rows){
   var q = HC_Q_.trim().toLowerCase();
   var hit = rows.filter(function(c){ return hcHit_(c, q); });
   if(!hit.length){
     return '<div class="mid" style="padding:26px">' +
-      (q ? '找不到「' + esc(HC_Q_) + '」' : '這個條件下沒有體檢單') + '</div>';
+      (q ? ('找不到「' + esc(HC_Q_) + '」') : '這個條件下沒有體檢單') + '</div>';
   }
-  var by = {}, order = [];
-  hit.forEach(function(c){
-    var k = c.nextDate || '（沒設日期）';
-    if(!by[k]){ by[k] = []; order.push(k); }
-    by[k].push(c);
-  });
   /* 沒設日期的排最後——它是待辦，不是某一天的事。 */
-  order.sort(function(a, b){
-    if(a === '（沒設日期）') return 1;
-    if(b === '（沒設日期）') return -1;
-    return a.localeCompare(b);
+  hit.sort(function(a, b){
+    var x = a.nextDate || '9999', y = b.nextDate || '9999';
+    return x.localeCompare(y);
   });
-  return order.map(function(k){
-    var list = by[k], day = hcDay_(k);
-    var ppl = list.reduce(function(s, c){ return s + ((c.hc || {}).n || 0); }, 0);
-    var hot = day && day.days !== null && day.days <= 0 &&
-              list.some(function(c){ return c.status === '進行中'; });
-    return '<div class="hgh' + (hot ? ' hot' : '') + '">' +
-      '<b>' + (day ? esc(day.d) + '（' + esc(day.w.slice(1)) + '）' : esc(k)) +
-        (day && day.days === 0 ? '　今天' : '') + '</b>' +
-      '<em>' + list.length + ' 批 · ' + ppl + ' 人</em>' +
-      (day && day.days > 0 ? '<span class="r">剩 ' + day.days + ' 天</span>' : '') +
-      '</div>' + list.map(hcBatchCard).join('');
-  }).join('');
+  var ppl = hit.reduce(function(s, c){ return s + ((c.hc || {}).n || 0); }, 0);
+  var noAck = hit.reduce(function(s, c){
+    var h = c.hc || {};
+    return s + (c.status === '進行中' ? Math.max(0, (h.n || 0) - (h.ack || 0)) : 0);
+  }, 0);
+
+  return hcTodoBar(hit) +
+    '<div class="hb">' +
+      '<div class="bar"><b>體檢</b><span class="now">' +
+        hit.length + ' 批 · ' + ppl + ' 人' +
+        (noAck ? ('　<em>' + noAck + ' 人沒確認</em>') : '') +
+        '　今天 ' + esc(todayStr().slice(5).replace('-', '/')) + '</span></div>' +
+      hit.map(hcRow).join('') +
+      '<div class="hlg">' +
+        '<span><i style="background:var(--fgreen)"></i>都確認了</span>' +
+        '<span><i style="background:var(--amber)"></i>確認了一部分</span>' +
+        '<span><i style="background:var(--fred)"></i>一個都還沒</span>' +
+      '</div>' +
+    '</div>';
 }
 
 /* ── 搜尋列 ─────────────────────────────────────────
@@ -7936,10 +8037,19 @@ function hcSearchBar(){
 
 function hcPaintList(){
   var rows = TK_ROWS.filter(function(c){ return tkMatch(c, TK_ST); });
-  $('hcList').innerHTML = hcGroups(rows);
-  [].forEach.call($('hcList').querySelectorAll('[data-case]'), function(el){
-    el.addEventListener('click', function(){ openCase(el.dataset.case); });
+  $('hcList').innerHTML = hcList(rows);
+  [].forEach.call($('hcList').querySelectorAll('[data-hc]'), function(el){
+    el.addEventListener('click', function(){
+      /* 一次只開一個。連開三批之後整頁都是名單，就找不到批了。 */
+      HCX_ = (HCX_ === el.dataset.hc) ? '' : el.dataset.hc;
+      hcPaintList();
+    });
   });
+  if(HCX_){
+    var c = null;
+    TK_ROWS.forEach(function(x){ if(x.id === HCX_) c = x; });
+    if(c) hcExpFill(c);
+  }
 }
 
 function hcBindSearch(){

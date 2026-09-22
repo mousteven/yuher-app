@@ -2017,6 +2017,10 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .vrow .dd i{font-style:normal;font-weight:400;color:rgba(255,255,255,.34);margin:0 2px}
 .vrow .sub2{display:block;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
   font-size:0.5625rem;color:rgba(255,255,255,.34);white-space:nowrap}
+/* 真正的階段（申請中／證件齊／已離境／已回台）。
+   ⛔ 英文只是氣氛——「申請中」跟「證件齊」在上面都算 PLANNED，
+      沒有這一段他分不出證件辦好了沒。 */
+.vrow .sub2 em{font-style:normal;color:rgba(255,255,255,.62);font-weight:600}
 
 /* 那一條。底紋的直線＝一週，眼睛才量得出長度。 */
 .vrow .trk{position:relative;display:block;height:9px;border-radius:5px;margin-top:6px;
@@ -2416,93 +2420,109 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .hsr input:focus{outline:2px solid var(--brand);outline-offset:1px;
   border-color:transparent}
 
-.hgh{display:flex;align-items:baseline;gap:9px;padding:14px 2px 6px}
-.hgh b{font-size:0.9375rem}
-.hgh em{font-style:normal;font-size:0.75rem;color:var(--ink2)}
-.hgh .r{margin-left:auto;font-family:ui-monospace,Menlo,monospace;
-  font-size:0.75rem;color:var(--ink3)}
-.hgh.hot b{color:var(--bad-ink)}
+/* ── 體檢：待辦條 ＋ 一列一批 ──────────────────────
+   跟返鄉同一套（深藍底＋琥珀），但右邊放的是**確認進度**，
+   不是日期區間——體檢問的是「還有誰沒確認」，不是「誰在國外」。
+   ⚠ 8pt 格線：padding 只用 8/12。 */
 
-/* 批次卡＝票根（T3）。撕票線把「行程」跟「乘客」分開，
-   上半是當天要做的事，下半是誰、進度、單號。 */
-/* 群組那一則是預設要貼的，用邊框把它跟備援那幾則分開。
-   ⛔ 不要只靠順序——翻譯捲下去之後兩者長得一樣，會貼錯。 */
-.hcmsg.gm{border:1.5px solid var(--brand);border-radius:12px}
-.hcmsg.gm .h{color:var(--brand)}
-
-/* 搬到頁首的接送提示：只有它在上面，所以自己管下方間距。 */
-/* 打電話：放在名字左邊，因為那是「現在要做的動作」，不是狀態。 */
-.hccall{flex:none;background:var(--navy);color:#fff;border-radius:8px;
-  padding:4px 10px;font-size:0.75rem;font-weight:700;text-decoration:none;
-  margin-right:8px;white-space:nowrap}
-.hcnop{flex:none;font-style:normal;font-size:0.6875rem;color:var(--bad-ink);
-  background:var(--bad-bg);border-radius:8px;padding:4px 8px;margin-right:8px;
-  white-space:nowrap}
-.hcdone{display:block;font-style:normal;font-size:0.75rem;color:var(--ok-ink);
-  background:var(--ok-bg);border-radius:8px;padding:5px 9px;margin-top:6px}
-/* ⛔ 搬到頁首的區塊不可以留 .hcbox 的上框線與上邊距——
-   那條線原本是「跟上面那塊分開」用的，放到最上面就變成
-   一個孤零零的深色橫條浮在標題底下（2026-09-21 實機）。 */
-.hcbox.top{margin:0 0 10px;border-top:0;padding-top:0;background:transparent}
-.hcbox.top .hcal{margin-top:0}
-.hbc{background:var(--card);border:1px solid var(--line);border-radius:12px;
-  margin-bottom:8px;position:relative;overflow:hidden}
-.hbc.warn{border-color:var(--warn-bar)}
-.hbc.bad{border-color:var(--bad-bar)}
-.hbc.done{opacity:0.7}
-.hbc.nw{box-shadow:0 0 0 2px var(--brand)}
-.hbc .new{position:absolute;right:0;top:0;background:var(--brand);color:#fff;
-  font-size:0.5625rem;font-weight:800;padding:2px 9px;border-radius:0 0 0 8px}
-.hbc .th{display:flex;align-items:center;gap:6px;padding:8px 13px;
-  background:var(--info-bg);color:var(--info-ink);font-size:0.75rem;
-  font-weight:700}
-.hbc.warn .th{background:var(--warn-bg);color:var(--warn-ink)}
-.hbc.bad .th{background:var(--bad-bg);color:var(--bad-ink)}
-.hbc.done .th{background:var(--ok-bg);color:var(--ok-ink)}
-.hbc .th .no{margin-left:auto;font-family:ui-monospace,Menlo,monospace;
-  font-size:0.6875rem;color:var(--ink3);font-weight:400}
-.hbc .big{padding:12px 13px 10px}
-.hbc .big .t{font-family:ui-monospace,Menlo,monospace;font-size:1.375rem;
-  font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
-.hbc .big .t em{font-style:normal;font-family:-apple-system,"Noto Sans TC",sans-serif;font-size:0.8125rem;
-  font-weight:500;color:var(--ink2);margin-left:7px}
-.hbc .big .t .wait{font-size:0.9375rem;font-weight:500;color:var(--warn-ink)}
-.hbc .big .p{font-size:0.8125rem;color:var(--ink2);margin-top:3px}
-.hbc .big .p b{font-weight:600;color:var(--ink)}
-/* 撕票線。兩端的小圓缺口用底色蓋出來，所以底色要跟頁面一致。 */
-.hbc .tear{position:relative;height:13px}
-.hbc .tear::before{content:"";position:absolute;left:12px;right:12px;top:50%;
-  border-top:1px dashed var(--line)}
-.hbc .tear i{position:absolute;top:50%;transform:translateY(-50%);width:13px;
-  height:13px;border-radius:99px;background:var(--bg)}
-.hbc .tear i.l{left:-7px}
-.hbc .tear i.r{right:-7px}
-.hbc .stub{padding:0 13px 12px}
-.hbc .pax{display:flex;gap:9px;align-items:baseline}
-.hbc .pax .n{font-family:ui-monospace,Menlo,monospace;font-size:0.9375rem;
-  font-weight:700;flex:none}
-.hbc .pax .who{flex:1;min-width:0;font-size:0.875rem;line-height:1.35}
-.hbc .pax .who i{display:block;font-style:normal;font-size:0.75rem;
-  color:var(--ink3);font-family:ui-monospace,Menlo,monospace;margin-top:1px;
+/* 待辦條。⛔ 沒有待辦就整條不出現（hcTodoBar 回空字串）——
+   永遠掛一塊「目前沒有待辦」在那裡，兩個禮拜後就沒有人看它了。 */
+.htb{background:var(--fids);border-radius:13px;overflow:hidden;margin-bottom:12px;
+  box-shadow:inset 0 0 0 1px rgba(232,101,127,.32);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.htb .bar{display:flex;align-items:center;gap:8px;padding:8px 12px;
+  background:rgba(232,101,127,.12);border-bottom:1px solid rgba(232,101,127,.26)}
+.htb .bar b{color:var(--fred);font-size:0.75rem;letter-spacing:.16em}
+.htb .bar .now{margin-left:auto;color:rgba(255,255,255,.5);font-size:0.6875rem}
+.htr{display:flex;align-items:center;gap:9px;padding:10px 12px;
+  border-top:1px solid rgba(255,255,255,.07);cursor:pointer;
+  font-family:-apple-system,"Microsoft JhengHei",sans-serif}
+.htr:active{background:rgba(255,255,255,.06)}
+.htr .dot{flex:0 0 7px;height:7px;border-radius:50%;background:var(--amber)}
+.htr .dot.r{background:var(--fred)}
+.htr .tx{flex:1;min-width:0}
+.htr .tx b{display:block;font-size:0.75rem;font-weight:600;color:#fff;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hbc .pax .who.nobody{color:var(--bad-ink);font-weight:700}
-.hbc .bar{height:4px;border-radius:99px;background:var(--line2);margin-top:9px;
-  overflow:hidden}
-.hbc .bar i{display:block;height:100%;background:var(--ok-bar)}
-.hbc .r4{display:flex;gap:9px;align-items:center;margin-top:6px;
-  font-size:0.75rem;color:var(--ink2);flex-wrap:wrap}
-.hbc .r4 b{font-family:ui-monospace,Menlo,monospace}
-.hbc .r4 .code{font-family:ui-monospace,Menlo,monospace;font-size:0.6875rem;
-  color:var(--ink3);margin-left:auto}
-.hbc .pill{font-size:0.625rem;font-weight:800;border-radius:99px;
-  padding:1px 9px;white-space:nowrap;background:var(--line2);color:var(--ink3)}
-.hbc .pill.i{background:var(--info-bg);color:var(--info-ink)}
-.hbc .pill.w{background:var(--warn-bg);color:var(--warn-ink)}
-.hbc .pill.b{background:var(--bad-bg);color:var(--bad-ink)}
-.hbc .pill.g{background:var(--ok-bg);color:var(--ok-ink)}
-.hbc .todo{margin:9px 13px 12px;background:var(--warn-bg);border-radius:8px;
-  padding:7px 10px;font-size:0.75rem;color:var(--warn-ink);font-weight:700}
-.hbc .todo.r{background:var(--bad-bg);color:var(--bad-ink)}
+.htr .tx s{display:block;text-decoration:none;font-size:0.625rem;
+  color:rgba(255,255,255,.34);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.htr .go{flex:0 0 auto;font-size:0.6875rem;font-weight:700;color:var(--amber)}
+
+/* 清單本體 */
+.hb{background:var(--fids);border-radius:13px;overflow:hidden;margin-bottom:12px;
+  box-shadow:inset 0 0 0 1px rgba(240,180,41,.18);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.hb .bar{display:flex;align-items:center;gap:8px;padding:9px 12px;
+  background:var(--fids2);border-bottom:1px solid rgba(240,180,41,.2)}
+.hb .bar b{color:var(--amber);font-size:0.75rem;letter-spacing:.16em}
+.hb .bar .now{margin-left:auto;color:rgba(255,255,255,.5);font-size:0.6875rem;
+  font-variant-numeric:tabular-nums}
+.hb .bar .now em{font-style:normal;color:var(--fred);font-weight:700}
+
+/* 一列一批。⚠ 至少 78px——工廠裡站著單手點。 */
+.hrow{display:grid;grid-template-columns:50px 1fr 62px;gap:8px;padding:10px 12px;
+  border-top:1px solid rgba(255,255,255,.07);align-items:center;cursor:pointer}
+.hrow:active{background:rgba(255,255,255,.06)}
+.hrow.on{background:rgba(255,255,255,.045)}
+/* 有急的待辦就在左邊留一條紅邊——不用讀字就知道這一列要動。 */
+.hrow.bad{box-shadow:inset 3px 0 0 var(--fred)}
+.hrow .d{font-size:0.9375rem;font-weight:700;color:var(--amber);line-height:1.15;
+  font-variant-numeric:tabular-nums}
+.hrow .d s{display:block;text-decoration:none;font-size:0.5625rem;letter-spacing:.08em;
+  color:rgba(240,180,41,.55)}
+.hrow .m{min-width:0}
+.hrow .t1{display:block;font-size:0.6875rem;color:rgba(255,255,255,.62);
+  letter-spacing:.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hrow .nm{display:block;margin-top:1px;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.8125rem;font-weight:600;color:#fff;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hrow .nm em{font-style:normal;font-size:0.5625rem;font-weight:700;margin-left:6px;
+  padding:2px 6px;border-radius:5px;background:rgba(240,180,41,.2);color:var(--amber)}
+.hrow .co{display:block;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.625rem;color:rgba(255,255,255,.34);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 名單是空的要看得出來——那一批不會有任何人收到通知，
+   而畫面上它跟正常的長得一模一樣。 */
+.hrow .nm.none{color:var(--fred)}
+.hrow .pg{position:relative;display:block;height:5px;border-radius:3px;margin-top:6px;
+  background:rgba(255,255,255,.09);overflow:hidden}
+.hrow .pg i{position:absolute;inset:0 auto 0 0;border-radius:3px}
+.hrow .b{text-align:right}
+.hrow .st{display:block;font-size:0.5625rem;font-weight:700;letter-spacing:.06em;
+  font-variant-numeric:tabular-nums}
+.hrow .big{display:block;font-size:1.0625rem;font-weight:700;line-height:1.1;
+  font-variant-numeric:tabular-nums}
+.hrow .s2{display:block;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.5625rem;color:rgba(255,255,255,.34);white-space:nowrap}
+.hrow .g{color:var(--fgreen)} .hrow .am{color:var(--amber)}
+.hrow .rd{color:var(--fred)} .hrow .dim{color:rgba(255,255,255,.34)}
+/* hcPill_ 回的是 b/w/i/g 四種色碼，這裡對到同一組顏色 */
+.hrow .b1,.hrow .w{color:var(--amber)} .hrow .i{color:rgba(255,255,255,.62)}
+
+/* 展開。⚠ 裡面那兩塊是案件頁原封不動搬過來的（hcCarAlert / hcBoxHtml），
+   它們本來就是淺色卡片——放在深底上要自己把底色補回來，
+   不然字會消失。 */
+.hexp{padding:2px 12px 12px;background:rgba(255,255,255,.045);
+  border-top:1px solid rgba(255,255,255,.05)}
+.hexp .hcbox{background:var(--card);border-radius:11px;padding:11px 12px;
+  margin-top:8px;border:1px solid var(--line2)}
+.hkv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:10px 0 0;
+  font-family:-apple-system,"Microsoft JhengHei",sans-serif;font-size:0.6875rem}
+.hkv dt{color:rgba(255,255,255,.34)}
+.hkv dd{margin:0;color:rgba(255,255,255,.88);font-weight:600}
+.hacts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.hacts button{flex:1;min-width:84px;min-height:44px;border-radius:9px;
+  border:1px solid rgba(240,180,41,.28);background:rgba(255,255,255,.05);color:#fff;
+  font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.6875rem;font-weight:700;cursor:pointer}
+.hacts button:active{background:rgba(255,255,255,.12)}
+.hacts .full{flex:0 0 100%;border-color:rgba(255,255,255,.12);
+  color:rgba(255,255,255,.55);font-weight:400}
+.hlg{display:flex;flex-wrap:wrap;gap:10px;padding:9px 12px;
+  border-top:1px solid rgba(255,255,255,.07);
+  font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.625rem;color:rgba(255,255,255,.55)}
+.hlg i{display:inline-block;width:16px;height:7px;border-radius:2px;
+  margin-right:4px;vertical-align:middle}
 
 /* 收合的提醒條 */
 #hcAlertBar{cursor:pointer}
