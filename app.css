@@ -1971,6 +1971,44 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 :root{ --fids:#0C1118; --fids2:#161D28; --amber:#F0B429;
        --fgreen:#39C08A; --fred:#E8657F; }
 
+/* ── 登機證存根：發問卷給工人 ─────────────────────────
+   跟下面的 FIDS 看板同一套配色（深藍底＋琥珀）。
+   左邊那條虛線是存根聯的撕線——整塊看起來就是一張登機證。
+   ⚠ 8pt 格線：padding 只用 8/12/16。 */
+.bpass{background:var(--fids);border-radius:13px;margin-bottom:12px;
+  box-shadow:inset 0 0 0 1px rgba(240,180,41,.18);overflow:hidden;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.bpass .bp1{display:flex;align-items:baseline;gap:8px;padding:8px 12px;
+  background:var(--fids2);border-bottom:1px dashed rgba(240,180,41,.3)}
+.bpass .bp1 b{color:var(--amber);font-size:0.75rem;letter-spacing:.18em}
+.bpass .bp1 span{font-family:inherit;color:rgba(255,255,255,.5);font-size:0.6875rem}
+.bpass .bp2{display:flex;gap:8px;padding:12px}
+.bpass .bpf{flex:1;min-width:0}
+.bpass .bpf:last-child{flex:0 0 108px}
+.bpass .bpf label{display:block;font-size:0.5625rem;letter-spacing:.14em;
+  color:rgba(240,180,41,.55);margin-bottom:4px}
+/* 選單與選擇器要看得清楚——工廠裡光線通常很差。 */
+.bpass select,.bpass .epkval{width:100%;background:rgba(255,255,255,.07);
+  color:#fff;border:1px solid rgba(240,180,41,.25);border-radius:8px;
+  padding:8px;font:inherit;font-size:0.8125rem;min-height:38px;text-align:left}
+.bpass .epkval.has{color:var(--amber);font-weight:700}
+.bpass .bp3{padding:0 12px 12px}
+.bpass .bphint{font-family:inherit;font-size:0.6875rem;color:rgba(255,255,255,.4)}
+.bpass .bpurl{display:block;word-break:break-all;font-size:0.6875rem;
+  color:rgba(255,255,255,.62);background:rgba(0,0,0,.28);border-radius:8px;
+  padding:8px;line-height:1.5;user-select:all}
+.bpass .bpbtn{display:flex;gap:8px;margin-top:8px}
+.bpass .bpbtn>*{flex:1;min-height:44px;border-radius:8px;font:inherit;
+  font-size:0.8125rem;font-weight:700;border:0;display:flex;
+  align-items:center;justify-content:center;text-decoration:none;cursor:pointer}
+.bpass .bpbtn .line{background:#06C755;color:#fff}
+.bpass .bpbtn button{background:rgba(255,255,255,.1);color:#fff;
+  border:1px solid rgba(240,180,41,.25)}
+.bpass .bpbtn button:active{background:rgba(255,255,255,.18)}
+/* 選擇器的浮層本來是淺色的，放在深底上要壓回深色，不然整塊白掉。 */
+.bpass .epkpop{background:var(--fids2);border-color:rgba(240,180,41,.25)}
+.bpass .epkpop input{background:rgba(255,255,255,.07);color:#fff;
+  border-color:rgba(240,180,41,.25)}
 .fids{background:var(--fids);border-radius:13px;overflow:hidden;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   box-shadow:inset 0 0 0 1px rgba(240,180,41,.18);margin-bottom:12px}

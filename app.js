@@ -4869,6 +4869,7 @@ function drawCases(){
   $('tkBody').innerHTML = (TK_CUR === '返鄉休假')
     ? vacBoard(rows)
     : rows.map(caseCard).join('');
+  if(TK_CUR === '返鄉休假') vaclWire();
   [].forEach.call($('tkBody').querySelectorAll('[data-case]'), function(el){
     el.addEventListener('click', function(){ openCase(el.dataset.case); });
   });
@@ -4932,7 +4933,8 @@ function vacRow(c){
 
 function vacBoard(rows){
   var going = rows.filter(function(c){ return c.status === '進行中'; }).length;
-  return '<div class="fids">' +
+  return vacIssue() +
+  '<div class="fids">' +
     '<div class="bar"><b>返鄉 · 出境看板</b>' +
       '<span class="now">' + going + ' 人在途中　' + esc(todayStr().slice(5)) + '</span></div>' +
     '<div class="fhdr"><span>DATE</span><span>FLIGHT / 移工</span>' +
@@ -4940,6 +4942,117 @@ function vacBoard(rows){
     rows.map(vacRow).join('') +
     '<div class="ffoot"><span>往下拉更新</span><span>TERMINAL · YU HER</span></div>' +
   '</div>';
+}
+
+/* ── 發問卷給工人（CHECK-IN）────────────────────────────
+
+   牟佑彬 2026-09-22：「返鄉休假到底哪邊可以產生連結給移工填寫」。
+   在這之前只有電腦版後台產得出來，但他人在工廠、工人當面跟他說
+   「我十一月要回家」——那一刻就要能把連結傳出去。
+
+   ⛔ 不走後端短連結。問卷頁自己讀 ?employer=，所以連結在前端就組得出來，
+      不用等一次往返（工廠訊號差的時候那一次往返就是放棄的理由）。
+   ⚠ 版面跟著航廈走：這一塊是登機證的存根聯。 */
+var VAC_PAGE_ = 'https://mousteven.github.io/yuher-app/vac.html';
+var VACL_ = { cat: 'factory', name: '' };
+
+var VACL_PK_ = {
+  id: 'vaclPk', mode: 'svc', list: [], allowNew: false,
+  onPick: function(c){
+    VACL_.name = c;
+    var v = $('vaclPkVal');
+    v.textContent = c; v.classList.add('has'); v.classList.remove('open');
+    $('vaclPkPop').style.display = 'none';
+    vaclPaint();
+  }
+};
+
+function vaclUrl(){
+  if(!VACL_.name) return '';
+  return VAC_PAGE_ + '?employer=' + encodeURIComponent(VACL_.name) +
+         '&cat=' + VACL_.cat;
+}
+
+function vacIssue(){
+  return '<div class="bpass">' +
+    '<div class="bp1"><b>CHECK-IN</b><span>發問卷給工人</span></div>' +
+    '<div class="bp2">' +
+      '<div class="bpf"><label>PASSENGER / 雇主</label>' +
+        '<div class="epk" id="vaclPk">' +
+          '<button type="button" class="epkval" id="vaclPkVal">請選擇…</button>' +
+          '<div class="epkpop" id="vaclPkPop" style="display:none">' +
+            '<input id="vaclPkQ" placeholder="打一個字就會出現" autocomplete="off">' +
+            '<div id="vaclPkBox"></div>' +
+          '</div></div></div>' +
+      '<div class="bpf"><label>CLASS / 類別</label>' +
+        '<select id="vaclCat"><option value="factory">工廠</option>' +
+        '<option value="caretaker">家庭雇主</option></select></div>' +
+    '</div>' +
+    '<div class="bp3" id="vaclOut"></div>' +
+  '</div>';
+}
+
+/* 畫面重繪之後要重接一次——vacBoard 每次都是整段換掉 innerHTML。 */
+function vaclWire(){
+  if(!$('vaclPkVal')) return;
+  vaclFill();
+  pkWire(VACL_PK_);
+  $('vaclCat').value = VACL_.cat;
+  $('vaclCat').addEventListener('change', function(){
+    VACL_.cat = this.value;
+    VACL_.name = '';
+    $('vaclPkVal').textContent = '請選擇…';
+    $('vaclPkVal').classList.remove('has');
+    vaclFill(); vaclPaint();
+  });
+  if(VACL_.name){
+    $('vaclPkVal').textContent = VACL_.name;
+    $('vaclPkVal').classList.add('has');
+  }
+  vaclPaint();
+}
+
+function vaclFill(){
+  var kind = VACL_.cat === 'caretaker' ? '家庭雇主' : '工廠';
+  VACL_PK_.list = PRESETS.filter(function(x){ return (x.t || '工廠') === kind; })
+                         .map(pkFromPreset_);
+}
+
+function vaclPaint(){
+  var box = $('vaclOut'); if(!box) return;
+  var url = vaclUrl();
+  if(!url){
+    box.innerHTML = '<span class="bphint">選一家雇主，就會產生那一家專用的連結</span>';
+    return;
+  }
+  /* ⛔ 文字要中英雙語。工人收到的是這一段，不是我們看的介面。 */
+  var txt = '【返鄉休假 / 期滿離境問卷】\n' +
+    'Vacation / Final Departure Questionnaire\n' +
+    '請點連結，選你的語言後填寫。\n' +
+    'Please tap the link, choose your language and fill it in.\n' + url;
+  box.innerHTML =
+    '<code class="bpurl">' + esc(url) + '</code>' +
+    '<div class="bpbtn">' +
+      '<a class="line" target="_blank" rel="noopener" ' +
+        'href="https://line.me/R/msg/text/?' + encodeURIComponent(txt) + '">傳到 LINE</a>' +
+      '<button type="button" id="vaclCopy">複製連結</button>' +
+    '</div>';
+  var cp = $('vaclCopy');
+  cp.addEventListener('click', function(){
+    var done = function(){ cp.textContent = '已複製';
+      setTimeout(function(){ cp.textContent = '複製連結'; }, 1600); };
+    /* clipboard 在 iframe 裡常常沒權限，失敗就把網址選起來讓他長按複製——
+       比按了完全沒反應好。 */
+    try { navigator.clipboard.writeText(url).then(done, vaclSel); }
+    catch(e){ vaclSel(); }
+  });
+}
+
+function vaclSel(){
+  var el = $('vaclOut') && $('vaclOut').querySelector('.bpurl');
+  if(!el) return;
+  var r = document.createRange(); r.selectNodeContents(el);
+  var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
 }
 
 /* 摘要一句話。照「先講結論」的規矩：不要寫「共 6 件」，
