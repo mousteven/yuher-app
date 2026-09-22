@@ -6,6 +6,15 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Vacation Questionnaire · 返鄉休假問卷</title>
+<!-- ⛔ 這四行是給 LINE／Messenger 的預覽卡看的，不是給瀏覽器看的。
+     沒有它們的話，LINE 的爬蟲會去抓畫面上的字，而載入中的畫面只有
+     「…」跟那個還沒顯示的「伺服器在喚醒，請再等一下」——
+     **工人收到的預覽卡上就寫著「伺服器在喚醒」**，看起來像壞了。
+     ⚠ 改了之後 LINE 會快取預覽卡，舊訊息上的還是舊的，這是正常的。 -->
+<meta property="og:title" content="返鄉休假問卷 · Vacation Questionnaire">
+<meta property="og:description" content="填好這一份，我們才能幫你辦返鄉手續。Fill this in so we can arrange your trip home.">
+<meta property="og:image" content="https://mousteven.github.io/yuher-app/apple-touch-icon.png">
+<meta name="description" content="填好這一份，我們才能幫你辦返鄉手續。Fill this in so we can arrange your trip home.">
 <!--
   返鄉休假 / 期滿離境問卷：移工自己填的那一頁
 
@@ -384,26 +393,42 @@ function bootFail() {
   applyLangTexts(currentLang);
   updateAirports(true);
   updateConditionals();
-  vacWhoAmI();
+  vacPrefill(r.who);
 }, bootFail);
 
-/* 邀請連結：把他的姓名與名冊上的手機帶進來。
+/* 邀請連結：把他的姓名、名冊上的手機、還有雇主帶進來。
 
-   ⛔ 兩個都**不要鎖死**。名字可能拼錯、手機常常是舊的——
+   ⛔ 2026-09-23 之前這裡是**第二趟**請求（vacWho）。
+      vacInit 回來畫面才出現，接著才發第二個請求，
+      而 Apps Script 冷啟動一趟就三十幾秒——
+      工人看到的是一張**空白的表**，他就自己開始打字了，
+      等 vacWho 回來時下面那個「已經有值就不要蓋掉」的防呆
+      剛好讓它什麼都不做。**看起來就是「帶入根本沒作用」。**
+      現在 vacInit 一趟就把 who 一起帶回來，沒有那個空窗。
+
+   ⛔ 姓名與手機**不要鎖死**。名字可能拼錯、手機常常是舊的——
       這一頁的目的之一就是讓他改。鎖起來的話他只能放棄。
+   ⚠ 但**雇主要鎖**。那條連結是綁定某一家發出去的，
+     而且這正是牟佑彬 2026-09-23 講的：
+     「不要到了這個頁面之後還要再找他的工廠。」
+     126 家工廠的下拉，在工廠裡用手機捲是不可能的事。
+
    ⚠ 查不到（連結太舊、或那個人不在名冊上了）就當作沒有這回事，
      整份表照樣填得完。絕對不要因此擋住他。 */
-function vacWhoAmI() {
-  if (!INV_TOKEN) return;
-  api('vacWho', null, function (r) {
-    if (!r || !r.ok) return;
-    if (r.name && !$('name').value) $('name').value = r.name;
-    if (r.phone && !$('twPhone').value) $('twPhone').value = r.phone;
-    if (r.employer) {
-      setActiveCat(r.cat === 'caretaker' ? 'caretaker' : 'factory');
-      activeEmployerSelect().value = r.employer;
-    }
-  }, function () {});
+function vacPrefill(who) {
+  if (!who || !who.ok) return;
+  if (who.name && !$('name').value) $('name').value = who.name;
+  if (who.phone && !$('twPhone').value) $('twPhone').value = who.phone;
+  if (!who.employer) return;
+  setActiveCat(who.cat === 'caretaker' ? 'caretaker' : 'factory');
+  var sel = activeEmployerSelect();
+  sel.value = who.employer;
+  /* ⛔ 對不到就不要鎖。名冊改了名字、或這家已經不在清單裡的時候，
+     鎖起來等於讓他送出一個空的雇主——那筆案件會開在沒有人身上。 */
+  if (sel.value !== who.employer) return;
+  $('employerPickerWrap').style.display = 'none';
+  $('employerLockedWrap').style.display = '';
+  $('employerLockedName').textContent = who.employer;
 }
 
 function buildLangBar(langs) {

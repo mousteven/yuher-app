@@ -5391,14 +5391,14 @@ function vacGateWire(){
    ⚠ 版面跟著航廈走：這一塊是登機證的存根聯。 */
 var VAC_PAGE_ = 'https://mousteven.github.io/yuher-app/vac.html';
 /* eid＝名冊上的外國人編號。⛔ 指定給某個人的連結要它才發得出來，
-   而它**不會出現在網址上**（流水號，加一就是別人）。 */
+var VACL_ = { cat: 'factory', name: '', eid: '', who: '', url: '', msg: '', lang: '' };
 var VACL_ = { cat: 'factory', name: '', eid: '', who: '', url: '' };
 
 var VACL_PK_ = {
   id: 'vaclPk', mode: 'svc', list: [], allowNew: false,
   onPick: function(c){
     VACL_.name = c;
-    VACL_.eid = ''; VACL_.who = ''; VACL_.url = '';
+    VACL_.eid = ''; VACL_.who = ''; VACL_.url = ''; VACL_.msg = ''; VACL_.lang = '';
     var v = $('vaclPkVal');
     v.textContent = c; v.classList.add('has'); v.classList.remove('open');
     $('vaclPkPop').style.display = 'none';
@@ -5445,7 +5445,7 @@ function vaclMint(){
       vaclPaint(r.phone);
     })
     .withFailureHandler(function(e){
-      VACL_.eid = ''; VACL_.url = '';
+      VACL_.eid = ''; VACL_.url = ''; VACL_.msg = ''; VACL_.lang = '';
       toast((e && e.message) || '產生連結失敗', true);
       vaclPaint();
     })
@@ -5487,7 +5487,7 @@ function vaclWire(){
   $('vaclCat').value = VACL_.cat;
   $('vaclCat').addEventListener('change', function(){
     VACL_.cat = this.value;
-    VACL_.name = ''; VACL_.eid = ''; VACL_.who = ''; VACL_.url = '';
+    VACL_.name = ''; VACL_.eid = ''; VACL_.who = ''; VACL_.url = ''; VACL_.msg = ''; VACL_.lang = '';
     $('vaclPkVal').textContent = '請選擇…';
     $('vaclPkVal').classList.remove('has');
     vaclFill(); vaclPaint();
@@ -5501,7 +5501,7 @@ function vaclWire(){
   $('vaclWho').addEventListener('change', function(){
     VACL_.eid = this.value;
     VACL_.who = this.value ? this.options[this.selectedIndex].textContent.split('　')[0] : '';
-    VACL_.url = '';
+    VACL_.url = ''; VACL_.msg = ''; VACL_.lang = '';
     if(VACL_.eid) vaclMint(); else vaclPaint();
   });
   vaclPaint();
