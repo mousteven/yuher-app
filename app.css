@@ -1975,6 +1975,58 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    跟下面的 FIDS 看板同一套配色（深藍底＋琥珀）。
    左邊那條虛線是存根聯的撕線——整塊看起來就是一張登機證。
    ⚠ 8pt 格線：padding 只用 8/12/16。 */
+/* ── 時間軸（出境看板底下）────────────────────────
+   跟看板同一套（深藍底＋琥珀）。一人一條，白線＝今天。
+   ⚠ 每一條是 button：點下去開那一件，跟看板的列一樣。 */
+.vtl{background:var(--fids);border-radius:13px;overflow:hidden;margin-top:12px;
+  box-shadow:inset 0 0 0 1px rgba(240,180,41,.18);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.vtl .bar{display:flex;align-items:center;gap:8px;padding:9px 13px;
+  background:var(--fids2);border-bottom:1px solid rgba(240,180,41,.2)}
+.vtl .bar b{color:var(--amber);font-size:0.75rem;letter-spacing:.18em}
+.vtl .bar .now{margin-left:auto;color:rgba(255,255,255,.5);font-size:0.6875rem;
+  font-variant-numeric:tabular-nums}
+/* 月份刻度：flex 權重＝那個月的天數，格線才對得上條子 */
+.vtax{display:flex;padding:6px 13px 2px;font-size:0.5625rem;letter-spacing:.1em;
+  color:rgba(240,180,41,.55)}
+.vtrow{display:block;width:100%;text-align:left;background:none;border:0;
+  border-top:1px solid rgba(255,255,255,.07);padding:9px 13px;font:inherit;
+  color:#fff;cursor:pointer}
+.vtrow:active{background:rgba(255,255,255,.06)}
+.vth{display:flex;align-items:baseline;gap:7px;margin-bottom:6px}
+.vth b{font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.8125rem;font-weight:600;color:rgba(255,255,255,.9);white-space:nowrap}
+.vth s{flex:1;min-width:0;text-decoration:none;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.625rem;color:rgba(255,255,255,.34);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vth u{text-decoration:none;font-size:0.5625rem;font-weight:700;letter-spacing:.1em;
+  white-space:nowrap}
+/* 底紋的直線＝一週，眼睛才量得出長度 */
+.vtt{position:relative;display:block;height:20px;border-radius:5px;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 100%);
+  background-size:calc(100%/9) 100%}
+.vtb{position:absolute;top:2px;bottom:2px;border-radius:4px;display:flex;
+  align-items:center;padding:0 5px;overflow:hidden;white-space:nowrap;
+  font-size:0.5625rem;font-weight:700;letter-spacing:.04em;color:#0b0f14}
+.vtb.none{left:0;right:0;justify-content:center;color:rgba(255,255,255,.34);
+  background:rgba(255,255,255,.05);font-family:-apple-system,"Microsoft JhengHei",sans-serif}
+/* 被時間窗切掉的那一端不做圓角＝「還沒完，繼續往外」。
+   ⛔ 不要為了好看把它補圓——補了就看不出有東西被切掉。 */
+.vtb.cutl{border-top-left-radius:0;border-bottom-left-radius:0}
+.vtb.cutr{border-top-right-radius:0;border-bottom-right-radius:0}
+.vtoff{padding:9px 13px;border-top:1px solid rgba(255,255,255,.07);
+  font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.6875rem;line-height:1.5;color:rgba(255,255,255,.42)}
+/* ⛔ 今天這條線要壓在條子上面，而且要夠亮——它是整張圖唯一的參考點。 */
+.vtnow{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;
+  border-radius:1px;box-shadow:0 0 7px rgba(255,255,255,.8)}
+.vtlg{display:flex;flex-wrap:wrap;gap:10px;padding:9px 13px;
+  border-top:1px solid rgba(255,255,255,.07);
+  font-family:-apple-system,"Microsoft JhengHei",sans-serif;
+  font-size:0.625rem;color:rgba(255,255,255,.55)}
+.vtlg i{display:inline-block;width:18px;height:8px;border-radius:2px;
+  margin-right:4px;vertical-align:middle}
+.vtlg i.tdy{width:2px;height:11px;background:#fff;border-radius:1px}
 /* ── GATE：工人填好、還沒開成案件的問卷 ─────────────
    跟登機證與看板同一套（深藍＋琥珀）。用綠色當「要動作」的訊號，
    ⚠ 整個返鄉頁只有這裡是綠的——超過一處就沒有提示作用了。 */

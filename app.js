@@ -4936,6 +4936,129 @@ function vacRow(c){
   '</button>';
 }
 
+/* ── 時間軸（出境看板底下）────────────────────────────
+
+   牟佑彬 2026-09-22：「把每一位返鄉休假的期間做一個標示，
+   讓我能一目了然地知道目前誰還在國外」。
+
+   ⛔ 上面那張看板回答的是「下一件事什麼時候發生」（一列一個日期）。
+      「現在誰在國外」是**一個時間點**的問題，一列一個日期答不出來——
+      你要自己把離境日和回台日兜起來跟今天比。
+      所以這裡改成一人一條，把今天畫成一條線：**壓到線的就是在外面的人**。
+
+   ⚠ 沒有日期的也要畫出來（整條灰的寫「日期未定」）。看板上真的有這種人，
+     行事曆假裝他不存在的話，他會以為所有人都排好了。 */
+
+var VACT_C_ = { over:'#F2678B', out:'#28D07A', plan:'#F0B429',
+                done:'rgba(255,255,255,.22)', none:'rgba(255,255,255,.14)' };
+var VACT_L_ = { over:'OVERDUE', out:'ABROAD', plan:'PLANNED',
+                done:'ARRIVED', none:'NO DATE' };
+
+function vtDay_(a, b){ return Math.round((b - a) / 86400000); }
+function vtParse_(s){
+  if(!s) return null;
+  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s));
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+}
+
+/* 一條的狀態。⛔ 先看日期再看階段——階段是人工推的，常常忘了推，
+   但日期是工人自己填的，比較可信。 */
+function vtState_(c, today){
+  var d = c.detail || {};
+  var o = vtParse_(d.out), b = vtParse_(d.back);
+  if(!o) return 'none';
+  if(c.status !== '進行中') return 'done';
+  if(b && b < today) return 'over';          // 該回來了卻還沒結案
+  if(o <= today && (!b || today <= b)) return 'out';
+  if(o > today) return 'plan';
+  return 'out';                              // 走了、但沒填回台日
+}
+
+function vacTime(rows){
+  var today = vtParse_(todayStr());
+  var has = rows.filter(function(c){ return vtParse_((c.detail || {}).out); });
+  if(!rows.length) return '';
+
+  /* 時間窗**固定**：上個月 1 號 ～ 三個月後的月底。大約五個月。
+
+     ⛔ 2026-09-22 第一版是「把所有人都包進來」，牟佑彬看過之後說
+        「休假三個月、或三個月之後才走的，看不到沒關係」。
+        他是對的——自動延伸的話，只要有一個人訂了半年後的票，
+        **其他所有人的條子就會被壓成一根細線**，整張圖就廢了。
+        固定範圍換來的是：每個人的條子寬度永遠一樣，量得出長短。
+
+     ⚠ 超出範圍的不是消失：兩端會切平（切口那邊不做圓角），
+       完全在範圍外的在底下用一行字交代，不要讓他以為只有這幾個人。 */
+  var A = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  var B = new Date(today.getFullYear(), today.getMonth() + 4, 1);
+  var span = vtDay_(A, B) || 1;
+  var nowPct = (vtDay_(A, today) / span * 100);
+
+  /* 月份刻度：每個月一格，寬度照那個月的天數分，所以格線對得上條子。 */
+  var ticks = '', cur = new Date(A);
+  while(cur < B){
+    var nx = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+    ticks += '<span style="flex:' + vtDay_(cur, nx) + '">' + (cur.getMonth() + 1) + '月</span>';
+    cur = nx;
+  }
+
+  var nOut = rows.filter(function(c){
+    var k = vtState_(c, today); return k === 'out' || k === 'over';
+  }).length;
+
+  /* 完全落在範圍外的，畫不出來但要講一聲。 */
+  var off = has.filter(function(c){
+    var o = vtParse_(c.detail.out);
+    var b = vtParse_(c.detail.back) || new Date(o.getTime() + 30 * 86400000);
+    return b < A || o >= B;
+  });
+  var inWin = rows.filter(function(c){ return off.indexOf(c) === -1; });
+
+  return '<div class="vtl">' +
+    '<div class="bar"><b>返鄉 · 時間軸</b>' +
+      '<span class="now">現在在國外 ' + nOut + ' 人　今天 ' +
+        esc(todayStr().slice(5).replace('-', '/')) + '</span></div>' +
+    '<div class="vtax">' + ticks + '</div>' +
+    inWin.map(function(c){ return vtRow_(c, today, A, B, span, nowPct); }).join('') +
+    (off.length ? ('<div class="vtoff">另有 ' + off.length +
+      ' 位不在這五個月裡（' + esc(off.map(function(c){
+        return (c.workers || '?') + ' ' + c.detail.out.slice(0, 7).replace('-', '/');
+      }).join('、')) + '）——在上面的看板上找得到</div>') : '') +
+    '<div class="vtlg">' +
+      '<span><i style="background:' + VACT_C_.out + '"></i>在國外</span>' +
+      '<span><i style="background:' + VACT_C_.over + '"></i>逾期未回</span>' +
+      '<span><i style="background:' + VACT_C_.plan + '"></i>還沒出發</span>' +
+      '<span><i class="tdy"></i>今天</span></div>' +
+  '</div>';
+}
+
+function vtRow_(c, today, A, B, span, nowPct){
+  var d = c.detail || {};
+  var k = vtState_(c, today), col = VACT_C_[k];
+  var line = '<div class="vtnow" style="left:' + nowPct.toFixed(2) + '%"></div>';
+  var body;
+  if(k === 'none'){
+    body = '<div class="vtb none">日期未定</div>';
+  } else {
+    var o = vtParse_(d.out);
+    var b = vtParse_(d.back) || new Date(o.getTime() + 30 * 86400000);
+    var raw0 = vtDay_(A, o) / span * 100, raw1 = vtDay_(A, b) / span * 100;
+    var s = Math.max(0, raw0), e = Math.min(100, raw1);
+    /* 被切掉的那一端不做圓角＝「還沒完」。⚠ 這是唯一的提示，
+       不要為了好看把它補圓，補了就看不出有東西被切掉。 */
+    var cut = (raw0 < 0 ? ' cutl' : '') + (raw1 > 100 ? ' cutr' : '');
+    body = '<div class="vtb' + cut + '" style="left:' + s.toFixed(2) + '%;width:' +
+      Math.max(7, e - s).toFixed(2) + '%;background:' + col + '">' +
+      (raw0 < 0 ? '' : esc(d.out.slice(5).replace('-', '/'))) + '</div>';
+  }
+  return '<button type="button" class="vtrow" data-case="' + esc(c.id) + '">' +
+    '<span class="vth"><b>' + esc(c.workers || '（未填移工）') + '</b>' +
+      '<s>' + esc(c.client || '') + '</s>' +
+      '<u style="color:' + col + '">' + VACT_L_[k] + '</u></span>' +
+    '<span class="vtt">' + body + line + '</span>' +
+  '</button>';
+}
+
 /* ── 待處理的問卷（GATE）─────────────────────────────
 
    工人自己填的問卷不會自動變成案件——問卷是公開網址，
@@ -5022,7 +5145,8 @@ function vacBoard(rows){
       '<span style="text-align:right">STATUS</span></div>' +
     rows.map(vacRow).join('') +
     '<div class="ffoot"><span>往下拉更新</span><span>TERMINAL · YU HER</span></div>' +
-  '</div>';
+  '</div>' +
+  vacTime(rows);
 }
 
 /* ── 發問卷給工人（CHECK-IN）────────────────────────────
