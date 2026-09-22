@@ -1990,7 +1990,16 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 /* 選單與選擇器要看得清楚——工廠裡光線通常很差。 */
 .bpass select,.bpass .epkval{width:100%;background:rgba(255,255,255,.07);
   color:#fff;border:1px solid rgba(240,180,41,.25);border-radius:8px;
-  padding:8px;font:inherit;font-size:0.8125rem;min-height:38px;text-align:left}
+  padding:8px;font:inherit;font-size:0.8125rem;min-height:44px;text-align:left}
+/* ⚠ 深底上的 <select>：不寫這兩行，Safari 會沿用系統的深色文字，
+   在深藍底上幾乎看不見（2026-09-22 截圖驗收時發現）。
+   展開的選項清單是系統畫的，也要一起指定，否則變白底白字。 */
+.bpass select{appearance:none;-webkit-appearance:none;color:#fff;font-weight:700;
+  background-image:linear-gradient(45deg,transparent 50%,rgba(240,180,41,.8) 50%),
+    linear-gradient(135deg,rgba(240,180,41,.8) 50%,transparent 50%);
+  background-position:calc(100% - 15px) 19px,calc(100% - 10px) 19px;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:26px}
+.bpass select option{background:#161D28;color:#fff}
 .bpass .epkval.has{color:var(--amber);font-weight:700}
 .bpass .bp3{padding:0 12px 12px}
 .bpass .bphint{font-family:inherit;font-size:0.6875rem;color:rgba(255,255,255,.4)}
