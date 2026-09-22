@@ -388,12 +388,15 @@ function bootFail() {
   buildRelations();
   T_SELECT = T('vacAirportSelect'); T_OTHER = T('relOther');
   fillEmployers(r.employers);
+  /* ⛔ 帶入要排在「把表單顯示出來」**之前**。
+     排在後面的話，表單會先空白地出現幾個影格再跳出名字——
+     那一瞬間看起來就像沒帶到，而工人已經開始打字了。 */
+  vacPrefill(r.who);
   $('boot').style.display = 'none';
   $('wrap').style.display = '';
   applyLangTexts(currentLang);
   updateAirports(true);
   updateConditionals();
-  vacPrefill(r.who);
 }, bootFail);
 
 /* 邀請連結：把他的姓名、名冊上的手機、還有雇主帶進來。
