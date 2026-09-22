@@ -5391,8 +5391,11 @@ function vacGateWire(){
    ⚠ 版面跟著航廈走：這一塊是登機證的存根聯。 */
 var VAC_PAGE_ = 'https://mousteven.github.io/yuher-app/vac.html';
 /* eid＝名冊上的外國人編號。⛔ 指定給某個人的連結要它才發得出來，
-var VACL_ = { cat: 'factory', name: '', eid: '', who: '', url: '', msg: '', lang: '' };
-var VACL_ = { cat: 'factory', name: '', eid: '', who: '', url: '' };
+   而它**不會出現在網址上**（流水號，加一就是別人）。
+   ⚠ msg／lang 是 2026-09-23 加的：發給工人的那段話由後端照
+     名冊上的語別組好帶回來，前端不再自己拼中英雙語。 */
+var VACL_ = { cat: 'factory', name: '', eid: '', who: '',
+              url: '', msg: '', lang: '' };
 
 var VACL_PK_ = {
   id: 'vaclPk', mode: 'svc', list: [], allowNew: false,
