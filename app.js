@@ -996,6 +996,10 @@ function fixStick(){
   var st = document.documentElement.style;
   var cs = document.querySelector('.calsticky');
   st.setProperty('--calh', (cs ? cs.offsetHeight : 0) + 'px');
+  /* 追蹤頁那條（頁籤列）的高度。分段標題要釘在它下面。
+     ⚠ 一定要指名 #p-track——querySelector('.calsticky') 會先撈到行事曆那條。 */
+  var tk = document.querySelector('#p-track .calsticky');
+  st.setProperty('--tkh', (tk ? tk.offsetHeight : 0) + 'px');
   var dh = document.querySelector('.daylist h4');
   st.setProperty('--dayh', (dh ? dh.offsetHeight : 0) + 'px');
   var rv = document.querySelector('#p-follow .evsticky');
@@ -4772,7 +4776,6 @@ var TK_CUR = '異常事件';
 var TK_CACHE = {};       // { 異常事件: { rows, counts, unit }, … }
 var TK_LOADED = '';      // 已經載好的是哪一種，離開再回來時不用重打一次
 var TK_UNIT = '件';      // 後端給的單位。「件」數的是案件，不是服務紀錄
-var TK_ST = '';          // 狀態過濾（'' = 全部）
 var TK_ROWS = [];
 var TK_COUNTS = {};
 
@@ -4835,18 +4838,16 @@ function tkBand(c){
       但四個頁籤上的 badge 是同一次呼叫回來的。 */
 function tkBust(){ TK_CACHE = {}; TK_LOADED = ''; TK_ROWS = []; }
 
-/* 膠囊上寫的是三分法那三個字，不是十四個階段詞。
-   階段詞（含倒數）由呼叫端當小字印在旁邊。 */
-function tkPill(c){
-  var b = BAND_[tkBand(c)];
-  return '<span class="cst ' + b.c + '">' + esc(b.t) + '</span>';
-}
+/* 膠囊寫**階段詞**（含倒數），顏色照三分法。
 
-/* 一筆案件算不算在某個篩選裡。清單與計數兩邊都要問同一個問題，
-   分開寫兩份遲早會有一天對不起來。 */
-function tkMatch(c, k){
-  if(!k) return true;
-  return tkBand(c) === k;
+   ⛔ 2026-09-23 改回來的：9/22 那一版膠囊上寫的是「在我手上」三個字。
+      但 9/23 清單加了分段標題之後，標題已經講了一次「在我手上」，
+      膠囊再講一次就是**同一句話在相鄰兩行講兩次**。
+      現在：類別由標題講一次，膠囊講這一件現在到哪一步。
+      顏色兩邊一致，所以還是一眼看得出誰跟誰同一類。 */
+function tkPill(c){
+  return '<span class="cst ' + BAND_[tkBand(c)].c + '">' +
+    esc(c.state.text) + '</span>';
 }
 
 function loadTrack(force){
@@ -4916,7 +4917,7 @@ function drawKinds(){
   [].forEach.call($('tkKinds').children, function(b){
     b.addEventListener('click', function(){
       if(b.dataset.k === TK_CUR) return;
-      TK_CUR = b.dataset.k; TK_ST = '';
+      TK_CUR = b.dataset.k;
       /* 離開體檢就把開單表單收起來——留在畫面上，切到「異常」
          卻看到一張體檢單，會以為自己按錯。 */
       hcMode(false);
@@ -4929,34 +4930,43 @@ function drawKinds(){
   });
 }
 
+/* 一批案件按三分法分組，回 [{ k, t, n, rows }]，空的那一組不回。
+   ⛔ 順序一律照 BAND_ORDER_，不要另外寫一組——兩份排序遲早對不起來。 */
+function tkGroups(rows){
+  var by = {};
+  rows.forEach(function(c){ (by[tkBand(c)] = by[tkBand(c)] || []).push(c); });
+  return BAND_ORDER_.filter(function(k){ return by[k] && by[k].length; })
+    .map(function(k){
+      return { k: k, t: BAND_[k].t, c: BAND_[k].c, n: by[k].length, rows: by[k] };
+    });
+}
+
+/* 看板（返鄉、體檢）的標頭沿用同一組字。
+   ⛔ 看板刻意照日期排——時間順序本身就是資訊，不能拆成三段。
+      所以那兩頁把三分法的數量寫進**既有的**標頭列，不另外加一排。 */
+function tkTally(rows){
+  return tkGroups(rows).map(function(g){
+    return '<em class="bnd ' + g.c + '">' + esc(g.t) + ' ' + g.n + '</em>';
+  }).join('');
+}
+
 function drawCases(){
   refreshed();
-  var rows = TK_ROWS.filter(function(c){ return tkMatch(c, TK_ST); });
+  /* ⛔ 2026-09-23：篩選那一排（全部／在我手上／在等別人／還沒到我／已結束）
+     整排拿掉了。牟佑彬：「上面的選單和篩選佔用太多空間」——
+     iPhone 13 上實測：頂欄 66 ＋ 頁籤 46 ＋ 篩選 46 ＋ 空隙 23 ＝ 181px，
+     **螢幕的 21.4% 在第一件事出現之前就用掉了。**
 
-  /* 篩選＝三分法那三格，不是七格。
-     ⛔ 原本是「有退回／逾期／今天／快到了／進行中／已結案」——
-        那六個是**兩種不同的問題**混在一排：前四個問「多急」、
-        後兩個問「開著沒」。要選哪一個要先想一下，就已經慢了。
-     現在一排只問一件事：球在誰手上。
-     ⚠ 只列真的有東西的那幾格。列出 0 的分類是在浪費一排寬度。 */
-  var defs = [
-    { k: '', t: '全部', c: '' },
-    { k: 'me', t: BAND_.me.t, c: 'var(--warn-bar)' },
-    { k: 'them', t: BAND_.them.t, c: 'var(--info-bar)' },
-    { k: 'later', t: BAND_.later.t, c: 'var(--line)' },
-    { k: 'done', t: BAND_.done.t, c: 'var(--ok-bar)' }
-  ];
-  $('tkFilt').innerHTML = defs.map(function(d){
-    var n = TK_ROWS.filter(function(c){ return tkMatch(c, d.k); }).length;
-    if(!n && d.k) return '';
-    return '<button type="button" data-st="' + d.k + '"' +
-      (TK_ST === d.k ? ' class="on"' : '') + '>' +
-      (d.c ? '<i class="sq" style="background:' + d.c + '"></i>' : '') +
-      esc(d.t) + '<b>' + n + '</b></button>';
-  }).join('');
-  [].forEach.call($('tkFilt').children, function(b){
-    b.addEventListener('click', function(){ TK_ST = b.dataset.st; drawCases(); });
-  });
+     他選的是「② 篩選變成清單裡的分段標題」。理由：
+     **清單本來就已經照三分法排序了，只是沒有人講出來。**
+     在每一段前面加一條細標題，捲動就是篩選——
+     把一個「模式」（要先選再看）換成「結構」（本來就分好了），
+     少一排控制項，而且什麼都沒有藏起來。
+
+     ⚠ 連帶解決了一個對不起來的地方：「要你處理 106 件」跟
+       「全部 4」本來挨在上下兩排，但 106 是待辦筆數、4 是案件數。
+       兩個單位不同的數字擺這麼近，會讓人以為其中一個算錯了。 */
+  var rows = TK_ROWS;
 
   // 先講一句人話，再列清單。數字一定帶單位（取捨三）。
   /* ⛔ tkLede 2026-09-22 拿掉（牟佑彬）。上面的頁籤與篩選鈕已經把
@@ -4980,21 +4990,16 @@ function drawCases(){
   }
   /* 返鄉走航廈看板。這個頁籤唯一要回答的問題是
      「誰快走了、誰還沒回來」——一排日期＋目的地＋狀態燈，比通用卡片直接。 */
-  /* 排序照三分法：要你動的排最上面。同一類裡面維持後端給的順序。
-     ⛔ 用 BAND_ORDER_ 的索引，不要另外寫一組權重數字——
-        兩份排序遲早有一天會對不起來。
-     ⛔ 返鄉不排。那是甘特圖，**時間順序本身就是資訊**，
-        打散了就看不出誰跟誰的假期疊在一起。
-        而且最上面那條「要你處理」已經把急的撈出來了，
-        再排一次是同一件事做兩遍。 */
-  if(TK_CUR !== '返鄉休假'){
-    rows = rows.sort(function(a, b){
-      return BAND_ORDER_.indexOf(tkBand(a)) - BAND_ORDER_.indexOf(tkBand(b));
-    });
-  }
+  /* ⛔ 返鄉走甘特圖，**時間順序本身就是資訊**，不可以拆成三段——
+     打散了就看不出誰跟誰的假期疊在一起。它把三分法的數量
+     寫進看板標頭（見 vacBoard）。 */
   $('tkBody').innerHTML = (TK_CUR === '返鄉休假')
     ? vacBoard(rows)
-    : rows.map(caseCard).join('');
+    : tkGroups(rows).map(function(g){
+        return '<div class="tkband ' + g.c + '">' +
+            '<i></i>' + esc(g.t) + '<span>' + g.n + ' 件</span></div>' +
+          g.rows.map(caseCard).join('');
+      }).join('');
   if(TK_CUR === '返鄉休假'){
     vacWire();
     if(VACL_OPEN_) vaclWire();
@@ -5098,11 +5103,12 @@ function vacWin_(today){
 function vacBoard(rows){
   var today = vtParse_(todayStr());
   var w = vacWin_(today);
-  var nOut = 0, nOver = 0;
-  rows.forEach(function(c){
-    var k = vtState_(c, today);
-    if(k === 'out') nOut++; else if(k === 'over'){ nOut++; nOver++; }
-  });
+  /* ⛔ 逾期要單獨算。三分法只講「球在誰手上」，逾期是**有多糟**——
+     兩個軸不能互相取代：「在我手上 2」裡面有一個已經逾期 41 天，
+     只印前者等於把最嚴重的事藏起來。
+     （「在國外 N」拿掉了——那就是「在等別人」，同一件事講兩次。） */
+  var nOver = 0;
+  rows.forEach(function(c){ if(vtState_(c, today) === 'over') nOver++; });
   var off = rows.filter(function(c){
     var o = vtParse_((c.detail || {}).out); if(!o) return false;
     var bk = vtParse_(c.detail.back) || new Date(o.getTime() + 30 * 86400000);
@@ -5111,7 +5117,9 @@ function vacBoard(rows){
   var inWin = rows.filter(function(c){ return off.indexOf(c) === -1; });
 
   return '<div class="vb">' +
-    '<div class="bar"><b>返鄉</b><span class="now">在國外 ' + nOut +
+    /* ⛔ 三分法的數量寫在這裡，不另外加一排篩選鈕。
+       甘特圖照日期排是刻意的，拆成三段就看不出誰跟誰的假期疊在一起。 */
+    '<div class="bar"><b>返鄉</b><span class="now">' + tkTally(rows) +
       (nOver ? ('　<em class="bad">逾期 ' + nOver + '</em>') : '') +
       '　今天 ' + esc(todayStr().slice(5).replace('-', '/')) + '</span></div>' +
     '<div class="vtax">' + w.ticks + '</div>' +
@@ -5599,8 +5607,7 @@ function caseCard(c){
   return '<div class="ev ' + cls + '" data-case="' + esc(c.id) + '">' +
     '<span class="bar lg-' + esc((c.lang || '').split('、')[0]) + '"></span>' +
     '<span class="b">' +
-      '<span class="t">' + tkPill(c) +
-        '<s class="cdet">' + esc(c.state.text) + '</s></span>' +
+      '<span class="t">' + tkPill(c) + '</span>' +
       '<span class="n">' + esc(c.workers || c.client) + '</span>' +
       '<span class="m">' + esc(c.title || c.sub || c.kind) +
         (c.workers ? '　·　' + esc(c.client) : '') +
@@ -8059,7 +8066,7 @@ function tkDrawTodo(){
 
   box.innerHTML = '<div class="tktd' + (bad ? ' bad' : '') + '">' +
     '<div class="bar"><b>要你處理</b>' +
-      '<span class="now">' + n + ' 件' +
+      '<span class="now">' + n + ' 件待辦' +
         (more > 0 ? '　<em class="mo">看全部</em>' :
          (TKTODO_OPEN_ && n > 4 ? '　<em class="mo">收起來</em>' : '')) +
       '</span></div>' +
@@ -8105,7 +8112,7 @@ function tkTodoGo_(x){
     }
   }
   if(TK_CUR === need){ arrive(); return; }
-  TK_CUR = need; TK_ST = '';
+  TK_CUR = need;
   hcMode(false);
   drawKinds();
   loadTrack();
@@ -8270,9 +8277,13 @@ function hcList(rows){
   }, 0);
 
   return     '<div class="hb">' +
+      /* ⛔ 同上：清單照體檢日排，所以三分法寫在標頭，不另外加一排。
+         ⚠ 「幾批幾人」留著——那是這一頁獨有的形狀（一張單底下一整批人），
+           三分法回答不了它。 */
       '<div class="bar"><b>體檢</b><span class="now">' +
         hit.length + ' 批 · ' + ppl + ' 人' +
         (noAck ? ('　<em>' + noAck + ' 人沒確認</em>') : '') +
+        '　' + tkTally(hit) +
         '　今天 ' + esc(todayStr().slice(5).replace('-', '/')) + '</span></div>' +
       hit.map(hcRow).join('') +
       '<div class="hlg">' +
@@ -8293,7 +8304,7 @@ function hcSearchBar(){
 }
 
 function hcPaintList(){
-  var rows = TK_ROWS.filter(function(c){ return tkMatch(c, TK_ST); });
+  var rows = TK_ROWS;
   $('hcList').innerHTML = hcList(rows);
   [].forEach.call($('hcList').querySelectorAll('[data-hc]'), function(el){
     el.addEventListener('click', function(){
