@@ -103,7 +103,7 @@
 <div class="langbar" id="langbar"><span id="langLabel"></span><br></div>
 <h1 data-i18n="vacPageTitle"></h1>
 
-<div id="boot" style="padding:40px 0;text-align:center;color:#888">…</div>
+<div id="boot" style="padding:40px 0;text-align:center;color:#888">…<div id="bootSlow" style="display:none;margin-top:10px;font-size:13px">伺服器在喚醒，請再等一下<br>Waking up the server, please wait…</div></div>
 <div id="wrap" style="display:none">
 <form id="vacForm">
   <div id="employerPickerWrap">
@@ -286,7 +286,12 @@
       promise 永遠掛著，畫面停在「…」——沒有錯誤、沒有重試。
       每次 15 秒，自動重試共 3 次，全部失敗才放棄。 */
 var API_ = 'https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec';
-var API_TIMEOUT_ = 15000, API_TRIES_ = 3;
+/* ⛔ 2026-09-22：本來是 15 秒試 3 次。實測 Apps Script 冷啟動要 30～36 秒，
+   15 秒就掐掉等於**永遠等不到冷啟動跑完**，掐一次又重叫一次只會更慢，
+   最後畫面顯示「連不上」——但網路其實是好的。
+   改成 40 秒試 2 次：第一次就給冷啟動跑完的時間，總預算還比原本多。
+   ⚠ 不要為了「快點失敗」把它調回去，工廠的工人寧可多等也不想重填。 */
+var API_TIMEOUT_ = 40000, API_TRIES_ = 2;
 
 function apiFetch_(url, opt, tries, ok, bad) {
   var ctl = null, timer = null, done = false;
@@ -341,7 +346,12 @@ function bootFail() {
   $('rt').addEventListener('click', function () { location.reload(); });
 }
 
-api('vacInit', null, function (r) {
+/* 冷啟動時畫面會停在「…」三十幾秒。不講話的話工人會以為壞掉然後關掉。 */
+  var slowTimer = setTimeout(function () {
+    var el = $('bootSlow'); if (el) el.style.display = 'block';
+  }, 8000);
+  api('vacInit', null, function (r) {
+  clearTimeout(slowTimer);
   if (!r || !r.ok) { bootFail(); return; }
   I18N = r.i18n; AIRPORTS = r.airports; RELATIONS = r.relations;
   COUNTRIES = r.countries; LANG_LABELS = r.labels;

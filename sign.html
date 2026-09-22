@@ -150,8 +150,13 @@ var API_ = 'https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nu
    所以：每一次呼叫都有時限，逾時就自己重試，連續失敗才放棄並讓人按重試。
    ⚠ AbortController 在 iOS 12.2 以上都有；沒有的話退回只計時不中斷，
      至少 bad() 會被叫到，畫面不會死在那裡。 */
-var API_TIMEOUT_ = 15000;     // 單次
-var API_TRIES_ = 3;           // 一共試幾次（含第一次）
+/* ⛔ 2026-09-22：本來是 15 秒試 3 次。實測 Apps Script 冷啟動要 30～36 秒，
+   15 秒就掐掉等於**永遠等不到冷啟動跑完**，掐一次又重叫一次只會更慢，
+   最後畫面顯示「連不上」——但網路其實是好的。
+   改成 40 秒試 2 次：第一次就給冷啟動跑完的時間，總預算還比原本多。
+   ⚠ 不要為了「快點失敗」把它調回去，工廠的工人寧可多等也不想重填。 */
+var API_TIMEOUT_ = 40000;     // 單次
+var API_TRIES_ = 2;           // 一共試幾次（含第一次）
 
 function apiFetch_(url, opt, tries, ok, bad){
   var ctl = null, timer = null, done = false;
