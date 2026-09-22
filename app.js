@@ -974,7 +974,13 @@ var CAL_LG = [];                 // 語別過濾（空 = 全部）
 // 翻譯人員一打開先只看自己的。主管沒有自己的行程，維持看全部。
 var CAL_MINE = false;            // 只看我的
 var CAL_ST = '';                 // 狀態過濾（'' = 全部）
-var CAL_VIEW = 'month';          // month | week | day
+/* ⛔ 2026-09-22 設計檢視第 6 項：預設從「月」改成「日」。
+   翻譯早上打開 App 只問一句：**今天要去哪**。
+   月曆回答的是「這個月哪幾天有事」——那是排程的問題，不是出門前的問題。
+   量到的：首屏 168px 篩選 ＋ 825px 全空的月曆，
+   而「今天要跑哪幾家」在摺線下面看不到。
+   ⚠ 月與週沒有拿掉，在切換器上，要排程的時候切過去。 */
+var CAL_VIEW = 'day';            // month | week | day
 var SCHED_ID = '';               // 這次填寫是從哪一筆行程來的
 
 /* 頂欄與分頁列的高度會隨字級與裝置變，量出來再設，不要寫死 */
@@ -1273,7 +1279,18 @@ function visible(){
 }
 
 /* 上排＝狀態，下排＝語別與人員。兩排都不換行，各自橫向捲。
-   狀態一律五個都列出來（就算是 0），位置固定，手指才有肌肉記憶。 */
+   狀態一律五個都列出來（就算是 0），位置固定，手指才有肌肉記憶。
+   ⛔ 不要改成「數量為零就不畫」——位置會跳，肌肉記憶就沒了。
+
+   ⚠ 2026-09-22 改成：**日檢視預設收起來**。
+      篩選是「找東西」的行為，屬於搜尋；「今天要去哪」不需要它。
+      月／週檢視是用來掃描與排程的，那時候篩選才有意義，維持攤開。 */
+var CAL_FILT_OPEN_ = false;
+function calFiltShow_(){
+  /* ⛔ CAL_MINE 不算「他在篩選」——翻譯一登入它就是開的，是預設值。
+     把預設值當成篩選條件的話，這一排永遠不會收起來。 */
+  return CAL_VIEW !== 'day' || CAL_FILT_OPEN_ || !!(CAL_ST || CAL_LG.length);
+}
 function drawFilters(langs){
   var live = CAL_ROWS.filter(function(r){ return r.status !== '取消'; });
   var chip = function(on, data, mark, txt, n){
@@ -1301,6 +1318,24 @@ function drawFilters(langs){
         '<i class="dot lg-'+esc(l)+'"></i>', l, n);
     }).join('') +
     (on ? '<button type="button" class="clr" id="calClr">取消全選</button>' : '');
+
+  /* 收起來的時候：兩排都不畫，改成一顆「篩選」。
+     ⚠ 有在篩的時候一定攤開——不然他會忘記自己開著篩選，
+       然後以為今天真的沒有行程。 */
+  var wraps = document.querySelectorAll('.calfw');
+  var show = calFiltShow_();
+  [].forEach.call(wraps, function(w){ w.style.display = show ? '' : 'none'; });
+  var fb = $('calFiltBtn');
+  if(!show){
+    if(!fb){
+      fb = document.createElement('button');
+      fb.type = 'button'; fb.id = 'calFiltBtn'; fb.className = 'calfb';
+      wraps[0].parentNode.insertBefore(fb, wraps[0]);
+    }
+    fb.textContent = '篩選';
+    fb.style.display = '';
+    fb.onclick = function(){ CAL_FILT_OPEN_ = true; drawCal(); };
+  } else if(fb){ fb.style.display = 'none'; }
 
   [].forEach.call($('calSt').querySelectorAll('button'), function(b){
     b.addEventListener('click', function(){

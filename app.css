@@ -1009,6 +1009,11 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    原本三排 pill 會各自換行，五行擠在一起看不出誰跟誰是一組。
    改成兩排不換行、各自橫向捲動：上排是狀態（做事看的），
    下排是語別與人員（找人看的）。右緣留一道漸層提示還可以往右滑。 */
+/* 日檢視收起來時的那一顆。⚠ 44px——工廠裡站著單手點。 */
+.calfb{min-height:44px;padding:0 16px;border-radius:99px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink2);
+  font:inherit;font-size:0.8125rem;font-weight:600;margin:0 0 9px;cursor:pointer}
+.calfb:active{background:var(--line2)}
 .calfw{position:relative}
 .calfw::after{content:"";position:absolute;right:0;top:0;bottom:8px;width:24px;
   background:linear-gradient(to right,rgba(0,0,0,0),var(--bg));pointer-events:none}
