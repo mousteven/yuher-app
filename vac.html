@@ -276,6 +276,11 @@
 
   <button type="submit" id="submitBtn" data-i18n="vacSubmitBtn"></button>
 </form>
+<!-- ⛔ 2026-09-22：搬到 Pages 的時候這一行被切掉了（拆檔的程式切在 </form>，
+     而它在 </form> 之後一行）。#msg 的樣式有跟過來，元素沒有——
+     結果送出時 msg.className 對 null 設值，**任何人都送不出去**。
+     靜態檢查抓不到（樣式在、id 不在），只有真的按下送出才會爆。 -->
+<div id="msg"></div>
 </div>
 </div>
 <canvas id="resizeCanvas" style="display:none"></canvas>
