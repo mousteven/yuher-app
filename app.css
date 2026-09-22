@@ -19,7 +19,270 @@
   --bad-ink:#9E3B52;  --bad-bg:#F8EAEF;  --bad-line:#E2C3CD;  --bad-bar:#9E3B52;
   --chrome-bg:#1B3B6F; --chrome-ink:#fff;
   --shadow:0 8px 28px -12px rgba(10,16,28,.3);
+  /* ── 追蹤頁籤的看板（2026-09-22）──────────────────
+     ⛔ 之前是釘死的深色（--fids），跟 App 其他頁不同調，
+        而且展開之後深色卡裡塞淺色卡＝同一畫面兩套語言。
+        改成跟著主題走，深淺各一組。
+     ⚠ 航廈的味道不靠底色，靠**結構**：等寬字的機場代碼、
+       › 的航線箭頭、看板式的標頭。那些在淺色下一樣成立。 */
+  --board:var(--card); --board2:#F6F8FB; --board-line:var(--line);
+  --sunk:#F6F8FB; --accent:#1B3B6F; --accent-soft:#EAF0F9;
+  --grid:rgba(20,30,50,.07);
+  /* 字級四級。⛔ 不要第五級——七種字級就是「文字有大有小」的來源。 */
+  --t1:1rem; --t2:0.875rem; --t3:0.75rem; --t4:0.6875rem;
 }
+
+/* ═══ 追蹤頁籤的共用元件 ═══════════════════════════════
+
+   四個頁籤（異常／返鄉／就醫／體檢）同一套骨架：
+     左＝日期　中＝主角與補充　右＝狀態
+   換頁籤不用重新學。
+
+   ⛔ 字級只有四級：--t1 16 / --t2 14 / --t3 12 / --t4 11。
+      2026-09-22 之前用了七種，那就是他說的「文字有大有小」。
+   ⛔ 元件裡不可以出現寫死的顏色。一出現 rgba(255,255,255,…)
+      就等於押注在深色底上，淺色模式下它會消失。 */
+
+/* ── 看板外框 ─────────────────────────────────── */
+.vb,.hb{background:var(--board);border:1px solid var(--board-line);
+  border-radius:12px;overflow:hidden;margin-bottom:12px}
+.vb .bar,.hb .bar{display:flex;align-items:baseline;gap:8px;padding:10px 12px;
+  background:var(--board2);border-bottom:1px solid var(--board-line)}
+.vb .bar b,.hb .bar b{color:var(--accent);font-size:var(--t3);
+  letter-spacing:.12em;font-weight:700}
+.vb .bar .now,.hb .bar .now{margin-left:auto;color:var(--ink2);font-size:var(--t4);
+  font-variant-numeric:tabular-nums}
+.vb .bar .now em,.hb .bar .now em{font-style:normal;color:var(--bad-ink);font-weight:700}
+/* 月份刻度：flex 權重＝那個月的天數，格線才對得上條子 */
+.vtax{display:flex;padding:6px 12px 2px;font-size:var(--t4);letter-spacing:.08em;
+  color:var(--ink3);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.vbempty{padding:22px 12px;text-align:center;font-size:var(--t3);color:var(--ink3)}
+
+/* ── 一列 ──────────────────────────────────────
+   ⚠ 至少 74px——工廠裡站著單手點。 */
+/* ⛔ 一列的骨架是**一個明講的類別**，不是兩個選擇器湊在一起。
+   四個頁籤共用它，欄寬各自微調。
+   （check_css_clash 抓到 .vrow 出現在兩條規則——它是對的：
+     「共用」如果只存在於選擇器裡，下一個人改的時候看不到。） */
+.lrow{display:grid;gap:8px;padding:10px 12px;
+  border-top:1px solid var(--line2);align-items:center;cursor:pointer}
+.lrow:first-of-type{border-top:0}
+.lrow:active,.lrow.on{background:var(--sunk)}
+.vrow{grid-template-columns:1fr 92px}
+.hrow{grid-template-columns:46px 1fr 70px}
+/* 有急的待辦就在左邊留一條紅邊——不用讀字就知道這一列要動。 */
+.hrow.bad{box-shadow:inset 3px 0 0 var(--bad-bar)}
+
+/* 左欄：日期（體檢用）。⚠ 等寬字＋固定寬度，上下對得齊。 */
+.hrow .d{font-size:var(--t2);font-weight:700;color:var(--ink);line-height:1.2;
+  font-variant-numeric:tabular-nums}
+.hrow .d s{display:block;text-decoration:none;font-size:var(--t4);
+  font-weight:400;color:var(--ink3)}
+
+/* 中欄 */
+.vrow .a,.hrow .m{min-width:0}
+/* 第一行：機場代碼／醫院——等寬字，這是航廈味道的來源之一。 */
+.vrow .rt,.hrow .t1{display:block;font-size:var(--t4);color:var(--ink2);
+  letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.vrow .rt{display:flex;align-items:center;gap:5px;font-weight:700;color:var(--ink)}
+.vrow .rt.dim{color:var(--ink3);font-weight:400}
+.vrow .rt i{font-style:normal;color:var(--ink3);font-weight:400}
+.vrow .nm,.hrow .nm{display:block;margin-top:1px;font-size:var(--t2);
+  font-weight:600;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hrow .nm em{font-style:normal;font-size:var(--t4);font-weight:700;margin-left:6px;
+  padding:1px 6px;border-radius:5px;background:var(--accent-soft);color:var(--accent)}
+.vrow .co,.hrow .co{display:block;font-size:var(--t4);color:var(--ink3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 名單是空的要看得出來——那一批不會有任何人收到通知，
+   而畫面上它跟正常的長得一模一樣。 */
+.hrow .nm.none{color:var(--bad-ink)}
+
+/* 右欄 */
+.vrow .b,.hrow .b{text-align:right}
+.vrow .st,.hrow .st{display:block;font-size:var(--t4);font-weight:700;
+  letter-spacing:.06em;font-variant-numeric:tabular-nums}
+/* ⛔ 去程 › 回程一定要兩個都印。只印一個的話「還沒走」跟「已經走了」
+   共用同一格而意思不同——那是最容易看錯的東西。 */
+.vrow .dd{display:block;font-size:var(--t4);font-weight:700;white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.vrow .dd i{font-style:normal;font-weight:400;color:var(--ink3);margin:0 2px}
+.hrow .big{display:block;font-size:var(--t1);font-weight:700;line-height:1.1;
+  font-variant-numeric:tabular-nums}
+.vrow .sub2,.hrow .s2{display:block;font-size:var(--t4);color:var(--ink3);
+  white-space:nowrap}
+/* 真正的階段（申請中／證件齊／已離境／已回台）。
+   ⛔ 英文只是氣氛——「申請中」跟「證件齊」在上面都算 PLANNED，
+      沒有這一段他分不出證件辦好了沒。 */
+.vrow .sub2 em{font-style:normal;color:var(--ink2);font-weight:600}
+/* 狀態四色。⚠ 一個畫面只會出現這四種，不要再加第五種。 */
+.st-ok{color:var(--ok-ink)} .st-warn{color:var(--warn-ink)}
+.st-bad{color:var(--bad-ink)} .st-info{color:var(--info-ink)}
+.st-dim{color:var(--ink3)}
+
+/* ── 時間條／進度條 ────────────────────────────
+   返鄉放休假期間、體檢放確認人數。同一個元件，兩種意思。 */
+.vrow .trk,.hrow .pg{position:relative;display:block;height:6px;border-radius:3px;
+  margin-top:6px;background:var(--line2);overflow:hidden}
+.vrow .trk{overflow:visible;background:
+  repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 100%);
+  background-size:calc(100%/9) 100%}
+.vrow .bnd,.hrow .pg i{position:absolute;top:0;bottom:0;border-radius:3px}
+.vrow .bnd.none{left:0;right:0;background:var(--line2)}
+.bnd-ok{background:var(--ok-bar)} .bnd-warn{background:var(--warn-bar)}
+.bnd-bad{background:var(--bad-bar)} .bnd-dim{background:var(--line)}
+/* 被時間窗切掉的那一端不做圓角＝「還沒完」。
+   ⛔ 不要為了好看補圓——補了就看不出有東西被切掉。 */
+.vrow .bnd.cutl{border-top-left-radius:0;border-bottom-left-radius:0}
+.vrow .bnd.cutr{border-top-right-radius:0;border-bottom-right-radius:0}
+/* 今天：整張圖唯一的參考點。⚠ 深色用亮線、淺色用暗線，都要壓得住底下的條子。 */
+.vrow .tdy{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:1px;
+  background:var(--ink)}
+
+/* ── 展開：凹一層，不換配色 ────────────────────
+   ⛔ 這是之前最大的問題——深色卡裡塞淺色卡，看起來像兩個 App。 */
+.vexp,.hexp{background:var(--sunk);padding:12px;
+  border-top:1px solid var(--line2)}
+/* 階段是唯讀的（後端從日期算）。
+   ⛔ 看起來像按鈕、按了沒反應，比沒有這個東西更糟。 */
+.vstep{display:flex;gap:4px;margin-bottom:12px}
+.vstep span{flex:1;text-align:center;padding:6px 2px;border-radius:8px;
+  font-size:var(--t4);background:var(--card);border:1px solid var(--line);
+  color:var(--ink3)}
+.vstep span.done{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
+.vstep span.cur{background:var(--brand);border-color:transparent;color:#fff;font-weight:700}
+.vstamp{display:flex;gap:5px;margin-bottom:12px}
+.vstamp span{flex:1;text-align:center;padding:6px 2px;border-radius:8px;
+  font-size:var(--t4);background:var(--ok-bg);color:var(--ok-ink);
+  border:1px solid var(--ok-line)}
+.vstamp span.no{background:var(--bad-bg);color:var(--bad-ink);border-color:var(--bad-line)}
+.vkv,.hkv{display:grid;grid-template-columns:52px 1fr;gap:3px 8px;margin:0 0 12px;
+  font-size:var(--t3)}
+.vkv dt,.hkv dt{color:var(--ink3)}
+.vkv dd,.hkv dd{margin:0;color:var(--ink);font-weight:500;word-break:break-word}
+/* 醫院那一格拆成三層：名稱（主）、地址與地標（次）、開地圖（連結）。 */
+.hkv dd .sub{color:var(--ink2);font-weight:400;font-size:var(--t4)}
+.hkv dd .lnk{display:inline-block;margin-top:3px;color:var(--brand);
+  font-weight:700;text-decoration:none}
+.vacts,.hacts{display:flex;gap:8px;flex-wrap:wrap}
+.vacts button,.hacts button{flex:1;min-width:88px;min-height:44px;border-radius:8px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);
+  font:inherit;font-size:var(--t3);font-weight:600;cursor:pointer}
+.vacts button:active,.hacts button:active{background:var(--sunk)}
+.vacts .pri,.hacts .pri{background:var(--brand);border-color:transparent;color:#fff}
+/* 結案／開錯了那些留在完整那一頁——少做、而且比較重要，
+   不該跟「改個日期」擺在一起誤觸。 */
+.vacts .full,.hacts .full{flex:0 0 100%;border:0;background:none;
+  color:var(--ink2);font-weight:400;min-height:38px}
+
+/* ── 圖例與範圍外那一行 ─────────────────────── */
+.vtlg,.hlg{display:flex;flex-wrap:wrap;gap:10px;padding:9px 12px;
+  border-top:1px solid var(--line2);font-size:var(--t4);color:var(--ink2)}
+.vtlg i,.hlg i{display:inline-block;width:16px;height:6px;border-radius:2px;
+  margin-right:4px;vertical-align:middle}
+.vtlg i.tdy{width:2px;height:11px;background:var(--ink);border-radius:1px}
+/* 固定時間窗之外的那幾位：畫不出來，但要交代一聲。
+   ⛔ 不要讓他以為只有畫出來的這幾個人。 */
+.vtoff{padding:9px 12px;border-top:1px solid var(--line2);
+  font-size:var(--t4);line-height:1.5;color:var(--ink3)}
+
+/* ── 底部動作列 ────────────────────────────── */
+.vbact{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line2)}
+.vbact button{flex:1;min-height:44px;border-radius:8px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);font:inherit;
+  font-size:var(--t3);font-weight:700;cursor:pointer}
+.vbact .pri{background:var(--brand);border-color:transparent;color:#fff}
+.vbact .gate{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
+.vbact button:active{filter:brightness(.96)}
+
+/* ── 待辦條：唯一會用滿版狀態底色的東西 ───────────
+   ⛔ 沒有待辦就整條不出現。永遠掛一塊「目前沒有待辦」在那裡，
+      兩個禮拜後就沒有人看它了。 */
+.htb,.vgate{border-radius:12px;overflow:hidden;margin-bottom:12px}
+.htb{background:var(--bad-bg);border:1px solid var(--bad-line)}
+.vgate{background:var(--ok-bg);border:1px solid var(--ok-line)}
+.htb .bar,.vgate .vg1{display:flex;align-items:baseline;gap:8px;padding:9px 12px;
+  background:none;border:0}
+.htb .bar b{color:var(--bad-ink);font-size:var(--t3);letter-spacing:.12em}
+.vgate .vg1 b{color:var(--ok-ink);font-size:var(--t3);letter-spacing:.12em}
+.htb .bar .now,.vgate .vg1 span{margin-left:auto;color:var(--ink2);font-size:var(--t4)}
+.htr{display:flex;align-items:center;gap:9px;padding:10px 12px;
+  border-top:1px solid var(--bad-line);background:var(--card);cursor:pointer}
+.htr:active{background:var(--sunk)}
+.htr .dot{flex:0 0 7px;height:7px;border-radius:50%;background:var(--warn-bar)}
+.htr .dot.r{background:var(--bad-bar)}
+.htr .tx{flex:1;min-width:0}
+.htr .tx b{display:block;font-size:var(--t3);font-weight:600;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.htr .tx s{display:block;text-decoration:none;font-size:var(--t4);color:var(--ink3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.htr .go{flex:0 0 auto;font-size:var(--t3);font-weight:700;color:var(--brand)}
+
+/* GATE：工人填好、還沒開成案件的問卷 */
+.vgrow{display:grid;grid-template-columns:56px 1fr;gap:8px;padding:12px;
+  border-top:1px solid var(--ok-line);background:var(--card)}
+.vgrow .gd,.vgrow .d{font-size:var(--t2);font-weight:700;color:var(--ok-ink);
+  line-height:1.2;font-variant-numeric:tabular-nums}
+.vgrow .d s{display:block;text-decoration:none;font-size:var(--t4);
+  font-weight:400;color:var(--ink3)}
+.vgrow .m b,.vgrow .gn{display:block;font-size:var(--t2);font-weight:600;color:var(--ink)}
+.vgrow .m i,.vgrow .gc{display:block;font-style:normal;font-size:var(--t4);color:var(--ink2)}
+.vgrow .m u,.vgrow .gx{display:block;text-decoration:none;font-size:var(--t4);
+  color:var(--ink3);margin-top:2px}
+.vgrow .a,.vgrow .ga{grid-column:1/-1;display:flex;gap:8px;margin-top:8px}
+.vgrow .a button,.vgrow .ga button{flex:1;min-height:44px;border-radius:8px;border:0;
+  font:inherit;font-size:var(--t3);font-weight:700;background:var(--ok-bar);color:#fff;
+  cursor:pointer}
+.vgrow .a .vno,.vgrow .ga .no{flex:0 0 84px;background:var(--card);color:var(--ink2);
+  border:1px solid var(--line)}
+.vgrow .a .vgo:disabled{opacity:.55}
+
+/* ── 登機證存根：發問卷給工人 ─────────────────
+   ⚠ 撕線那條虛線是它的識別，淺色深色都要看得到。 */
+.bpass{background:var(--board);border:1px solid var(--board-line);border-radius:12px;
+  overflow:hidden;margin-bottom:12px}
+.bpass .bp1{display:flex;align-items:baseline;gap:8px;padding:9px 12px;
+  background:var(--board2);border-bottom:1px dashed var(--line)}
+.bpass .bp1 b{color:var(--accent);font-size:var(--t3);letter-spacing:.12em;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.bpass .bp1 span{color:var(--ink2);font-size:var(--t4)}
+.bpass .bp2{display:flex;gap:8px;padding:12px 12px 0}
+.bpass .bp2:last-of-type{padding-bottom:0}
+.bpass .bpf{flex:1;min-width:0}
+.bpass .bp2 .bpf:last-child:not(:only-child){flex:0 0 108px}
+.bpass .bpf label{display:block;font-size:var(--t4);letter-spacing:.1em;
+  color:var(--ink3);margin-bottom:4px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.bpass select,.bpass .epkval{width:100%;background:var(--card);color:var(--ink);
+  border:1px solid var(--line);border-radius:8px;padding:8px;
+  font:inherit;font-size:var(--t3);min-height:44px;text-align:left}
+.bpass .epkval.has{color:var(--accent);font-weight:700}
+.bpass select{font-weight:600}
+.bpass select option{background:var(--card);color:var(--ink)}
+.bpass .bp3{padding:12px}
+.bpass .bphint{font-size:var(--t4);color:var(--ink3)}
+/* 指定給誰的那一行。⚠「沒帶到電話」不是錯誤，是提醒——
+   用琥珀不用紅，紅色要留給真的出事的東西。 */
+.bpass .bpwho{font-size:var(--t4);color:var(--ink2);margin-bottom:8px;line-height:1.5}
+.bpass .bpwho b{color:var(--accent);font-weight:700}
+.bpass .bpwho i{font-style:normal;color:var(--ink3)}
+.bpass .bpwho i.warn{color:var(--warn-ink)}
+.bpass .bpurl{display:block;word-break:break-all;font-size:var(--t4);
+  color:var(--ink2);background:var(--sunk);border:1px solid var(--line);
+  border-radius:8px;padding:8px;line-height:1.5;user-select:all;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.bpass .bpbtn{display:flex;gap:8px;margin-top:8px}
+.bpass .bpbtn>*{flex:1;min-height:44px;border-radius:8px;font:inherit;
+  font-size:var(--t3);font-weight:700;border:0;display:flex;
+  align-items:center;justify-content:center;text-decoration:none;cursor:pointer}
+.bpass .bpbtn .line{background:#06C755;color:#fff}
+.bpass .bpbtn button{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.bpass .bpbtn button:active{background:var(--sunk)}
+/* 選擇器的浮層跟著主題走，不要自己壓一套顏色。 */
+.bpass .epkpop{background:var(--card);border-color:var(--line)}
+.bpass .epkpop input{background:var(--card);color:var(--ink);border-color:var(--line)}
+
 
 /* ── 夜間模式 ──────────────────────────────────────
    深藍底、亮一階的主色（深色底上原本的海軍藍會看不見）。
@@ -37,14 +300,20 @@ body.dark{
   --chrome-bg:#141C2E; --chrome-ink:#EAF0F8;
   --shadow:0 8px 28px -12px rgba(0,0,0,.6);
   color-scheme:dark;
+  --board:#0F141C; --board2:#161D28; --board-line:#232C3A; --sunk:#131922;
+  /* 夜間才有琥珀——那是航廈看板的顏色，白天用它會糊在白底上。 */
+  --accent:#F0B429; --accent-soft:rgba(240,180,41,.12);
+  --grid:rgba(255,255,255,.05);
 }
 /* 紙就是紙。簽名的墨色與服務表預覽一律留白底，
    不然翻譯在工廠裡簽完根本看不到自己簽了什麼。 */
 body.dark .sheet,body.dark .pvscroll,body.dark .sig,body.dark .sigwrap,
 body.dark .rvpdf,body.dark canvas{color-scheme:light}
 body.dark .sheet{background:#fff;color:#111}
-/* 固定日間模式。翻譯是在工廠、宿舍、醫院這些地方用，
-   環境光線亮，白底比深色好讀；而且深色下簽名的墨色會看不清楚。 */
+/* ⚠ 2026-09-22 牟佑彬：「日間模式就用淺色，夜間模式就用深色」。
+   設定裡的「自動」會跟著手機走，他也可以自己鎖成日間或夜間。
+   ⛔ 簽名板與服務表預覽**永遠是白底**（上面那兩條規則）——
+      深色下簽名的墨色會看不清楚，那跟主題無關，是紙就是紙。 */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* 根字級。使用者是在工廠、宿舍、醫院用手機看，年齡層也偏中年以上，
    所以預設就開「大」。所有 font-size 都是 rem，改這一個數字整套跟著變。
@@ -1869,7 +2138,6 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 @media (max-width:380px){ .c4auto{display:none} }
 
 
-
 /* 時間軸的服務內容：左標右文（他挑的排法 F）。
    標籤欄固定寬才對得齊，一眼掃得下來。
    ⚠ 補充那兩列要上底色——罐頭選項每一筆都長得幾乎一樣，
@@ -1968,219 +2236,7 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
    ⚠ 所以它的對比要自己顧：琥珀 #F0B429 對 #0C1118 是 9.8:1，
      白字 82% 透明度也還有 11:1。好看不可以換來難讀。
    ⛔ 三個顏色是新加的 token，只有這一塊在用，不要拿去別的地方。 */
-:root{ --fids:#0C1118; --fids2:#161D28; --amber:#F0B429;
-       --fgreen:#39C08A; --fred:#E8657F; }
 
-/* ── 返鄉：一人一列（看板＋時間軸合而為一）────────
-   ⛔ 2026-09-22 之前是兩張卡片各畫一次同一批人。合併之後
-      頁面短一半，而且不會再有兩個數字互相打架。
-   ⚠ 顏色只有三個：綠＝在國外、紅＝逾期、琥珀＝還沒走。
-      每多一種，工廠裡那台手機上的圖例就多一行。 */
-.vb{background:var(--fids);border-radius:13px;overflow:hidden;margin-bottom:12px;
-  box-shadow:inset 0 0 0 1px rgba(240,180,41,.18);
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.vb .bar{display:flex;align-items:center;gap:8px;padding:9px 12px;
-  background:var(--fids2);border-bottom:1px solid rgba(240,180,41,.2)}
-.vb .bar b{color:var(--amber);font-size:0.75rem;letter-spacing:.16em}
-.vb .bar .now{margin-left:auto;color:rgba(255,255,255,.5);font-size:0.6875rem;
-  font-variant-numeric:tabular-nums}
-.vb .bar .now .bad{font-style:normal;color:#F2678B;font-weight:700}
-/* 月份刻度：flex 權重＝那個月的天數，格線才對得上條子 */
-.vtax{display:flex;padding:6px 12px 2px;font-size:0.5625rem;letter-spacing:.1em;
-  color:rgba(240,180,41,.55)}
-.vbempty{padding:22px 12px;text-align:center;font-size:0.8125rem;
-  font-family:-apple-system,"Microsoft JhengHei",sans-serif;color:rgba(255,255,255,.38)}
-
-/* 一列。⚠ 至少 74px——工廠裡站著單手點。 */
-.vrow{display:grid;grid-template-columns:1fr 96px;gap:8px;padding:9px 12px;
-  border-top:1px solid rgba(255,255,255,.07);align-items:center;cursor:pointer}
-.vrow:active{background:rgba(255,255,255,.06)}
-.vrow.on{background:rgba(255,255,255,.045)}
-.vrow .a{min-width:0}
-.vrow .rt{display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;
-  letter-spacing:.05em;color:rgba(255,255,255,.9)}
-.vrow .rt.dim{color:rgba(255,255,255,.34);font-weight:400}
-.vrow .rt i{font-style:normal;color:rgba(255,255,255,.34);font-weight:400;font-size:0.6875rem}
-/* 中文名字走系統字——等寬字排中文會散 */
-.vrow .nm{display:block;margin-top:1px;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.8125rem;font-weight:600;color:#fff;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vrow .co{display:block;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.625rem;color:rgba(255,255,255,.34);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vrow .b{text-align:right}
-.vrow .st{display:block;font-size:0.5625rem;font-weight:700;letter-spacing:.09em}
-/* ⛔ 去程 › 回程一定要兩個都印。只印一個的話「還沒走」跟「已經走了」
-   共用同一格而意思不同——那是最容易看錯的東西。 */
-.vrow .dd{display:block;font-size:0.6875rem;font-weight:700;white-space:nowrap;
-  font-variant-numeric:tabular-nums}
-.vrow .dd i{font-style:normal;font-weight:400;color:rgba(255,255,255,.34);margin:0 2px}
-.vrow .sub2{display:block;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.5625rem;color:rgba(255,255,255,.34);white-space:nowrap}
-/* 真正的階段（申請中／證件齊／已離境／已回台）。
-   ⛔ 英文只是氣氛——「申請中」跟「證件齊」在上面都算 PLANNED，
-      沒有這一段他分不出證件辦好了沒。 */
-.vrow .sub2 em{font-style:normal;color:rgba(255,255,255,.62);font-weight:600}
-
-/* 那一條。底紋的直線＝一週，眼睛才量得出長度。 */
-.vrow .trk{position:relative;display:block;height:9px;border-radius:5px;margin-top:6px;
-  background:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 100%);
-  background-size:calc(100%/9) 100%}
-.vrow .bnd{position:absolute;top:1px;bottom:1px;border-radius:3px}
-.vrow .bnd.none{left:0;right:0;background:rgba(255,255,255,.05)}
-/* 被時間窗切掉的那一端不做圓角＝「還沒完」。
-   ⛔ 不要為了好看補圓——補了就看不出有東西被切掉。 */
-.vrow .bnd.cutl{border-top-left-radius:0;border-bottom-left-radius:0}
-.vrow .bnd.cutr{border-top-right-radius:0;border-bottom-right-radius:0}
-/* 今天：整張圖唯一的參考點，要壓在條子上面而且夠亮。 */
-.vrow .tdy{position:absolute;top:-2px;bottom:-2px;width:2px;background:#fff;
-  border-radius:1px;box-shadow:0 0 6px rgba(255,255,255,.85)}
-
-/* ── 就地展開 ──────────────────────────────────── */
-.vexp{padding:2px 12px 12px;background:rgba(255,255,255,.045);
-  border-top:1px solid rgba(255,255,255,.05)}
-/* 階段是唯讀的（後端從日期算），所以不做成按鈕——
-   ⛔ 看起來像按鈕、按了沒反應，比沒有這個東西更糟。 */
-.vstep{display:flex;gap:4px;margin:8px 0 10px}
-.vstep span{flex:1;text-align:center;padding:6px 2px;border-radius:7px;
-  font-family:-apple-system,"Microsoft JhengHei",sans-serif;font-size:0.625rem;
-  border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.04);
-  color:rgba(255,255,255,.34)}
-.vstep span.done{background:rgba(40,208,122,.12);border-color:rgba(40,208,122,.3);
-  color:#28D07A}
-.vstep span.cur{background:var(--amber);border-color:transparent;color:#0b0f14;
-  font-weight:700}
-.vstamp{display:flex;gap:5px;margin-bottom:10px}
-.vstamp span{flex:1;text-align:center;padding:6px 2px;border-radius:7px;
-  font-family:-apple-system,"Microsoft JhengHei",sans-serif;font-size:0.625rem;
-  background:rgba(40,208,122,.12);color:#28D07A;border:1px solid rgba(40,208,122,.28)}
-.vstamp span.no{background:rgba(242,103,139,.1);color:#F2678B;
-  border-color:rgba(242,103,139,.3)}
-.vkv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0 0 10px;
-  font-family:-apple-system,"Microsoft JhengHei",sans-serif;font-size:0.6875rem}
-.vkv dt{color:rgba(255,255,255,.34)}
-.vkv dd{margin:0;color:rgba(255,255,255,.88);font-weight:600}
-.vacts{display:flex;gap:6px;flex-wrap:wrap}
-.vacts button{flex:1;min-width:88px;min-height:44px;border-radius:9px;
-  border:1px solid rgba(240,180,41,.28);background:rgba(255,255,255,.05);color:#fff;
-  font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.6875rem;font-weight:700;cursor:pointer}
-.vacts button:active{background:rgba(255,255,255,.12)}
-/* 結案／開錯了那些留在完整那一頁——少做、而且比較重要，
-   不該跟「改個日期」擺在一起誤觸。 */
-.vacts .full{flex:0 0 100%;border-color:rgba(255,255,255,.12);
-  color:rgba(255,255,255,.55);font-weight:400}
-
-/* 固定時間窗之外的那幾位：畫不出來，但要交代一聲。
-   ⛔ 不要讓他以為只有畫出來的這幾個人。 */
-.vtoff{padding:9px 12px;border-top:1px solid rgba(255,255,255,.07);
-  font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.6875rem;line-height:1.5;color:rgba(255,255,255,.42)}
-/* 圖例。⚠ 三個顏色就三行，不要再加第四種狀態。 */
-.vtlg{display:flex;flex-wrap:wrap;gap:10px;padding:9px 12px;
-  border-top:1px solid rgba(255,255,255,.07);
-  font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.625rem;color:rgba(255,255,255,.55)}
-.vtlg i{display:inline-block;width:18px;height:8px;border-radius:2px;
-  margin-right:4px;vertical-align:middle}
-.vtlg i.tdy{width:2px;height:11px;background:#fff;border-radius:1px}
-
-/* 底部動作列：發問卷與待處理問卷收成兩顆 */
-.vbact{display:flex;gap:8px;padding:10px 12px;
-  border-top:1px solid rgba(255,255,255,.07)}
-.vbact button{flex:1;min-height:44px;border-radius:9px;border:0;
-  font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.75rem;font-weight:700;cursor:pointer}
-.vbact .pri{background:#06C755;color:#fff}
-.vbact .gate{background:rgba(6,199,85,.16);color:#28D07A;
-  border:1px solid rgba(6,199,85,.45)}
-.vbact button:active{filter:brightness(1.15)}
-
-/* ── 登機證存根：發問卷給工人 ─────────────────────────
-   跟下面的 FIDS 看板同一套配色（深藍底＋琥珀）。
-   左邊那條虛線是存根聯的撕線——整塊看起來就是一張登機證。
-   ⚠ 8pt 格線：padding 只用 8/12/16。 */
-/* ── GATE：工人填好、還沒開成案件的問卷 ─────────────
-   跟登機證與看板同一套（深藍＋琥珀）。用綠色當「要動作」的訊號，
-   ⚠ 整個返鄉頁只有這裡是綠的——超過一處就沒有提示作用了。 */
-.vgate{background:var(--fids);border-radius:13px;margin-bottom:12px;overflow:hidden;
-  box-shadow:inset 0 0 0 1px rgba(6,199,85,.35);
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.vgate .vg1{display:flex;align-items:baseline;gap:8px;padding:8px 12px;
-  background:rgba(6,199,85,.13);border-bottom:1px solid rgba(6,199,85,.28)}
-.vgate .vg1 b{color:#28D07A;font-size:0.75rem;letter-spacing:.18em}
-.vgate .vg1 span{font-family:inherit;color:rgba(255,255,255,.62);font-size:0.6875rem}
-.vgrow{display:grid;grid-template-columns:56px 1fr;gap:8px;padding:12px;
-  border-top:1px solid rgba(255,255,255,.07)}
-.vgrow:first-of-type{border-top:0}
-.vgrow .d{font-size:0.9375rem;font-weight:700;color:#28D07A;line-height:1.15;
-  font-variant-numeric:tabular-nums}
-.vgrow .d s{display:block;text-decoration:none;font-size:0.5625rem;
-  color:rgba(255,255,255,.35);letter-spacing:.1em}
-.vgrow .m{min-width:0}
-.vgrow .m b{display:block;font-family:inherit;font-size:0.875rem;color:#fff}
-.vgrow .m i{display:block;font-style:normal;font-family:inherit;font-size:0.75rem;
-  color:rgba(255,255,255,.62);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vgrow .m u{display:block;text-decoration:none;font-size:0.6875rem;
-  color:rgba(255,255,255,.4);margin-top:2px}
-/* 按鈕自己一行、各佔一半——工廠裡站著單手點，44px 是下限。 */
-.vgrow .a{grid-column:1/-1;display:flex;gap:8px;margin-top:8px}
-.vgrow .a button{flex:1;min-height:44px;border-radius:8px;border:0;font:inherit;
-  font-size:0.8125rem;font-weight:700;cursor:pointer}
-.vgrow .a .vgo{background:#06C755;color:#fff}
-.vgrow .a .vgo:disabled{background:rgba(6,199,85,.35);color:rgba(255,255,255,.7)}
-.vgrow .a .vno{flex:0 0 88px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.62);
-  border:1px solid rgba(255,255,255,.14)}
-.bpass{background:var(--fids);border-radius:13px;margin-bottom:12px;
-  box-shadow:inset 0 0 0 1px rgba(240,180,41,.18);overflow:hidden;
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.bpass .bp1{display:flex;align-items:baseline;gap:8px;padding:8px 12px;
-  background:var(--fids2);border-bottom:1px dashed rgba(240,180,41,.3)}
-.bpass .bp1 b{color:var(--amber);font-size:0.75rem;letter-spacing:.18em}
-.bpass .bp1 span{font-family:inherit;color:rgba(255,255,255,.5);font-size:0.6875rem}
-.bpass .bp2{display:flex;gap:8px;padding:12px}
-.bpass .bpf{flex:1;min-width:0}
-.bpass .bpf:last-child{flex:0 0 108px}
-.bpass .bpf label{display:block;font-size:0.5625rem;letter-spacing:.14em;
-  color:rgba(240,180,41,.55);margin-bottom:4px}
-/* 選單與選擇器要看得清楚——工廠裡光線通常很差。 */
-.bpass select,.bpass .epkval{width:100%;background:rgba(255,255,255,.07);
-  color:#fff;border:1px solid rgba(240,180,41,.25);border-radius:8px;
-  padding:8px;font:inherit;font-size:0.8125rem;min-height:44px;text-align:left}
-/* ⚠ 深底上的 <select>：不寫這兩行，Safari 會沿用系統的深色文字，
-   在深藍底上幾乎看不見（2026-09-22 截圖驗收時發現）。
-   展開的選項清單是系統畫的，也要一起指定，否則變白底白字。 */
-.bpass select{appearance:none;-webkit-appearance:none;color:#fff;font-weight:700;
-  background-image:linear-gradient(45deg,transparent 50%,rgba(240,180,41,.8) 50%),
-    linear-gradient(135deg,rgba(240,180,41,.8) 50%,transparent 50%);
-  background-position:calc(100% - 15px) 19px,calc(100% - 10px) 19px;
-  background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:26px}
-.bpass select option{background:#161D28;color:#fff}
-.bpass .epkval.has{color:var(--amber);font-weight:700}
-/* 指定給誰的那一行。⚠ 「沒帶到電話」不是錯誤，是提醒——
-   用琥珀不用紅，紅色要留給真的出事的東西。 */
-.bpass .bpwho{font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.6875rem;color:rgba(255,255,255,.62);margin-bottom:8px;line-height:1.5}
-.bpass .bpwho b{color:var(--amber);font-weight:700}
-.bpass .bpwho i{font-style:normal;color:rgba(255,255,255,.4)}
-.bpass .bpwho i.warn{color:var(--amber)}
-.bpass .bp3{padding:0 12px 12px}
-.bpass .bphint{font-family:inherit;font-size:0.6875rem;color:rgba(255,255,255,.4)}
-.bpass .bpurl{display:block;word-break:break-all;font-size:0.6875rem;
-  color:rgba(255,255,255,.62);background:rgba(0,0,0,.28);border-radius:8px;
-  padding:8px;line-height:1.5;user-select:all}
-.bpass .bpbtn{display:flex;gap:8px;margin-top:8px}
-.bpass .bpbtn>*{flex:1;min-height:44px;border-radius:8px;font:inherit;
-  font-size:0.8125rem;font-weight:700;border:0;display:flex;
-  align-items:center;justify-content:center;text-decoration:none;cursor:pointer}
-.bpass .bpbtn .line{background:#06C755;color:#fff}
-.bpass .bpbtn button{background:rgba(255,255,255,.1);color:#fff;
-  border:1px solid rgba(240,180,41,.25)}
-.bpass .bpbtn button:active{background:rgba(255,255,255,.18)}
-/* 選擇器的浮層本來是淺色的，放在深底上要壓回深色，不然整塊白掉。 */
-.bpass .epkpop{background:var(--fids2);border-color:rgba(240,180,41,.25)}
-.bpass .epkpop input{background:rgba(255,255,255,.07);color:#fff;
-  border-color:rgba(240,180,41,.25)}
 /* 登機證的撕線打孔與條碼。
    ⚠ 打孔那兩顆圓要跟卡片外面的底色一樣，不然會看到兩個色塊。 */
 .bp .code{padding:0 14px 12px}
@@ -2354,7 +2410,10 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
 .hcrow .st.g{background:var(--ok-bg);color:var(--ok-ink)}
 .hcrow .st.b{background:var(--info-bg);color:var(--info-ink)}
 .hcrow .st.y{background:var(--warn-bg);color:var(--warn-ink)}
-.hcrow .st.n{background:var(--line2);color:var(--ink3)}
+/* ⛔ 「沒讀」本來是 --ink3 配 --line2，對比只有 3.0:1——
+   灰字配灰底，而且是 11px 的小字，工廠的光線下讀不到。
+   ⚠ 它偏偏是最需要看到的一個：沒讀代表他可能根本沒收到通知。 */
+.hcrow .st.n{background:var(--line2);color:var(--ink2)}
 
 /* 報到來源。強弱要分得出來——翻譯點名與收據是證據，
    工人自己按只是訊號，不可以拿來當缺席扣款的依據。 */
@@ -2419,110 +2478,6 @@ h3{font-size:0.875rem;margin:0 0 11px;color:var(--brand)}
   font-family:inherit}
 .hsr input:focus{outline:2px solid var(--brand);outline-offset:1px;
   border-color:transparent}
-
-/* ── 體檢：待辦條 ＋ 一列一批 ──────────────────────
-   跟返鄉同一套（深藍底＋琥珀），但右邊放的是**確認進度**，
-   不是日期區間——體檢問的是「還有誰沒確認」，不是「誰在國外」。
-   ⚠ 8pt 格線：padding 只用 8/12。 */
-
-/* 待辦條。⛔ 沒有待辦就整條不出現（hcTodoBar 回空字串）——
-   永遠掛一塊「目前沒有待辦」在那裡，兩個禮拜後就沒有人看它了。 */
-.htb{background:var(--fids);border-radius:13px;overflow:hidden;margin-bottom:12px;
-  box-shadow:inset 0 0 0 1px rgba(232,101,127,.32);
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.htb .bar{display:flex;align-items:center;gap:8px;padding:8px 12px;
-  background:rgba(232,101,127,.12);border-bottom:1px solid rgba(232,101,127,.26)}
-.htb .bar b{color:var(--fred);font-size:0.75rem;letter-spacing:.16em}
-.htb .bar .now{margin-left:auto;color:rgba(255,255,255,.5);font-size:0.6875rem}
-.htr{display:flex;align-items:center;gap:9px;padding:10px 12px;
-  border-top:1px solid rgba(255,255,255,.07);cursor:pointer;
-  font-family:-apple-system,"Microsoft JhengHei",sans-serif}
-.htr:active{background:rgba(255,255,255,.06)}
-.htr .dot{flex:0 0 7px;height:7px;border-radius:50%;background:var(--amber)}
-.htr .dot.r{background:var(--fred)}
-.htr .tx{flex:1;min-width:0}
-.htr .tx b{display:block;font-size:0.75rem;font-weight:600;color:#fff;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.htr .tx s{display:block;text-decoration:none;font-size:0.625rem;
-  color:rgba(255,255,255,.34);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.htr .go{flex:0 0 auto;font-size:0.6875rem;font-weight:700;color:var(--amber)}
-
-/* 清單本體 */
-.hb{background:var(--fids);border-radius:13px;overflow:hidden;margin-bottom:12px;
-  box-shadow:inset 0 0 0 1px rgba(240,180,41,.18);
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.hb .bar{display:flex;align-items:center;gap:8px;padding:9px 12px;
-  background:var(--fids2);border-bottom:1px solid rgba(240,180,41,.2)}
-.hb .bar b{color:var(--amber);font-size:0.75rem;letter-spacing:.16em}
-.hb .bar .now{margin-left:auto;color:rgba(255,255,255,.5);font-size:0.6875rem;
-  font-variant-numeric:tabular-nums}
-.hb .bar .now em{font-style:normal;color:var(--fred);font-weight:700}
-
-/* 一列一批。⚠ 至少 78px——工廠裡站著單手點。 */
-.hrow{display:grid;grid-template-columns:50px 1fr 62px;gap:8px;padding:10px 12px;
-  border-top:1px solid rgba(255,255,255,.07);align-items:center;cursor:pointer}
-.hrow:active{background:rgba(255,255,255,.06)}
-.hrow.on{background:rgba(255,255,255,.045)}
-/* 有急的待辦就在左邊留一條紅邊——不用讀字就知道這一列要動。 */
-.hrow.bad{box-shadow:inset 3px 0 0 var(--fred)}
-.hrow .d{font-size:0.9375rem;font-weight:700;color:var(--amber);line-height:1.15;
-  font-variant-numeric:tabular-nums}
-.hrow .d s{display:block;text-decoration:none;font-size:0.5625rem;letter-spacing:.08em;
-  color:rgba(240,180,41,.55)}
-.hrow .m{min-width:0}
-.hrow .t1{display:block;font-size:0.6875rem;color:rgba(255,255,255,.62);
-  letter-spacing:.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hrow .nm{display:block;margin-top:1px;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.8125rem;font-weight:600;color:#fff;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hrow .nm em{font-style:normal;font-size:0.5625rem;font-weight:700;margin-left:6px;
-  padding:2px 6px;border-radius:5px;background:rgba(240,180,41,.2);color:var(--amber)}
-.hrow .co{display:block;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.625rem;color:rgba(255,255,255,.34);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* 名單是空的要看得出來——那一批不會有任何人收到通知，
-   而畫面上它跟正常的長得一模一樣。 */
-.hrow .nm.none{color:var(--fred)}
-.hrow .pg{position:relative;display:block;height:5px;border-radius:3px;margin-top:6px;
-  background:rgba(255,255,255,.09);overflow:hidden}
-.hrow .pg i{position:absolute;inset:0 auto 0 0;border-radius:3px}
-.hrow .b{text-align:right}
-.hrow .st{display:block;font-size:0.5625rem;font-weight:700;letter-spacing:.06em;
-  font-variant-numeric:tabular-nums}
-.hrow .big{display:block;font-size:1.0625rem;font-weight:700;line-height:1.1;
-  font-variant-numeric:tabular-nums}
-.hrow .s2{display:block;font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.5625rem;color:rgba(255,255,255,.34);white-space:nowrap}
-.hrow .g{color:var(--fgreen)} .hrow .am{color:var(--amber)}
-.hrow .rd{color:var(--fred)} .hrow .dim{color:rgba(255,255,255,.34)}
-/* hcPill_ 回的是 b/w/i/g 四種色碼，這裡對到同一組顏色 */
-.hrow .b1,.hrow .w{color:var(--amber)} .hrow .i{color:rgba(255,255,255,.62)}
-
-/* 展開。⚠ 裡面那兩塊是案件頁原封不動搬過來的（hcCarAlert / hcBoxHtml），
-   它們本來就是淺色卡片——放在深底上要自己把底色補回來，
-   不然字會消失。 */
-.hexp{padding:2px 12px 12px;background:rgba(255,255,255,.045);
-  border-top:1px solid rgba(255,255,255,.05)}
-.hexp .hcbox{background:var(--card);border-radius:11px;padding:11px 12px;
-  margin-top:8px;border:1px solid var(--line2)}
-.hkv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:10px 0 0;
-  font-family:-apple-system,"Microsoft JhengHei",sans-serif;font-size:0.6875rem}
-.hkv dt{color:rgba(255,255,255,.34)}
-.hkv dd{margin:0;color:rgba(255,255,255,.88);font-weight:600}
-.hacts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.hacts button{flex:1;min-width:84px;min-height:44px;border-radius:9px;
-  border:1px solid rgba(240,180,41,.28);background:rgba(255,255,255,.05);color:#fff;
-  font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.6875rem;font-weight:700;cursor:pointer}
-.hacts button:active{background:rgba(255,255,255,.12)}
-.hacts .full{flex:0 0 100%;border-color:rgba(255,255,255,.12);
-  color:rgba(255,255,255,.55);font-weight:400}
-.hlg{display:flex;flex-wrap:wrap;gap:10px;padding:9px 12px;
-  border-top:1px solid rgba(255,255,255,.07);
-  font-family:-apple-system,"Microsoft JhengHei",sans-serif;
-  font-size:0.625rem;color:rgba(255,255,255,.55)}
-.hlg i{display:inline-block;width:16px;height:7px;border-radius:2px;
-  margin-right:4px;vertical-align:middle}
 
 /* 收合的提醒條 */
 #hcAlertBar{cursor:pointer}

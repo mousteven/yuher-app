@@ -4894,8 +4894,13 @@ function drawCases(){
 
 /* 顏色與標籤。⛔ 只有這五種狀態，不要再加——每多一種，
    工廠裡那台手機上的圖例就多一行。 */
-var VACT_C_ = { over:'#F2678B', out:'#28D07A', plan:'#F0B429',
-                done:'rgba(255,255,255,.22)', none:'rgba(255,255,255,.14)' };
+/* ⛔ 顏色交給 CSS，這裡只給 class。寫死色碼等於押注在一種主題上——
+   他 2026-09-22 要「日間淺色、夜間深色」，寫死的在另一邊不是刺眼就是看不見。
+   st-*  是文字色、bnd-* 是條子的底色，兩組都在 app.css 的 token 區。 */
+var VACT_C_ = { over:'st-bad', out:'st-ok', plan:'st-warn',
+                done:'st-dim', none:'st-dim' };
+var VACT_B_ = { over:'bnd-bad', out:'bnd-ok', plan:'bnd-warn',
+                done:'bnd-dim', none:'bnd-dim' };
 var VACT_L_ = { over:'OVERDUE', out:'ABROAD', plan:'PLANNED',
                 done:'ARRIVED', none:'NO DATE' };
 
@@ -4991,9 +4996,9 @@ function vacBoard(rows){
         (VACL_OPEN_ ? '收起來' : '發問卷') + '</button>' +
     '</div>' +
     '<div class="vtlg">' +
-      '<span><i style="background:' + VACT_C_.out + '"></i>在國外</span>' +
-      '<span><i style="background:' + VACT_C_.over + '"></i>逾期未回</span>' +
-      '<span><i style="background:' + VACT_C_.plan + '"></i>還沒出發</span>' +
+      '<span><i class="bnd-ok"></i>在國外</span>' +
+      '<span><i class="bnd-bad"></i>逾期未回</span>' +
+      '<span><i class="bnd-warn"></i>還沒出發</span>' +
       '<span><i class="tdy"></i>今天</span></div>' +
   '</div>' +
   (VACP_OPEN_ ? ('<div id="vgateBox">' + vacGate() + '</div>') : '') +
@@ -5030,7 +5035,7 @@ function vacRow(c, today, w){
     ? (esc(vtMd_(d.out)) + '<i>›</i>' + (bk ? ('<b>' + esc(vtMd_(d.back)) + '</b>') : '—'))
     : '—<i>›</i>—';
 
-  return '<div class="vrow' + (open ? ' on' : '') + '" data-vac="' + esc(c.id) + '">' +
+  return '<div class="lrow vrow' + (open ? ' on' : '') + '" data-vac="' + esc(c.id) + '">' +
     '<span class="a">' +
       '<span class="rt' + (d.from && d.to ? '' : ' dim') + '">' + route + '</span>' +
       '<span class="nm">' + esc(c.workers || '（未填移工）') + '</span>' +
@@ -5038,8 +5043,8 @@ function vacRow(c, today, w){
       vacTrk_(c, today, w, col, k) +
     '</span>' +
     '<span class="b">' +
-      '<span class="st" style="color:' + col + '">' + VACT_L_[k] + '</span>' +
-      '<span class="dd" style="color:' + col + '">' + dd + '</span>' +
+      '<span class="st ' + col + '">' + VACT_L_[k] + '</span>' +
+      '<span class="dd ' + col + '">' + dd + '</span>' +
       '<span class="sub2">' +
         (c.phase ? ('<em>' + esc(c.phase) + '</em>　') : '') +
         esc(tail) + (open ? '　⌃' : '　⌄') + '</span>' +
@@ -5059,8 +5064,8 @@ function vacTrk_(c, today, w, col, k){
   var r0 = vtDay_(w.A, o) / w.span * 100, r1 = vtDay_(w.A, bk) / w.span * 100;
   var s0 = Math.max(0, r0), e0 = Math.min(100, r1);
   var cut = (r0 < 0 ? ' cutl' : '') + (r1 > 100 ? ' cutr' : '');
-  return '<span class="trk"><i class="bnd' + cut + '" style="left:' + s0.toFixed(2) +
-    '%;width:' + Math.max(5, e0 - s0).toFixed(2) + '%;background:' + col + '"></i>' +
+  return '<span class="trk"><i class="bnd ' + VACT_B_[k] + cut + '" style="left:' +
+    s0.toFixed(2) + '%;width:' + Math.max(5, e0 - s0).toFixed(2) + '%"></i>' +
     line + '</span>';
 }
 
@@ -7378,7 +7383,11 @@ function hcCaseBlock(caseId){
        擺在最後等於藏起來，而漏填的代價是一整車人在門口等不到車。 */
     if(v.needCar){
       var al = document.createElement('div');
-      al.id = 'hcAl'; al.className = 'hcbox top';
+      /* ⛔ 不可以寫 'hcbox top'。.top 早就是 App 最上面那條深藍標題列
+       （深藍底＋白字），套上去之後這一塊會被塗成深藍、字變白，
+       「接送資訊還沒填」就消失在淺藍底上（2026-09-22 他截圖回報）。
+       擺在最上面是 insertBefore 做的，不需要任何 class。 */
+    al.id = 'hcAl'; al.className = 'hcbox';
       al.innerHTML = hcCarAlert(v);
       $('ckBody').insertBefore(al, $('ckBody').firstChild);
     }
@@ -7389,7 +7398,7 @@ function hcCaseBlock(caseId){
        ⚠ 插在接送提醒後面：接送沒填是「我現在就要做的事」，
          名單是「我要去追的事」，先做再追。 */
     var el = document.createElement('div');
-    el.id = 'hcBox'; el.className = 'hcbox top';
+    el.id = 'hcBox'; el.className = 'hcbox';
     el.innerHTML = hcBoxHtml(v);
     var after = $('hcAl');
     if(after && after.nextSibling) $('ckBody').insertBefore(el, after.nextSibling);
@@ -7883,7 +7892,9 @@ function hcRow(c){
   var after = day && day.days <= 0 && h.n;
   var got = after ? h.inn : h.ack;
   var pct = h.n ? Math.round((got / h.n) * 100) : 0;
+  /* ⛔ tone 只用來挑 class，不要拿它去組色碼。 */
   var tone = !h.n ? 'dim' : (got >= h.n ? 'g' : (got === 0 ? 'rd' : 'am'));
+  var stCls = { g:'st-ok', am:'st-warn', rd:'st-bad', dim:'st-dim' }[tone];
 
   var ride = (h.ride === '自行前往');
   var line2 = (ride ? '自行前往' : '接送') +
@@ -7896,7 +7907,7 @@ function hcRow(c){
   var nm = h.n ? (who.join('、') + (h.n > who.length ? (' 等 ' + h.n + ' 人') : ''))
                : '名單是空的，這批不會有人收到通知';
 
-  return '<div class="hrow' + (open ? ' on' : '') + (todo && todo.bad ? ' bad' : '') +
+  return '<div class="lrow hrow' + (open ? ' on' : '') + (todo && todo.bad ? ' bad' : '') +
       '" data-hc="' + esc(c.id) + '">' +
     '<span class="d">' + (day ? esc(day.d) : '—') +
       '<s>' + (day ? esc(day.w.slice(1)) : '沒日期') + '</s></span>' +
@@ -7907,14 +7918,14 @@ function hcRow(c){
            那一張的解法（清單照體檢日排，新開的可能排在很後面）。 */
         (hcIsNew_(c) ? '<em class="new">剛開的</em>' : '') + '</span>' +
       '<span class="co">' + esc(nm) + '</span>' +
-      (h.n ? ('<span class="pg"><i style="width:' + Math.max(3, pct) +
-              '%;background:' + (tone === 'g' ? 'var(--fgreen)'
-                               : tone === 'rd' ? 'var(--fred)' : 'var(--amber)') +
-              '"></i></span>') : '') +
+      (h.n ? ('<span class="pg"><i class="bnd-' +
+              (tone === 'g' ? 'ok' : tone === 'rd' ? 'bad' : 'warn') +
+              '" style="width:' + Math.max(3, pct) + '%"></i></span>') : '') +
     '</span>' +
     '<span class="b">' +
-      (h.n ? ('<span class="st ' + tone + '">' + got + ' / ' + h.n + '</span>') : '') +
-      '<span class="big ' + p[0] + '">' +
+      (h.n ? ('<span class="st ' + stCls + '">' + got + ' / ' + h.n + '</span>') : '') +
+      '<span class="big ' + ({ g:'st-ok', w:'st-warn', b:'st-bad',
+                                i:'st-info' }[p[0]] || 'st-dim') + '">' +
         (day && day.days !== null ? Math.abs(day.days) : '—') + '</span>' +
       '<span class="s2">' +
         (!day ? '沒設日期'
@@ -7943,7 +7954,21 @@ function hcExpFill(c){
       return; }
     var d = v.detail || {};
     var kv = [];
-    if(d.hos)  kv.push(['醫院', d.hos + (d.time ? ('　報到 ' + d.time) : '')]);
+    /* ⛔ d.hos 是用 | 分欄存的：名稱|英文名|地址|地標|地圖網址。
+       整串印出來就是一大坨（他 2026-09-22 截圖裡最擠的地方）。
+       拆成三行：名稱＋報到時間、地址＋認路的地標、一顆開地圖。
+       ⚠ 英文名不印——那是給工人的通知訊息在用的，翻譯的畫面上是雜訊。 */
+    if(d.hos){
+      var hp = String(d.hos).split('|');
+      var hname = (hp[0] || '').trim();
+      var haddr = [(hp[2] || '').trim(), (hp[3] || '').trim()]
+                    .filter(function(x){ return x; }).join('・');
+      var hmap  = (hp[4] || '').trim();
+      kv.push(['醫院', esc(hname) + (d.time ? ('　報到 ' + esc(d.time)) : '') +
+        (haddr ? ('<br><span class="sub">' + esc(haddr) + '</span>') : '') +
+        (hmap ? ('<br><a href="' + esc(hmap) + '" target="_blank" ' +
+                 'rel="noopener" class="lnk">開地圖</a>') : ''), 1]);
+    }
     if(d.ride === '接送'){
       kv.push(['接送車', v.needCar ? '上車時間未定'
         : ((d.at || '') + '　' + (d.where || ''))]);
@@ -7952,8 +7977,10 @@ function hcExpFill(c){
     box.innerHTML =
       (v.needCar ? ('<div class="hcbox">' + hcCarAlert(v) + '</div>') : '') +
       '<div class="hcbox">' + hcBoxHtml(v) + '</div>' +
+      /* r[2] 為真＝這一格已經是組好的 HTML，不要再 esc 一次。 */
       (kv.length ? ('<dl class="hkv">' + kv.map(function(r){
-        return '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>';
+        return '<dt>' + esc(r[0]) + '</dt><dd>' +
+          (r[2] ? r[1] : esc(r[1])) + '</dd>';
       }).join('') + '</dl>') : '') +
       '<div class="hacts">' +
         '<button type="button" data-ha="next">改日期</button>' +
@@ -8019,9 +8046,9 @@ function hcList(rows){
         '　今天 ' + esc(todayStr().slice(5).replace('-', '/')) + '</span></div>' +
       hit.map(hcRow).join('') +
       '<div class="hlg">' +
-        '<span><i style="background:var(--fgreen)"></i>都確認了</span>' +
-        '<span><i style="background:var(--amber)"></i>確認了一部分</span>' +
-        '<span><i style="background:var(--fred)"></i>一個都還沒</span>' +
+        '<span><i class="bnd-ok"></i>都確認了</span>' +
+        '<span><i class="bnd-warn"></i>確認了一部分</span>' +
+        '<span><i class="bnd-bad"></i>一個都還沒</span>' +
       '</div>' +
     '</div>';
 }
