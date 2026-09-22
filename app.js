@@ -4869,7 +4869,7 @@ function drawCases(){
   $('tkBody').innerHTML = (TK_CUR === '返鄉休假')
     ? vacBoard(rows)
     : rows.map(caseCard).join('');
-  if(TK_CUR === '返鄉休假') vaclWire();
+  if(TK_CUR === '返鄉休假'){ vaclWire(); vacGateWire(); vacGateLoad(); }
   [].forEach.call($('tkBody').querySelectorAll('[data-case]'), function(el){
     el.addEventListener('click', function(){ openCase(el.dataset.case); });
   });
@@ -4931,9 +4931,85 @@ function vacRow(c){
   '</button>';
 }
 
+/* ── 待處理的問卷（GATE）─────────────────────────────
+
+   工人自己填的問卷不會自動變成案件——問卷是公開網址，
+   自動開案的話填錯的、重複的、亂填的都會長在看板上。
+   這裡列出來讓他按一下轉成案件，資料自動帶進去，不用重打。
+
+   ⚠ 這一區只在「有待處理」的時候出現。永遠掛一塊空的在那裡，
+     兩個禮拜後他就不會再看它了。 */
+var VACP_ = [];
+
+function vacGate(){
+  if(!VACP_.length) return '';
+  return '<div class="vgate">' +
+    '<div class="vg1"><b>GATE</b><span>工人填好的問卷 ' + VACP_.length + ' 筆　按一下開成案件</span></div>' +
+    VACP_.map(function(q, i){
+      var when = q.out ? q.out.slice(5) : '未定';
+      return '<div class="vgrow">' +
+        '<span class="d">' + esc(when) + '<s>' + (q.dep ? 'FINAL' : 'RETURN') + '</s></span>' +
+        '<span class="m"><b>' + esc(q.name || '（沒填姓名）') + '</b>' +
+          '<i>' + esc(q.client) + '</i>' +
+          '<u>' + esc([q.country, q.book, q.back ? ('回台 ' + q.back.slice(5)) : '']
+                        .filter(function(x){ return x; }).join('　·　')) + '</u></span>' +
+        '<span class="a">' +
+          '<button type="button" class="vgo" data-i="' + i + '">開成案件</button>' +
+          '<button type="button" class="vno" data-i="' + i + '">忽略</button>' +
+        '</span></div>';
+    }).join('') +
+  '</div>';
+}
+
+/* 抓待處理的問卷。⚠ 失敗就當作沒有——這一區是加分項，
+   後端出問題不該讓整個出境看板跟著空白。 */
+function vacGateLoad(){
+  google.script.run
+    .withSuccessHandler(function(r){
+      VACP_ = (r && r.rows) || [];
+      var box = $('vgateBox');
+      if(box){ box.innerHTML = vacGate(); vacGateWire(); }
+    })
+    .withFailureHandler(function(){})
+    .vacPending(CODE);
+}
+
+function vacGateWire(){
+  var box = $('vgateBox'); if(!box) return;
+  [].forEach.call(box.querySelectorAll('.vgo'), function(b){
+    b.addEventListener('click', function(){
+      var q = VACP_[+b.dataset.i]; if(!q) return;
+      b.disabled = true; b.textContent = '開案中…';
+      google.script.run
+        .withSuccessHandler(function(res){
+          toast('已開成 ' + ((res && res.id) || '案件'));
+          /* 看板要立刻多出那一筆——重畫會順便再抓一次待處理的問卷。 */
+          TK_LOADED = ''; TK_ROWS = []; loadTrack();
+        })
+        .withFailureHandler(function(err){
+          b.disabled = false; b.textContent = '開成案件';
+          toast((err && err.message) || '開案失敗', true);
+        })
+        .vacToCase(CODE, q.row);
+    });
+  });
+  [].forEach.call(box.querySelectorAll('.vno'), function(b){
+    b.addEventListener('click', function(){
+      var q = VACP_[+b.dataset.i]; if(!q) return;
+      if(!confirm('把「' + (q.name || '這一筆') + '」收起來？\n\n' +
+                  '那一列還在試算表裡，只是不再出現在這裡。')) return;
+      google.script.run
+        .withSuccessHandler(function(){ vacGateLoad(); })
+        .withFailureHandler(function(err){ toast((err && err.message) || '失敗', true); })
+        .vacIgnore(CODE, q.row);
+    });
+  });
+}
+
 function vacBoard(rows){
   var going = rows.filter(function(c){ return c.status === '進行中'; }).length;
   return vacIssue() +
+  '<div id="vgateBox">' + vacGate() + '</div>' +
   '<div class="fids">' +
     '<div class="bar"><b>返鄉 · 出境看板</b>' +
       '<span class="now">' + going + ' 人在途中　' + esc(todayStr().slice(5)) + '</span></div>' +
