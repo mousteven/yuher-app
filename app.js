@@ -4468,12 +4468,16 @@ function drawReviewActions(r){
        「修改內容」放在送審上面——被退回時該做的是先改，不是再送一次。 */
     h = '<div class="rvform">'+
         '<button type="button" class="act" id="rvEdit" '+
-        'style="width:100%;padding:13px;border-radius:11px;border:1px solid var(--line);'+
-        'background:var(--card);color:var(--ink);font-size:15px;font-weight:700;'+
+        /* ⚠ 這兩顆是行內樣式，所以尺度與顏色都要自己照 token 寫：
+           圓角只有 --r0/--r1/--r2，字級只有 --t0…--t6，
+           填滿式按鈕的底是 --fill 不是 --brand（夜間 --brand 是淺藍，
+           白字壓上去只有 2.5:1）。 */
+        'style="width:100%;padding:13px;border-radius:var(--r1);border:1px solid var(--line);'+
+        'background:var(--card);color:var(--ink);font-size:var(--t2);font-weight:700;'+
         'font-family:inherit;margin-bottom:8px">修改內容</button>'+
         '<button type="button" class="act p" id="rvSubmit" '+
-        'style="width:100%;padding:14px;border-radius:11px;border:1px solid var(--brand);'+
-        'background:var(--brand);color:#fff;font-size:15px;font-weight:700;'+
+        'style="width:100%;padding:14px;border-radius:var(--r1);border:1px solid var(--fill);'+
+        'background:var(--fill);color:var(--fill-ink);font-size:var(--t2);font-weight:700;'+
         'font-family:inherit">送審給副理</button></div>';
   } else if(role === '副理' && r.status === '待副理審'){
     h = '<div class="rvform">'+

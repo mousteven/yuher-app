@@ -6,18 +6,28 @@
    否則同事的瀏覽器會繼續吃舊快取。 */
 /* 翻譯人員站在工廠裡用手機填，所以：目標鍵大、固定白底好讀、少打字。 */
 :root{
-  --brand:#1B3B6F; --brand-d:#132B52; --brand-soft:#E7EDF6; --brand2:var(--info-ink);
-  --rose:#9E3B52; --rose-soft:var(--bad-bg);
-  --ink:#131A26; --ink2:#41506B; --ink3:#7F8CA3;
-  --bg:#F4F6FA; --card:#fff; --line:#DDE3EC; --line2:#EDF1F7;
-  --warn:#a8641a; --warn-soft:#f9efe1; --danger:#9E3B52; --ok:#1c6b3f;
+  --brand:#14304F; --brand-d:#0E2440; --brand-soft:#E6ECF4; --brand2:var(--info-ink);
+  --rose:#7E2A38; --rose-soft:var(--bad-bg);
+  --ink:#131A26; --ink2:#41506B; --ink3:#67718A;
+  --bg:#F4F6F8; --card:#fff; --line:#DCE2EA; --line2:#EBEFF4;
+  --warn:#a8641a; --warn-soft:#f9efe1; --danger:#7E2A38; --ok:#0B5940;
   /* 狀態色。四組各有文字、底、框線、長條四個值，
      夜間模式只要換這一組，不用一處一處找。 */
-  --ok-ink:#12674A;   --ok-bg:#E6F2EC;   --ok-line:#B9DBCB;   --ok-bar:#1E9E72;
+  --ok-ink:#0B5940;   --ok-bg:#E7F1EC;   --ok-line:#B7D5C6;   --ok-bar:#3FAE86;
   --warn-ink:#8A6318; --warn-bg:#FBF1E4; --warn-line:#E7D2AE; --warn-bar:#C99A3E;
   --info-ink:#2A5599; --info-bg:#E9EEF8; --info-line:#C7D5EA; --info-bar:#4A6FA5;
-  --bad-ink:#9E3B52;  --bad-bg:#F8EAEF;  --bad-line:#E2C3CD;  --bad-bar:#9E3B52;
-  --chrome-bg:#1B3B6F; --chrome-ink:#fff;
+  --bad-ink:#7E2A38;  --bad-bg:#F6E9EC;  --bad-line:#DFC3CA;  --bad-bar:#74242F;
+  --chrome-bg:#14304F; --chrome-ink:#fff;
+  /* 填滿式按鈕的底。⛔ 不可以直接用 --brand——夜間的 --brand 是
+     **淺**藍（給深底上的文字用），白字壓上去只有 2.5:1。
+     兩個工作不一樣：--brand 是字的顏色，--fill 是底的顏色。 */
+  --fill:#14304F; --fill-ink:#fff;
+  /* 同樣的道理，四組狀態色各補一個「填滿色」。
+     ⛔ 規則只有一條：**要填滿就用 --*-fill，要畫條子就用 --*-bar。**
+        條子沒有字，所以可以亮；按鈕上面有白字，所以必須暗。
+     2026-09-22 掃出十一處把條子色或文字色拿去當按鈕底，
+     最糟的是「開成案件」那顆：白字在 #3FAE86 上只有 2.76:1。 */
+  --ok-fill:#0B5940; --warn-fill:#8A6318; --bad-fill:#74242F;
   --shadow:0 8px 28px -12px rgba(10,16,28,.3);
   /* ── 追蹤頁籤的看板（2026-09-22）──────────────────
      ⛔ 之前是釘死的深色（--fids），跟 App 其他頁不同調，
@@ -25,8 +35,8 @@
         改成跟著主題走，深淺各一組。
      ⚠ 航廈的味道不靠底色，靠**結構**：等寬字的機場代碼、
        › 的航線箭頭、看板式的標頭。那些在淺色下一樣成立。 */
-  --board:var(--card); --board2:#F6F8FB; --board-line:var(--line);
-  --sunk:#F6F8FB; --accent:#1B3B6F; --accent-soft:#EAF0F9;
+  --board:var(--card); --board2:#F5F7F9; --board-line:var(--line);
+  --sunk:#F5F7F9; --accent:#14304F; --accent-soft:#E9EEF5;
   --grid:rgba(20,30,50,.07);
   /* ── 兩把尺（2026-09-22 設計檢視第 8 項）─────────────────
 
@@ -189,7 +199,7 @@
   font-size:var(--t5);background:var(--card);border:1px solid var(--line);
   color:var(--ink3)}
 .vstep span.done{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
-.vstep span.cur{background:var(--brand);border-color:transparent;color:#fff;font-weight:700}
+.vstep span.cur{background:var(--fill);border-color:transparent;color:var(--fill-ink);font-weight:700}
 .vstamp{display:flex;gap:5px;margin-bottom:12px}
 .vstamp span{flex:1;text-align:center;padding:6px 2px;border-radius:var(--r1);
   font-size:var(--t5);background:var(--ok-bg);color:var(--ok-ink);
@@ -208,7 +218,7 @@
   border:1px solid var(--line);background:var(--card);color:var(--ink);
   font:inherit;font-size:var(--t4);font-weight:600;cursor:pointer}
 .vacts button:active,.hacts button:active{background:var(--sunk)}
-.vacts .pri,.hacts .pri{background:var(--brand);border-color:transparent;color:#fff}
+.vacts .pri,.hacts .pri{background:var(--fill);border-color:transparent;color:var(--fill-ink)}
 /* 結案／開錯了那些留在完整那一頁——少做、而且比較重要，
    不該跟「改個日期」擺在一起誤觸。 */
 .vacts .full,.hacts .full{flex:0 0 100%;border:0;background:none;
@@ -230,7 +240,7 @@
 .vbact button{flex:1;min-height:44px;border-radius:var(--r1);border:1px solid var(--line);
   background:var(--card);color:var(--ink);font:inherit;
   font-size:var(--t4);font-weight:700;cursor:pointer}
-.vbact .pri{background:var(--brand);border-color:transparent;color:#fff}
+.vbact .pri{background:var(--fill);border-color:transparent;color:var(--fill-ink)}
 .vbact .gate{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
 .vbact button:active{filter:brightness(.96)}
 .vgate{background:var(--ok-bg);border:1px solid var(--ok-line)}
@@ -279,7 +289,8 @@
   color:var(--ink3);margin-top:2px}
 .vgrow .a,.vgrow .ga{grid-column:1/-1;display:flex;gap:8px;margin-top:8px}
 .vgrow .a button,.vgrow .ga button{flex:1;min-height:44px;border-radius:var(--r1);border:0;
-  font:inherit;font-size:var(--t4);font-weight:700;background:var(--ok-bar);color:#fff;
+  font:inherit;font-size:var(--t4);font-weight:700;background:var(--ok-fill);
+  color:var(--fill-ink);
   cursor:pointer}
 .vgrow .a .vno,.vgrow .ga .no{flex:0 0 84px;background:var(--card);color:var(--ink2);
   border:1px solid var(--line)}
@@ -335,19 +346,22 @@
    深藍底、亮一階的主色（深色底上原本的海軍藍會看不見）。
    簽名板與服務表預覽不跟著變，見下面。 */
 body.dark{
-  --brand:#7AA5DE; --brand-d:#5F8CC9; --brand-soft:#1C2A45; --brand2:#9CBDEC;
-  --rose:#E08098; --rose-soft:#3A2028;
+  --brand:#7FA8DC; --brand-d:#6690C6; --brand-soft:#18253C; --brand2:#9CBDEC;
+  --rose:#E79AAA; --rose-soft:#2E1F26;
   --ink:#E9EEF6; --ink2:#AEBBD0; --ink3:#7C8AA3;
-  --bg:#0E1320; --card:#171E2E; --line:#2B3549; --line2:#1E2636;
-  --warn:#E0A960; --warn-soft:#2E2414; --danger:#E08098; --ok:#4FBF8B;
-  --ok-ink:#6FD3A6;   --ok-bg:#142B22;   --ok-line:#245C44;   --ok-bar:#3EAE7E;
+  --bg:#0D1219; --card:#161D29; --line:#28313F; --line2:#1C2432;
+  --warn:#E0A960; --warn-soft:#2E2414; --danger:#E79AAA; --ok:#4FBF95;
+  --ok-ink:#68C59D;   --ok-bg:#12291F;   --ok-line:#25523F;   --ok-bar:#6FDCAE;
   --warn-ink:#E6B771; --warn-bg:#2E2414; --warn-line:#5B4726; --warn-bar:#D2A053;
   --info-ink:#9CBDEC; --info-bg:#182338; --info-line:#33486D; --info-bar:#5E87C4;
-  --bad-ink:#F0A0B2;  --bad-bg:#33202A;  --bad-line:#6B3B4A;  --bad-bar:#D4778D;
-  --chrome-bg:#141C2E; --chrome-ink:#EAF0F8;
+  --bad-ink:#E79AAA;  --bad-bg:#2E1F26;  --bad-line:#5E3640;  --bad-bar:#B85469;
+  --chrome-bg:#111925; --chrome-ink:#EAF0F8;
+  /* 夜間把同一個藍提亮才按得到。墨藍 #14304F 在深底上幾乎看不見。 */
+  --fill:#2E5E97; --fill-ink:#fff;
+  --ok-fill:#1E7A5C; --warn-fill:#96701F; --bad-fill:#B85469;
   --shadow:0 8px 28px -12px rgba(0,0,0,.6);
   color-scheme:dark;
-  --board:#0F141C; --board2:#161D28; --board-line:#232C3A; --sunk:#131922;
+  --board:#0A0F16; --board2:#141A24; --board-line:#222A38; --sunk:#111722;
   /* 夜間才有琥珀——那是航廈看板的顏色，白天用它會糊在白底上。 */
   --accent:#F0B429; --accent-soft:rgba(240,180,41,.12);
   --grid:rgba(255,255,255,.05);
@@ -403,7 +417,7 @@ body.hidechrome{--stick:0px}
 @media (prefers-reduced-motion:reduce){
   #upbar i{animation:none;width:100%;opacity:.6}
 }
-#newver{position:sticky;top:0;z-index:30;background:var(--brand2);color:#fff;
+#newver{position:sticky;top:0;z-index:30;background:var(--fill);color:var(--fill-ink);
   padding:10px 14px;font-size:var(--t2);font-weight:700;text-align:center;cursor:pointer;
   letter-spacing:.02em}
 .top b{font-size:var(--t2);letter-spacing:.01em;white-space:nowrap;overflow:hidden;
@@ -460,7 +474,7 @@ body.tabsbottom .tabs button[data-t=new]{justify-content:center;gap:0;
 body.tabsbottom .tabs button[data-t=new] span{display:none}
 body.tabsbottom .tabs .plus{display:block;position:relative;
   width:2.5rem;height:2.5rem;
-  border-radius:50%;background:var(--brand);
+  border-radius:50%;background:var(--fill);
   transition:transform .14s cubic-bezier(.32,.72,0,1),
              box-shadow .2s ease,background .2s ease}
 body.tabsbottom .tabs .plus::before,
@@ -513,7 +527,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   border:1px solid var(--line);background:var(--bg);border-radius:var(--r2);padding:8px 13px;
   cursor:pointer;margin:0}
 .chips input{width:auto;margin:0;accent-color:var(--brand)}
-.chips label:has(input:checked){background:var(--brand);border-color:var(--brand);color:#fff}
+.chips label:has(input:checked){background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 .chips .ph{font-size:var(--t4);color:var(--ink3);padding:8px 2px}
 .hint{font-size:var(--t4);color:var(--ink3);margin:0 0 4px}
 
@@ -528,7 +542,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .btns{display:flex;gap:8px}
 .btns button{flex:1;padding:14px;border-radius:var(--r2);border:1px solid var(--line);
   background:var(--card);font-weight:700;cursor:pointer}
-.btns button.p{background:var(--brand);border-color:var(--brand);color:#fff}
+.btns button.p{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 .btns button:disabled{opacity:.55}
 
 .rec{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
@@ -624,7 +638,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .smbtns{display:flex;gap:8px;margin-top:12px}
 .smbtns button{flex:1;padding:13px;border-radius:var(--r2);border:1px solid var(--line);
   background:var(--card);font-size:var(--t2);font-weight:700;cursor:pointer;color:var(--ink2)}
-.smbtns button.p{background:var(--brand);border-color:var(--brand);color:#fff}
+.smbtns button.p{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 
 /* ── 骨架：還沒回來的那幾格 ───────────────────────────────
    2026-09-18。原本點已完成的行程是整片空白配「讀取中…」，等 2–3 秒。
@@ -663,9 +677,9 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   border-left:1px solid var(--line);transition:background .13s,color .13s}
 .swst i{font-style:normal;font-size:var(--t2);line-height:1}
 .swst b{font-size:var(--t6);font-weight:800;letter-spacing:.02em}
-.swst.hot{background:var(--brand);color:#fff}
+.swst.hot{background:var(--fill);color:var(--fill-ink)}
 .swst.bad{color:var(--danger)}
-.swst.bad.hot{background:var(--danger);color:#fff}
+.swst.bad.hot{background:var(--bad-fill);color:var(--fill-ink)}
 /* 滑過一格的那一下。iPhone 不給網頁震動，這個是他們唯一收得到的回饋 */
 .swst.pop{animation:swpop .22s cubic-bezier(.34,1.4,.5,1)}
 @keyframes swpop{ 0%{transform:scale(1)} 40%{transform:scale(1.14)} 100%{transform:scale(1)} }
@@ -738,10 +752,10 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   transition:transform .12s ease-out}
 .stack button:active{transform:scale(.97)}
 .stack button:disabled{opacity:.5}
-.stack button.p{background:var(--brand);border-color:var(--brand);color:#fff}
+.stack button.p{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 .stack button.sec{border-color:var(--brand);color:var(--brand2)}
 /* 橘色＝「還沒完成的事」。跟藍色的送審分開，人一眼看得出這次要按的不一樣 */
-.stack button.w{background:var(--warn-bar);border-color:var(--warn-bar);color:#fff}
+.stack button.w{background:var(--warn-fill);border-color:var(--warn-fill);color:var(--fill-ink)}
 .stack button.q{background:transparent;border-color:transparent;color:var(--ink3);font-weight:600}
 
 /* PDF 那一格：還沒產生時是一顆按鈕，產生後就地變成檔案本身。
@@ -809,7 +823,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   background:var(--card)}
 .pvbar button{flex:1;padding:13px;border-radius:var(--r2);border:1px solid var(--line);
   background:var(--card);font-size:var(--t2);font-weight:700;cursor:pointer;color:var(--ink2)}
-.pvbar button.p{background:var(--brand);border-color:var(--brand);color:#fff}
+.pvbar button.p{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 .fit{position:relative}
 /* ── 客戶服務紀錄表 ────────────────────────────────────────
    版面設計的三個原則：
@@ -944,7 +958,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .pickFilter{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px}
 .pickFilter button{border:1px solid var(--line);background:var(--card);border-radius:var(--r2);
   padding:5px 14px;font-size:var(--t3);font-weight:700;color:var(--ink2);cursor:pointer}
-.pickFilter button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.pickFilter button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 .picks .o{display:block;font-size:var(--t4);color:var(--ink3);margin-top:1px}
 .picks{max-height:290px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--r2);
   background:var(--card)}
@@ -984,7 +998,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .roster .mk{width:22px;height:22px;border-radius:50%;flex:none;display:grid;
   place-items:center;font-size:var(--t4);font-weight:800;
   border:1.5px solid var(--line);color:transparent;background:var(--card)}
-.roster .it.on .mk{background:var(--brand);border-color:var(--brand);color:#fff}
+.roster .it.on .mk{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 .roster .nm{flex:1;font-size:var(--t2);color:var(--ink3)}
 .roster .it.on .nm{color:var(--ink);font-weight:700}
 .roster .tm{font-size:var(--t4);color:var(--ink3);font-variant-numeric:tabular-nums}
@@ -1024,7 +1038,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   font-size:var(--t2);font-weight:700;color:var(--ink3);cursor:pointer;
   border-right:1px solid var(--line)}
 .segs button:last-child{border-right:0}
-.segs button.on{background:var(--brand);color:#fff}
+.segs button.on{background:var(--fill);color:var(--fill-ink)}
 
 /* 週檢視：手機上七欄太窄，改成一天一列，橫向看得到那天有誰 */
 .wk{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;background:var(--card)}
@@ -1082,7 +1096,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   border:1px solid var(--line);border-radius:var(--r2);padding:6px 13px;background:var(--card);
   font-size:var(--t3);font-family:inherit;color:var(--ink2);cursor:pointer}
 .calf button b{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink3)}
-.calf button.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
+.calf button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink);font-weight:700}
 .calf button.on b{color:rgba(255,255,255,.72)}
 .calf button.clr{border-style:dashed;background:none;color:var(--ink3)}
 .calf.sub button{padding:5px 11px;font-size:var(--t4)}
@@ -1094,7 +1108,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .filters button{border:1px solid var(--line);border-radius:var(--r2);padding:5px 13px;
   font-size:var(--t4);color:var(--ink2);background:var(--card);cursor:pointer;
   font-family:inherit;display:inline-flex;align-items:center;gap:6px}
-.filters button.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
+.filters button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink);font-weight:700}
 .filters .dot{width:8px;height:8px;border-radius:50%;display:block}
 .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:4px 0}
 .dow span{text-align:center;font-size:var(--t5);color:var(--ink3);font-weight:700}
@@ -1106,8 +1120,8 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .cell .d{font-size:var(--t3);color:var(--ink2);font-variant-numeric:tabular-nums}
 .cell.today{border-color:var(--brand)}
 .cell.today .d{color:var(--brand);font-weight:800}
-.cell.sel{background:var(--brand);border-color:var(--brand)}
-.cell.sel .d{color:#fff;font-weight:800}
+.cell.sel{background:var(--fill);border-color:var(--fill)}
+.cell.sel .d{color:var(--fill-ink);font-weight:800}
 .cell .dots{display:flex;gap:2px;flex-wrap:wrap;justify-content:center}
 .cell .dots i{width:5px;height:5px;border-radius:50%;display:block}
 .cell .dots i.hollow{background:transparent!important;box-shadow:inset 0 0 0 1.5px currentColor}
@@ -1140,7 +1154,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   transition:top .22s cubic-bezier(.32,.72,0,1)}
 .grp:first-child{margin-top:0}
 .grp::after{content:"";flex:1;height:1px;background:var(--line)}
-.grp b{background:var(--brand);color:#fff;border-radius:var(--r2);padding:1px 9px;
+.grp b{background:var(--fill);color:var(--fill-ink);border-radius:var(--r2);padding:1px 9px;
   font-size:var(--t4);letter-spacing:0}
 .grp.done b{background:var(--ink3)}
 .ev{display:flex;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:var(--r2);
@@ -1187,7 +1201,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .ev .acts button{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
   padding:5px 11px;min-height:2.25rem;font-size:var(--t4);font-weight:700;
   color:var(--ink2);cursor:pointer;font-family:inherit;white-space:nowrap}
-.ev .acts button.p{background:var(--brand);border-color:var(--brand);color:#fff}
+.ev .acts button.p{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 /* ⚠ 一定要跟 var(--card) 混，不可以跟 transparent 混。
    這張卡片外面包了一層會露出取消／追蹤按鈕的容器，半透明的話
    底下的東西會整片透出來。外觀完全一樣，差別只在不透明。 */
@@ -1443,9 +1457,13 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .top #guideBtn:hover,.top #guideBtn:focus-visible{opacity:1}
 .top #guideBtn:active{opacity:.6}
 
+/* ⛔ 底色用 --bad-bar 不是 --danger。--danger 是**字**的紅，
+   夜間它是淺粉（給深底上的文字用），白字壓上去只有 2.2:1。
+   --bad-bar 是**填滿用**的紅：日間 10.3:1、夜間 4.7:1，兩邊都過。
+   這跟 --brand／--fill 是同一個道理：字的顏色與底的顏色是兩件事。 */
 .badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;
-  height:18px;padding:0 5px;margin-left:5px;border-radius:var(--r2);background:var(--danger);
-  color:#fff;font-size:var(--t5);font-weight:800;font-style:normal;vertical-align:1px}
+  height:18px;padding:0 5px;margin-left:5px;border-radius:var(--r2);background:var(--bad-fill);
+  color:var(--fill-ink);font-size:var(--t5);font-weight:800;font-style:normal;vertical-align:1px}
 /* ── 送審頁的頁首 ──────────────────────────────────
    原本是「待我審閱　5」——一個分類名加一個數字，
    使用者還要自己想「所以我要先處理哪一筆」。
@@ -1459,7 +1477,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .rvhead.act{border-color:var(--bad-line);background:var(--bad-bg)}
 .rvhead .ic{flex:none;width:28px;height:28px;border-radius:var(--r1);
   background:var(--ink);color:var(--card);display:grid;place-items:center}
-.rvhead.act .ic{background:var(--bad-ink);color:#fff}
+.rvhead.act .ic{background:var(--bad-fill);color:var(--fill-ink)}
 .rvhead .ic svg{width:16px;height:16px}
 .rvhead .tx{flex:1;min-width:0}
 .rvhead .tx b{display:block;font-size:var(--t2);line-height:1.5;color:var(--ink);
@@ -1475,7 +1493,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .rvbar button{flex:1;padding:10px;border-radius:var(--r1);border:1px solid var(--line);
   background:var(--card);font-size:var(--t2);font-weight:700;color:var(--ink2);cursor:pointer;
   font-family:inherit}
-.rvbar button.p{background:var(--brand);border-color:var(--brand);color:#fff}
+.rvbar button.p{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 .rvbar button:disabled{opacity:.45}
 .rv{display:flex;gap:10px;padding:12px;border:1px solid var(--line);border-radius:var(--r2);
   margin-bottom:9px;background:var(--card);align-items:flex-start}
@@ -1533,7 +1551,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   padding:12px 13px 11px;margin-bottom:10px}
 .rvw .hd{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
   padding-bottom:9px;border-bottom:1px solid var(--line);margin-bottom:10px}
-.rvw .hd i{font-style:normal;font-size:var(--t5);font-weight:800;background:var(--ink);color:#fff;
+.rvw .hd i{font-style:normal;font-size:var(--t5);font-weight:800;background:var(--ink);color:var(--card);
   border-radius:var(--r0);padding:2px 6px}
 .rvw .hd b{font-size:var(--t1);letter-spacing:.03em}
 .rvw .hd .or{font-size:var(--t4);color:var(--ink3)}
@@ -1593,7 +1611,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 /* 名單可以很長，滑到一半要回頭改篩選條件時，
    一路往上滑太久。右下角給一顆，按了直接回最上面並把頁籤放回來。 */
 #toTop{position:fixed;right:16px;bottom:calc(var(--sab, env(safe-area-inset-bottom, 0px)) + 18px);
-  width:46px;height:46px;border-radius:50%;border:0;background:var(--brand);color:#fff;
+  width:46px;height:46px;border-radius:50%;border:0;background:var(--fill);color:var(--fill-ink);
   font-size:var(--t0);line-height:1;cursor:pointer;z-index:40;font-family:inherit;
   box-shadow:0 6px 18px rgba(19,26,38,.3);
   opacity:0;transform:translateY(14px) scale(.9);pointer-events:none;
@@ -1610,7 +1628,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   background:var(--ink);color:var(--bg);padding:11px 20px;border-radius:var(--r2);font-size:var(--t2);
   font-weight:700;opacity:0;transition:.18s;pointer-events:none;z-index:60;max-width:88vw;text-align:center}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
-#toast.bad{background:var(--danger);color:#fff}
+#toast.bad{background:var(--bad-fill);color:var(--fill-ink)}
 .mid{padding:44px 20px;text-align:center;color:var(--ink3);font-size:var(--t2);line-height:1.9}
 /* ── 登入 ──────────────────────────────────────────
    登入碼是四位數字，所以不用文字輸入框，直接給數字鍵盤——
@@ -1636,7 +1654,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 
 .lg-top{text-align:center;margin-bottom:2rem}
 .lg-mark{display:inline-grid;place-items:center;width:4rem;height:4rem;
-  border-radius:var(--r2);background:var(--brand);color:#fff;
+  border-radius:var(--r2);background:var(--fill);color:var(--fill-ink);
   font-size:var(--t0);font-weight:700;letter-spacing:.06em;
   box-shadow:0 10px 26px -10px color-mix(in oklab,var(--brand) 70%,transparent)}
 /* 公司名退一階當落款，App 名稱才是主角——
@@ -1718,7 +1736,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   font-family:inherit;font-size:var(--t1);text-align:center;letter-spacing:.3em;
   background:var(--card);color:var(--ink)}
 .lg-alt button{padding:.85rem;border-radius:var(--r2);border:1px solid var(--brand);
-  background:var(--brand);color:#fff;font-family:inherit;font-size:var(--t1);
+  background:var(--fill);color:var(--fill-ink);font-family:inherit;font-size:var(--t1);
   font-weight:700;cursor:pointer}
 
 @media (prefers-reduced-motion:reduce){
@@ -1733,7 +1751,10 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 /* 頁籤上的計數。跟送審那顆紅點同一個 .badge，只是這裡貼在文字後面 */
 #tkKinds button{position:relative}
 #tkKinds .badge{position:static;margin-left:5px;vertical-align:1px}
-#tkKinds button.on .badge{background:rgba(255,255,255,.3)}
+/* ⛔ 選中的那一格底是深藍，紅點要換成「更暗」不是「更亮」。
+   原本是白色 30%，白字壓上去只有 3.4:1——夜間唯一沒過的那一個。
+   往黑的方向壓，日間 15:1、夜間 7.7:1。 */
+#tkKinds button.on .badge{background:rgba(0,0,0,.28)}
 
 /* 先講一句人話，再列清單 */
 /* ⛔ .tklede 2026-09-22 跟著 tkLede() 一起刪掉。
@@ -1787,7 +1808,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 /* ── 登機證：返鄉休假 ───────────────────────────────
    機票長什麼樣大家都認得，不用再教一次怎麼讀。
    中間那條剪票線兩側的圓孔是紙票的記號，有它就一眼知道在講飛機。 */
-.bp{background:var(--brand);color:#fff;border-radius:var(--r2);overflow:hidden;
+.bp{background:var(--fill);color:var(--fill-ink);border-radius:var(--r2);overflow:hidden;
   margin-bottom:11px}
 .bp .hd{display:flex;align-items:center;gap:8px;padding:11px 14px 0;
   font-size:var(--t5);letter-spacing:.14em;opacity:.78}
@@ -1801,7 +1822,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .bp .arw::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;
   background:rgba(255,255,255,.34)}
 .bp .arw::after{content:"\2708";position:absolute;left:50%;top:50%;
-  transform:translate(-50%,-52%);font-size:var(--t3);background:var(--brand);
+  transform:translate(-50%,-52%);font-size:var(--t3);background:var(--fill);
   padding:0 5px}
 .bp .dt{padding:0 14px 12px;display:flex;gap:16px;font-size:var(--t4)}
 .bp .dt div span{display:block;opacity:.64;font-size:var(--t6);letter-spacing:.1em;
@@ -1875,7 +1896,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   background:var(--card);font-family:inherit;font-size:var(--t4);color:var(--ink3);
   cursor:pointer;white-space:nowrap}
 .stp.done{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
-.stp.now{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:800}
+.stp.now{background:var(--fill);border-color:var(--fill);color:var(--fill-ink);font-weight:800}
 .stp:active{transform:scale(.97)}
 @media (prefers-reduced-motion:reduce){ .stp:active{transform:none} }
 
@@ -1996,7 +2017,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   justify-content:center;font-variant-numeric:tabular-nums;z-index:1}
 /* 目前這一筆要標出來。不然點進去看完第一筆，回來就不知道自己原本在哪。 */
 .ci.cur{background:var(--brand-soft)}
-.ci.cur .no{background:var(--brand);color:#fff}
+.ci.cur .no{background:var(--fill);color:var(--fill-ink)}
 .ci .top{display:flex;align-items:baseline;gap:6px;min-width:0}
 .ci .d{font-size:var(--t3);font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
 .ci .me{font-size:var(--t6);font-weight:800;color:var(--brand);background:var(--card);
@@ -2045,7 +2066,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .mgmini .no{flex:none;width:17px;height:17px;border-radius:50%;background:var(--line2);
   color:var(--ink2);font-size:var(--t6);font-weight:800;display:flex;align-items:center;
   justify-content:center;font-variant-numeric:tabular-nums}
-.mgmini .r.new .no{background:var(--ok-bar);color:#fff}
+.mgmini .r.new .no{background:var(--ok-fill);color:var(--fill-ink)}
 .mgmini .d{flex:none;font-variant-numeric:tabular-nums;font-weight:700;font-size:var(--t5)}
 .mgmini .s{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mgmini .was{flex:none;font-size:var(--t6);color:var(--ink3)}
@@ -2053,7 +2074,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .mggo button{flex:1;padding:13px;border-radius:var(--r2);font-family:inherit;font-size:var(--t2);
   font-weight:800;cursor:pointer;border:1px solid var(--line);background:var(--card);
   color:var(--ink2)}
-.mggo button.p{background:var(--brand);border-color:var(--brand);color:#fff}
+.mggo button.p{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 
 /* ── 紀錄詳情的追蹤區塊 c5（2026-09-19，他挑的 A）──────────────
    一句人話 → 一條進度 → 代碼縮到最小放最後。
@@ -2125,11 +2146,12 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .c6i:not(:last-child)::after{content:'';position:absolute;left:6px;top:28px;
   bottom:-4px;width:2px;background:var(--line)}
 .c6i .d{width:14px;height:14px;border-radius:var(--r2);flex:none;margin-top:4px;
-  display:grid;place-items:center;font-size:var(--t6);font-weight:700;color:#fff;
-  background:var(--line)}
-.c6i.ok .d{background:var(--ok-ink)}
-.c6i.now .d{background:var(--brand)}
-.c6i.next .d{background:var(--warn-ink)}
+  display:grid;place-items:center;font-size:var(--t6);font-weight:700;
+  /* ⚠ 還沒到的那一顆是灰底，白字在上面只有 1.3:1。灰底配深字。 */
+  color:var(--ink2);background:var(--line)}
+.c6i.ok .d{background:var(--ok-fill);color:var(--fill-ink)}
+.c6i.now .d{background:var(--fill);color:var(--fill-ink)}
+.c6i.next .d{background:var(--warn-fill);color:var(--fill-ink)}
 .c6i .c{flex:1;min-width:0}
 .c6i .c em{font-style:normal;font-size:var(--t6);color:var(--ink3);
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em}
@@ -2169,9 +2191,9 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .lprw.on{border-color:var(--brand);background:var(--brand-soft)}
 .lprw.lock{opacity:.62;background:var(--line2);cursor:default}
 .lprw .ck{width:20px;height:20px;border-radius:var(--r1);border:1.5px solid var(--line);
-  flex:none;display:grid;place-items:center;font-size:var(--t5);color:#fff;
+  flex:none;display:grid;place-items:center;font-size:var(--t5);color:var(--fill-ink);
   margin-top:2px}
-.lprw.on .ck{background:var(--brand);border-color:var(--brand)}
+.lprw.on .ck{background:var(--fill);border-color:var(--fill)}
 .lprw.lock .ck{border-style:dashed}
 .lprw .c{flex:1;min-width:0;display:block}
 .lprw .r1{display:flex;align-items:baseline;gap:8px}
@@ -2202,7 +2224,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .lppv .k{width:22px;height:22px;border-radius:var(--r2);background:var(--line2);
   display:grid;place-items:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size:var(--t5);font-weight:600;color:var(--ink2);flex:none}
-.lppv .pvi.add .k{background:var(--brand);color:#fff}
+.lppv .pvi.add .k{background:var(--fill);color:var(--fill-ink)}
 .lppv .pvi .c{flex:1;min-width:0}
 .lppv .pvi .c b{display:block;font-weight:600}
 .lppv .pvi .c span{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -2286,7 +2308,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .bf1 .tm{flex:none;font-family:ui-monospace,Menlo,monospace;font-size:var(--t5)}
 .bf1.on{color:var(--ink)}
 .bf1.on .nm{font-weight:700}
-.bf1.on .mk{background:var(--ok-ink);border-color:var(--ok-ink);color:#fff}
+.bf1.on .mk{background:var(--ok-fill);border-color:var(--ok-fill);color:var(--fill-ink)}
 .rvbf .hint{font-size:var(--t5);color:var(--ink3);margin:9px 0 0}
 
 .bneed{font-size:var(--t4);line-height:1.55;color:var(--warn-ink);
@@ -2373,7 +2395,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .epkchip{font-size:var(--t4);border:1px solid var(--line);border-radius:var(--r2);
   padding:3px 10px;color:var(--ink2);background:var(--card);font-family:inherit;
   white-space:nowrap}
-.epkchip.on{background:var(--brand);border-color:var(--brand);color:#fff;
+.epkchip.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink);
   font-weight:700}
 .epkhd{font-size:var(--t5);color:var(--ink3);margin:10px 0 2px;
   font-family:ui-monospace,Menlo,monospace;letter-spacing:.06em}
@@ -2462,7 +2484,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .hcwho{display:flex;flex-wrap:wrap;gap:6px}
 .hcwho button{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
   padding:5px 11px;font-size:var(--t3);color:var(--ink2);font-family:inherit}
-.hcwho button.on{background:var(--brand);border-color:var(--brand);color:#fff;
+.hcwho button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink);
   font-weight:700}
 
 /* 案件頁的體檢區塊 */
@@ -2505,7 +2527,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .seg2{display:flex;gap:6px;flex:none}
 .seg2 button{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
   padding:6px 13px;font-size:var(--t3);color:var(--ink2);font-family:inherit}
-.seg2 button.on{background:var(--ok-ink);border-color:var(--ok-ink);color:#fff;
+.seg2 button.on{background:var(--ok-fill);border-color:var(--ok-fill);color:var(--fill-ink);
   font-weight:700}
 .seg2 button.no.on{background:var(--bad-ink);border-color:var(--bad-ink)}
 
@@ -2526,14 +2548,14 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .hcacts button{flex:1 1 auto;border:1px solid var(--line);background:var(--card);
   border-radius:var(--r1);padding:11px;font-size:var(--t2);font-weight:600;
   color:var(--ink2);font-family:inherit}
-.hcacts button.p{background:var(--brand);border-color:var(--brand);color:#fff;
+.hcacts button.p{background:var(--fill);border-color:var(--fill);color:var(--fill-ink);
   font-weight:700}
 
 /* 體檢：要帶什麼（點選的會翻成工人的母語） */
 .hcbring{display:flex;flex-wrap:wrap;gap:6px}
 .hcbring button{border:1px solid var(--line);background:var(--card);border-radius:var(--r1);
   padding:6px 12px;font-size:var(--t3);color:var(--ink2);font-family:inherit}
-.hcbring button.on{background:var(--brand);border-color:var(--brand);color:#fff;
+.hcbring button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink);
   font-weight:700}
 
 /* 體檢：移工自己回報的號碼跟名冊不一樣 */
