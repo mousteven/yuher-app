@@ -4916,11 +4916,16 @@ function vacRow(c){
       '<s>' + esc(tm || '—') + '</s></span>' +
     /* ⛔ 機場還沒填就整段寫「目的地未定」，不要印 ??? ——
        那看起來像系統壞了，而不是「這一格他還沒填」。 */
+    /* ⚠ 自己買票的人問卷不問機場（他已經有票），所以只有國家。
+       印「回菲律賓・未訂機場」比印「目的地未定」誠實——
+       後者看起來像我們什麼都不知道。 */
     '<span class="m"><span class="rt">' +
         ((frm && to)
           ? (esc(frm) + ' <i>›</i> ' + esc(to) +
              (air ? ' <i>' + esc(air) + '</i>' : ' <i>未訂票</i>'))
-          : '<i>目的地未定</i>') + '</span>' +
+          : (d.toName
+              ? ('回 ' + esc(d.toName) + ' <i>未訂機場</i>')
+              : '<i>目的地未定</i>')) + '</span>' +
       '<span class="nm">' + esc(c.workers || '（未填移工）') + '</span>' +
       '<span class="co">' + esc(c.client || '') + '</span></span>' +
     /* ⛔ 狀態欄只有 88px。整句 state.text（「已離境・剩 3 天」）會被擠成三行。
