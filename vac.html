@@ -431,7 +431,14 @@ function vacPrefill(who) {
      越南籍的工人看到的是菲律賓，**底下的機場清單也跟著是菲律賓的**。
      ⚠ 換國家之後一定要重畫機場（updateAirports），
        不然選單裡留著上一個國家的機場，他選得到卻是錯的。 */
-  if (who.country && $('country') && !$('country').value) {
+  /* ⛔ **不要**加 `!$('country').value` 這種防呆。
+     姓名是 <input>，沒填就是空字串，防呆成立；
+     但國家是 <select>，而且選單沒有「請選擇」這一格——
+     瀏覽器一定會自動選第一個（ph 菲律賓），value 永遠不是空的，
+     防呆永遠成立不了，等於這一行從來沒有執行過。
+     2026-09-23 實機跑過才發現：靜態斷言看得到這一行存在，
+     看不到它其實沒有生效。 */
+  if (who.country && $('country')) {
     $('country').value = who.country;
     if ($('country').value === who.country &&
         typeof updateAirports === 'function') updateAirports(true);
