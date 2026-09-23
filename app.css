@@ -2750,6 +2750,10 @@ body.finding .tabs{display:none}
   color:var(--ink3);margin-top:1px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 .prow.tap .vl b{color:var(--brand)}
+/* 「服務過他的人」裡把自己標出來。翻譯掃過去第一件事是找自己在不在。 */
+.prow .pme{font-style:normal;font-size:var(--t6);font-weight:800;
+  padding:1px 6px;border-radius:99px;background:var(--accent-soft);
+  color:var(--brand);letter-spacing:.06em}
 .prow .go{flex:none;font-size:var(--t4);font-weight:700;color:var(--brand)}
 .prow .ar{flex:none;color:var(--ink3);font-size:var(--t2)}
 

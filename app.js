@@ -8731,9 +8731,29 @@ function pplDrawWorker(p){
       '名冊上有兩筆，系統一律讀新的這一份。</div>';
   }
 
-  /* ⑥ 最近的接觸——行程與紀錄合流 */
+  /* ⑥ 服務過他的人。牟佑彬 2026-09-23：
+     「搜尋到一個點進去之後，底下也會附上曾經服務過他的」。
+     ⛔ 接手別人的案子時，真正要問的是「該找誰」——
+        底下那條時間線回答「發生過什麼」，這一段回答「誰最熟他」。
+     ⚠ 自己標出來。翻譯掃過去第一件事是找自己在不在裡面。 */
+  if((p.served || []).length){
+    h += '<div class="psec"><i></i>服務過他的人<span>' +
+      p.served.length + ' 位</span></div><div class="pcard">' +
+      p.served.map(function(x){
+        var me = (x.crew === STAFF_NAME);
+        return '<div class="prow static"><span class="vl"><b>' +
+          esc(x.crew) + (me ? '　<em class="pme">你</em>' : '') + '</b>' +
+          '<s>最近 ' + esc((x.last || '').slice(5).replace('-', '/')) + '</s></span>' +
+          '<span class="cst q">' + x.n + ' 次</span></div>';
+      }).join('') + '</div>';
+  }
+
+  /* ⑦ 最近的接觸——行程與紀錄合流 */
   if((p.timeline || []).length){
-    h += '<div class="psec"><i></i>最近的接觸</div><div class="pcard">' +
+    h += '<div class="psec"><i></i>最近的接觸' +
+      (p.timelineAll > p.timeline.length
+        ? ('<span>共 ' + p.timelineAll + ' 次</span>') : '') +
+      '</div><div class="pcard">' +
       p.timeline.map(function(t){
         return '<div class="ptl"><span class="dt">' +
           esc((t.date || '').slice(5).replace('-', '/')) + '</span>' +
@@ -8743,7 +8763,7 @@ function pplDrawWorker(p){
       }).join('') + '</div>';
   }
 
-  /* ⑦ 可以改的兩格。虛線框跟上面的唯讀區分開。 */
+  /* ⑧ 可以改的兩格。虛線框跟上面的唯讀區分開。 */
   h += '<div class="psec"><i></i>這兩格可以改</div>' +
     '<div class="pedit">' +
       '<label>負責翻譯</label>' +
