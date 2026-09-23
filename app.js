@@ -5445,6 +5445,10 @@ function vaclMint(){
       if(!r || !r.ok){ VACL_.eid = ''; vaclPaint(); return; }
       VACL_.url = r.url;
       VACL_.who = r.name || VACL_.who;
+      /* 訊息由後端組（只有它有 I18n.gs 那六句審過的標題）。
+         ⚠ 舊版後端不會回 msg，vaclPaint 會退回中英雙語那一版。 */
+      VACL_.msg = r.msg || '';
+      VACL_.lang = r.lang || '';
       vaclPaint(r.phone);
     })
     .withFailureHandler(function(e){
@@ -5530,12 +5534,16 @@ function vaclPaint(phone){
        (phone ? ('　<i>手機 ' + esc(phone) + ' 已帶入</i>')
               : '　<i class="warn">名冊上沒有手機，會請他自己填</i>') + '</div>')
     : '';
-  /* ⛔ 文字要中英雙語。工人收到的是這一段，不是我們看的介面。 */
-  var txt = '【返鄉休假 / 期滿離境問卷】\n' +
+  /* ⛔ 2026-09-23：這一段本來寫死中英雙語，
+     **越南籍與泰籍工人收到的是兩種他都看不懂的文字**。
+     現在由後端照名冊上的語別組好（vacInviteMsg_），
+     連結也直接帶 &lang=，打開就是他的語言，不用自己選。
+     ⚠ 沒指定人（整家共用）的那一條不知道是誰要收，維持中英雙語。 */
+  var txt = VACL_.msg || ('【返鄉休假 / 期滿離境問卷】\n' +
     (VACL_.who ? (VACL_.who + '\n') : '') +
     'Vacation / Final Departure Questionnaire\n' +
     '請點連結，選你的語言後填寫。\n' +
-    'Please tap the link, choose your language and fill it in.\n' + url;
+    'Please tap the link, choose your language and fill it in.\n' + url);
   box.innerHTML = tag +
     '<code class="bpurl">' + esc(url) + '</code>' +
     '<div class="bpbtn">' +

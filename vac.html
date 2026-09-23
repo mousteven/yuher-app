@@ -420,8 +420,22 @@ function bootFail() {
      整份表照樣填得完。絕對不要因此擋住他。 */
 function vacPrefill(who) {
   if (!who || !who.ok) return;
-  if (who.name && !$('name').value) $('name').value = who.name;
+  /* ⛔ 中文名與原文名兩個都要印。牟佑彬 2026-09-23：
+     「有些工人看不懂他自己的中文名字」——中文名是我們取的，
+     他護照上寫的是 TRAN HAI LAM。只印中文他不確定這張表是不是他的。
+     ⚠ 這一格的說明寫著「請照護照上的名字」，所以原文名一定要在。 */
+  var nm = [who.name, who.orig].filter(Boolean).join('　');
+  if (nm && !$('name').value) $('name').value = nm;
   if (who.phone && !$('twPhone').value) $('twPhone').value = who.phone;
+  /* ⛔ 國籍要預設成他自己的國家。之前一律停在第一個選項（菲律賓），
+     越南籍的工人看到的是菲律賓，**底下的機場清單也跟著是菲律賓的**。
+     ⚠ 換國家之後一定要重畫機場（updateAirports），
+       不然選單裡留著上一個國家的機場，他選得到卻是錯的。 */
+  if (who.country && $('country') && !$('country').value) {
+    $('country').value = who.country;
+    if ($('country').value === who.country &&
+        typeof updateAirports === 'function') updateAirports(true);
+  }
   if (!who.employer) return;
   setActiveCat(who.cat === 'caretaker' ? 'caretaker' : 'factory');
   var sel = activeEmployerSelect();
