@@ -483,6 +483,10 @@ $('outCancel').addEventListener('click', function(){
 });
 $('outGo').addEventListener('click', function(){
   try { localStorage.removeItem('svc.code'); } catch(e){}
+  /* ⛔ 名冊裡有 1687 個人的完整手機，登出一定要一起清掉。
+     ⚠ 2026-09-23 我在 commit 訊息裡寫了「登出清掉」，但其實沒接上——
+       fdWipe 只有存備註的時候被呼叫到。**寫在訊息裡不等於做了。** */
+  if(typeof fdWipe === 'function') fdWipe();
   CODE = ''; TAX = null; PRESETS = []; CREW = []; MYSIG = '';
   STAFF_NAME = ''; STAFF_ROLE = '';
   CAL_ROWS = []; REV = null; EV = null;
@@ -8396,6 +8400,20 @@ function fdLoad(cb){
     .svcRoster(CODE);
 }
 
+/* 只改名冊裡的一列（存完負責翻譯之後用）。
+   ⛔ 不要為了一格改動就把整份名冊丟掉重載——那會出現一段
+      「名冊是空的」的空窗，而畫面在那段期間會講出錯的話。 */
+function fdPatch_(eid, fields){
+  var hit = null;
+  FD_ROWS_.forEach(function(w){ if(w.e === eid) hit = w; });
+  if(!hit) return;
+  Object.keys(fields).forEach(function(k){ hit[k] = fields[k]; });
+  try {
+    localStorage.setItem(FD_KEY_,
+      JSON.stringify({ t: Date.now(), at: FD_AT_, rows: FD_ROWS_ }));
+  } catch(e){}
+}
+
 /* ⛔ 登出一定要清掉。名冊裡有 1687 個人的手機號碼。 */
 function fdWipe(){
   FD_ROWS_ = []; FD_AT_ = ''; FD_Q_ = '';
@@ -8623,6 +8641,9 @@ function pplOpen(kind, id){
 function pplBack(){
   $('pplWrap').style.display = 'none';
   $('findWrap').style.display = '';
+  /* ⚠ 一定要重畫。在個人頁改過負責翻譯之後回來，
+     不重畫的話清單還停在舊的那一份，看起來像沒存進去。 */
+  fdDraw();
   setTimeout(function(){ try { $('fdQ').focus(); } catch(e){} }, 60);
 }
 
@@ -8783,9 +8804,14 @@ function pplWire(p){
       .withSuccessHandler(function(){
         btn.textContent = '已存起來';
         setTimeout(function(){ btn.disabled = false; btn.textContent = '存起來'; }, 1500);
-        /* ⚠ 名冊快取在後端已經清掉了，手機裡這一份也要，
-           不然搜尋列上的「負責翻譯」還是舊的。 */
-        fdWipe();
+        /* ⛔ **不要 fdWipe()。** 2026-09-23 牟佑彬回報：
+           清單上寫「在職 1 人」，點進去卻說「名冊上這一家沒有在職的人」。
+           原因就是這裡——fdWipe 把 FD_ROWS_ 清成空的**卻沒有重新載入**，
+           而雇主那幾列是從 PRESETS 來的（沒被清），所以清單看起來還正常，
+           點進去用 FD_ROWS_ 一濾就是 0 人。
+           **畫面說了一句肯定而錯誤的話**，那比慢比當掉都糟。
+           改成只改動到的那一格，名冊其餘部分原封不動。 */
+        fdPatch_(p.eid, { t: $('pplCrew').value });
       })
       .withFailureHandler(function(e){
         btn.disabled = false; btn.textContent = '存起來';
@@ -8836,7 +8862,12 @@ function pplClient(name){
           '<span class="ar">›</span></button>';
       }).join('') + '</div>';
   } else {
-    h += '<div class="mid" style="padding:22px">名冊上這一家沒有在職的人</div>';
+    /* ⛔ 名冊還沒載回來的時候**不可以**說「沒有在職的人」。
+       那是一句肯定而且可能是錯的話——2026-09-23 他就是看到這一句，
+       而實際上那一家有一位在職。分不出來的時候就說分不出來。 */
+    h += '<div class="mid" style="padding:22px">' +
+      (FD_ROWS_.length ? '名冊上這一家沒有在職的人'
+                       : '名冊還在載入，稍等一下再看名單') + '</div>';
   }
 
   if(pz && pz.p){
