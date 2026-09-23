@@ -363,7 +363,10 @@ function api(fn, body, ok, bad){
                      : '&s=' + encodeURIComponent(SCODE)), {}, API_TRIES_, ok, bad);
   }
 }
-var D = null, SHOT = null, STEP = 1, DOB = '', TAIL = '', HASP = false;
+var D = null, SHOT = null, STEP = 'p', DOB = '', TAIL = '', HASP = false;
+/* 他在第一頁按了「我換號碼了」。⛔ 只是記住，輸入框在生日後面才出來——
+   第一頁就能改的話，同群組的人可以把接送電話改成自己的。 */
+var PCHG = false;
 
 /* 群組連結認完人之後拿到的個人短碼。
    ⛔ 記在這台手機上，第二次點同一條連結就直接進自己那一頁。
@@ -408,6 +411,7 @@ var T = {
     next:'Tiếp tục',
     q2:'Số điện thoại còn dùng không?', have:'Số chúng tôi đang có',
     same:'Đúng rồi', changed:'Đã đổi số', only3:'Đây là số công ty đang lưu',
+    drvCall:'Tài xế sẽ gọi số này khi xe đến đón bạn.', badPhone:'Số này chưa đủ số', q2c:'Số mới của bạn?',
     q2b:'Số điện thoại của bạn?', noPhone:'Chúng tôi chưa có số của bạn',
     skip:'Không có điện thoại',
     okT:'Đã xác nhận', okS:'Phiên dịch đã nhận được',
@@ -452,6 +456,7 @@ var T = {
     next:'Lanjut',
     q2:'Nomor ini masih dipakai?', have:'Nomor yang kami punya',
     same:'Benar', changed:'Sudah ganti', only3:'Ini nomor yang tersimpan di perusahaan',
+    drvCall:'Sopir akan menelepon nomor ini saat mobil jemputan tiba.', badPhone:'Nomor ini kurang angka', q2c:'Nomor baru Anda?',
     q2b:'Nomor HP Anda?', noPhone:'Kami belum punya nomor Anda',
     skip:'Tidak punya HP',
     okT:'Sudah dikonfirmasi', okS:'Penerjemah sudah menerimanya',
@@ -496,6 +501,7 @@ var T = {
     next:'ถัดไป',
     q2:'ยังใช้เบอร์นี้อยู่ไหม', have:'เบอร์ที่เรามี',
     same:'ใช่', changed:'เปลี่ยนแล้ว', only3:'นี่คือเบอร์ที่บริษัทบันทึกไว้',
+    drvCall:'คนขับจะโทรหาเบอร์นี้เมื่อรถมาถึง', badPhone:'เบอร์นี้ตัวเลขไม่ครบ', q2c:'เบอร์ใหม่ของคุณ',
     q2b:'เบอร์โทรของคุณ', noPhone:'เรายังไม่มีเบอร์ของคุณ',
     skip:'ไม่มีโทรศัพท์',
     okT:'ยืนยันแล้ว', okS:'ล่ามได้รับแล้ว',
@@ -540,6 +546,7 @@ var T = {
     q2:'Is this number still yours?', have:'The number we have',
     same:'Yes, correct', changed:'I changed it',
     only3:'This is the number we have on file',
+    drvCall:'The driver calls this number when the van arrives.', badPhone:'This number is too short', q2c:'Your new number?',
     q2b:'Your phone number?', noPhone:'We do not have your number yet',
     skip:'No phone',
     okT:'Confirmed', okS:'Your translator can see it',
@@ -582,6 +589,7 @@ var ZH = { head:'定期體檢通知', today:'今天體檢',
   y:'年', mo:'月', dd:'日', likeArc:'跟居留證上一樣', next:'下一步',
   q2:'這支電話還在用嗎？', have:'我們手上的號碼',
   same:'對，就是這支', changed:'我換號碼了', only3:'這是公司名冊上的號碼',
+  drvCall:'接你的司機到了會打這支電話。', badPhone:'這支號碼位數不對', q2c:'你的新號碼',
   q2b:'你的手機號碼', noPhone:'我們還沒有你的號碼', skip:'我沒有電話',
   okT:'已確認', okS:'翻譯那邊看得到了',
   badT:'生日對不上', badS:'這不是你的通知嗎？',
@@ -956,7 +964,90 @@ function bindPick(){
   if(w) w.addEventListener('click', function(){ SHOWLIST = true; draw(); });
 }
 
-/* ── 確認 V1：兩步 ──────────────────────────────── */
+/* ── 確認 V2（牟佑彬 2026-09-23）：電話 → 生日 →（換號碼才）新號碼 → 通知
+   ⛔ 【無論換號還是沒換，都要過生日這一關】——他的原話。
+   ⛔ 第一頁只印【遮罩】號碼，而且【不能在這一頁改】。
+      這條連結貼在工廠 LINE 群組，任何人都點得進來：
+        看到完整號碼  = 個資外洩
+        改得了號碼      = 司機當天打給錯的人（更嚴重）
+      兩件都靠【生日排在它們前面】擋住。
+   ⚠ 群組連結（一則給五個人）不走這個順序：
+      第一頁還不知道點進來的是誰，問不出電話。
+      它維持：選名字 → 生日 → 電話（完整）→ 通知。 */
+/* 這一次進來的要不要走新順序？
+   ⛔ 群組連結（mode==='pick'、還沒選名字）不走——
+      第一頁還不知道點進來的是誰，拿不出要問哪一支電話。
+   ⚠ 已經確認過、或已結案的，直接看完整通知。 */
+function V2_(){
+  return !!D && !D.ack && D.stage !== 'done' && D.mode !== 'pick';
+}
+
+/* 把【生日＋（可能的）新號碼】一起送出去。
+   ⛔ 後端會自己再驗一次生日，不是因為前端說過關就放行。 */
+function ackSend(phone, errBox){
+  var bs = document.querySelectorAll('#app button');
+  [].forEach.call(bs, function(b){ b.disabled = true; });
+  api('hcAck', { dob: DOB, phone: phone || '' }, function(r){
+    if(r && r.ok){ STEP = 1; PCHG = false; load(); return; }
+    [].forEach.call(bs, function(b){ b.disabled = false; });
+    if(r && r.gone){ gone(); return; }
+    STEP = 'bad'; draw();
+  }, function(){
+    [].forEach.call(bs, function(b){ b.disabled = false; });
+    if(errBox && $(errBox)) $(errBox).innerHTML =
+      '<div class="err">Network error · 網路不穩，再試一次</div>';
+  });
+}
+
+function stepPhone(){
+  return '<p class="q">' + esc(t('q2')) + '</p>' +
+    (zhOnly() ? '' : '<p class="qz">' + esc(ZH.q2) + '</p>') +
+    '<div class="hasno"><span class="tz">' + esc(t('have')) +
+      (zhOnly() ? '' : '　·　' + esc(ZH.have)) + '</span>' +
+      '<div class="n">' + esc(D.phoneMask || '') + '</div></div>' +
+    '<div class="two">' +
+      '<button type="button" class="s" id="chg0">' + esc(t('changed')) +
+        (zhOnly() ? '' : '<small>' + esc(ZH.changed) + '</small>') + '</button>' +
+      '<button type="button" id="same0">' + esc(t('same')) + ' ✓' +
+        (zhOnly() ? '' : '<small>' + esc(ZH.same) + '</small>') + '</button>' +
+    '</div>' +
+    '<p class="why">' + esc(t('drvCall')) +
+      (zhOnly() ? '' : '　·　<span class="zh">' + esc(ZH.drvCall) + '</span>') + '</p>';
+}
+function bindPhone(){
+  function go(chg){ PCHG = chg; STEP = 1; draw(); }
+  $('same0').addEventListener('click', function(){ go(false); });
+  $('chg0').addEventListener('click', function(){ go(true); });
+}
+
+/* 生日過了之後才出來的新號碼框。
+   ⚠ 按「對，就是這支」的人看不到這一頁，驗完生日直接到通知。 */
+function stepNewPhone(){
+  return '<p class="q">' + esc(t('q2c')) + '</p>' +
+    (zhOnly() ? '' : '<p class="qz">' + esc(ZH.q2c) + '</p>') +
+    '<p class="why">' + esc(t('drvCall')) +
+      (zhOnly() ? '' : '　·　<span class="zh">' + esc(ZH.drvCall) + '</span>') + '</p>' +
+    '<div class="fld"><input class="line" id="ph2" type="tel" inputmode="tel" ' +
+      'placeholder="09xx-xxx-xxx"></div>' +
+    '<div id="er2"></div>' +
+    '<button type="button" id="done2">' + esc(t('okT')) + ' ✓' +
+      (zhOnly() ? '' : '<small>' + esc(ZH.okT) + '</small>') + '</button>' +
+    '<a class="alt" id="nop2">' + esc(t('skip')) +
+      (zhOnly() ? '' : '<span class="zh">' + esc(ZH.skip) + '</span>') + '</a>';
+}
+function bindNewPhone(){
+  function send(phone){ ackSend(phone, 'er2'); }
+  $('done2').addEventListener('click', function(){
+    var v = $('ph2').value.replace(/[^0-9]/g, '');
+    /* ⛔ 號碼不對就不要送。與其存一支打不通的，
+       不如讓他當場改——他人就在畫面前面。 */
+    if(v.length < 9){ showErr('er2', 'badPhone'); $('ph2').focus(); return; }
+    send(v);
+  });
+  $('nop2').addEventListener('click', function(){ send(''); });
+}
+
+/* ── 確認 V1：兩步（群組連結還在用）──────────────────────────────── */
 var AGE_MIN = 14, AGE_MAX = 80;
 function yrMax(){ return new Date().getFullYear() - AGE_MIN; }
 function yrMin(){ return new Date().getFullYear() - AGE_MAX; }
@@ -1017,7 +1108,18 @@ function bind1(){
       }
       if(r && r.already){ load(); return; }
       if(r && r.ok){
-        HASP = !!r.hasPhone; TAIL = r.phoneTail || ''; STEP = 2; draw(); return;
+        HASP = !!r.hasPhone; TAIL = r.phoneTail || '';
+        /* 個人連結（V2）：電話已經在第一頁問過了。
+           說要換的 → 現在才給他輸入框；說沒換的 → 直接完成。
+           ⚠ 名冊上本來就沒號碼的（!HASP）也走輸入框——
+             那是【收集】那一輪，不是確認。
+           ⛔ 群組連結沒有第一頁，維持舊的第二步（STEP 2）。 */
+        if(V2_()){
+          if(PCHG || !HASP){ STEP = 'n'; draw(); }
+          else ackSend('', 'er');
+          return;
+        }
+        STEP = 2; draw(); return;
       }
       if(r && r.gone){ gone(); return; }
       if(r && r.badDob){ showErr('er', 'badDob'); return; }
@@ -1196,13 +1298,31 @@ function draw(){
     $('retry').addEventListener('click', function(){ STEP = 1; draw(); });
     return;
   }
-  /* 第二步接管整個畫面。已經走到這裡的人，最重要的事是把它按完——
+  /* 一次只出一個問題。已經走到這裡的人，最重要的事是把它按完——
      底下那一大張通知這時候只會讓他分心。 */
   if(!D.ack && D.stage !== 'done' && STEP === 2){
     $('app').innerHTML = '<div class="pg">' + head() +
       '<div class="bd">' + step2() + '</div>' +
       '<div class="prog"><i class="on"></i><i class="on"></i></div></div>';
     bind2(); return;
+  }
+  /* 個人連結的新順序（V2）。⛔ 完整通知在驗完身分前不出來。 */
+  if(V2_()){
+    var b3 = '', on3 = 1;
+    if(STEP === 'p'){ b3 = stepPhone(); on3 = 1; }
+    else if(STEP === 1){ b3 = whyAck() + step1(); on3 = 2; }
+    else if(STEP === 'n'){ b3 = stepNewPhone(); on3 = 3; }
+    if(b3){
+      var dots = '';
+      for(var k3 = 1; k3 <= 3; k3++) dots += '<i' + (k3 <= on3 ? ' class="on"' : '') + '></i>';
+      $('app').innerHTML = '<div class="pg">' + head() +
+        '<div class="bd">' + b3 + '</div>' +
+        '<div class="prog">' + dots + '</div></div>';
+      if(STEP === 'p') bindPhone();
+      if(STEP === 1) bind1();
+      if(STEP === 'n') bindNewPhone();
+      return;
+    }
   }
 
   var h = head() + band() + notYet() + '<div class="bd">';
