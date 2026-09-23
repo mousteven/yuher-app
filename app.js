@@ -8340,3 +8340,542 @@ function hcBindSearch(){
     hcPaintList();
   });
 }
+
+/* ══ 全域搜尋（2026-09-23）══════════════════════════════════
+
+   牟佑彬：「打姓氏或名字、中文或英文或各語言，都能搜尋到
+   工廠、雇主、工人、行程內容。」他選的版型是「⑤ 打字時只給提示」。
+
+   ⛔ 兩段式，因為 Apps Script 冷啟動要三十幾秒：
+        人與工廠 → 名冊登入時下載一次，**在手機裡搜**，打字當下就出結果
+        行程與紀錄 → 停止打字 400ms 之後才打後端
+      每按一個鍵打一次後端，在工廠的訊號下是不可能的。
+
+   ⛔ 手機號碼確實下載到手機裡（他決定的，要能離線打、能用末四碼搜）。
+      **所以一定要配兩道**：登出清掉、24 小時過期。
+      少了那兩道，手機掉了等於整份名冊外流。 */
+
+var FD_ROWS_ = [];          // 名冊（搜尋用的精簡欄位）
+var FD_AT_ = '';            // 名冊是哪一天的
+var FD_Q_ = '';
+var FD_T_ = null;           // 後端查詢的 debounce
+var FD_HIT_ = { sched: [], logs: [] };
+var FD_BUSY_ = false;
+var FD_KEY_ = 'svc.roster';
+var FD_TTL_ = 24 * 3600 * 1000;   // 24 小時
+
+/* ── 名冊：存在手機裡 ─────────────────────────────────── */
+
+function fdLoad(cb){
+  if(FD_ROWS_.length) { if(cb) cb(); return; }
+  /* 先用手機裡那一份畫，再去後端拿新的——
+     ⚠ 第一次打開就要能搜，不能等三十幾秒的冷啟動。 */
+  try {
+    var raw = localStorage.getItem(FD_KEY_);
+    if(raw){
+      var o = JSON.parse(raw);
+      if(o && o.rows && (Date.now() - (o.t || 0)) < FD_TTL_){
+        FD_ROWS_ = o.rows; FD_AT_ = o.at || '';
+      } else {
+        localStorage.removeItem(FD_KEY_);   // 過期就丟掉，不要留著
+      }
+    }
+  } catch(e){}
+  if(cb) cb();
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!r || !r.ok || !r.rows) return;
+      FD_ROWS_ = r.rows; FD_AT_ = r.at || '';
+      try {
+        localStorage.setItem(FD_KEY_,
+          JSON.stringify({ t: Date.now(), at: r.at, rows: r.rows }));
+      } catch(e2){}      /* 存不下就算了，記憶體裡那一份還在 */
+      if($('findWrap') && $('findWrap').style.display !== 'none') fdDraw();
+    })
+    .withFailureHandler(function(){})
+    .svcRoster(CODE);
+}
+
+/* ⛔ 登出一定要清掉。名冊裡有 1687 個人的手機號碼。 */
+function fdWipe(){
+  FD_ROWS_ = []; FD_AT_ = ''; FD_Q_ = '';
+  try { localStorage.removeItem(FD_KEY_); } catch(e){}
+}
+
+/* ── 比對 ─────────────────────────────────────────────
+
+   ⚠ 中文用「包含」，英文不分大小寫，數字同時比對編號與手機。
+   ⛔ 手機比對要把符號去掉——名冊上有 0968-892445 這種寫法，
+      他打 892445 一樣要找得到。 */
+
+function fdNorm_(s){ return String(s || '').toLowerCase(); }
+function fdDigits_(s){ return String(s || '').replace(/[^0-9]/g, ''); }
+
+function fdMatchWorker_(w, q, qd){
+  if(fdNorm_(w.n).indexOf(q) !== -1) return 3;      // 中文名
+  if(fdNorm_(w.o).indexOf(q) !== -1) return 2;      // 原文名
+  if(qd && qd.length >= 3){
+    if(fdDigits_(w.p).indexOf(qd) !== -1) return 2; // 手機
+    if(String(w.e).indexOf(qd) !== -1) return 2;    // 外國人編號
+  }
+  if(fdNorm_(w.c).indexOf(q) !== -1) return 1;      // 他的雇主
+  return 0;
+}
+
+/* 雇主清單從 PRESETS 來（登入時就有了），不用另外下載。 */
+function fdClients_(q){
+  var out = [];
+  (PRESETS || []).forEach(function(c){
+    if(fdNorm_(c.c).indexOf(q) === -1) return;
+    out.push(c);
+  });
+  return out;
+}
+
+/* ── 畫面 ─────────────────────────────────────────────── */
+
+function fdOpen(){
+  /* ⛔ 不要在這裡記「原本在哪一個底頁」。這一層是蓋上去的，
+     關掉就露出底下原本那一頁——底頁的狀態從頭到尾沒有被動過。
+     （第一版寫了 `FD_BACK_ = TAB`，而這個 App 根本沒有 TAB 這個變數，
+      分頁是用 DOM 上的 .tabs button.on 記的。那一行讓 fdOpen
+      一進來就 ReferenceError，整個搜尋打不開，而且**沒有任何錯誤訊息**。） */
+  fdLoad(function(){});
+  $('findWrap').style.display = '';
+  document.body.classList.add('finding');
+  $('fdQ').value = FD_Q_;
+  fdDraw();
+  /* ⚠ 要等一拍再 focus。立刻 focus 的話 iOS 的鍵盤會把還在做的
+     版面切換推掉，結果鍵盤跳出來又收回去。 */
+  setTimeout(function(){ try { $('fdQ').focus(); } catch(e){} }, 60);
+}
+
+function fdClose(){
+  $('findWrap').style.display = 'none';
+  document.body.classList.remove('finding');
+}
+
+function fdDraw(){
+  var box = $('fdOut'); if(!box) return;
+  var q = fdNorm_(FD_Q_.trim());
+  var qd = fdDigits_(FD_Q_);
+  if(!q && !qd){
+    box.innerHTML = '<div class="fdhint">' +
+      '打名字找人（中文或原文都可以）<br>' +
+      '打工廠名找一整家<br>' +
+      '打手機末四碼找人<br>' +
+      '<s>名冊 ' + (FD_ROWS_.length || 0) + ' 人' +
+      (FD_AT_ ? ('　·　' + esc(FD_AT_) + ' 更新') : '') + '</s></div>';
+    return;
+  }
+
+  var ws = [];
+  FD_ROWS_.forEach(function(w){
+    var sc = fdMatchWorker_(w, q, qd);
+    if(sc) ws.push({ w: w, sc: sc });
+  });
+  /* 自己負責的排前面（他選的：全部都搜得到，自己的優先）。 */
+  ws.sort(function(a, b){
+    if(a.sc !== b.sc) return b.sc - a.sc;
+    var am = (a.w.t === STAFF_NAME) ? 0 : 1, bm = (b.w.t === STAFF_NAME) ? 0 : 1;
+    if(am !== bm) return am - bm;
+    return String(a.w.n).localeCompare(String(b.w.n));
+  });
+  var cs = q ? fdClients_(q) : [];
+
+  /* ⛔ 打工廠名的時候，工廠要排在工人前面。
+     2026-09-23 壓力測試量到的：打「帝寶」（448 人那家），
+     前 8 列全是那家的**工人**，**工廠被擠到第 9 個**——
+     可是你打廠名就是想找那家工廠。
+
+     判斷方式不是「有沒有工廠符合」，而是**工人是靠什麼比中的**：
+       靠自己的名字比中（sc >= 2）→ 你在找人，人排前面
+       只靠雇主名比中（sc === 1）→ 你在找工廠，工廠排前面
+     所以打「阮」的時候工人照樣在最前面（他們是靠名字比中的）。 */
+  var byName = ws.some(function(x){ return x.sc >= 2; });
+
+  var SHOW = 8;
+  var h = '<div class="fdlist">';
+  if(!byName) h += fdClientRows_(cs, FD_Q_);
+  ws.slice(0, SHOW).forEach(function(x){
+    var w = x.w;
+    h += '<button type="button" class="fdrow" data-e="' + esc(w.e) + '">' +
+      '<span class="k">移工</span><span class="m">' +
+        fdMark_(w.n || w.o, FD_Q_) +
+        '<u>' + esc(w.c || '') + (w.t ? ('　·　' + esc(w.t)) : '') + '</u>' +
+      '</span></button>';
+  });
+  if(byName) h += fdClientRows_(cs, FD_Q_);
+  FD_HIT_.sched.slice(0, 3).forEach(function(r){
+    h += '<button type="button" class="fdrow" data-s="' + esc(r.id) + '">' +
+      '<span class="k">行程</span><span class="m">' +
+      esc((r.date || '').slice(5) + ' ' + (r.client || '') + ' ' + (r.topic || '')) +
+      '<u>' + esc(r.workers || '') + '</u></span></button>';
+  });
+  FD_HIT_.logs.slice(0, 3).forEach(function(r){
+    h += '<button type="button" class="fdrow" data-l="' + esc(r.code) + '">' +
+      '<span class="k">紀錄</span><span class="m">' +
+      esc((r.date || '').slice(5) + ' ' + (r.name || r.client || '') + ' ' +
+          (r.big || '')) +
+      '<u>' + esc(r.client || '') + '</u></span></button>';
+  });
+  h += '</div>';
+
+  var more = ws.length - Math.min(ws.length, SHOW);
+  var tail = [];
+  if(more > 0) tail.push('還有 ' + more + ' 位　·　繼續打字縮小範圍');
+  if(FD_BUSY_) tail.push('行程與紀錄查詢中…');
+  if(!ws.length && !cs.length && !FD_BUSY_ &&
+     !FD_HIT_.sched.length && !FD_HIT_.logs.length){
+    h = '<div class="fdhint">找不到「' + esc(FD_Q_) + '」<br>' +
+        '<s>試試看原文名，或只打前兩個字</s></div>';
+  }
+  box.innerHTML = h + (tail.length ?
+    ('<p class="fdmore">' + esc(tail.join('　·　')) + '</p>') : '');
+
+  [].forEach.call(box.querySelectorAll('.fdrow'), function(b){
+    b.addEventListener('click', function(){
+      if(b.dataset.e) return pplOpen('w', b.dataset.e);
+      if(b.dataset.c) return pplOpen('c', b.dataset.c);
+      if(b.dataset.s || b.dataset.l){
+        fdClose();
+        toast('這一筆在行事曆或查詢頁裡打得開');
+      }
+    });
+  });
+}
+
+function fdClientRows_(cs, q){
+  return cs.slice(0, 4).map(function(c){
+    var n = (c.w || []).length;
+    return '<button type="button" class="fdrow" data-c="' + esc(c.c) + '">' +
+      '<span class="k">' + (c.t === '家庭雇主' ? '雇主' : '工廠') + '</span>' +
+      '<span class="m">' + fdMark_(c.c, q) +
+      '<u>在職 ' + n + ' 人</u></span></button>';
+  }).join('');
+}
+
+/* 把打的字標起來。⚠ 一定要先 esc 再插標記，
+   否則名字裡有 < 就會變成標籤。 */
+function fdMark_(text, q){
+  var t = String(text || ''), k = String(q || '').trim();
+  if(!k) return esc(t);
+  var i = t.toLowerCase().indexOf(k.toLowerCase());
+  if(i < 0) return esc(t);
+  return esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + k.length)) +
+         '</mark>' + esc(t.slice(i + k.length));
+}
+
+function fdType(){
+  FD_Q_ = $('fdQ').value || '';
+  FD_HIT_ = { sched: [], logs: [] };
+  fdDraw();                                  /* 人與工廠：立刻 */
+  clearTimeout(FD_T_);
+  var q = FD_Q_.trim();
+  if(q.length < 2){ FD_BUSY_ = false; return; }
+  /* 行程與紀錄：停手 400ms 才打後端。
+     ⛔ 不要每按一鍵就打——冷啟動三十幾秒，而且會排隊。 */
+  FD_BUSY_ = true;
+  FD_T_ = setTimeout(function(){
+    var mine = q;
+    google.script.run
+      .withSuccessHandler(function(r){
+        if(mine !== FD_Q_.trim()) return;    /* 已經又打了字，這份是舊的 */
+        FD_BUSY_ = false;
+        FD_HIT_ = { sched: (r && r.sched) || [], logs: (r && r.logs) || [] };
+        fdDraw();
+      })
+      .withFailureHandler(function(){ FD_BUSY_ = false; fdDraw(); })
+      .svcFind(CODE, mine, 3);
+  }, 400);
+}
+
+/* ══ 移工頁與工廠頁（2026-09-23）══════════════════════════
+
+   從搜尋點進來的那一頁。⛔ 整頁開、左上角返回——
+   這是設計檢視第 9 項定的兩種中斷裡的「換一個畫面」那一種，
+   不是就地展開。
+
+   ⛔ 移工頁的資料**一趟拿完**（svcPerson）。不要分兩趟——
+      2026-09-23 返鄉問卷就是分兩趟，冷啟動時工人面對一張空白的表。 */
+
+var PPL_KIND_ = '';
+var PPL_ID_ = '';
+
+function pplOpen(kind, id){
+  PPL_KIND_ = kind; PPL_ID_ = id;
+  $('findWrap').style.display = 'none';
+  $('pplWrap').style.display = '';
+  document.body.classList.add('finding');
+  $('pplOut').innerHTML = '<div class="mid" style="padding:30px">讀取中…</div>';
+  $('pplTitle').textContent = kind === 'c' ? id : '…';
+  window.scrollTo(0, 0);
+  if(kind === 'c') return pplClient(id);
+  google.script.run
+    .withSuccessHandler(pplDrawWorker)
+    .withFailureHandler(function(e){
+      $('pplOut').innerHTML = '<div class="mid" style="padding:30px">' +
+        esc((e && e.message) || '讀不到') + '</div>';
+    })
+    .svcPerson(CODE, id);
+}
+
+function pplBack(){
+  $('pplWrap').style.display = 'none';
+  $('findWrap').style.display = '';
+  setTimeout(function(){ try { $('fdQ').focus(); } catch(e){} }, 60);
+}
+
+/* 剩幾天。⚠ 回 null 代表沒有日期，呼叫端要自己決定印什麼——
+   印「剩 null 天」比不印更糟。 */
+function pplDays_(ymd){
+  if(!ymd) return null;
+  var a = vtParse_(ymd), b = vtParse_(todayStr());
+  return (a && b) ? vtDay_(b, a) : null;
+}
+function pplLeft_(ymd){
+  var d = pplDays_(ymd);
+  if(d === null) return '';
+  return d < 0 ? ('逾期 ' + (-d) + ' 天') : (d === 0 ? '今天' : ('剩 ' + d + ' 天'));
+}
+/* 只有最急的那一個上色。⛔ 三個都標紅等於沒有標。 */
+function pplTone_(d){
+  if(d === null) return 'q';
+  if(d < 0) return 'bad';
+  if(d <= 30) return 'warn';
+  return 'q';
+}
+
+function pplDrawWorker(p){
+  if(!p || !p.ok){ $('pplOut').innerHTML =
+    '<div class="mid" style="padding:30px">讀不到</div>'; return; }
+  $('pplTitle').textContent = p.name || p.orig || '移工';
+
+  var h = '';
+  /* ① 是不是他 */
+  h += '<div class="pcard phd">' +
+    '<div class="nm">' + esc(p.name || '（沒有中文名）') + '</div>' +
+    '<div class="og">' + esc(p.orig || '') + '</div>' +
+    '<div class="mt"><span class="cst ok">在職</span>' +
+      esc([p.eid, p.nat, p.dob].filter(Boolean).join('　·　')) + '</div>' +
+    '<div class="pacts">' +
+      (p.phone
+        ? ('<a class="p" href="tel:' + esc(p.phone) + '">打電話</a>')
+        : '<span class="p off">名冊沒電話</span>') +
+      '<button type="button" id="pplCase">開一件追蹤</button>' +
+      '<button type="button" id="pplVac">發問卷</button>' +
+    '</div></div>';
+
+  /* ② 要你處理——沒有就整段不畫 */
+  var open = (p.cases || []).filter(function(c){ return c.status === '進行中'; });
+  if(open.length){
+    h += '<div class="psec warn"><i></i>要你處理<span>' + open.length + ' 件</span></div>' +
+      '<div class="pcard">' + open.map(function(c){
+        return '<button type="button" class="prow" data-case="' + esc(c.id) + '">' +
+          '<span class="vl"><b>' + esc(c.kind) + '</b><s>' +
+          esc((c.state && c.state.text) || c.phase || '') + '</s></span>' +
+          '<span class="go">去處理</span></button>';
+      }).join('') + '</div>';
+  }
+
+  /* ③ 聯絡與位置——每一列都是一個動作 */
+  h += '<div class="psec"><i></i>聯絡與位置</div><div class="pcard">';
+  if(p.phone) h += pplRow_('手機', pplTel_(p.phone), '', 'tel:' + p.phone, '☏');
+  h += pplRow_('雇主', p.client, (p.job || '') + (p.employerId ? ('　·　' + p.employerId) : ''),
+               'client:' + p.client, '›');
+  if(p.workAddr) h += pplRow_('工作地', p.workAddr, '',
+    'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.workAddr), '⌖');
+  if(p.workContact || p.workTel)
+    h += pplRow_('現場', p.workContact || '（未填）', pplTel_(p.workTel),
+                 p.workTel ? ('tel:' + p.workTel) : '', p.workTel ? '☏' : '');
+  h += '</div>';
+
+  /* ④ 時鐘 */
+  var clocks = [['下次體檢', p.nextHc], ['居留期限', p.arcEnd], ['期滿日', p.expire]]
+    .filter(function(x){ return x[1]; });
+  if(clocks.length){
+    h += '<div class="psec"><i></i>時鐘</div><div class="pcard">' +
+      clocks.map(function(x){
+        var d = pplDays_(x[1]);
+        return '<div class="prow static"><span class="lb">' + esc(x[0]) + '</span>' +
+          '<span class="vl"><b>' + esc(x[1]) + '</b></span>' +
+          '<span class="cst ' + pplTone_(d) + '">' + esc(pplLeft_(x[1])) + '</span></div>';
+      }).join('') + '</div>';
+  }
+
+  /* ⑤ 續聘。⛔ 編號不一樣一定要講出來——發問卷的連結是綁編號的。 */
+  if(p.prev){
+    h += '<div class="pwarn"><b>這是續聘後的新合約</b>' +
+      '前一份 ' + esc(p.prev.expire || '') + ' 到期（編號 ' + esc(p.prev.eid) + '）。' +
+      '名冊上有兩筆，系統一律讀新的這一份。</div>';
+  }
+
+  /* ⑥ 最近的接觸——行程與紀錄合流 */
+  if((p.timeline || []).length){
+    h += '<div class="psec"><i></i>最近的接觸</div><div class="pcard">' +
+      p.timeline.map(function(t){
+        return '<div class="ptl"><span class="dt">' +
+          esc((t.date || '').slice(5).replace('-', '/')) + '</span>' +
+          '<span class="bd"><b>' + esc(t.t || '') + '</b><s>' +
+          esc([t.client, t.crew].filter(Boolean).join('　·　')) + '</s></span>' +
+          '<span class="kk">' + esc(t.k) + '</span></div>';
+      }).join('') + '</div>';
+  }
+
+  /* ⑦ 可以改的兩格。虛線框跟上面的唯讀區分開。 */
+  h += '<div class="psec"><i></i>這兩格可以改</div>' +
+    '<div class="pedit">' +
+      '<label>負責翻譯</label>' +
+      '<select id="pplCrew">' +
+        '<option value="">（未指定）</option>' +
+        (CREW || []).map(function(n){
+          return '<option' + (n === p.crew ? ' selected' : '') + '>' + esc(n) + '</option>';
+        }).join('') +
+      '</select>' +
+      '<label>備註</label>' +
+      '<textarea id="pplMemo" rows="2">' + esc(p.memo || '') + '</textarea>' +
+      '<button type="button" id="pplSave">存起來</button>' +
+    '</div>' +
+    '<p class="fdmore">名冊每月從管理系統匯入　·　姓名與證件日期要改請改那邊</p>';
+
+  $('pplOut').innerHTML = h;
+  pplWire(p);
+}
+
+/* 電話加分隔號。⚠ 0912345678 這樣一串要一位一位對，
+   0912-345-678 才唸得出來——翻譯常常是照著螢幕唸給雇主聽的。
+   ⛔ 只是顯示，撥號用的還是原始字串（tel: 不要有多餘的符號）。 */
+function pplTel_(s){
+  var d = String(s || '').replace(/[^0-9]/g, '');
+  if(/^09\d{8}$/.test(d)) return d.slice(0,4) + '-' + d.slice(4,7) + '-' + d.slice(7);
+  if(/^0[2-8]\d{7,8}$/.test(d)) return d.slice(0,2) + '-' + d.slice(2);
+  return String(s || '');
+}
+
+function pplRow_(lb, val, sub, href, arrow){
+  var tap = href ? ' tap' : '';
+  return '<button type="button" class="prow' + tap + '"' +
+    (href ? (' data-go="' + esc(href) + '"') : '') + '>' +
+    '<span class="lb">' + esc(lb) + '</span>' +
+    '<span class="vl"><b>' + esc(val || '') + '</b>' +
+    (sub ? ('<s>' + esc(sub) + '</s>') : '') + '</span>' +
+    (arrow ? ('<span class="ar">' + arrow + '</span>') : '') + '</button>';
+}
+
+function pplWire(p){
+  [].forEach.call($('pplOut').querySelectorAll('[data-go]'), function(b){
+    b.addEventListener('click', function(){
+      var g = b.dataset.go;
+      if(g.indexOf('client:') === 0) return pplOpen('c', g.slice(7));
+      window.open(g, g.indexOf('tel:') === 0 ? '_self' : '_blank');
+    });
+  });
+  [].forEach.call($('pplOut').querySelectorAll('[data-case]'), function(b){
+    b.addEventListener('click', function(){
+      $('pplWrap').style.display = 'none';
+      document.body.classList.remove('finding');
+      openCase(b.dataset.case);
+    });
+  });
+  fdOn_('pplSave', function(){
+    var btn = $('pplSave'); btn.disabled = true; btn.textContent = '存…';
+    google.script.run
+      .withSuccessHandler(function(){
+        btn.textContent = '已存起來';
+        setTimeout(function(){ btn.disabled = false; btn.textContent = '存起來'; }, 1500);
+        /* ⚠ 名冊快取在後端已經清掉了，手機裡這一份也要，
+           不然搜尋列上的「負責翻譯」還是舊的。 */
+        fdWipe();
+      })
+      .withFailureHandler(function(e){
+        btn.disabled = false; btn.textContent = '存起來';
+        toast((e && e.message) || '存不進去', true);
+      })
+      .svcPersonNote(CODE, p.eid, $('pplCrew').value, $('pplMemo').value);
+  });
+  fdOn_('pplCase', function(){
+    $('pplWrap').style.display = 'none';
+    document.body.classList.remove('finding');
+    toast('到「追蹤 → ＋ 開一件」，' + (p.client || '') + ' 已經記起來了');
+  });
+  fdOn_('pplVac', function(){
+    $('pplWrap').style.display = 'none';
+    document.body.classList.remove('finding');
+    toast('到「追蹤 → 返鄉 → 發問卷」挑 ' + (p.name || '') + '');
+  });
+}
+
+/* ── 工廠／雇主頁 ────────────────────────────────────
+   同一套骨架，主角換成一群人。
+   ⛔ 家庭雇主不另外做一種版型——兩種長得不一樣才是要重新學。 */
+
+function pplClient(name){
+  var pz = presetOf(name);
+  var ws = FD_ROWS_.filter(function(w){ return w.c === name; });
+  $('pplTitle').textContent = name;
+
+  var h = '<div class="pcard phd">' +
+    '<div class="nm sm">' + esc(name) + '</div>' +
+    '<div class="mt"><span class="cst q">' +
+      esc((pz && pz.t) || '工廠') + '</span>在職 ' + ws.length + ' 人' +
+      ((pz && pz.crew) ? ('　·　' + esc(pz.crew)) : '') + '</div>' +
+    '<div class="pacts">' +
+      '<button type="button" id="pclPlan" class="p">排行程</button>' +
+      '<button type="button" id="pclVac">發問卷</button>' +
+    '</div></div>';
+
+  if(ws.length){
+    h += '<div class="psec"><i></i>在職名單<span>' + ws.length + ' 人</span></div>' +
+      '<div class="pcard">' + ws.map(function(w){
+        var d = pplDays_(w.h || w.x);
+        var lb = w.h ? ('體檢 ' + pplLeft_(w.h)) : (w.x ? ('期滿 ' + pplLeft_(w.x)) : '—');
+        return '<button type="button" class="prow tap" data-e="' + esc(w.e) + '">' +
+          '<span class="vl"><b>' + esc(w.n || w.o) + '</b><s>' +
+          esc(w.o || '') + '</s></span>' +
+          '<span class="cst ' + pplTone_(d) + '">' + esc(lb) + '</span>' +
+          '<span class="ar">›</span></button>';
+      }).join('') + '</div>';
+  } else {
+    h += '<div class="mid" style="padding:22px">名冊上這一家沒有在職的人</div>';
+  }
+
+  if(pz && pz.p){
+    h += '<div class="psec"><i></i>聯絡與位置</div><div class="pcard">' +
+      pplRow_('聯絡', pz.p, '', '', '') + '</div>';
+  }
+  $('pplOut').innerHTML = h;
+
+  [].forEach.call($('pplOut').querySelectorAll('[data-e]'), function(b){
+    b.addEventListener('click', function(){ pplOpen('w', b.dataset.e); });
+  });
+  fdOn_('pclPlan', function(){
+    $('pplWrap').style.display = 'none';
+    document.body.classList.remove('finding');
+    openPlan(name);
+  });
+  fdOn_('pclVac', function(){
+    $('pplWrap').style.display = 'none';
+    document.body.classList.remove('finding');
+    toast('到「追蹤 → 返鄉 → 發問卷」選 ' + name);
+  });
+}
+
+/* ⛔ 自己的 fdOn_，不要用 on()。
+   on() 是**別的函式裡面的區域函式**（app.js 7670 行），
+   接在檔案尾端的這一段看不到它——2026-09-23 踩到：
+   `ReferenceError: Can't find variable: on`，整個搜尋打不開，
+   而且 app.js 跨網域載入，手機上只會看到「Script error.」。
+   ⚠ 這是同一天第二次了（第一次是用了不存在的 TAB）。
+     **靜態檢查抓不到這一類，只有真的把頁面跑起來才看得到。** */
+function fdOn_(id, fn){ var b = $(id); if(b) b.addEventListener('click', fn); }
+
+/* ── 接上去 ─────────────────────────────────────────── */
+fdOn_('findBtn', fdOpen);
+fdOn_('fdBack', fdClose);
+fdOn_('pplBack', pplBack);
+fdOn_('fdClr', function(){ $('fdQ').value = ''; fdType(); $('fdQ').focus(); });
+if($('fdQ')){
+  $('fdQ').addEventListener('input', fdType);
+  /* ⚠ iOS 的 type=search 有一顆自己的清除鈕，它發的是 search 事件不是 input。 */
+  $('fdQ').addEventListener('search', fdType);
+}

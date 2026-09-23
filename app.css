@@ -2645,3 +2645,143 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 #hcAlertBar .more{margin-left:auto;font-size:var(--t4);color:var(--ink2);
   flex:none}
 
+
+/* ══ 全域搜尋與詳情頁（2026-09-23）════════════════════════
+
+   ⛔ 一個新的字級、一個新的圓角都不要加。
+      9/22 才把 51 種字級收成 9 格、24 種圓角收成 3 級——
+      新功能自己開一套，就是拼裝車重新長回來的方式。 */
+
+/* 頂欄的放大鏡。跟「新手上路」同一組尺寸，兩顆並排才不會一大一小。 */
+.top #findBtn{flex:none;display:inline-flex;align-items:center;justify-content:center;
+  width:44px;height:44px;background:none;border:0;color:var(--chrome-ink);
+  cursor:pointer;opacity:.9}
+.top #findBtn svg{width:22px;height:22px}
+.top #findBtn:active{opacity:.55}
+/* ⚠ 新手上路本來用 margin-left:auto 把自己推到右邊。
+   多一顆之後那個 auto 要讓給第一顆，否則兩顆會被拆開。 */
+.top #guideBtn + #findBtn{margin-left:0}
+
+/* 搜尋層與詳情層：蓋在最上面。
+   ⛔ 不是第六個底頁——底頁回答「我在做哪一類事」，
+      搜尋回答「我要找一個東西」，那是兩件事。 */
+#findWrap,#pplWrap{position:fixed;inset:0;z-index:40;background:var(--bg);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px)}
+/* 打開的時候把底下的分頁列收掉，不然它會蓋住最後一列結果。 */
+body.finding .tabs{display:none}
+
+.fdbar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;
+  padding:9px 10px;background:var(--chrome-bg);color:var(--chrome-ink)}
+.fdbar button{flex:none;width:36px;height:36px;border:0;background:none;
+  color:var(--chrome-ink);font-size:var(--t0);font-family:inherit;cursor:pointer}
+.fdbar b{flex:1;min-width:0;font-size:var(--t2);font-weight:700;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fdin{flex:1;min-width:0;display:flex;align-items:center;gap:8px;
+  background:var(--card);border-radius:var(--r2);padding:0 11px}
+.fdin svg{width:17px;height:17px;flex:none;color:var(--ink3)}
+.fdin input{flex:1;min-width:0;border:0;background:none;font:inherit;
+  font-size:var(--t1);color:var(--ink);padding:11px 0;outline:none}
+/* ⛔ type=search 在 WebKit 上自己會長一顆清除鈕，
+   加上我們自己那顆就變成**並排兩顆 ✕**。2026-09-23 實機截圖上看到的。
+   關掉原生那顆，留我們自己的（它在 Android 上也有，行為一致）。 */
+.fdin input::-webkit-search-cancel-button,
+.fdin input::-webkit-search-decoration{-webkit-appearance:none;appearance:none}
+.fdin button{width:30px;height:30px;font-size:var(--t3);color:var(--ink3)}
+
+.fdhint{padding:26px 18px;text-align:center;font-size:var(--t3);
+  color:var(--ink2);line-height:2}
+.fdhint s{display:block;text-decoration:none;margin-top:10px;
+  font-size:var(--t5);color:var(--ink3)}
+.fdlist{margin:10px 12px 0;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r2);overflow:hidden}
+.fdrow{display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+  padding:12px 13px;border:0;border-top:1px solid var(--line2);
+  background:var(--card);color:var(--ink);font:inherit;font-size:var(--t2);
+  cursor:pointer;min-height:2.75rem}
+.fdrow:first-child{border-top:0}
+.fdrow:active{background:var(--sunk)}
+.fdrow .k{flex:none;width:26px;font-size:var(--t6);font-weight:800;
+  letter-spacing:.06em;color:var(--ink3)}
+.fdrow .m{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fdrow .m u{text-decoration:none;color:var(--ink3);font-size:var(--t4);margin-left:6px}
+.fdrow mark{background:var(--warn-bg);color:var(--warn-ink);padding:0 1px;
+  border-radius:var(--r0)}
+.fdmore{margin:9px 12px 0;text-align:center;font-size:var(--t5);color:var(--ink3)}
+
+/* ── 詳情頁 ─────────────────────────────────────────── */
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
+  margin:9px 12px 0;overflow:hidden}
+.phd{padding:13px 14px}
+.phd .nm{font-size:var(--td);font-weight:800;letter-spacing:-.01em;line-height:1.2}
+.phd .nm.sm{font-size:var(--t0)}
+.phd .og{font-size:var(--t3);color:var(--ink3);margin-top:1px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.phd .mt{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px;
+  font-size:var(--t5);color:var(--ink3)}
+.pacts{display:flex;gap:7px;margin-top:11px}
+.pacts > *{flex:1;text-align:center;padding:12px 4px;border-radius:var(--r1);
+  font-size:var(--t4);font-weight:700;text-decoration:none;
+  border:1px solid var(--line);background:var(--card);color:var(--ink2);
+  font-family:inherit;cursor:pointer;min-height:2.75rem}
+.pacts .p{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
+.pacts .p.off{background:var(--bad-bg);border-color:var(--bad-line);
+  color:var(--bad-ink);cursor:default}
+
+.psec{display:flex;align-items:center;gap:7px;padding:7px 12px;margin:14px 0 0;
+  background:var(--bg);border-bottom:1px solid var(--line);
+  font-size:var(--t5);font-weight:800;letter-spacing:.1em;color:var(--ink2)}
+.psec i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--line)}
+.psec.warn{color:var(--warn-ink)} .psec.warn i{background:var(--warn-bar)}
+.psec span{margin-left:auto;font-weight:700;letter-spacing:0;color:var(--ink3)}
+
+.prow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:11px 12px;border:0;border-top:1px solid var(--line2);
+  background:var(--card);color:var(--ink);font:inherit;font-size:var(--t3);
+  cursor:pointer;min-height:2.75rem}
+.prow:first-child{border-top:0}
+.prow.static{cursor:default}
+.prow:not(.static):active{background:var(--sunk)}
+.prow .lb{flex:none;width:58px;color:var(--ink3);font-size:var(--t5);font-weight:600}
+.prow .vl{flex:1;min-width:0}
+.prow .vl b{display:block;font-weight:700;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.prow .vl s{display:block;text-decoration:none;font-size:var(--t5);
+  color:var(--ink3);margin-top:1px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.prow.tap .vl b{color:var(--brand)}
+.prow .go{flex:none;font-size:var(--t4);font-weight:700;color:var(--brand)}
+.prow .ar{flex:none;color:var(--ink3);font-size:var(--t2)}
+
+.ptl{display:flex;gap:10px;padding:10px 12px;border-top:1px solid var(--line2);
+  font-size:var(--t3)}
+.ptl:first-child{border-top:0}
+.ptl .dt{flex:none;width:42px;font-size:var(--t5);font-weight:700;color:var(--ink3);
+  font-variant-numeric:tabular-nums}
+.ptl .bd{flex:1;min-width:0}
+.ptl .bd b{display:block;font-weight:700;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.ptl .bd s{display:block;text-decoration:none;font-size:var(--t5);
+  color:var(--ink3);margin-top:1px}
+.ptl .kk{flex:none;font-size:var(--t6);font-weight:800;letter-spacing:.06em;
+  color:var(--ink3);padding-top:2px}
+
+/* 續聘那一塊。⚠ 用警示色不是錯誤色——這不是壞掉，是要你知道。 */
+.pwarn{margin:9px 12px 0;padding:10px 12px;border-radius:var(--r2);
+  background:var(--warn-bg);border:1px solid var(--warn-line);
+  font-size:var(--t4);color:var(--warn-ink);line-height:1.6}
+.pwarn b{display:block;font-weight:800;margin-bottom:2px}
+
+/* 可以改的兩格。虛線框＝「這裡跟上面那些唯讀的不一樣」。 */
+.pedit{margin:9px 12px 0;padding:11px 12px;border-radius:var(--r2);
+  border:1px dashed var(--line);background:var(--card)}
+.pedit label{display:block;font-size:var(--t5);color:var(--ink3);
+  font-weight:600;margin-bottom:4px}
+.pedit label + textarea,.pedit select + label{margin-top:10px}
+.pedit select,.pedit textarea{width:100%;border:1px solid var(--line);
+  border-radius:var(--r1);padding:10px 11px;font:inherit;font-size:var(--t3);
+  background:var(--bg);color:var(--ink);min-height:2.75rem}
+.pedit button{width:100%;margin-top:10px;padding:12px;border-radius:var(--r1);
+  border:1px solid var(--fill);background:var(--fill);color:var(--fill-ink);
+  font:inherit;font-size:var(--t3);font-weight:700;cursor:pointer;min-height:2.75rem}
+.pedit button:disabled{opacity:.55}
