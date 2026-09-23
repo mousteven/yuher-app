@@ -7992,15 +7992,18 @@ function tkTodo(){
     $('tkBody').parentNode.insertBefore(box, $('tkBody'));
   }
   var seq = ++TKTODO_SEQ_;
-  var got = { car: null, ack: null, due: null };
+  var got = { car: null, ack: null, due: null, cf: null };
 
   function paint(){
     if(seq !== TKTODO_SEQ_) return;
-    if(got.car === null || got.ack === null || got.due === null) return;
+    if(got.car === null || got.ack === null || got.due === null ||
+       got.cf === null) return;
     /* ⛔ 排序＝「要花多少時間才追得完」，不是嚴重度。
        「還沒確認」要打電話給好幾個人，最花時間，所以排最前面。
        「還沒開單」是自己按幾下就好。 */
-    TKTODO_ = got.ack.concat(got.due, got.car, tkTodoLocal_());
+    /* 衝突排最前面。它代表「畫面上現在顯示的資料可能不是你要的」——
+       在那之前做的任何判斷都可能是錯的，所以要先解決。 */
+    TKTODO_ = got.cf.concat(got.ack, got.due, got.car, tkTodoLocal_());
     tkDrawTodo();
   }
   function fail(k){ return function(){ got[k] = []; paint(); }; }
@@ -8016,6 +8019,23 @@ function tkTodo(){
     });
     paint();
   }).withFailureHandler(fail('ack')).hcAckTodo(CODE);
+
+  /* ⛔ 你改過的手機／生日，跟管理系統後來改的打架了。
+     ⚠ 只有**真衝突**會來（管理系統沒動、或改成跟你一樣的都不會）。
+       會亂叫的警報比沒有警報更糟。 */
+  google.script.run.withSuccessHandler(function(r){
+    got.cf = ((r && r.list) || []).map(function(x){
+      var f = x.phone ? '手機' : '生日';
+      var d = x.phone || x.dob || {};
+      return { k: '名冊', eid: x.eid, go: 'conflict', field: x.phone ? 'phone' : 'dob',
+               bad: 1,
+               t: (x.name || x.orig) + '　' + f + '有兩個版本，要用哪一個',
+               s: '你改的 ' + (d.mine || '（空的）') +
+                  '　·　管理系統 ' + (d.now || '（空的）') +
+                  (x.client ? ('　·　' + x.client) : '') };
+    });
+    paint();
+  }).withFailureHandler(fail('cf')).svcConflicts(CODE);
 
   /* 接送資訊還沒填。 */
   google.script.run.withSuccessHandler(function(r){
@@ -8110,6 +8130,14 @@ var TKTODO_OPEN_ = false;
    就指到空的地方了——**文案會過期，按鈕不會**。 */
 function tkTodoGo_(x){
   if(!x) return;
+  /* 名冊衝突：直接開那個人的頁面，兩個值並排給他選。 */
+  if(x.go === 'conflict'){
+    if(typeof pplOpen === 'function'){
+      document.body.classList.add('finding');
+      return pplOpen('w', x.eid);
+    }
+    return;
+  }
   var goNew = (x.go === 'hcnew');
   var need = x.k;
   function arrive(){
@@ -8701,7 +8729,8 @@ function pplDrawWorker(p){
 
   /* ③ 聯絡與位置——每一列都是一個動作 */
   h += '<div class="psec"><i></i>聯絡與位置</div><div class="pcard">';
-  if(p.phone) h += pplRow_('手機', pplTel_(p.phone), '', 'tel:' + p.phone, '☏');
+  if(p.phone) h += pplRow_('手機', pplTel_(p.phone),
+    p.phoneMine ? '你改過的（名冊上不是這個）' : '', 'tel:' + p.phone, '☏');
   h += pplRow_('雇主', p.client, (p.job || '') + (p.employerId ? ('　·　' + p.employerId) : ''),
                'client:' + p.client, '›');
   if(p.workAddr) h += pplRow_('工作地', p.workAddr, '',
@@ -8724,14 +8753,36 @@ function pplDrawWorker(p){
       }).join('') + '</div>';
   }
 
-  /* ⑤ 續聘。⛔ 編號不一樣一定要講出來——發問卷的連結是綁編號的。 */
+  /* ⑤ 衝突：你改過的值跟管理系統後來改的打架。
+     ⛔ 兩個值**並排**給他看，不要只說「有衝突」。
+        他要判斷的是哪一個號碼打得通，不是「有沒有衝突」這件事本身。
+     ⚠ 目前畫面上顯示、發通知會用的是**管理系統那一個**（見 rosterMerge_），
+       所以要講清楚，不然他會以為按了才生效。 */
+  if(p.conflict){
+    ['phone', 'dob'].forEach(function(f){
+      var c = p.conflict[f]; if(!c) return;
+      var lb = (f === 'phone') ? '手機' : '生日';
+      h += '<div class="pconf"><b>' + lb + '有兩個版本</b>' +
+        '<div class="two">' +
+          '<div><s>你改的</s>' + esc(c.mine || '（空的）') + '</div>' +
+          '<div class="now"><s>管理系統　現在用這個</s>' +
+            esc(c.now || '（空的）') + '</div>' +
+        '</div>' +
+        '<div class="cbtn">' +
+          '<button type="button" data-cf="' + f + '" data-w="sys">就用管理系統的</button>' +
+          '<button type="button" data-cf="' + f + '" data-w="mine">還是用我改的</button>' +
+        '</div></div>';
+    });
+  }
+
+  /* ⑥ 續聘。⛔ 編號不一樣一定要講出來——發問卷的連結是綁編號的。 */
   if(p.prev){
     h += '<div class="pwarn"><b>這是續聘後的新合約</b>' +
       '前一份 ' + esc(p.prev.expire || '') + ' 到期（編號 ' + esc(p.prev.eid) + '）。' +
       '名冊上有兩筆，系統一律讀新的這一份。</div>';
   }
 
-  /* ⑥ 服務過他的人。牟佑彬 2026-09-23：
+  /* ⑦ 服務過他的人。牟佑彬 2026-09-23：
      「搜尋到一個點進去之後，底下也會附上曾經服務過他的」。
      ⛔ 接手別人的案子時，真正要問的是「該找誰」——
         底下那條時間線回答「發生過什麼」，這一段回答「誰最熟他」。
@@ -8748,7 +8799,7 @@ function pplDrawWorker(p){
       }).join('') + '</div>';
   }
 
-  /* ⑦ 最近的接觸——行程與紀錄合流 */
+  /* ⑧ 最近的接觸——行程與紀錄合流 */
   if((p.timeline || []).length){
     h += '<div class="psec"><i></i>最近的接觸' +
       (p.timelineAll > p.timeline.length
@@ -8763,9 +8814,22 @@ function pplDrawWorker(p){
       }).join('') + '</div>';
   }
 
-  /* ⑧ 可以改的兩格。虛線框跟上面的唯讀區分開。 */
-  h += '<div class="psec"><i></i>這兩格可以改</div>' +
+  /* ⑨ 可以改的那幾格。虛線框跟上面的唯讀區分開。 */
+  /* ⛔ 可以改的只有這四格，而且它們**存在另一張表**（移工註記），
+     匯入不碰那張表，所以不會被每週更新蓋掉。
+     ⚠ 手機與生日另外記「你改的當下名冊是什麼」，
+       管理系統後來如果也改了，會進「要你處理」讓他選，
+       不會安靜地被覆蓋、也不會安靜地永遠蓋住名冊。
+     ⛔ 姓名、編號、雇主、許可生效日、期滿日、體檢日**不開放改**——
+        體檢排程整個是從許可生效日算的，在這裡蓋一個錯的值
+        會算出錯的到期日，而且沒有人會發現。那是唯一會罰錢的環。 */
+  h += '<div class="psec"><i></i>這幾格可以改</div>' +
     '<div class="pedit">' +
+      '<label>手機</label>' +
+      '<input id="pplPhone" type="tel" inputmode="tel" value="' +
+        esc(p.phone || '') + '">' +
+      '<label>生日</label>' +
+      '<input id="pplDob" type="date" value="' + esc(p.dob || '') + '">' +
       '<label>負責翻譯</label>' +
       '<select id="pplCrew">' +
         '<option value="">（未指定）</option>' +
@@ -8777,7 +8841,8 @@ function pplDrawWorker(p){
       '<textarea id="pplMemo" rows="2">' + esc(p.memo || '') + '</textarea>' +
       '<button type="button" id="pplSave">存起來</button>' +
     '</div>' +
-    '<p class="fdmore">名冊每月從管理系統匯入　·　姓名與證件日期要改請改那邊</p>';
+    '<p class="fdmore">這幾格存在另一張表，每週更新不會蓋掉　·　' +
+      '姓名與證件日期要改請改管理系統</p>';
 
   $('pplOut').innerHTML = h;
   pplWire(p);
@@ -8818,6 +8883,17 @@ function pplWire(p){
       openCase(b.dataset.case);
     });
   });
+  [].forEach.call($('pplOut').querySelectorAll('[data-cf]'), function(b){
+    b.addEventListener('click', function(){
+      b.disabled = true;
+      google.script.run
+        .withSuccessHandler(function(){ pplOpen('w', p.eid); })
+        .withFailureHandler(function(e){
+          b.disabled = false; toast((e && e.message) || '處理失敗', true);
+        })
+        .svcResolveConflict(CODE, p.eid, b.dataset.cf, b.dataset.w);
+    });
+  });
   fdOn_('pplSave', function(){
     var btn = $('pplSave'); btn.disabled = true; btn.textContent = '存…';
     google.script.run
@@ -8831,13 +8907,15 @@ function pplWire(p){
            點進去用 FD_ROWS_ 一濾就是 0 人。
            **畫面說了一句肯定而錯誤的話**，那比慢比當掉都糟。
            改成只改動到的那一格，名冊其餘部分原封不動。 */
-        fdPatch_(p.eid, { t: $('pplCrew').value });
+        fdPatch_(p.eid, { t: $('pplCrew').value,
+                          p: $('pplPhone').value });
       })
       .withFailureHandler(function(e){
         btn.disabled = false; btn.textContent = '存起來';
         toast((e && e.message) || '存不進去', true);
       })
-      .svcPersonNote(CODE, p.eid, $('pplCrew').value, $('pplMemo').value);
+      .svcPersonNote(CODE, p.eid, $('pplCrew').value, $('pplMemo').value,
+                     $('pplPhone').value, $('pplDob').value);
   });
   fdOn_('pplCase', function(){
     $('pplWrap').style.display = 'none';

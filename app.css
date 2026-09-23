@@ -2782,10 +2782,30 @@ body.finding .tabs{display:none}
 .pedit label{display:block;font-size:var(--t5);color:var(--ink3);
   font-weight:600;margin-bottom:4px}
 .pedit label + textarea,.pedit select + label{margin-top:10px}
-.pedit select,.pedit textarea{width:100%;border:1px solid var(--line);
+.pedit select,.pedit textarea,.pedit input{width:100%;border:1px solid var(--line);
   border-radius:var(--r1);padding:10px 11px;font:inherit;font-size:var(--t3);
   background:var(--bg);color:var(--ink);min-height:2.75rem}
 .pedit button{width:100%;margin-top:10px;padding:12px;border-radius:var(--r1);
   border:1px solid var(--fill);background:var(--fill);color:var(--fill-ink);
   font:inherit;font-size:var(--t3);font-weight:700;cursor:pointer;min-height:2.75rem}
 .pedit button:disabled{opacity:.55}
+
+/* 覆寫跟管理系統打架的那一塊。
+   ⛔ 兩個值要**並排**，而且標明現在用的是哪一個——
+      不標的話他會以為按了才生效，但其實畫面上已經在用管理系統那個了。 */
+.pconf{margin:9px 12px 0;padding:11px 12px;border-radius:var(--r2);
+  background:var(--bad-bg);border:1px solid var(--bad-line)}
+.pconf b{display:block;font-size:var(--t4);font-weight:800;color:var(--bad-ink)}
+.pconf .two{display:flex;gap:9px;margin-top:8px}
+.pconf .two > div{flex:1;min-width:0;padding:8px 10px;border-radius:var(--r1);
+  background:var(--card);border:1px solid var(--line);
+  font-size:var(--t3);font-weight:700;color:var(--ink)}
+.pconf .two .now{border-color:var(--bad-line)}
+.pconf .two s{display:block;text-decoration:none;font-size:var(--t6);
+  font-weight:700;color:var(--ink3);letter-spacing:.06em;margin-bottom:2px}
+.pconf .cbtn{display:flex;gap:8px;margin-top:9px}
+.pconf .cbtn button{flex:1;padding:11px 4px;border-radius:var(--r1);
+  border:1px solid var(--line);background:var(--card);color:var(--ink2);
+  font:inherit;font-size:var(--t4);font-weight:700;cursor:pointer;
+  min-height:2.75rem}
+.pconf .cbtn button:disabled{opacity:.5}
