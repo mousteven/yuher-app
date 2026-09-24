@@ -25,28 +25,36 @@
    否則同事的瀏覽器會繼續吃舊快取。 */
 /* 翻譯人員站在工廠裡用手機填，所以：目標鍵大、固定白底好讀、少打字。 */
 :root{
-  --brand:#14304F; --brand-d:#0E2440; --brand-soft:#E6ECF4; --brand2:var(--info-ink);
-  --rose:#7E2A38; --rose-soft:var(--bad-bg);
-  --ink:#131A26; --ink2:#41506B; --ink3:#67718A;
-  --bg:#F4F6F8; --card:#fff; --line:#DCE2EA; --line2:#EBEFF4;
-  --warn:#a8641a; --warn-soft:#f9efe1; --danger:#7E2A38; --ok:#0B5940;
+  --brand:#163B63; --brand-d:#0B223D; --brand-soft:#E4ECF5; --brand2:var(--info-ink);
+  --rose:#982F42; --rose-soft:var(--bad-bg);
+  --ink:#142033; --ink2:#41506B; --ink3:#616F88;
+  --bg:#F5F7FA; --card:#fff; --line:#D8E0EA; --line2:#E7ECF3;
+  --warn:#a8641a; --warn-soft:#f9efe1; --danger:#982F42; --ok:#2E6A54;
   /* 狀態色。四組各有文字、底、框線、長條四個值，
      夜間模式只要換這一組，不用一處一處找。 */
-  --ok-ink:#0B5940;   --ok-bg:#E7F1EC;   --ok-line:#B7D5C6;   --ok-bar:#3FAE86;
+  --ok-ink:#2E6A54;   --ok-bg:#E7F1EC;   --ok-line:#B7D5C6;   --ok-bar:#3FAE86;
   --warn-ink:#8A6318; --warn-bg:#FBF1E4; --warn-line:#E7D2AE; --warn-bar:#C99A3E;
   --info-ink:#2A5599; --info-bg:#E9EEF8; --info-line:#C7D5EA; --info-bar:#4A6FA5;
-  --bad-ink:#7E2A38;  --bad-bg:#F6E9EC;  --bad-line:#DFC3CA;  --bad-bar:#74242F;
-  --chrome-bg:#14304F; --chrome-ink:#fff;
+  --bad-ink:#982F42;  --bad-bg:#F7EAEC;  --bad-line:#E0C4CA;  --bad-bar:#982F42;
+  /* 頂欄。⚠ --chrome-bg 是備胎（舊瀏覽器或清單檔要一個純色），
+     畫面上實際上的是 --chrome-grad。 */
+  --chrome-bg:#163B63; --chrome-ink:#fff;
+  /* 135° 三段（牟佑彬 2026-09-24 指定）。
+     ⛔ 漸層**只給頂欄**。頁籤、卡片、按鈕、badge 一律純色——
+        「Gradient is an atmosphere, not a decoration」。
+     ⚠ badge 只有 16px 寬，漸層頭尾只差 13 階 RGB（量過），
+       低於肉眼能分辨的 20 階——加了看不見，只多一份維護成本。 */
+  --chrome-grad:linear-gradient(135deg,#0B223D 0%,#163B63 50%,#234E70 100%);
   /* 填滿式按鈕的底。⛔ 不可以直接用 --brand——夜間的 --brand 是
      **淺**藍（給深底上的文字用），白字壓上去只有 2.5:1。
      兩個工作不一樣：--brand 是字的顏色，--fill 是底的顏色。 */
-  --fill:#14304F; --fill-ink:#fff;
+  --fill:#163B63; --fill-ink:#fff;
   /* 同樣的道理，四組狀態色各補一個「填滿色」。
      ⛔ 規則只有一條：**要填滿就用 --*-fill，要畫條子就用 --*-bar。**
         條子沒有字，所以可以亮；按鈕上面有白字，所以必須暗。
      2026-09-22 掃出十一處把條子色或文字色拿去當按鈕底，
      最糟的是「開成案件」那顆：白字在 #3FAE86 上只有 2.76:1。 */
-  --ok-fill:#0B5940; --warn-fill:#8A6318; --bad-fill:#74242F;
+  --ok-fill:#2E6A54; --warn-fill:#8A6318; --bad-fill:#982F42;
   --shadow:0 8px 28px -12px rgba(10,16,28,.3);
   /* ── 追蹤頁籤的看板（2026-09-22）──────────────────
      ⛔ 之前是釘死的深色（--fids），跟 App 其他頁不同調，
@@ -370,16 +378,19 @@
    深藍底、亮一階的主色（深色底上原本的海軍藍會看不見）。
    簽名板與服務表預覽不跟著變，見下面。 */
 body.dark{
-  --brand:#7FA8DC; --brand-d:#6690C6; --brand-soft:#18253C; --brand2:#9CBDEC;
-  --rose:#E79AAA; --rose-soft:#2E1F26;
+  --brand:#7FA8DC; --brand-d:#6690C6; --brand-soft:#16253A; --brand2:#9CBDEC;
+  --rose:#E0929C; --rose-soft:#2A1A1F;
   --ink:#E9EEF6; --ink2:#AEBBD0; --ink3:#7C8AA3;
-  --bg:#0D1219; --card:#161D29; --line:#28313F; --line2:#1C2432;
-  --warn:#E0A960; --warn-soft:#2E2414; --danger:#E79AAA; --ok:#4FBF95;
-  --ok-ink:#68C59D;   --ok-bg:#12291F;   --ok-line:#25523F;   --ok-bar:#6FDCAE;
+  --bg:#0B1119; --card:#151C27; --line:#27303E; --line2:#1B2331;
+  --warn:#E0A960; --warn-soft:#2E2414; --danger:#E0929C; --ok:#6FC7A6;
+  --ok-ink:#6FC7A6;   --ok-bg:#12291F;   --ok-line:#25523F;   --ok-bar:#6FDCAE;
   --warn-ink:#E6B771; --warn-bg:#2E2414; --warn-line:#5B4726; --warn-bar:#D2A053;
   --info-ink:#9CBDEC; --info-bg:#182338; --info-line:#33486D; --info-bar:#5E87C4;
-  --bad-ink:#E79AAA;  --bad-bg:#2E1F26;  --bad-line:#5E3640;  --bad-bar:#B85469;
-  --chrome-bg:#111925; --chrome-ink:#EAF0F8;
+  --bad-ink:#E0929C;  --bad-bg:#2A1A1F;  --bad-line:#5A333D;  --bad-bar:#B85469;
+  --chrome-bg:#0B1624; --chrome-ink:#EAF0F8;
+  /* ⛔ 深色模式的頂欄要**更深**。照拄淺色那一組的話，
+     頂欄會比周圍的背景還亮，整個層次翻過來。 */
+  --chrome-grad:linear-gradient(135deg,#070F1A 0%,#0B1624 50%,#12293F 100%);
   /* 夜間把同一個藍提亮才按得到。墨藍 #14304F 在深底上幾乎看不見。 */
   --fill:#2E5E97; --fill-ink:#fff;
   --ok-fill:#1E7A5C; --warn-fill:#96701F; --bad-fill:#B85469;
@@ -436,7 +447,7 @@ body.hidechrome #chrome{transform:translateY(-101%)}
 body.hidechrome{--stick:0px}
 .calsticky,.evsticky{transition:top .22s cubic-bezier(.32,.72,0,1)}
 
-.top{background:var(--chrome-bg);color:var(--chrome-ink);
+.top{background:var(--chrome-bg);background-image:var(--chrome-grad);color:var(--chrome-ink);
   padding:11px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 /* 有新版時的提示條。擺在最上面、整條可以點，
    在工廠裡單手操作也按得到。 */
@@ -1321,7 +1332,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
    說明內容就能占滿整個螢幕，不會一直被一條藍色壓著。 */
 .hp-bar{position:absolute;top:0;left:0;right:0;z-index:2;
   display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
-  background:var(--chrome-bg);color:var(--chrome-ink);
+  background:var(--chrome-bg);background-image:var(--chrome-grad);color:var(--chrome-ink);
   padding:11px 8px;
   transition:transform .26s cubic-bezier(.32,.72,0,1)}
 #help.hpdn .hp-bar{transform:translateY(-101%)}
@@ -2705,7 +2716,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 body.finding .tabs{display:none}
 
 .fdbar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;
-  padding:9px 10px;background:var(--chrome-bg);color:var(--chrome-ink)}
+  padding:9px 10px;background:var(--chrome-bg);background-image:var(--chrome-grad);color:var(--chrome-ink)}
 .fdbar button{flex:none;width:36px;height:36px;border:0;background:none;
   color:var(--chrome-ink);font-size:var(--t0);font-family:inherit;cursor:pointer}
 .fdbar b{flex:1;min-width:0;font-size:var(--t2);font-weight:700;

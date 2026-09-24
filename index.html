@@ -83,8 +83,8 @@ html,body{margin:0;height:100%;overflow:hidden;background:#fff;
     rgba(128,182,246,.26) 0%, rgba(46,98,160,.15) 34%, rgba(12,26,44,.05) 56%, rgba(8,16,28,0) 68%)}
 #load .arc::after{content:'';position:absolute;inset:0;border-radius:50%;
   background:conic-gradient(from 8deg, transparent 0deg,
-    rgba(190,225,255,.12) 18deg, rgba(232,244,255,.88) 44deg,
-    rgba(150,200,250,.34) 72deg, transparent 112deg);
+    rgba(190,225,255,.06) 18deg, rgba(210,232,252,.34) 44deg,
+    rgba(150,200,250,.14) 72deg, transparent 112deg);
   -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 1.6px),#000 calc(100% - 1.6px));
   mask:radial-gradient(farthest-side,transparent calc(100% - 1.6px),#000 calc(100% - 1.6px));
   /* ⛔ 這一層**不可以加旋轉動畫**。2026-09-24 實測：
@@ -111,6 +111,41 @@ html,body{margin:0;height:100%;overflow:hidden;background:#fff;
 #load .hz::before{content:'';position:absolute;left:24%;right:18%;top:-3%;height:10%;
   background:radial-gradient(ellipse,rgba(200,230,255,.30),transparent 70%);
   filter:blur(11px)}
+
+/* ── 弧上的流光（第二版，2026-09-24）──────────────────
+
+   ★ 關鍵：【不旋轉，只淡入淡出】。
+     四層靜止的亮邊，亮帶各在不同角度，輪流淡入淡出——
+     看起來就是光沿著弧在跑。
+
+   ⛔ 為什麼不直接轉（2026-09-24 實測，iPhone 13）：
+       什麼都不動        16ms/幀  ← 預算
+       整片弧旋轉        90ms/幀  ← 11fps
+       光點沿著弧跑      29ms/幀  ← 34fps
+     前兩種都是因為它們每一幀都要重新光柵化一個 839px 的遮罩圖層。
+     opacity 不一樣——那是合成器的工作，圖層只畫一次。
+
+   ⚠ 只有四個角度，所以週期要慢（22 秒）並且讓相鄰兩層重疊——
+     快了或不重疊的話光會「跳」，那比不動還難看。 */
+#load .arc .g{position:absolute;inset:0;border-radius:50%;opacity:0;
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 1.6px),#000 calc(100% - 1.6px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 1.6px),#000 calc(100% - 1.6px));
+  animation:glow 22s linear infinite}
+#load .arc .g1{background:conic-gradient(from 350deg,transparent 0deg,
+  rgba(190,225,255,.12) 16deg,rgba(232,244,255,.88) 40deg,
+  rgba(150,200,250,.30) 66deg,transparent 104deg);animation-delay:0s}
+#load .arc .g2{background:conic-gradient(from 20deg,transparent 0deg,
+  rgba(190,225,255,.12) 16deg,rgba(232,244,255,.88) 40deg,
+  rgba(150,200,250,.30) 66deg,transparent 104deg);animation-delay:-16.5s}
+#load .arc .g3{background:conic-gradient(from 50deg,transparent 0deg,
+  rgba(190,225,255,.12) 16deg,rgba(232,244,255,.88) 40deg,
+  rgba(150,200,250,.30) 66deg,transparent 104deg);animation-delay:-11s}
+#load .arc .g4{background:conic-gradient(from 80deg,transparent 0deg,
+  rgba(190,225,255,.12) 16deg,rgba(232,244,255,.88) 40deg,
+  rgba(150,200,250,.30) 66deg,transparent 104deg);animation-delay:-5.5s}
+/* 四層各亮四分之一的時間，頭尾各留一段重疊。 */
+@keyframes glow{
+  0%{opacity:0} 6%{opacity:1} 25%{opacity:1} 31%{opacity:0} 100%{opacity:0}}
 
 /* ⛔ 這裡曾經有一顆「沿著大弧跑的光點」，2026-09-24 拿掉了。
 
@@ -199,6 +234,9 @@ html,body{margin:0;height:100%;overflow:hidden;background:#fff;
   /* ⛔ 關掉動畫的人要看到「靜止但完整」的樣子，不是殘缺的樣子。
      流光停在右上（亮點停在邊框最自然的位置），大弧停在原角度。 */
   #load .ic .edge::before{animation:none;transform:rotate(38deg)}
+  /* 四層只留第二層靜止點亮，不要四層疊在一起。 */
+  #load .arc .g{animation:none;opacity:0}
+  #load .arc .g2{opacity:1}
 }
 
 /* ── 安裝說明 ───────────────────────────────────────
@@ -275,7 +313,7 @@ ol li b{color:var(--ink)}
      下拉更新換 iframe 時也是同一個畫面。收掉的時機見下面的 hideLoad。 -->
 <div id="load" class="on" aria-live="polite">
   <!-- 三層光。⚠ 順序不能換：地平線要壓在星球弧上面。 -->
-  <span class="arc" aria-hidden="true"></span>
+  <span class="arc" aria-hidden="true"><span class="g g1"></span><span class="g g2"></span><span class="g g3"></span><span class="g g4"></span></span>
   <span class="halo" aria-hidden="true"></span>
   <span class="hz" aria-hidden="true"></span>
   <div class="mid">
