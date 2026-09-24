@@ -1,3 +1,22 @@
+/* ── 拉丁與數字的字型（2026-09-24）────────────
+
+   ⛔ 只換拉丁與數字，**中文絕對不換**。
+      iPhone 上的中文是 PingFang TC（蘋果為這塊螢幕做的），而且 0KB。
+      換成網頁中文字型是又貴又退步：
+        Noto Sans TC  105 片，一頁實際要載 115～345KB
+        Archivo       只要拉丁那 1～2 片，26～53KB
+      而且中文字型載入時整頁會跳一下。
+
+   ★ 「中文不換」不是特別處理，是字型後備鏈本來的行為：
+     Archivo 沒有中文字符 → 瀏覽器往後找到 PingFang。
+
+   ⚠ 用 @import 而不是在 Service.html 放 <link>，是因為
+     前者只要推 GitHub Pages，後者要重新部署 Apps Script。
+     下次有部署的時候可以搬過去（少一個來回）。
+   ⚠ display=swap：字型沒到之前先用系統字畫，不會有一段空白。
+     拉丁字型換的時候不會像中文那樣整頁跳。 */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap');
+
 /* 羽禾 移工服務平台 — 版面樣式
    2026-09-12 從 src/Service.html 拆出來之後，**這個檔就是正本**。
    Service.html 只剩 16KB 的骨架（HTML 結構 ＋ 兩個伺服器端變數），
@@ -54,6 +73,11 @@
      現在只有兩把尺。要加新的一格之前先問：
      它跟現有的哪一格差多少？差不到 2px 就用那一格——
      差 1px 的兩種字級，畫面上只會看起來像沒對齊。 */
+
+  /* 字型。--sys 是中文（不動），--lat 是拉丁與數字。
+     ⛔ --lat 的後備就是 --sys，所以中文會自動落回 PingFang。 */
+  --sys:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --lat:"Archivo",var(--sys);
 
   /* 字級。--td 以上是「一頁只有一個」的大東西。 */
   --td2:2rem;   /* 32  導覽頁的大標 */
@@ -389,8 +413,17 @@ html,body{overflow-x:clip;max-width:100%;overscroll-behavior-x:none;
   /* 關掉 iOS 自己的上下回彈，不然會跟我們的下拉更新互相打架 */
   overscroll-behavior-y:contain}
 body{background:var(--bg);color:var(--ink);font-size:var(--t2);line-height:1.65;
-  font-family:-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  font-family:var(--lat);
+  /* ★ 數字一律等寬。一整排「剩 3 / 10 / 28 / 147 天」是要用眼睛掃的——
+     浮動寬度的話每一行都要重新定位一次。
+     ⚠ 寫在 body 上是因為它會繼承；下面那一條是補「自己設了
+       font-family 所以繼承不到」的那些地方。 */
+  font-variant-numeric:tabular-nums;
   padding-bottom:80px}
+/* 自己設了字型的元素繼承不到 body 的 tabular-nums，要補回來。
+   ⛔ 這一條不可以拿掉，拿掉之後等寬字那幾個區塊會安靜地失效。 */
+button,input,select,textarea,
+[style*="ui-monospace"],.mono,.num{font-variant-numeric:tabular-nums}
 button,input,select,textarea{font:inherit;color:inherit}
 
 /* 頂欄＋分頁列包成一塊。往下滑時整塊往上收起來，
