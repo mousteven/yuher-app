@@ -54,29 +54,108 @@ html,body{margin:0;height:100%;overflow:hidden;background:#fff;
    刻意不用轉圈圈：那是「不知道要多久」的通用符號，哪個網站都長那樣。
    App 自己的圖示配一條掃過去的細線，看起來是這個 App 的一部分。
    圖示的呼吸很慢（2.4 秒一次）——快的動態讀起來焦慮，慢的讀起來是「在跑，別急」。 */
-#load{position:fixed;inset:0;z-index:6;display:none;flex-direction:column;
-  align-items:center;justify-content:center;background:var(--brand);color:#fff;
-  padding:calc(env(safe-area-inset-top) + 20px) 28px
-          calc(env(safe-area-inset-bottom) + 20px);
-  opacity:0;transition:opacity .22s ease}
-#load.on{display:flex;opacity:1}
-#load .ic{width:72px;height:72px;border-radius:17px;display:block;
-  box-shadow:0 14px 34px rgba(0,0,0,.34);animation:ldbrz 2.4s ease-in-out infinite}
-@keyframes ldbrz{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
-/* 會填滿的進度條，不是來回掃的。每一段都對應一個真的發生的事
-   （見下面的 LOAD_STEP），所以它不是裝出來的進度——
-   跑滿代表畫面真的準備好了，然後才切過去。 */
-#load .bar{width:168px;height:3px;border-radius:99px;margin-top:28px;overflow:hidden;
-  background:rgba(255,255,255,.18)}
-#load .bar i{display:block;height:100%;width:0;border-radius:99px;background:#fff;
+/* ── 開場畫面（2026-09-24 牟佑彬指定 Digital Luxury）─────────
+   深海藍 ＋ 玻璃鈦邊標記 ＋ 兩道大光弧 ＋ 1px 金線。
+
+   ⛔ 全部用 CSS 畫，**不可以改成貼一張背景圖**。
+      他給的參考圖是 1.3MB 的 PNG；壓成 WebP 還有 200-300KB。
+      工人在工廠 4G 上要先下載完那張圖才能開始等 App——
+      一張為了「讓等待好看」的圖反而讓等待變長。這一段約 3KB，
+      跟著 index.html 一起到，而且任何螢幕尺寸都自動貼合。
+
+   ⚠ 金色只出現三個地方：鈦邊、進度線、頁腳短橫。
+     「載入中」是暖白不是金的——金色一多就變廉價感。
+
+   ⚠ 這是**靜態**的，只有那條金線在動，所以只畫一次，
+     不會每一幀重繪。大面積模糊在舊手機上很貴。 */
+#load{position:fixed;inset:0;z-index:6;display:none;
+  background:radial-gradient(120% 90% at 78% -8%,
+    #1B3E66 0%, #102540 34%, #0A1729 60%, #060C15 100%);
+  color:#fff;overflow:hidden;isolation:isolate;
+  opacity:0;transform:scale(1.02);
+  transition:opacity .34s ease, transform .34s cubic-bezier(.32,.72,0,1)}
+#load.on{display:block;opacity:1;transform:none}
+
+/* 上面那道像星球的弧：一個巨大的圓，只有邊緣 1.6px 吃到光 */
+#load .arc{position:absolute;width:215%;aspect-ratio:1;border-radius:50%;
+  left:-115%;top:-22%;pointer-events:none;
+  background:radial-gradient(circle at 34% 30%,
+    rgba(128,182,246,.26) 0%, rgba(46,98,160,.15) 34%, rgba(12,26,44,.05) 56%, rgba(8,16,28,0) 68%)}
+#load .arc::after{content:'';position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 8deg, transparent 0deg,
+    rgba(190,225,255,.12) 18deg, rgba(232,244,255,.88) 44deg,
+    rgba(150,200,250,.34) 72deg, transparent 112deg);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 1.6px),#000 calc(100% - 1.6px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 1.6px),#000 calc(100% - 1.6px))}
+/* 弧最亮處的暈。沒有這一層，邊緣會硬得像畫上去的 */
+#load .halo{position:absolute;width:62%;aspect-ratio:1;right:-20%;top:2%;
+  border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(180,220,255,.20) 0%,transparent 66%);
+  filter:blur(18px)}
+
+/* 下面那道地平線 */
+#load .hz{position:absolute;width:300%;height:150%;left:-100%;top:74%;
+  border-radius:50%;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 8%,
+    rgba(28,64,106,.62) 0%, rgba(12,26,44,.86) 40%, #060B12 72%)}
+#load .hz::after{content:'';position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 330deg, transparent 0deg,
+    rgba(160,205,250,.18) 14deg, rgba(232,244,255,.80) 30deg,
+    rgba(150,195,245,.20) 46deg, transparent 64deg);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 1.4px),#000 calc(100% - 1.4px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 1.4px),#000 calc(100% - 1.4px))}
+#load .hz::before{content:'';position:absolute;left:24%;right:18%;top:-3%;height:10%;
+  background:radial-gradient(ellipse,rgba(200,230,255,.30),transparent 70%);
+  filter:blur(11px)}
+
+#load .mid{position:absolute;left:0;right:0;top:44%;transform:translateY(-50%);
+  display:flex;flex-direction:column;align-items:center;padding:0 28px;z-index:2}
+
+/* 玻璃＋鈦邊。⚠ 不是圖片——原本這裡是 <img src="icon-192.png">，
+   換成純 CSS 之後連那一次請求也省掉了。 */
+#load .ic{width:78px;height:78px;border-radius:22px;position:relative;
+  background:linear-gradient(152deg,rgba(255,255,255,.14),rgba(255,255,255,.02) 58%);
+  -webkit-backdrop-filter:blur(7px) saturate(130%);
+  backdrop-filter:blur(7px) saturate(130%);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 14px 34px -14px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.22)}
+/* 鈦邊：1px 漸層描邊。亮金→暗金→亮金，所以邊框會「轉折」，像金屬在反光 */
+#load .ic::before{content:'';position:absolute;inset:0;border-radius:22px;padding:1px;
+  background:linear-gradient(145deg,#F0DFBB 0%,#D9BE8A 22%,
+    rgba(140,119,72,.35) 52%,#D9BE8A 82%,#F0DFBB 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+/* 玻璃面上那一道斜光 */
+#load .ic::after{content:'';position:absolute;inset:0;border-radius:22px;
+  pointer-events:none;background:linear-gradient(118deg,
+    rgba(255,255,255,.20) 0%,rgba(255,255,255,.06) 28%,transparent 44%)}
+#load .ic b{font-family:"Songti TC","Noto Serif TC",Georgia,serif;
+  font-size:30px;font-weight:400;letter-spacing:.06em;color:#F0DFBB;
+  line-height:1;position:relative;z-index:1;
+  text-shadow:0 0 14px rgba(217,190,138,.35)}
+
+/* 1px 金線。⛔ 進度是真的（見下面 loadStep），不要改成來回掃的假動畫。 */
+#load .bar{width:136px;height:1px;margin-top:27px;overflow:hidden;
+  background:rgba(255,255,255,.13)}
+#load .bar i{display:block;height:100%;width:0;
+  background:linear-gradient(90deg,rgba(217,190,138,.25),#F0DFBB);
+  box-shadow:0 0 8px 0 rgba(240,223,187,.55);
   transition:width .45s cubic-bezier(.2,.7,.2,1)}
-#load .msg{margin:18px 0 0;font-size:14.5px;font-weight:700;letter-spacing:.03em}
-/* 第二行專門講「現在到哪了」。拖久了要說話，一直只寫「更新中」會讓人以為卡住 */
-#load .sub{margin:6px 0 0;font-size:12.5px;line-height:1.5;text-align:center;
-  color:rgba(255,255,255,.62);min-height:1.5em;max-width:16em}
+#load .msg{margin:16px 0 0;font-size:10.5px;font-weight:400;letter-spacing:.42em;
+  text-indent:.42em;color:rgba(233,220,192,.62)}
+#load .sub{margin:11px 0 0;font-size:12.5px;line-height:1.5;text-align:center;
+  color:rgba(255,255,255,.5);min-height:1.5em;max-width:16em}
+
+#load .sig{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 7%);
+  text-align:center;z-index:2;margin:0}
+#load .sig span{font-size:8px;letter-spacing:.34em;text-indent:.34em;
+  color:rgba(217,190,138,.44)}
+#load .sig u{display:block;width:34px;height:1px;background:rgba(217,190,138,.34);
+  margin:9px auto 0}
+
 @media (prefers-reduced-motion:reduce){
-  #load{transition:none}
-  #load .ic{animation:none}
+  #load{transition:none;transform:none}
   #load .bar i{transition:none}      /* 進度照走，只是不要滑動 */
 }
 
@@ -153,10 +232,19 @@ ol li b{color:var(--ink)}
      在 4G 上好幾秒，中間是一片空的灰色（那是空 iframe 的底色）。
      下拉更新換 iframe 時也是同一個畫面。收掉的時機見下面的 hideLoad。 -->
 <div id="load" class="on" aria-live="polite">
-  <img class="ic" src="icon-192.png" alt="">
-  <div class="bar"><i></i></div>
-  <p class="msg" id="loadMsg">載入中</p>
-  <p class="sub" id="loadSub"></p>
+  <!-- 三層光。⚠ 順序不能換：地平線要壓在星球弧上面。 -->
+  <span class="arc" aria-hidden="true"></span>
+  <span class="halo" aria-hidden="true"></span>
+  <span class="hz" aria-hidden="true"></span>
+  <div class="mid">
+    <!-- ⚠ 以前這裡是 <img src="icon-192.png">。換成純 CSS 的玻璃方塊，
+         連那一次圖片請求都省掉了——而那一次請求正好卡在最不該卡的時候。 -->
+    <div class="ic"><b>羽禾</b></div>
+    <div class="bar"><i></i></div>
+    <p class="msg" id="loadMsg">載入中</p>
+    <p class="sub" id="loadSub"></p>
+  </div>
+  <p class="sig"><span>YU HER MANAGEMENT</span><u></u></p>
 </div>
 <div id="app">
   <!-- src 由下面的 script 組出來：網址帶 ?code= 時會一起傳進去，
