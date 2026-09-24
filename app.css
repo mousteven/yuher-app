@@ -1789,6 +1789,98 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   .lg-dots.bad{animation:none}
 }
 
+
+/* ── 登入頁：跟載入頁同一個世界（牟佑彬 2026-09-24）──────────
+
+   深海藍 ＋ 大光弧 ＋ 玻璃鈦邊標記 ＋ 香檳金。
+   載入頁是「品牌的情緒」，登入頁是「品牌的精緻」，首頁是「效率」——
+   同一套語言，濃度不同。
+
+   ⛔ 這一段的顏色**刻意寫死，不吃 token**。
+      登入頁在日夜兩種模式下都要長一樣——它是品牌時刻，
+      不是工作介面。跟著主題變的話，白天會變成一張淺色的登入頁，
+      跟載入頁接不起來。
+
+   ⚠ 鍵盤是這一頁唯一真的要「用」的東西。
+     玻璃底 ＋ 白字，對比 13:1 以上（量過），
+     工廠光線不好、戴手套也按得到——按鍵直徑維持原本的大小，一點都沒縮。 */
+.login{
+  background:radial-gradient(120% 78% at 78% -4%,
+    #1B3E66 0%, #102540 34%, #0A1729 60%, #060C15 100%);
+  color:#fff;isolation:isolate;overflow:hidden}
+
+/* 上面那道像星球的弧。幾何跟載入頁同一組，只是淡一點——
+   登入頁還要「用」，光不能搶走鍵盤。 */
+.login::before{content:'';position:absolute;width:215%;aspect-ratio:1;
+  border-radius:50%;left:-115%;top:-16%;pointer-events:none;z-index:0;
+  background:radial-gradient(circle at 34% 30%,
+    rgba(128,182,246,.18) 0%, rgba(46,98,160,.10) 34%, rgba(8,16,28,0) 62%);
+  box-shadow:inset 0 0 0 1px rgba(190,222,255,.10)}
+/* 下面那道地平線 */
+.login::after{content:'';position:absolute;width:300%;height:150%;
+  left:-100%;top:82%;border-radius:50%;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse at 50% 8%,
+    rgba(28,64,106,.50) 0%, rgba(12,26,44,.80) 40%, #060B12 72%);
+  box-shadow:inset 0 0 0 1px rgba(200,228,255,.13)}
+.login > *{position:relative;z-index:1}
+
+/* 玻璃＋鈦邊，跟載入頁同一顆 */
+.lg-mark{background:linear-gradient(152deg,rgba(255,255,255,.13),rgba(255,255,255,.02) 58%);
+  -webkit-backdrop-filter:blur(7px) saturate(130%);
+  backdrop-filter:blur(7px) saturate(130%);
+  color:#F0DFBB;position:relative;border-radius:22px;
+  font-family:"Songti TC","Noto Serif TC",Georgia,serif;font-weight:400;
+  text-shadow:0 0 14px rgba(217,190,138,.35);
+  box-shadow:0 14px 34px -14px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.22)}
+.lg-mark::before{content:'';position:absolute;inset:0;border-radius:22px;padding:1px;
+  background:linear-gradient(145deg,#F0DFBB 0%,#D9BE8A 22%,
+    rgba(140,119,72,.35) 52%,#D9BE8A 82%,#F0DFBB 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.lg-mark::after{content:'';position:absolute;inset:0;border-radius:22px;
+  pointer-events:none;background:linear-gradient(118deg,
+    rgba(255,255,255,.18) 0%,rgba(255,255,255,.05) 28%,transparent 44%)}
+
+.login .lg-co{color:rgba(217,190,138,.62);letter-spacing:.24em;text-indent:.24em;
+  font-size:var(--t5)}
+.login h1{color:#fff;font-weight:400;letter-spacing:.3em;text-indent:.3em;
+  font-family:"Songti TC","Noto Serif TC",Georgia,serif}
+.lg-msg{color:rgba(255,255,255,.52)}
+.lg-msg.bad{color:#F0A6B2}
+.lg-msg.busy{color:rgba(240,223,187,.85)}
+
+/* 四個語別點。⛔ 這四個顏色是 App 的識別，不可以換掉——
+   只調亮到在深底上讀得出來（原本那組是給淺底用的，壓在深藍上會糊掉）。 */
+.lg-dots i{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.22)}
+.lg-dots i.on:nth-child(1),.lg-dots.busy i:nth-child(1){background:#5FC2D0;box-shadow:inset 0 0 0 1.5px #5FC2D0}
+.lg-dots i.on:nth-child(2),.lg-dots.busy i:nth-child(2){background:#E9A063;box-shadow:inset 0 0 0 1.5px #E9A063}
+.lg-dots i.on:nth-child(3),.lg-dots.busy i:nth-child(3){background:#92C266;box-shadow:inset 0 0 0 1.5px #92C266}
+.lg-dots i.on:nth-child(4),.lg-dots.busy i:nth-child(4){background:#BC9BE0;box-shadow:inset 0 0 0 1.5px #BC9BE0}
+.lg-dots.bad i,.lg-dots.bad i.on{background:#F0A6B2;box-shadow:inset 0 0 0 1.5px #F0A6B2}
+
+/* 鍵盤：玻璃。⚠ 按鍵大小一點都沒改——工廠裡好按比好看重要。 */
+.lg-pad button{background:rgba(255,255,255,.07);color:#fff;font-weight:300;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.13),
+             0 6px 18px -10px rgba(0,0,0,.6)}
+.lg-pad button:active{background:rgba(255,255,255,.17);
+  box-shadow:inset 0 0 0 1px rgba(240,223,187,.42)}
+.lg-pad button.ghost{background:none;backdrop-filter:none;
+  -webkit-backdrop-filter:none;box-shadow:none;color:rgba(255,255,255,.52)}
+.lg-pad button.ghost:active{background:rgba(255,255,255,.08);box-shadow:none}
+
+/* 備援的文字輸入 */
+.lg-alt input{background:rgba(255,255,255,.07);color:#fff;
+  border-color:rgba(255,255,255,.16)}
+.lg-alt input::placeholder{color:rgba(255,255,255,.35)}
+.lg-alt button{background:rgba(240,223,187,.92);color:#0A1729;
+  border-color:rgba(240,223,187,.92);font-weight:700}
+
+/* ⚠ 日夜都一樣。夜間模式不要再蓋一層，不然會變成兩種深藍。 */
+body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
+  #1B3E66 0%, #102540 34%, #0A1729 60%, #060C15 100%)}
+
 /* ── 追蹤：四個要追到結束的事 ──────────────────────────
    2026-09-18。色票、圓角、間距全部沿用上面既有的 token，
    這一段沒有新增任何顏色——新功能不該長得像另一個 App。 */

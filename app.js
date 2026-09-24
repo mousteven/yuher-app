@@ -292,6 +292,11 @@ function tellShell(){
     shellPost({
       yuher: 'ready',
       top: cs.getPropertyValue('--chrome-bg').trim() || '#1B3B6F',
+      /* ⚠ 瀏海／狀態列那一條在 iframe 外面，是外殼畫的。
+         只送純色的話它會跟頂欄的漸層對不起來——2026-09-24 他截圖抓到。
+         135° 在 390×66 這種扁比例裡幾乎等於橫向，所以外殼那一條
+         畫同一道漸層，左右變化就會接得上，接縫看不出來。 */
+      topGrad: cs.getPropertyValue('--chrome-grad').trim(),
       bottom: cs.getPropertyValue('--card').trim() || '#ffffff'
     });
   } catch(e){}
@@ -7654,8 +7659,8 @@ function hcBoxHtml(v){
         '<span>名冊 <s>' + esc(p.phone || '（空的）') + '</s>　→　' +
         '他填 <em>' + esc(p.said) + '</em></span>' +
         '<div class="act"><button type="button" data-ad="' + esc(p.name) +
-        '">更新名冊</button><button type="button" data-dr="' + esc(p.name) +
-        '">先不要動</button></div></div>' : '');
+        '">以他填的為準</button><button type="button" data-dr="' + esc(p.name) +
+        '">不採用</button></div></div>' : '');
   }).join('') + '</div>';
 
   var acts = [];
@@ -7707,11 +7712,22 @@ function hcBindBox(v){
    之後要查「這支號碼是誰改的、什麼時候改的」查得到。 */
 function hcPhone(v, name, take){
   var p = v.list.filter(function(x){ return x.name === name; })[0] || {};
-  if(take && !confirm('把「' + name + '」名冊上的號碼換成他自己填的？\n\n' +
-      '名冊：' + (p.phone || '（空的）') + '\n' +
+  /* ⚠ 確認框**不要承諾同步到個人資料**。
+     ⛔ 前端會比後端早到（Pages 推了、Apps Script 還沒部署），
+        那個空檔裡承諾會變成謊話。真正發生了什麼由下面的 toast
+        照後端回的 r.sync 講——那是唯一知道實情的地方。
+     ⚠ 舊版寫「更新名冊」，
+     但它根本沒碰名冊、也沒碰個人資料——只改了體檢那一列。
+     按鈕名字騙人比功能沒做還糟（牟佑彬 2026-09-24 抓到）。 */
+  if(take && !confirm('把「' + name + '」的電話改成他自己填的？\n\n' +
+      '現在：' + (p.phone || '（空的）') + '\n' +
       '他填：' + p.said)) return;
-  google.script.run.withSuccessHandler(function(){
-    toast(take ? '名冊已更新' : '已記錄，名冊不動');
+  google.script.run.withSuccessHandler(function(r){
+    /* ⛔ 不可以一律說「已更新」。同步失敗的時候這一場換了、個人資料沒換，
+       畫面講得肯定而錄錯是最糟的一種。 */
+    if(!take){ toast('已記錄，號碼不改'); }
+    else if(r && r.sync && r.sync.ok){ toast('換好了，個人資料也同步了'); }
+    else { toast((r && r.note) || '這一場換了，個人資料沒換到', true); }
     openCase(v.id);
   }).withFailureHandler(function(e){ toast(e.message, true); })
     [take ? 'hcAdoptPhone' : 'hcDropSaidPhone'](CODE, v.id, name);
@@ -7879,7 +7895,7 @@ function hcTodo_(c){
   if(h.n && h.ack === 0 && day && day.days <= 10)
     return { t: '發出去了，一個都還沒確認', bad: day.days <= 3 };
   if(h.flag) return { t: h.flag + ' 人生日連錯，可能不是本人', bad: 1 };
-  if(h.said) return { t: h.said + ' 人回報了新號碼，要不要更新名冊', bad: 0 };
+  if(h.said) return { t: h.said + ' 人回報了新號碼，要不要改過來', bad: 0 };
   return null;
 }
 

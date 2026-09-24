@@ -488,6 +488,8 @@ ol li b{color:var(--ink)}
       /* 頂端安全區域那一條由外殼塗色，程式告訴我們它的頂欄是什麼顏色。
          底部不用塗了：iframe 現在自己貼到螢幕底部，底欄是程式自己畫的。 */
       if(d.top) $('app').style.background = d.top;
+      /* 漸層要疊在純色上面：舊版程式不會送 topGrad，那時候純色就是後備。 */
+      $('app').style.backgroundImage = d.topGrad || 'none';
       sendInsets();
     }
   });
