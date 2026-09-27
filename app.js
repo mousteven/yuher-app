@@ -1282,7 +1282,12 @@ function visible(){
   return CAL_ROWS.filter(function(r){
     if(r.status === '取消') return false;
     if(CAL_ST && stKey(r) !== CAL_ST) return false;
-    if(CAL_MINE && r.crew !== (STAFF_NAME||'')) return false;
+    /* ⛔ 灰色預排也算「我的」。
+       行政排給我、特助還沒確認的那幾筆，**我要看得到**
+       （牟佑彬 2026-09-27：讓翻譯提早知道未來會有這樣的行程）。
+       ⚠ 只有「建議給我」才算——別人的預排不要塞進我的清單。 */
+    if(CAL_MINE && r.crew !== (STAFF_NAME||'') &&
+       !(!r.crew && r.sug && r.sug === (STAFF_NAME||''))) return false;
     if(CAL_LG.length){
       var ls = (r.lang||'').split('、').filter(String);
       if(!ls.some(function(l){ return CAL_LG.indexOf(l) !== -1; })) return false;
@@ -1472,10 +1477,14 @@ function drawDay(){
   var wd = ['日','一','二','三','四','五','六'][new Date(d+'T00:00:00').getDay()];
   $('calDayTitle').textContent = (+d.slice(5,7))+' 月 '+(+d.slice(8,10))+' 日（'+wd+'）';
   var list = visible().filter(function(r){ return r.date === d; });
-  var plan = list.filter(function(r){ return r.status === '預排'; });
+  /* 三組：已確認的待處理／灰色預排／已完成。
+     ⛔ 灰色的不可以混進「待處理」——那會讓人照著去跑，而它還沒定。 */
+  var pre  = list.filter(function(r){ return r.status === '預排' && !r.crew && r.sug; });
+  var plan = list.filter(function(r){ return r.status === '預排' && r.crew; });
   var done = list.filter(function(r){ return r.status === '已完成'; });
   $('calDayCount').textContent = list.length
     ? (plan.length ? ('待處理 '+plan.length+'　已完成 '+done.length) : ('已完成 '+done.length))
+      + (pre.length ? ('　預排 '+pre.length) : '')
     : '沒有行程';
 
   /* ── 行程卡 ─────────────────────────────────────────
@@ -1554,10 +1563,50 @@ function drawDay(){
       '</div></div>';
   }
 
+  /* 灰色預排的卡片**刻意另外寫一個**，不重用上面那支。
+     ⛔ 那一支帶著側滑軌道、長按拖曳改期、點開填服務紀錄——
+        那些動作對「還沒確認的行程」全部都不該有。
+        與其在 card() 裡到處加 if，不如給預排一張安靜的卡。
+     ⚠ 這一段是十個人每天在用的畫面，能不動既有的就不動。 */
+  function preCard(r){
+    var l = (r.lang||'').split('、')[0] || '';
+    return '<div class="ev pre" data-pre="'+esc(r.id||'')+'">'+
+      '<span class="bar lg-'+esc(l)+'"></span>'+
+      '<span class="b">'+
+        '<span class="c4eye"><span class="sv">'+esc(r.topic || r.sub || '—')+'</span>'+
+        '<span class="c4pre">預排・還沒確認</span></span>'+
+        '<span class="c4nm"><span class="n">'+esc(r.client)+'</span></span>'+
+        (r.workers?'<span class="c4wk"><span class="c4ws">'+esc(r.workers)+'</span></span>':'')+
+        '<span class="c4who">'+esc(r.slot||'未定時段')+'　'+esc(r.by||'')+' 排的，等特助確認</span>'+
+        (r.decline
+          ? '<span class="c4no">你說了：'+esc(String(r.decline).split('：').slice(1).join('：')
+              || r.decline)+'</span>'
+          : '<button type="button" class="c4nogo" data-nogo="'+esc(r.id||'')+'">'+
+            '我那天不行</button>')+
+      '</span></div>';
+  }
+
   var html = '';
+  /* 被換掉的通知。⛔ 他可能已經排好路線、甚至跟工廠約好了，
+     所以一定要講一聲（牟佑彬 2026-09-27 指定）。 */
+  var moved = CAL_ROWS.filter(function(r){
+    return r.moved && String(r.moved).indexOf((STAFF_NAME||'') + ' →') === 0 &&
+           r.date === CAL_SEL;
+  });
+  if(moved.length){
+    html += moved.map(function(r){
+      return '<div class="c4moved">🔔 <b>'+esc(r.client)+' '+esc(r.topic||'')+
+        ' 不用你去了</b><span>'+esc(r.moved)+'</span></div>';
+    }).join('');
+  }
   if(plan.length){
     html += '<div class="grp">待處理 <b>'+plan.length+'</b></div>' +
             plan.map(card).join('');
+  }
+  if(pre.length){
+    html += '<div class="grp pre">預排 <b>'+pre.length+'</b>' +
+            '<span class="gn">行政排好了，等特助確認——先不要去</span></div>' +
+            pre.map(preCard).join('');
   }
   if(done.length){
     // 跑完的收在下面：一天結束時往下滑就是當天的成果
@@ -1568,9 +1617,32 @@ function drawDay(){
   fixStick();
 
   // 卡片本身可以長按拖曳改期（按鈕不受影響）
+  /* 「我那天不行」——灰色預排專用。
+     ⛔ 只能對「建議給自己、而且還沒確認」的講，後端也會再驗一次。
+        已確認的要改得找特助，不然行程會在出發前自己消失。 */
+  [].forEach.call($('calDayList').querySelectorAll('[data-nogo]'), function(b){
+    b.onclick = function(ev){
+      ev.stopPropagation();
+      var why = prompt('那天為什麼不行？特助會看到。', '');
+      if(why === null) return;
+      b.disabled = true; b.textContent = '送出中…';
+      google.script.run
+        .withSuccessHandler(function(){
+          toast('跟特助說了'); calBust(); loadCal();
+        })
+        .withFailureHandler(function(e){
+          b.disabled = false; b.textContent = '我那天不行';
+          toast(e.message, true);
+        })
+        .declineSchedule(CODE, b.dataset.nogo, why);
+    };
+  });
+
   var idx = 0;
   var all = plan.concat(done);
-  [].forEach.call($('calDayList').querySelectorAll('.ev'), function(card){
+  /* ⚠ 預排卡也是 .ev，但它不可以拖曳改期——用 :not(.pre) 排除。
+     不排除的話 all[idx] 會對錯人，拖到的是別張卡片。 */
+  [].forEach.call($('calDayList').querySelectorAll('.ev:not(.pre)'), function(card){
     var r2 = all[idx++]; if(!r2) return;
     bindDrag(card, r2);
   });

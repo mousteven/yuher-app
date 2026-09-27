@@ -2945,3 +2945,46 @@ body.finding .tabs{display:none}
   font:inherit;font-size:var(--t4);font-weight:700;cursor:pointer;
   min-height:2.75rem}
 .pconf .cbtn button:disabled{opacity:.5}
+
+/* ── 灰色預排（2026-09-27）──────────────────────────────
+   行政排好、特助還沒確認的行程。牟佑彬 9/27：
+   「在行事曆上以灰色表示且所有人都看得到…讓大家特別是翻譯
+     知道未來會有這樣的行程。」
+
+   ⛔ 一定要一眼看出「還沒定」，不然有人會照著去跑：
+      降飽和 ＋ 虛線邊 ＋ 明寫「預排・還沒確認」 ＋ 沒有側滑軌道。 */
+.ev.pre{
+  background: color-mix(in srgb, var(--ink3) 6%, var(--card));
+  border-style: dashed;
+  box-shadow: none;
+}
+.ev.pre .bar{ opacity:.45 }
+.ev.pre .c4nm .n{ color: var(--ink3) }
+.c4pre{
+  font-size:11px; font-weight:700; color:var(--ink3);
+  background:var(--line2); border:1px dashed var(--line);
+  padding:1px 8px; border-radius:99px; margin-left:6px; white-space:nowrap;
+}
+.grp.pre{ color:var(--ink3) }
+.grp .gn{ font-weight:400; font-size:12px; color:var(--ink3); margin-left:8px }
+/* 「我那天不行」：看得見但不搶戲——它不是主要動作。 */
+.c4nogo{
+  margin-top:8px; align-self:flex-start;
+  font:inherit; font-size:12.5px; font-weight:700; color:var(--ink2);
+  background:var(--card); border:1px solid var(--line);
+  border-radius:8px; padding:6px 13px; cursor:pointer;
+}
+.c4nogo:active{ background:var(--line2) }
+.c4nogo:disabled{ opacity:.5 }
+.c4no{
+  margin-top:7px; font-size:12px; font-weight:700; color:var(--bad-ink);
+}
+/* 被換掉的通知。⚠ 他可能已經排好路線、甚至跟工廠約好了。 */
+.c4moved{
+  display:flex; flex-direction:column; gap:2px;
+  background: color-mix(in srgb, var(--bad-ink) 8%, var(--card));
+  border:1px solid color-mix(in srgb, var(--bad-ink) 32%, transparent);
+  border-radius:12px; padding:10px 13px; margin-bottom:10px; font-size:13px;
+}
+.c4moved b{ color:var(--bad-ink) }
+.c4moved span{ color:var(--ink3); font-size:12px }
