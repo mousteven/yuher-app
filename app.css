@@ -3071,3 +3071,10 @@ body.finding .tabs{display:none}
 .dpp s{text-decoration:none;color:var(--ink3);font-size:.72rem;margin-left:4px}
 .dpp.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink);font-weight:700}
 .dpp.on s{color:rgba(255,255,255,.8)}
+
+/* 行政與特助只有兩三個底頁。不加這條的話每顆會撐到半個畫面，
+   看起來像排版壞掉。⚠ 只在 .few 生效，翻譯那五顆不受影響。 */
+.tabs.few{justify-content:center;gap:6px}
+.tabs.few button{flex:0 0 auto;min-width:112px;padding-left:18px;padding-right:18px}
+body.tabsbottom .tabs.few{gap:0}
+body.tabsbottom .tabs.few button{min-width:120px}

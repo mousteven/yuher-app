@@ -9156,6 +9156,11 @@ function applyRoleTabs(){
     return;
   }
   [].forEach.call(btns, function(b){ b.hidden = (want.indexOf(b.dataset.t) === -1); });
+  /* 只剩兩三顆的時候不要每顆撐到半個畫面——那看起來像壞掉。
+     ⚠ 用 class 標記而不是改 .tabs button 的通則，
+       翻譯那五顆（含中間的加號）完全不受影響。 */
+  var bar = document.querySelector('.tabs');
+  if(bar) bar.classList.toggle('few', want.length <= 3);
   /* 目前那一頁如果被藏起來了，要跳回第一個看得到的，
      不然畫面停在一個按不到的分頁上。 */
   var on = document.querySelector('.tabs button.on');
