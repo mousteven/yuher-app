@@ -80,9 +80,17 @@ function login(code){
         PRESETS = [];
       }
 
+      ADMIN_OF = r.adminOf || {};
+      CREW_LANG_ = r.crewLang || {};
+
       $('login').style.display='none'; $('app').style.display='';
   document.body.classList.remove('lgon');
       $('who').textContent = STAFF_NAME;
+      /* ⛔ 底頁要按角色重排（牟佑彬 2026-09-28：
+         「翻譯、行政、特助能不能統一用一個介面」）。
+         行政不跑外勤，填寫／追蹤／送審／評鑑對他們是雜訊；
+         特助只確認，連填寫都不需要。 */
+      applyRoleTabs();
 
       // 簽名板要在畫面顯示之後才 init，隱藏時量到的寬度是 0
       ['employer','staff'].forEach(function(k){
@@ -215,6 +223,7 @@ var PRESETS = [];
 var CREW = [];
 var STAFF_NAME = '';
 var STAFF_ROLE = '';
+var ADMIN_OF = {};          // 客戶 → 負責行政。空的＝還沒劃分，全部都看得到
 var OTHER_ = '__other__';
 
 /* ── 登出 ──────────────────────────────────────
@@ -967,6 +976,10 @@ document.querySelectorAll('.tabs button').forEach(function(b){
     if(b.dataset.t==='track') loadTrack();
     if(b.dataset.t==='follow') loadFollow();
     if(b.dataset.t==='stat') loadStat();
+    // 派工（行政與特助）。資料跟行事曆同一份 CAL_ROWS，不另外去拿。
+    if(b.dataset.t==='order') loadOrder();
+    if(b.dataset.t==='mine')  loadMine();
+    if(b.dataset.t==='conf')  loadConf();
     /* 離開填寫頁＝手上的事告一段落，這時候更新不會弄丟東西。 */
     tryUpdate();
   });
@@ -1218,6 +1231,16 @@ function calMerge(months){
     });
   });
   CAL_ROWS = out;
+  /* 行事曆的資料一到，紅點與派工那三頁就跟著更新——
+     ⛔ 不要讓它們各自再去拿一次，那會重複打後端而且兩邊數字對不上。 */
+  try { paintOwed(); } catch(e){}
+  try {
+    var on = document.querySelector('.tabs button.on');
+    var t = on && on.dataset.t;
+    if(t==='order') loadOrder();
+    else if(t==='mine') loadMine();
+    else if(t==='conf') loadConf();
+  } catch(e2){}
 }
 
 function loadCal(ym, force){
@@ -9095,4 +9118,416 @@ if($('fdQ')){
   $('fdQ').addEventListener('input', fdType);
   /* ⚠ iOS 的 type=search 有一顆自己的清除鈕，它發的是 search 事件不是 input。 */
   $('fdQ').addEventListener('search', fdType);
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   派工：行政開單 → 特助確認 → 翻譯執行
+
+   牟佑彬 2026-09-28：「翻譯、行政、特助能不能統一用一個介面」——
+   所以不做第二個網頁，而是這支 App 多三個底頁，**按角色顯示**。
+   行事曆、卡片樣式、篩選、下拉更新全部沿用，不再造一套。
+
+   流程（他 2026-09-27 選的做法二）：
+     行政填「建議誰去」（可留空）→ 特助按確認 → 翻譯手機上才變成正式行程。
+     還沒確認的是**灰色預排**，大家都看得到，讓翻譯提早知道、
+     也能先說「我那天不行」。
+   ══════════════════════════════════════════════════════════════ */
+
+/* 角色決定看得到哪幾個底頁。
+   ⛔ 這只是「看得到什麼」，不是權限——後端每一支都各自再驗一次。 */
+var ROLE_TABS_ = {
+  '行政':   ['cal', 'order', 'mine'],
+  '特助':   ['cal', 'conf'],
+  '副理':   ['cal', 'new', 'track', 'follow', 'stat', 'conf'],
+  '總經理': ['cal', 'new', 'track', 'follow', 'stat', 'conf']
+};
+function applyRoleTabs(){
+  var want = ROLE_TABS_[STAFF_ROLE];
+  var btns = document.querySelectorAll('.tabs button');
+  if(!want){
+    /* 翻譯（以及沒有角色的）維持原本五個，新的三個藏起來。
+       ⚠ 不可以反過來寫成「把不要的藏起來」——那樣新加角色時會漏。 */
+    [].forEach.call(btns, function(b){
+      b.hidden = (['order','mine','conf'].indexOf(b.dataset.t) !== -1); });
+    return;
+  }
+  [].forEach.call(btns, function(b){ b.hidden = (want.indexOf(b.dataset.t) === -1); });
+  /* 目前那一頁如果被藏起來了，要跳回第一個看得到的，
+     不然畫面停在一個按不到的分頁上。 */
+  var on = document.querySelector('.tabs button.on');
+  if(on && on.hidden){
+    var first = document.querySelector('.tabs button:not([hidden])');
+    if(first) first.click();
+  }
+}
+
+/* ── 共用：這一筆現在什麼狀態 ───────────────────── */
+function dpLive(){ return CAL_ROWS.filter(function(r){ return r.status !== '取消'; }); }
+function dpDay(d){ return dpLive().filter(function(r){ return r.date === d; }); }
+function dpWho(r){ return r.crew || r.sug || ''; }
+function dpUrg(r){
+  if(r.slot) return ['dpu1', '壓時間 ' + r.slot];
+  if((r.memo||'').indexOf('不急') === 0) return ['dpu3', '不急'];
+  return ['dpu2', '壓日期'];
+}
+function dpLabel(d){
+  if(!d) return '（沒有日期）';
+  var p = d.split('-'), x = new Date(+p[0], +p[1]-1, +p[2]);
+  return (+p[1]) + '/' + (+p[2]) + '（' + '日一二三四五六'.charAt(x.getDay()) + '）';
+}
+function dpCrewLang(n){ return (TAX && TAX.crewLang && TAX.crewLang[n]) || CREW_LANG_[n] || ''; }
+var CREW_LANG_ = {};   // 由 bootstrap 帶進來（svcBootstrap 的 crewLang）
+
+/* ── 衝突偵測 ────────────────────────────────────
+   四種：撞時間／語言不對／本人說不行／可能太滿。
+   前三種是硬的，第四種只提醒——**件數不等於多累**。
+   ⚠️ 「那天請假」做不了：系統沒有請假登記，
+      目前靠翻譯自己在灰色預排上按「我那天不行」頂著。 */
+function dpConflicts(d){
+  var rows = dpDay(d).filter(function(r){ return dpWho(r) && r.status === '預排'; });
+  var out = [], seen = {};
+  for(var i=0;i<rows.length;i++) for(var j=i+1;j<rows.length;j++){
+    var a=rows[i], b=rows[j];
+    if(dpWho(a)!==dpWho(b) || !a.slot || !b.slot || a.slot!==b.slot) continue;
+    out.push({ hard:1, ty:'撞時間', id:a.id,
+      title: dpWho(a)+' '+a.slot+' 同時有兩件',
+      why: esc(a.client)+' '+esc(a.topic||'')+'（'+esc(a.by)+'）　vs　'+
+           esc(b.client)+' '+esc(b.topic||'')+'（'+esc(b.by)+'）' });
+  }
+  rows.forEach(function(r){
+    var w = dpWho(r), lg = dpCrewLang(w);
+    if(r.decline){
+      out.push({ hard:1, ty:'本人說不行', id:r.id,
+        title: w+' 說 '+dpLabel(r.date)+' 那天不行',
+        why: esc(r.client)+' '+esc(r.topic||'')+'　·　他寫的：'+
+             esc(String(r.decline).split('：').slice(1).join('：') || r.decline) });
+    } else if(r.lang && lg && lg !== r.lang){
+      var alt = CREW.filter(function(n){ return dpCrewLang(n) === r.lang; });
+      out.push({ hard:1, ty:'語言不對', id:r.id,
+        title: esc(r.client)+' '+esc(r.topic||'')+' 排給了 '+w,
+        why: '這一場是'+esc(r.lang)+'文，'+w+' 是'+esc(lg)+'文　·　同語別的：'+
+             (alt.map(function(n){ return n+'（'+
+               dpDay(r.date).filter(function(y){ return dpWho(y)===n; }).length+' 件）';
+             }).join('、') || '沒有人') });
+    }
+  });
+  var cnt = {};
+  rows.forEach(function(r){ var w=dpWho(r); cnt[w]=(cnt[w]||0)+1; });
+  Object.keys(cnt).forEach(function(w){
+    if(cnt[w] >= 5) out.push({ hard:0, ty:'可能太滿', id:'',
+      title: w+' '+dpLabel(d)+' 排了 '+cnt[w]+' 件',
+      why: '件數不等於多累——一件離境結算可能比三件收證件久。看一下地點順不順路。' });
+  });
+  return out.filter(function(c){
+    var k = c.id ? (c.ty+c.id) : ('s'+c.title);
+    if(seen[k]) return false; seen[k]=1; return true;
+  });
+}
+function dpHardSet(d){
+  var m={}; dpConflicts(d).forEach(function(c){ if(c.hard && c.id) m[c.id]=c.ty; }); return m;
+}
+
+/* ── 共用卡片。沿用行事曆的視覺語言，不另外發明一套。 ── */
+function dpCard(r, acts){
+  var u = dpUrg(r), w = dpWho(r), pre = (!r.crew && r.sug);
+  return '<div class="dpcd'+(pre?' pre':'')+(r.crew?' ok':'')+'">'+
+    '<div class="dpb">'+
+      '<div class="dpk">'+esc(r.topic || r.sub || '—')+'</div>'+
+      '<div class="dpc">'+esc(r.client)+'</div>'+
+      (r.workers?'<div class="dpw">'+esc(r.workers)+'</div>':'')+
+      (r.memo?'<div class="dpw">'+esc(r.memo)+'</div>':'')+
+      '<div class="dpm">'+dpLabel(r.date)+'　'+esc(r.slot||'未定時段')+'　'+
+        (w?'<b>'+esc(w)+'</b>':'<b class="non">還沒有人</b>')+
+        '　·　'+esc(r.by||'')+(r.sug&&!r.crew?' 建議':' 開單')+
+        (r.decline?'<br><b class="non">本人說不行：'+
+          esc(String(r.decline).split('：').slice(1).join('：')||r.decline)+'</b>':'')+
+        (r.moved?'<br>改過：'+esc(r.moved):'')+
+      '</div>'+
+    '</div>'+
+    '<div class="dpg">'+
+      (r.status==='已完成' ? '<span class="dpt ok">✓ 已完成</span>'
+        : r.crew ? '<span class="dpt ok">✓ 已確認</span>'
+        : r.sug ? '<span class="dpt pre">預排・未確認</span>'
+        : '<span class="dpt wait">還沒有人</span>')+
+      '<span class="dpt '+u[0]+'">'+esc(u[1])+'</span>'+
+      (r.lang?'<span class="dpt">'+esc(r.lang)+'文</span>':'<span class="dpt">不用翻譯</span>')+
+      (acts||'')+
+    '</div></div>';
+}
+function dpGroup(title, list, tone){
+  if(!list.length) return '';
+  return '<div class="dphd '+(tone||'')+'">'+title+' <b>'+list.length+'</b></div>'+
+    list.map(function(r){ return dpCard(r); }).join('');
+}
+
+/* ── ⑴ 欠填紅點（2026-09-28 七天模擬列出來的破口之一）─────
+   「做完了但沒填紀錄」七天累積 30 筆，**連翻譯自己都不知道欠著**。
+   追蹤與送審本來就有紅點，照抄那個做法。
+   ⚠️ 數的是「已完成但沒有紀錄代碼」——那正是漏掉的定義。 */
+function owedCount(){
+  return CAL_ROWS.filter(function(r){
+    return r.status === '已完成' && !r.recCode && r.crew === (STAFF_NAME || '');
+  }).length;
+}
+function paintOwed(){
+  var b = $('newBadge');
+  if(!b) return;
+  var n = owedCount();
+  b.textContent = n;
+  b.style.display = n ? '' : 'none';
+}
+
+/* ── ⑵ 過期未結案 ───────────────────────────────
+   日期已經過了、還停在「預排」——七天模擬裡累積 50 筆，**沒有任何人看得到**。
+   ⚠️ 不看「已完成」也不看「取消」：那兩種都已經有結論了。 */
+function overdue(){
+  var t = todayStr();
+  return CAL_ROWS.filter(function(r){
+    return r.status === '預排' && r.date && r.date < t;
+  }).sort(function(a,b){ return a.date.localeCompare(b.date); });
+}
+function owedAll(){
+  return CAL_ROWS.filter(function(r){ return r.status === '已完成' && !r.recCode; });
+}
+
+function dpTomorrow(){ var d=new Date(); d.setDate(d.getDate()+1); return dpYmd(d); }
+function dpYmd(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+
+  '-'+('0'+d.getDate()).slice(-2); }
+function dpPlus(s,n){ var p=s.split('-'), d=new Date(+p[0],+p[1]-1,+p[2]);
+  d.setDate(d.getDate()+n); return dpYmd(d); }
+
+/* ══ 行政：客戶（開單）════════════════════════ */
+var DP_CLI = '', DP_SUG = null, DP_MINEONLY = true;
+function loadOrder(){
+  var box = $('p-order');
+  var own = PRESETS.filter(function(c){ return ADMIN_OF[c.c] === STAFF_NAME; });
+  var pool = (DP_MINEONLY && own.length) ? own : PRESETS;
+  if(!pool.length) pool = PRESETS;
+  if(!pool.some(function(c){ return c.c === DP_CLI; })) DP_CLI = pool.length ? pool[0].c : '';
+  var c = PRESETS.filter(function(x){ return x.c === DP_CLI; })[0];
+  var ts = dpLive().filter(function(r){ return r.client === DP_CLI; });
+
+  var h = '<div class="dpbar"><label class="dplb">客戶</label><select id="dpCli">'+
+    pool.map(function(x){
+      var n = dpLive().filter(function(y){ return y.client===x.c && !y.crew; }).length;
+      return '<option value="'+esc(x.c)+'"'+(x.c===DP_CLI?' selected':'')+'>'+
+        esc(x.c)+(n?('（待確認 '+n+'）'):'')+'</option>';
+    }).join('')+'</select>'+
+    (own.length?'<button type="button" class="dpsm" id="dpTgl">'+
+      (DP_MINEONLY?('只看我的 '+own.length+' 家'):('全部 '+PRESETS.length+' 家'))+
+      '</button>':'')+'</div>';
+  if(!own.length) h += '<p class="dpnote">「行政負責客戶」那張表還沒填，'+
+    '所以先顯示全部 '+PRESETS.length+' 家。</p>';
+  if(c) h += '<p class="dpnote">'+esc(c.p||'（名冊沒有地址）')+
+    '　·　'+((c.w&&c.w.length)||0)+' 位移工</p>';
+
+  h += dpGroup('還沒確認', ts.filter(function(r){ return !r.crew && r.status==='預排'; }), 'a');
+  h += dpGroup('特助確認了', ts.filter(function(r){ return r.crew && r.status==='預排'; }), '');
+  h += dpGroup('做完了', ts.filter(function(r){ return r.status==='已完成'; }), 'g');
+  if(!ts.length) h += '<p class="mid" style="padding:18px">這家目前沒有待辦</p>';
+
+  if(c){
+    var cats = (TAX && TAX.cats) || [];
+    h += '<div class="dpform"><div class="dphd">開一筆新的</div>'+
+      '<div class="dpr"><label class="dplb">服務類別</label><select id="dpB">'+
+      cats.map(function(x,i){ return '<option value="'+i+'">'+esc(x.b)+'</option>'; }).join('')+
+      '</select><label class="dplb">事由</label><select id="dpS"></select></div>'+
+      '<div class="dpr"><label class="dplb">語別</label><select id="dpL">'+
+      '<option value="">不用翻譯</option>'+
+      ((TAX&&TAX.langs)||[]).map(function(l){ return '<option>'+esc(l)+'</option>'; }).join('')+
+      '</select><label class="dplb">急迫度</label><select id="dpU">'+
+      '<option value="dated">壓日期</option><option value="urgent">壓時間</option>'+
+      '<option value="loose">不急</option></select>'+
+      '<input type="date" id="dpD"><input type="text" id="dpT" placeholder="09:00" '+
+      'style="display:none;max-width:96px"></div>'+
+      '<div class="dpr"><input type="text" id="dpM" placeholder="備註：找誰、要注意什麼…"></div>'+
+      '<div class="dpr"><label class="dplb">建議誰去</label><div class="dpsug">'+
+      CREW.map(function(n){
+        return '<button type="button" class="dpp'+(DP_SUG===n?' on':'')+'" data-p="'+
+          esc(n)+'">'+esc(n)+'<s>'+(dpCrewLang(n)||'外務')+'</s></button>';
+      }).join('')+'</div></div>'+
+      '<div class="dpr"><span class="dpnote">留空就是交給特助配</span>'+
+      '<button type="button" class="dpgo" id="dpSave">存檔</button></div></div>';
+  }
+  box.innerHTML = h;
+
+  var sel = $('dpCli');
+  if(sel) sel.onchange = function(){ DP_CLI = this.value; DP_SUG = null; loadOrder(); };
+  var tg = $('dpTgl');
+  if(tg) tg.onclick = function(){ DP_MINEONLY = !DP_MINEONLY; loadOrder(); };
+  [].forEach.call(box.querySelectorAll('.dpp'), function(b){
+    b.onclick = function(){ DP_SUG = (DP_SUG===b.dataset.p)?null:b.dataset.p; loadOrder(); };
+  });
+  var nb = $('dpB');
+  if(nb){
+    var fillSub = function(){
+      var cat = ((TAX&&TAX.cats)||[])[+nb.value] || { s:[] };
+      $('dpS').innerHTML = (cat.s||[]).map(function(x){
+        return '<option>'+esc(x.n)+'</option>'; }).join('');
+    };
+    nb.onchange = fillSub; fillSub();
+    $('dpD').value = dpTomorrow();
+    $('dpU').onchange = function(){
+      $('dpT').style.display = (this.value==='urgent')?'':'none';
+      /* 不急的往後兩週——不要卡在明天那一頁擋住真正急的事。 */
+      $('dpD').value = (this.value==='loose') ? dpPlus(dpTomorrow(),13) : dpTomorrow();
+    };
+    $('dpSave').onclick = dpSave;
+  }
+}
+function dpSave(){
+  var b = $('dpSave'); if(b.disabled) return;
+  var cats = (TAX&&TAX.cats)||[];
+  var big = (cats[+$('dpB').value]||{}).b || '', sub = $('dpS').value || '';
+  var mode = $('dpU').value, memo = $('dpM').value.trim();
+  if(mode==='loose') memo = memo ? ('不急・'+memo) : '不急';
+  if(mode==='urgent' && !$('dpT').value.trim()){ toast('壓時間就要填時間', true); return; }
+  b.disabled = true; b.textContent = '存檔中…';
+  var picked = DP_SUG, cli = DP_CLI;
+  var c = PRESETS.filter(function(x){ return x.c===cli; })[0] || {};
+  google.script.run
+    .withSuccessHandler(function(){
+      DP_SUG = null;
+      toast(cli+' '+sub+' 開好了'+(picked
+        ? ('　→ '+picked+' 的行事曆上會出現灰色預排') : '　→ 等特助配人'));
+      calBust(); loadCal(null, true);
+    })
+    .withFailureHandler(function(e){
+      b.disabled=false; b.textContent='存檔'; toast(e.message, true);
+    })
+    /* ⛔ crew 一定要明確傳空字串：不傳的話後端會掛給開單的人（行政自己）。
+       sug 才是「我建議誰」。 */
+    .addSchedule(CODE, { date:$('dpD').value,
+      slot: mode==='urgent'?$('dpT').value.trim():'',
+      crew:'', sug: picked||'', target:(c.t==='家庭雇主'?'家庭':'工廠'), client:cli,
+      lang:$('dpL').value, big:big, sub:sub, memo:memo });
+}
+
+/* ══ 行政：我開的單（含審核狀態）════════════════ */
+function loadMine(){
+  var mine = dpLive().filter(function(r){ return r.by === STAFF_NAME; });
+  var wait = mine.filter(function(r){ return !r.crew && r.status==='預排'; });
+  var okd  = mine.filter(function(r){ return r.crew && r.status==='預排'; });
+  var done = mine.filter(function(r){ return r.status==='已完成'; });
+  /* ⑶ 審核狀態。⛔ listSchedule 早就回了 r.rv（Schedule.gs:153），
+     在 2026-09-28 之前**這裡一個字都沒印**——
+     翻譯的紀錄被退回，開單的行政完全不知道，客戶打來他答不出話。 */
+  var back = done.filter(function(r){ return r.rv === '退回補正'; });
+  var h = '';
+  if(back.length) h += '<div class="dpalert">⚠ <b>'+back.length+' 筆被退回補正</b>'+
+    '<s>翻譯要補資料才會歸檔。這幾筆還沒結束。</s></div>';
+  h += dpGroup('等特助確認', wait, 'a') +
+       dpGroup('排好了', okd, '') +
+       dpGroup('做完了', done, 'g');
+  if(!mine.length) h += '<p class="mid" style="padding:22px">'+
+    '還沒有你開的單——切到「客戶」開一筆</p>';
+  h += '<p class="dpnote" style="margin-top:14px">'+
+    '這裡跟翻譯行事曆是<b>同一批資料</b>，只有一份。</p>';
+  $('p-mine').innerHTML = h;
+}
+
+/* ══ 特助：待確認 ════════════════════════════ */
+function loadConf(){
+  var day = CAL_SEL || todayStr();
+  var rows = dpDay(day), cfs = dpConflicts(day), bad = dpHardSet(day);
+  var pend = rows.filter(function(r){ return !r.crew && r.status==='預排'; });
+  var okSug  = pend.filter(function(r){ return r.sug && !bad[r.id]; });
+  var badSug = pend.filter(function(r){ return r.sug && bad[r.id]; });
+  var none   = pend.filter(function(r){ return !r.sug; });
+  var od = overdue(), ow = owedAll();
+
+  var h = '<div class="dpbar"><label class="dplb">日期</label>'+
+    '<input type="date" id="dpDay" value="'+esc(day)+'">'+
+    '<button type="button" class="dpsm" id="dpToday">今天</button></div>';
+
+  /* ⑵ 過期未結案。**七天模擬裡累積 50 筆，沒有任何人看得到。**
+     放在最上面——它是唯一一個「愈拖愈多、而且沒有人在看」的東西。 */
+  if(od.length){
+    h += '<div class="dpalert big">⛔ <b>'+od.length+' 筆過期還沒結案</b>'+
+      '<s>日期已經過了，狀態還停在「預排」——做了沒？取消了？沒有人知道。</s></div>'+
+      od.slice(0,12).map(function(r){ return dpCard(r, dpAct(r)); }).join('')+
+      (od.length>12?('<p class="dpnote">還有 '+(od.length-12)+' 筆</p>'):'');
+  }
+  if(ow.length){
+    h += '<div class="dpalert">⚠ <b>'+ow.length+' 筆做完了沒填紀錄</b>'+
+      '<s>行程已完成但沒有服務紀錄，等於沒有留下任何憑證。</s></div>'+
+      ow.slice(0,8).map(function(r){ return dpCard(r); }).join('');
+  }
+  if(cfs.length){
+    h += '<div class="dphd b">有問題　先看這個 <b>'+cfs.length+'</b></div>';
+    cfs.forEach(function(c){
+      h += '<div class="dpcf'+(c.hard?'':' soft')+'"><span class="dpty">'+esc(c.ty)+
+        '</span><div><b>'+esc(c.title)+'</b><s>'+c.why+'</s></div>'+
+        (c.id?dpPick(c.id, '改給…'):'')+'</div>';
+    });
+  }
+  if(okSug.length) h += '<div class="dphd">行政填了人，看起來沒問題 <b>'+okSug.length+
+    '</b><button type="button" class="dpgo sm" id="dpAll">全部確認</button></div>'+
+    okSug.map(function(r){ return dpCard(r, dpAct(r)); }).join('');
+  if(badSug.length) h += '<div class="dphd b">這幾筆有上面的問題 <b>'+badSug.length+
+    '</b></div>'+badSug.map(function(r){ return dpCard(r, dpAct(r)); }).join('');
+  if(none.length) h += '<div class="dphd a">行政沒填人，要你配 <b>'+none.length+
+    '</b></div>'+none.map(function(r){ return dpCard(r, dpAct(r)); }).join('');
+  var done = rows.filter(function(r){ return r.crew; });
+  if(done.length) h += '<div class="dphd g">已確認 <b>'+done.length+'</b></div>'+
+    done.map(function(r){ return dpCard(r); }).join('');
+  if(!rows.length && !od.length && !ow.length)
+    h += '<p class="mid" style="padding:22px">這一天沒有行程</p>';
+  h += '<p class="dpnote" style="margin-top:14px">'+
+    '確認之後那一筆才會變成翻譯手機上的正式行程。'+
+    '換人的話<b>被拿掉的那位會收到通知</b>。</p>';
+  $('p-conf').innerHTML = h;
+
+  $('dpDay').onchange = function(){ CAL_SEL = this.value; loadConf(); };
+  $('dpToday').onclick = function(){ CAL_SEL = todayStr(); loadConf(); };
+  var a = $('dpAll');
+  if(a) a.onclick = function(){ dpConfirmAll(okSug); };
+  [].forEach.call($('p-conf').querySelectorAll('.dpsel'), function(s){
+    s.onchange = function(){ if(this.value) dpDo(this.dataset.id, this.value); };
+  });
+  [].forEach.call($('p-conf').querySelectorAll('[data-conf]'), function(b){
+    b.onclick = function(){ dpDo(b.dataset.conf, ''); };
+  });
+}
+function dpPick(id, ph){
+  var r = CAL_ROWS.filter(function(x){ return x.id===id; })[0] || {};
+  var pool = CREW.filter(function(n){
+    return !r.lang || dpCrewLang(n)===r.lang || !dpCrewLang(n); });
+  return '<select class="dpsel" data-id="'+esc(id)+'"><option value="">'+ph+'</option>'+
+    pool.map(function(n){
+      /* ⛔ value 一定要是乾淨的名字。2026-09-27 撞過：顯示帶「（N 件）」，
+         送到後端變成不存在的人名，被 SVC_CREW_ 驗證擋下來。 */
+      return '<option value="'+esc(n)+'">'+esc(n)+'（'+
+        dpDay(r.date).filter(function(y){ return dpWho(y)===n; }).length+' 件）</option>';
+    }).join('')+'</select>';
+}
+function dpAct(r){
+  return (r.sug?'<button type="button" class="dpgo sm" data-conf="'+esc(r.id)+
+    '">確認</button>':'')+dpPick(r.id, r.sug?'換人…':'配人…');
+}
+function dpDo(id, who){
+  var r = CAL_ROWS.filter(function(x){ return x.id===id; })[0] || {};
+  var was = dpWho(r);
+  google.script.run
+    .withSuccessHandler(function(){
+      toast(who ? (r.client+'：'+(was||'沒人')+' → '+who+
+                   (was&&was!==who?('　已通知 '+was):''))
+                : (r.client+' 確認給 '+was));
+      calBust(); loadCal(null, true);
+    })
+    .withFailureHandler(function(e){ toast(e.message, true); })
+    .confirmSchedule(CODE, id, who || '');
+}
+function dpConfirmAll(list){
+  if(!list.length) return;
+  var left = list.length, n = 0;
+  list.forEach(function(r){
+    google.script.run
+      .withSuccessHandler(function(){ n++; if(!--left){
+        toast(n+' 筆一次確認完'); calBust(); loadCal(null, true); } })
+      .withFailureHandler(function(e){ if(!--left){
+        toast('有幾筆沒過：'+e.message, true); calBust(); loadCal(null, true); } })
+      .confirmSchedule(CODE, r.id, '');
+  });
 }

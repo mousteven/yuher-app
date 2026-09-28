@@ -2988,3 +2988,84 @@ body.finding .tabs{display:none}
 }
 .c4moved b{ color:var(--bad-ink) }
 .c4moved span{ color:var(--ink3); font-size:12px }
+
+/* ── 派工（行政與特助的三個底頁，2026-09-28）──────────────
+   牟佑彬：「翻譯、行政、特助能不能統一用一個介面」——
+   所以不做第二個網頁，而是這支 App 多三個底頁，按角色顯示。
+   ⚠ 沿用行事曆的色票與圓角，不另外發明一套。 */
+.dpbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.dplb{font-size:.78rem;color:var(--ink3);font-weight:700;letter-spacing:.05em;flex:none}
+.dpbar select,.dpbar input[type=date]{flex:1;min-width:150px;padding:9px 11px;
+  border:1px solid var(--line);border-radius:10px;background:var(--card);
+  font-family:inherit;font-size:.92rem;color:var(--ink)}
+.dpsm{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);
+  font-family:inherit;font-size:.8rem;color:var(--ink2);cursor:pointer;flex:none}
+.dpnote{font-size:.8rem;color:var(--ink3);margin:0 0 10px;line-height:1.6}
+.dpnote b{color:var(--ink2)}
+
+.dphd{display:flex;align-items:center;gap:8px;margin:16px 0 8px;font-size:.84rem;
+  font-weight:700;color:var(--ink3);letter-spacing:.04em}
+.dphd b{color:var(--ink);font-size:.95rem}
+.dphd.a{color:var(--warn-ink)} .dphd.b{color:var(--bad-ink)} .dphd.g{color:var(--ok-ink)}
+.dphd .dpgo{margin-left:auto}
+
+.dpcd{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:11px 13px;margin-bottom:8px;display:flex;flex-direction:column;gap:8px}
+.dpcd.pre{background:var(--bg);border-style:dashed}
+.dpcd.pre .dpc{color:var(--ink3)}
+.dpk{font-size:.8rem;color:var(--ink3)}
+.dpc{font-size:1.02rem;font-weight:700;letter-spacing:-.01em;margin:1px 0}
+.dpw{font-size:.82rem;color:var(--ink3)}
+.dpm{font-size:.8rem;color:var(--ink3);line-height:1.7}
+.dpm b{color:var(--ink);font-weight:700}
+.dpm b.non{color:var(--bad-ink)}
+.dpg{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.dpt{font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:99px;
+  background:var(--line2);color:var(--ink3);white-space:nowrap}
+.dpt.ok{background:var(--ok-bg);color:var(--ok-ink)}
+.dpt.pre{background:var(--line2);color:var(--ink3);border:1px dashed var(--line)}
+.dpt.wait{background:var(--warn-bg);color:var(--warn-ink)}
+.dpt.dpu1{background:var(--bad-bg);color:var(--bad-ink)}
+.dpt.dpu2{background:var(--warn-bg);color:var(--warn-ink)}
+.dpt.dpu3{background:var(--line2);color:var(--ink3)}
+
+/* ⛔ 填滿要用 --fill 不是 --brand。夜間 --brand 會變成淺藍 #7FA8DC，
+   白字只有 2.46:1，等於看不見。檢查器 2026-09-28 當場擋下來。 */
+.dpgo{background:var(--fill);color:var(--fill-ink);border:0;border-radius:10px;padding:8px 14px;
+  font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.dpgo.sm{padding:6px 12px;font-size:.8rem}
+.dpgo:disabled{opacity:.5}
+.dpsel{padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);
+  font-family:inherit;font-size:.82rem;color:var(--ink)}
+
+/* ⚠ 這兩條是七天模擬找出來的破口，刻意做得比別的顯眼——
+   它們是「愈拖愈多而且沒有人在看」的那種問題。 */
+.dpalert{background:var(--warn-bg);border:1px solid var(--warn-ink);border-radius:14px;
+  padding:11px 13px;margin:14px 0 9px;font-size:.88rem;line-height:1.6}
+.dpalert b{color:var(--warn-ink)}
+.dpalert s{display:block;text-decoration:none;color:var(--ink3);font-size:.8rem;margin-top:3px}
+.dpalert.big{background:var(--bad-bg);border-color:var(--bad-ink)}
+.dpalert.big b{color:var(--bad-ink)}
+
+.dpcf{background:var(--bad-bg);border:1px solid var(--bad-ink);border-radius:14px;
+  padding:11px 13px;margin-bottom:8px;display:flex;flex-direction:column;gap:7px}
+.dpcf.soft{background:var(--warn-bg);border-color:var(--warn-ink)}
+.dpty{align-self:flex-start;font-size:.72rem;font-weight:700;padding:3px 10px;
+  border-radius:99px;background:var(--bad-fill);color:var(--fill-ink)}
+.dpcf.soft .dpty{background:var(--warn-fill)}
+.dpcf b{font-size:.92rem;display:block}
+.dpcf s{display:block;text-decoration:none;font-size:.8rem;color:var(--ink3);margin-top:3px}
+
+.dpform{background:var(--card);border:1.5px dashed var(--brand);border-radius:14px;
+  padding:12px 13px;margin-top:14px}
+.dpr{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:9px}
+.dpr:last-child{margin-bottom:0}
+.dpr select,.dpr input{padding:9px 11px;border:1px solid var(--line);border-radius:10px;
+  background:var(--card);font-family:inherit;font-size:.9rem;color:var(--ink)}
+.dpr input[type=text]{flex:1;min-width:150px}
+.dpsug{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.dpp{padding:7px 11px;border:1px solid var(--line);border-radius:10px;background:var(--card);
+  font-family:inherit;font-size:.84rem;color:var(--ink2);cursor:pointer}
+.dpp s{text-decoration:none;color:var(--ink3);font-size:.72rem;margin-left:4px}
+.dpp.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink);font-weight:700}
+.dpp.on s{color:rgba(255,255,255,.8)}
