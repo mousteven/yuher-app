@@ -1231,16 +1231,6 @@ function calMerge(months){
     });
   });
   CAL_ROWS = out;
-  /* 行事曆的資料一到，紅點與派工那三頁就跟著更新——
-     ⛔ 不要讓它們各自再去拿一次，那會重複打後端而且兩邊數字對不上。 */
-  try { paintOwed(); } catch(e){}
-  try {
-    var on = document.querySelector('.tabs button.on');
-    var t = on && on.dataset.t;
-    if(t==='order') loadOrder();
-    else if(t==='mine') loadMine();
-    else if(t==='conf') loadConf();
-  } catch(e2){}
 }
 
 function loadCal(ym, force){
@@ -1402,6 +1392,19 @@ function drawFilters(langs){
 }
 
 function drawCal(){
+  /* ⛔ 紅點與派工三頁掛在這裡，不掛在「CAL_ROWS = …」那一行。
+     CAL_ROWS 有兩個賦值點（drawSched 直接給、mergeCache 合併後給），
+     2026-09-28 只掛了後者 → 翻譯一進來走的是前者，**紅點永遠不亮**。
+     drawCal 是兩條路都會經過的地方。 */
+  try { paintOwed(); } catch(ePO){}
+  try {
+    var onTab = document.querySelector('.tabs button.on');
+    var tt2 = onTab && onTab.dataset.t;
+    if(tt2==='order') loadOrder();
+    else if(tt2==='mine') loadMine();
+    else if(tt2==='conf') loadConf();
+  } catch(eDP){}
+
   var y = +CAL_YM.slice(0,4), m = +CAL_YM.slice(5,7);
 
   // 語別過濾：只列這個月實際有的語別，不要出現空選項
@@ -9250,6 +9253,14 @@ function dpCard(r, acts){
         : r.crew ? '<span class="dpt ok">✓ 已確認</span>'
         : r.sug ? '<span class="dpt pre">預排・未確認</span>'
         : '<span class="dpt wait">還沒有人</span>')+
+      /* ⑶ 審核狀態。⛔ listSchedule 早就回了 r.rv（Schedule.gs:153），
+         在 2026-09-28 之前**沒有任何畫面印它**——翻譯的紀錄被退回，
+         開單的行政完全不知道，客戶打電話來問他答不出話。
+         ⚠ 只有已完成的才印：還沒做的當然「未送審」，印出來是雜訊。 */
+      (r.status==='已完成' && r.rv
+        ? '<span class="dpt '+(r.rv==='已歸檔' ? 'ok'
+            : r.rv==='退回補正' ? 'dpu1' : 'wait')+'">'+esc(r.rv)+'</span>'
+        : '')+
       '<span class="dpt '+u[0]+'">'+esc(u[1])+'</span>'+
       (r.lang?'<span class="dpt">'+esc(r.lang)+'文</span>':'<span class="dpt">不用翻譯</span>')+
       (acts||'')+
