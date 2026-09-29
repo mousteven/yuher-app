@@ -217,11 +217,33 @@ function drawSwitchRows(r){
     b.onclick = function(){
       var c = b.dataset.sw;
       if(c === CODE){ $('outModal').style.display = 'none'; return; }
-      try { localStorage.setItem('svc.code', c); } catch(e){}
-      /* ⛔ 一定要重新整理。見上面那段註解。 */
-      location.reload();
+      switchTo(c);
     };
   });
+}
+
+/* 真的換人。
+   ⛔ **不可以用 location.reload()。** app.js 第 8 行是
+      `PRESET_CODE || localStorage.getItem('svc.code')`——
+      網址上的 ?code= 優先權比 localStorage 高，而點專屬連結進來的網址都帶著碼。
+      重新整理之後會再用網址那組登入、還把 localStorage 蓋回去，
+      **切換等於沒發生，而且完全不報錯**（2026-09-30 實測）。
+   ⛔ 每個人專屬的狀態一定要在這裡清乾淨。漏掉 CAL_MINE 的話，
+      從翻譯切到行政會看到**空白的行事曆**——因為「只看我的」還開著，
+      而行政名下一筆行程都沒有。 */
+function switchTo(code){
+  $('outModal').style.display = 'none';
+  /* 跟登出清的是同一組，差別只在不回登入畫面。 */
+  if(typeof fdWipe === 'function') fdWipe();
+  TAX = null; PRESETS = []; CREW = []; MYSIG = '';
+  STAFF_NAME = ''; STAFF_ROLE = '';
+  CAL_ROWS = []; REV = null; EV = null;
+  CAL_MINE = false;          // ⛔ 漏這行就是空白行事曆
+  HELP_DIR = null;           // 名單要重拿，不然切換清單還標在舊的身分上
+  EV_CREW = ''; DP_CLI = ''; DP_SUG = null;
+  try { localStorage.removeItem('svc.presets'); } catch(e){}
+  toast('切換中…');
+  login(code);
 }
 
 /* ── 數字鍵盤 ──────────────────────────────────────
