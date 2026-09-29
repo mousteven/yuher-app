@@ -119,6 +119,7 @@ function login(code){
         $('mine').checked = true;
       }
       $('crewOwner').value = ''; PICKED_ = []; PICK_LG = ''; SCHED_ID = '';
+      paintTodo(null);   // ⛔ 換人／清空時要收起來，不然會留著上一筆的交代
       [].forEach.call($('workers').children, fillWorkerNames);
 
       var bd = $('revBadge');
@@ -1585,11 +1586,26 @@ function drawDay(){
           : '')+
         // 時段與翻譯降到最後一行的小字。排一天的行程時還是要看得到。
         '<span class="c4who">'+esc(r.slot||'未定時段')+'　'+esc(r.crew)+'</span>'+
+        /* 行政交代的清單：卡片上**只顯示進度**，不把項目攤開。
+           ⛔ 攤開的話一天五筆、每筆三四條，行事曆會變成一長串清單，
+              要捲很久才看得到下一筆（2026-09-30 比過五種放法才定的）。 */
+        todoBadge(r)+
       '</span>'+
       '</div></div>';
   }
 
-  /* 灰色預排的卡片**刻意另外寫一個**，不重用上面那支。
+  /* 卡片上的交代進度。沒有交代事項就整個不顯示——
+   不要留一個「0 / 0」在那裡。 */
+function todoBadge(r){
+  var t = r.todo || [];
+  if(!t.length) return '';
+  var done = t.filter(function(x){ return x.d; }).length;
+  var all = done === t.length;
+  return '<span class="c4todo'+(all?' ok':'')+'">'+(all?'✓':'📌')+
+    ' 交代 '+done+' / '+t.length+'</span>';
+}
+
+/* 灰色預排的卡片**刻意另外寫一個**，不重用上面那支。
      ⛔ 那一支帶著側滑軌道、長按拖曳改期、點開填服務紀錄——
         那些動作對「還沒確認的行程」全部都不該有。
         與其在 card() 裡到處加 if，不如給預排一張安靜的卡。
@@ -2344,6 +2360,59 @@ function backToCal(){
   })();
 }
 
+/* ── 行政交代清單：填寫頁裡的那一塊（方案 ④）──────────────
+   牟佑彬 2026-09-30：「如果這個 checklist 是在行程區塊那邊，
+   那點擊服務表進去之後是不是又看不到了？」——所以清單要跟著進填寫頁，
+   放在「這一趟」卡片裡。
+
+   ⛔ 勾了就立刻送出，不要等存檔。人在工廠裡隨時可能被打斷，
+      等存檔才寫回去的話，勾了一半關掉 App 就全沒了。
+   ⚠ 只送「第幾項勾了」，不送整份清單——行政同時在後台改項目才不會被覆蓋。 */
+function paintTodo(r){
+  var box = $('todoBox');
+  if(!box) return;                        // 舊版 Service.html 沒有這一塊
+  var t = (r && r.todo) || [];
+  if(!t.length){ box.style.display = 'none'; box.dataset.id = ''; return; }
+  box.dataset.id = r.id || '';
+  box.style.display = '';
+  drawTodo(t);
+}
+function drawTodo(t){
+  var done = t.filter(function(x){ return x.d; }).length;
+  $('todoN').textContent = done + ' / ' + t.length;
+  $('todoList').innerHTML = t.map(function(x, i){
+    return '<div class="todoit'+(x.d?' on':'')+'" data-i="'+i+'">'+
+      '<span class="bx">'+(x.d?'✓':'')+'</span>'+
+      '<span class="tx">'+esc(x.t)+'</span></div>';
+  }).join('');
+}
+$('todoList') && $('todoList').addEventListener('click', function(e){
+  var it = e.target.closest ? e.target.closest('.todoit') : null;
+  if(!it) return;
+  var id = $('todoBox').dataset.id;
+  if(!id) return;
+  it.classList.toggle('on');                       // 先動畫面，不要等後端
+  it.querySelector('.bx').textContent = it.classList.contains('on') ? '✓' : '';
+  var done = [];
+  [].forEach.call($('todoList').children, function(el, i){
+    if(el.classList.contains('on')) done.push(i);
+  });
+  $('todoN').textContent = done.length + ' / ' + $('todoList').children.length;
+  google.script.run
+    .withSuccessHandler(function(res){
+      /* 後端回的是權威版本。行政剛好改過項目的話，這裡會把畫面校正回來。 */
+      var row = CAL_ROWS.filter(function(x){ return x.id === id; })[0];
+      if(row) row.todo = res.todo;
+      if(res.todo && res.todo.length !== $('todoList').children.length) drawTodo(res.todo);
+    })
+    .withFailureHandler(function(err){
+      it.classList.toggle('on');                   // 送不出去就退回去，不要騙人
+      it.querySelector('.bx').textContent = it.classList.contains('on') ? '✓' : '';
+      toast(err.message, true);
+    })
+    .setScheduleTodo(CODE, id, done);
+});
+
 function startFromSchedule(id){
   var r = CAL_ROWS.filter(function(x){ return x.id===id; })[0];
   if(!r) return;
@@ -2354,6 +2423,7 @@ function startFromSchedule(id){
                name: r.client };
   SCHED_ID = id;
   fillTripForm(r);
+  paintTodo(r);
   document.querySelector('.tabs button[data-t=new]').click();
   showBack(back, 'form');          // 要在切完分頁之後，分頁切換會把它收起來
   window.scrollTo(0,0);
@@ -9363,13 +9433,24 @@ function loadOrder(){
         return '<button type="button" class="dpp'+(DP_SUG===n?' on':'')+'" data-p="'+
           esc(n)+'">'+esc(n)+'<s>'+(dpCrewLang(n)||'外務')+'</s></button>';
       }).join('')+'</div></div>'+
+      /* 交代事項：選了服務細項會自動帶出那個細項的「處理經過」，
+         行政刪掉用不到的、補上這一家特別的。
+         ⛔ 這些預設值就是翻譯填服務紀錄時的處理經過選項（fillOpts 用的同一份），
+            **不是另外維護一套**。 */
+      '<div class="dpr" style="display:block"><label class="dplb">'+
+      '交代事項（翻譯到現場一條一條勾）</label>'+
+      '<div id="dpTodo"></div>'+
+      '<button type="button" class="tdadd" id="dpTodoAdd">＋ 再加一條</button></div>'+
       '<div class="dpr"><span class="dpnote">留空就是交給特助配</span>'+
       '<button type="button" class="dpgo" id="dpSave">存檔</button></div></div>';
   }
   box.innerHTML = h;
 
   var sel = $('dpCli');
-  if(sel) sel.onchange = function(){ DP_CLI = this.value; DP_SUG = null; loadOrder(); };
+  if(sel) sel.onchange = function(){
+    DP_CLI = this.value; DP_SUG = null;
+    var bx = $('dpTodo'); if(bx) bx.dataset.touched = '';   // 換客戶＝重新帶預設
+    loadOrder(); };
   var tg = $('dpTgl');
   if(tg) tg.onclick = function(){ DP_MINEONLY = !DP_MINEONLY; loadOrder(); };
   [].forEach.call(box.querySelectorAll('.dpp'), function(b){
@@ -9382,7 +9463,14 @@ function loadOrder(){
       $('dpS').innerHTML = (cat.s||[]).map(function(x){
         return '<option>'+esc(x.n)+'</option>'; }).join('');
     };
-    nb.onchange = fillSub; fillSub();
+    nb.onchange = function(){ fillSub(); dpTodoDefaults(); };
+    fillSub();
+    $('dpS').addEventListener('change', dpTodoDefaults);
+    dpTodoDefaults();
+    var ta = $('dpTodoAdd');
+    if(ta) ta.onclick = function(){
+      var bx = $('dpTodo'); if(bx) bx.dataset.touched = '1';
+      dpTodoAdd(''); };
     $('dpD').value = dpTomorrow();
     $('dpU').onchange = function(){
       $('dpT').style.display = (this.value==='urgent')?'':'none';
@@ -9392,6 +9480,39 @@ function loadOrder(){
     $('dpSave').onclick = dpSave;
   }
 }
+/* ── 行政端的交代事項輸入 ──────────────────────────── */
+function dpTodoRows(){
+  return [].map.call(($('dpTodo')||{children:[]}).children, function(r){
+    return (r.querySelector('input')||{}).value || ''; })
+    .map(function(v){ return v.trim(); }).filter(String);
+}
+function dpTodoAdd(v){
+  var box = $('dpTodo'); if(!box) return;
+  if(box.children.length >= 12) return;      // 上限跟後端 schedTodoStr_ 一致
+  var d = document.createElement('div');
+  d.className = 'tdrow';
+  d.innerHTML = '<input type="text" value="'+esc(v||'')+'" placeholder="例如：找會計部林小姐">'+
+    '<button type="button" class="dpsm" data-x="1">✕</button>';
+  d.querySelector('[data-x]').onclick = function(){
+    d.remove(); box.dataset.touched = '1'; };
+  /* ⛔ 使用者一動過就不再被預設覆蓋——打了一半被清掉是最惱人的事。 */
+  d.querySelector('input').addEventListener('input', function(){
+    box.dataset.touched = '1'; });
+  box.appendChild(d);
+}
+/* 換了服務細項就重帶預設。
+   ⛔ 只在「使用者還沒自己動過」的時候覆蓋——
+      打了一半被清掉是最惱人的事。 */
+function dpTodoDefaults(){
+  var box = $('dpTodo'); if(!box) return;
+  if(box.dataset.touched === '1') return;
+  var cats = (TAX && TAX.cats) || [];
+  var big = (cats[+($('dpB')||{value:0}).value] || {}).b || '';
+  var it = itemOf(big, ($('dpS')||{}).value || '');
+  box.innerHTML = '';
+  ((it && it.d) || []).slice(0, 6).forEach(function(v){ dpTodoAdd(v); });
+}
+
 function dpSave(){
   var b = $('dpSave'); if(b.disabled) return;
   var cats = (TAX&&TAX.cats)||[];
@@ -9414,7 +9535,8 @@ function dpSave(){
     })
     /* ⛔ crew 一定要明確傳空字串：不傳的話後端會掛給開單的人（行政自己）。
        sug 才是「我建議誰」。 */
-    .addSchedule(CODE, { date:$('dpD').value,
+    .addSchedule(CODE, { todo: dpTodoRows().map(function(t){ return {t:t, d:0}; }),
+      date:$('dpD').value,
       slot: mode==='urgent'?$('dpT').value.trim():'',
       crew:'', sug: picked||'', target:(c.t==='家庭雇主'?'家庭':'工廠'), client:cli,
       lang:$('dpL').value, big:big, sub:sub, memo:memo });

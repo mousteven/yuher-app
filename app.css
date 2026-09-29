@@ -3078,3 +3078,37 @@ body.finding .tabs{display:none}
 .tabs.few button{flex:0 0 auto;min-width:112px;padding-left:18px;padding-right:18px}
 body.tabsbottom .tabs.few{gap:0}
 body.tabsbottom .tabs.few button{min-width:120px}
+
+
+/* ── 行政交代清單（2026-09-30）────────────────────────────
+   行政開單時把交代拆成一條一條，翻譯在現場勾。
+   三個地方會出現：行事曆卡片（只有進度）、填寫頁的「這一趟」（可勾）、
+   行政的派工台（可編輯）。三處共用這一組樣式。
+
+   ⛔ 底色一律用 --warn-bg／--warn-ink 這組。
+      **不要用 --brand 當底**——夜間模式的 --brand 是淺藍，白字壓上去只有 2.5:1。 */
+.todobox{background:var(--warn-bg);border:1px solid var(--warn-line);
+  border-radius:var(--r2);padding:.7rem .8rem;margin-bottom:.8rem}
+.todohd{display:flex;align-items:center;gap:.4rem;font-size:var(--t5);font-weight:700;
+  color:var(--warn-ink);margin-bottom:.4rem}
+.todohd em{font-style:normal;margin-left:auto;font-size:var(--t6);font-weight:700}
+.todoit{display:flex;gap:.6rem;align-items:flex-start;padding:.4rem 0;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+.todoit .bx{width:1.35rem;height:1.35rem;border-radius:.42rem;border:2px solid #C7B189;
+  flex:none;margin-top:.1rem;display:flex;align-items:center;justify-content:center;
+  font-size:var(--t5);color:#fff;background:#fff;transition:background .14s,border-color .14s}
+.todoit.on .bx{background:var(--ok-fill);border-color:var(--ok-fill)}
+.todoit .tx{font-size:var(--t4);line-height:1.42;color:var(--ink)}
+.todoit.on .tx{color:var(--ink3);text-decoration:line-through}
+/* 行事曆卡片上的進度徽章 */
+.c4todo{display:inline-flex;align-items:center;gap:.3rem;background:var(--warn-bg);
+  border:1px solid var(--warn-line);border-radius:99px;padding:.1rem .5rem;
+  font-size:var(--t6);font-weight:700;color:var(--warn-ink);margin-top:.25rem;
+  align-self:flex-start}
+.c4todo.ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
+/* 行政端：一行一條、可刪 */
+.tdrow{display:flex;gap:.4rem;align-items:center;margin-bottom:.35rem}
+.tdrow input{flex:1;min-width:0}
+.tdrow button{flex:none;padding:.35rem .55rem;font-size:var(--t6)}
+.tdadd{width:100%;border:1px dashed var(--line);background:transparent;color:var(--brand);
+  font-weight:700;border-radius:var(--r3);padding:.45rem;font-size:var(--t5)}
