@@ -3112,3 +3112,19 @@ body.tabsbottom .tabs.few button{min-width:120px}
 .tdrow button{flex:none;padding:.35rem .55rem;font-size:var(--t6)}
 .tdadd{width:100%;border:1px dashed var(--line);background:transparent;color:var(--brand);
   font-weight:700;border-radius:var(--r3);padding:.45rem;font-size:var(--t5)}
+
+
+/* ── 切換身分（測試用，2026-09-30）──────────────────────────
+   只有 app.js SWITCH_OK_ 名單上的人看得到。
+   ⛔ 樣式要跟「登出」那顆有明顯區別——這不是日常操作。 */
+.swrole{border-top:1px solid var(--line2);margin-top:.2rem;padding-top:.8rem}
+.swrole .swt{font-size:var(--t6);color:var(--ink3);font-weight:700;margin-bottom:.5rem;
+  letter-spacing:.02em}
+.swrole .swg{display:flex;flex-wrap:wrap;gap:.4rem}
+.swrole button{flex:1 1 auto;min-width:5.4rem;padding:.6rem .5rem;border-radius:var(--r3);
+  border:1px solid var(--line);background:var(--card);color:var(--ink2);
+  font-size:var(--t5);font-weight:700}
+.swrole button.now{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
+.swrole button i{font-style:normal;display:block;font-size:var(--t6);font-weight:400;
+  color:var(--ink3);margin-top:.1rem}
+.swrole button.now i{color:rgba(255,255,255,.75)}

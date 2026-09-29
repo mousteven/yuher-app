@@ -158,6 +158,72 @@ $('btnLogin').addEventListener('click', function(){
   login(c);
 });
 
+/* ── 切換身分（測試用）────────────────────────────────────
+   牟佑彬 2026-09-30 要的：從帳號選單直接跳到行政／特助去測試，
+   不用登出再登入。
+
+   ⛔ **只有這份名單上的人看得到**，其他人連後端都不會去叫。
+      這顆按鈕等於「一鍵變成別人」——名單與碼雖然在「操作說明」裡
+      本來就對所有同事開放，但那是「查得到」，這是「一鍵切換」，門檻差很多。
+   ⛔ **切換＝整頁重新整理**，不要在原地換 CODE。
+      原地換的話 TAX／PRESETS／CAL_ROWS／REV 這些快取會留著上一個身分的資料，
+      畫面看起來對、資料是錯的——那比直接壞掉更難查。 */
+var SWITCH_OK_ = ['佑彬'];
+var SWITCH_ROLES_ = ['行政', '特助', '副理', '總經理'];
+
+function drawSwitch(){
+  /* ⛔ 容器由這裡動態插入，**不要寫進 Service.html**。
+     Service.html 是後端檔，改它就要重新部署；版本額度是稀缺資源
+     （2026-09-30 只剩 5 個）。純 app.js 的改動推 GitHub Pages 就生效。 */
+  var box = $('outSwitch');
+  if(!box){
+    var anchor = $('outBuild');
+    if(!anchor) return;
+    box = document.createElement('div');
+    box.id = 'outSwitch';
+    box.style.display = 'none';
+    anchor.parentNode.insertBefore(box, anchor);
+  }
+  if(SWITCH_OK_.indexOf(STAFF_NAME) < 0){ box.style.display = 'none'; return; }
+  box.style.display = '';
+  if(HELP_DIR){ drawSwitchRows(HELP_DIR); return; }
+  box.innerHTML = '<div class="swrole"><div class="swt">切換身分</div>' +
+    '<div class="swg"><span class="hint">載入中…</span></div></div>';
+  google.script.run
+    .withSuccessHandler(function(r){ HELP_DIR = r; drawSwitchRows(r); })
+    .withFailureHandler(function(){
+      box.innerHTML = '<div class="swrole"><div class="swt">切換身分</div>' +
+        '<span class="hint">名單載入失敗，下拉重新整理再試</span></div>'; })
+    .helpDirectory(CODE);
+}
+function drawSwitchRows(r){
+  var box = $('outSwitch');
+  if(!box || !r || !r.rows) return;
+  /* 每個角色只留一個代表，不要把十一個翻譯都列出來 */
+  var seen = {}, pick = [];
+  r.rows.forEach(function(x){
+    if(SWITCH_ROLES_.indexOf(x.role) < 0 || seen[x.role]) return;
+    seen[x.role] = 1; pick.push(x);
+  });
+  var me = r.rows.filter(function(x){ return x.me; })[0];
+  if(me) pick.unshift(me);
+  box.innerHTML = '<div class="swrole"><div class="swt">切換身分（測試用）</div>' +
+    '<div class="swg">' + pick.map(function(x){
+      return '<button type="button" class="' + (x.code === CODE ? 'now' : '') +
+        '" data-sw="' + esc(x.code) + '">' + esc(x.name) +
+        '<i>' + esc(x.role || '翻譯') + '</i></button>';
+    }).join('') + '</div></div>';
+  [].forEach.call(box.querySelectorAll('[data-sw]'), function(b){
+    b.onclick = function(){
+      var c = b.dataset.sw;
+      if(c === CODE){ $('outModal').style.display = 'none'; return; }
+      try { localStorage.setItem('svc.code', c); } catch(e){}
+      /* ⛔ 一定要重新整理。見上面那段註解。 */
+      location.reload();
+    };
+  });
+}
+
 /* ── 數字鍵盤 ──────────────────────────────────────
    四位數按完自動送出。按錯的時候點會抖一下並轉紅，
    不用讀字也知道錯了——這比跳一個對話框快，也不用再點一次關掉。 */
@@ -233,6 +299,7 @@ var OTHER_ = '__other__';
 $('whoBtn').addEventListener('click', function(){
   $('outName').textContent = STAFF_NAME || '（未命名）';
   $('outRole').textContent = STAFF_ROLE ? (STAFF_ROLE + '　登入碼 ' + CODE) : ('登入碼 ' + CODE);
+  drawSwitch();
   $('outBuild').textContent = '目前版本 ' + BUILD;
   $('outModal').style.display = '';
   checkBuild();
