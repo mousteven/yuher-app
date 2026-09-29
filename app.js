@@ -239,6 +239,9 @@ function switchTo(code){
   STAFF_NAME = ''; STAFF_ROLE = '';
   CAL_ROWS = []; REV = null; EV = null;
   CAL_MINE = false;          // ⛔ 漏這行就是空白行事曆
+  /* 勾勾也要跟著放掉。只改變數不改畫面的話，
+     「只看我的」看起來是打勾的、實際上沒有在篩——**畫面在騙人**。 */
+  if($('mine')) $('mine').checked = false;
   HELP_DIR = null;           // 名單要重拿，不然切換清單還標在舊的身分上
   EV_CREW = ''; DP_CLI = ''; DP_SUG = null;
   try { localStorage.removeItem('svc.presets'); } catch(e){}
