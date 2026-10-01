@@ -168,7 +168,18 @@ $('btnLogin').addEventListener('click', function(){
    ⛔ **切換＝整頁重新整理**，不要在原地換 CODE。
       原地換的話 TAX／PRESETS／CAL_ROWS／REV 這些快取會留著上一個身分的資料，
       畫面看起來對、資料是錯的——那比直接壞掉更難查。 */
+/* 誰可以「開始」切換。切過去之後靠裝置旗標，見 switchOK()。 */
 var SWITCH_OK_ = ['佑彬'];
+var SWITCH_FLAG_ = 'svc.devsw';
+/* ⛔ 這一支是 2026-10-01 補的漏洞：原本只看 SWITCH_OK_，
+   所以一切到行政一，**切換鈕就消失了，要回去只能登出重打登入碼**。
+   我當時只想到「誰可以開始切換」，沒想到「切過去之後怎麼回來」。
+   改成：名單上的人可以開始；開始過一次之後，**這台裝置**就一直看得到。
+   ⚠ 旗標存在裝置上，所以別人的手機不會莫名其妙多出這顆按鈕。 */
+function switchOK(){
+  if(SWITCH_OK_.indexOf(STAFF_NAME) >= 0) return true;
+  try { return localStorage.getItem(SWITCH_FLAG_) === '1'; } catch(e){ return false; }
+}
 var SWITCH_ROLES_ = ['行政', '特助', '副理', '總經理'];
 
 function drawSwitch(){
@@ -184,7 +195,7 @@ function drawSwitch(){
     box.style.display = 'none';
     anchor.parentNode.insertBefore(box, anchor);
   }
-  if(SWITCH_OK_.indexOf(STAFF_NAME) < 0){ box.style.display = 'none'; return; }
+  if(!switchOK()){ box.style.display = 'none'; return; }
   box.style.display = '';
   if(HELP_DIR){ drawSwitchRows(HELP_DIR); return; }
   box.innerHTML = '<div class="swrole"><div class="swt">切換身分</div>' +
@@ -233,6 +244,8 @@ function drawSwitchRows(r){
       而行政名下一筆行程都沒有。 */
 function switchTo(code){
   $('outModal').style.display = 'none';
+  /* 用過一次就記住這台裝置，切成行政／特助之後才回得來。 */
+  try { localStorage.setItem(SWITCH_FLAG_, '1'); } catch(e){}
   /* 跟登出清的是同一組，差別只在不回登入畫面。 */
   if(typeof fdWipe === 'function') fdWipe();
   TAX = null; PRESETS = []; CREW = []; MYSIG = '';
@@ -590,6 +603,9 @@ $('outCancel').addEventListener('click', function(){
 });
 $('outGo').addEventListener('click', function(){
   try { localStorage.removeItem('svc.code'); } catch(e){}
+  /* ⛔ 登出一併清掉切換旗標。手機借人或轉給同事時，
+     不可以讓對方一登入就看到「一鍵變成別人」。 */
+  try { localStorage.removeItem('svc.devsw'); } catch(e){}
   /* ⛔ 名冊裡有 1687 個人的完整手機，登出一定要一起清掉。
      ⚠ 2026-09-23 我在 commit 訊息裡寫了「登出清掉」，但其實沒接上——
        fdWipe 只有存備註的時候被呼叫到。**寫在訊息裡不等於做了。** */
@@ -9520,10 +9536,19 @@ function loadOrder(){
       '<input type="date" id="dpD"><input type="text" id="dpT" placeholder="09:00" '+
       'style="display:none;max-width:96px"></div>'+
       '<div class="dpr"><input type="text" id="dpM" placeholder="備註：找誰、要注意什麼…"></div>'+
+      /* 語別與建議翻譯**雙向連動**（牟佑彬 2026-10-01）。
+         ⛔ 以前兩個欄位互不相干：選了佑彬（英）語別還停在「越」，
+            **兩邊不一致而且沒有任何地方會發現**。
+         ⚠ 語別不符的只是**變淡，還是點得下去**——有時候真的要找代打。
+            擋死的話實務上會被繞過（行政改成不填語別），反而更糟。 */
       '<div class="dpr"><label class="dplb">建議誰去</label><div class="dpsug">'+
       CREW.map(function(n){
-        return '<button type="button" class="dpp'+(DP_SUG===n?' on':'')+'" data-p="'+
-          esc(n)+'">'+esc(n)+'<s>'+(dpCrewLang(n)||'外務')+'</s></button>';
+        var lg = dpCrewLang(n), want = ($('dpL')||{}).value || '';
+        /* 阿源是外務、沒有語別，任何語別都不該把他變淡 */
+        var dim = want && lg && lg !== want;
+        return '<button type="button" class="dpp'+(DP_SUG===n?' on':'')+
+          (dim?' dim':'')+'" data-p="'+esc(n)+'">'+esc(n)+
+          '<s>'+(lg||'外務')+'</s></button>';
       }).join('')+'</div></div>'+
       /* 交代事項：選了服務細項會自動帶出那個細項的「處理經過」，
          行政刪掉用不到的、補上這一家特別的。
@@ -9546,8 +9571,22 @@ function loadOrder(){
   var tg = $('dpTgl');
   if(tg) tg.onclick = function(){ DP_MINEONLY = !DP_MINEONLY; loadOrder(); };
   [].forEach.call(box.querySelectorAll('.dpp'), function(b){
-    b.onclick = function(){ DP_SUG = (DP_SUG===b.dataset.p)?null:b.dataset.p; loadOrder(); };
+    b.onclick = function(){
+      DP_SUG = (DP_SUG===b.dataset.p)?null:b.dataset.p;
+      /* 選了人 → 語別跟著變成他的語別。
+         ⛔ 外務（阿源）沒有語別，**不要把語別清空**——
+            那會把行政剛選好的語別洗掉。 */
+      if(DP_SUG){
+        var lg = dpCrewLang(DP_SUG);
+        if(lg && $('dpL')) $('dpL').value = lg;
+      }
+      loadOrder();
+    };
   });
+  /* 反方向：改語別 → 重畫人選（不符的變淡）。
+     ⚠ 如果目前選的人語別不符，不要自動取消他——行政可能是刻意找代打的。 */
+  var lsel = $('dpL');
+  if(lsel) lsel.onchange = function(){ loadOrder(); };
   var nb = $('dpB');
   if(nb){
     var fillSub = function(){
@@ -9700,8 +9739,19 @@ function loadConf(){
   if(none.length) h += '<div class="dphd a">行政沒填人，要你配 <b>'+none.length+
     '</b></div>'+none.map(function(r){ return dpCard(r, dpAct(r)); }).join('');
   var done = rows.filter(function(r){ return r.crew; });
-  if(done.length) h += '<div class="dphd g">已確認 <b>'+done.length+'</b></div>'+
-    done.map(function(r){ return dpCard(r); }).join('');
+  /* 已確認的也要能改——臨時請假、語別不對、撞行程都會發生。
+     ⛔ 卡片上**不掛按鈕**：一天幾十筆，每張兩顆會很吵，
+        而且改派是會通知別人的動作，誤觸代價高。
+        改成往左滑出軌道，跟翻譯端的行程卡同一套手勢。 */
+  if(done.length) h += '<div class="dphd g">已確認 <b>'+done.length+'</b>'+
+    '<span class="dpnote" style="margin-left:auto;font-weight:400">往左滑可以改派</span></div>'+
+    done.map(function(r){
+      return '<div class="dpsw" data-id="'+esc(r.id)+'">'+
+        '<div class="swrail">'+
+          '<span class="swst"><i>⇄</i><b>改派</b></span>'+
+          '<span class="swst bad"><i>↩</i><b>退回</b></span>'+
+        '</div>'+dpCard(r)+'</div>';
+    }).join('');
   if(!rows.length && !od.length && !ow.length)
     h += '<p class="mid" style="padding:22px">這一天沒有行程</p>';
   h += '<p class="dpnote" style="margin-top:14px">'+
@@ -9719,7 +9769,90 @@ function loadConf(){
   [].forEach.call($('p-conf').querySelectorAll('[data-conf]'), function(b){
     b.onclick = function(){ dpDo(b.dataset.conf, ''); };
   });
+  [].forEach.call($('p-conf').querySelectorAll('.dpsw'), bindConfSwipe);
 }
+/* 已確認的卡片：往左滑出「改派／退回」。
+   ⛔ 滑鼠與觸控都要能用——**特助是坐在電腦前的**，
+      只做觸控的話他根本滑不動（2026-09-29 派工台原型就踩過一次）。
+   ⚠ 這裡**不重用 bindSwipe**：那一支綁在翻譯端行程卡上、跑了兩週很穩，
+      為了多一個用途去改它不划算。這一支短很多，狀態也單純。 */
+function bindConfSwipe(w){
+  var card = w.querySelector('.dpcd'), rail = w.querySelector('.swrail');
+  if(!card || !rail) return;
+  var stops = rail.querySelectorAll('.swst'), MAX = SW_STEP_ * stops.length;
+  var x0 = 0, open = 0, dragging = false, moved = false;
+
+  function put(v){
+    open = Math.max(0, Math.min(MAX, v));
+    var t = open ? 'translateX(' + (-open) + 'px)' : '';
+    card.style.transform = t; rail.style.transform = t;
+    var i = Math.floor(open / SW_STEP_ - SW_ARM_);
+    [].forEach.call(stops, function(s, k){ s.classList.toggle('hot', k === i); });
+  }
+  function end(){
+    var i = Math.floor(open / SW_STEP_ - SW_ARM_);
+    if(i >= 0){ put(0); confAct(w.dataset.id, i === 0 ? 'move' : 'back'); }
+    else put(open > SW_STEP_ * 0.4 ? MAX : 0);
+  }
+  function startAt(x){ x0 = x; dragging = true; moved = false; }
+  function moveTo(x){
+    if(!dragging) return;
+    var d = x0 - x;
+    if(Math.abs(d) > 5) moved = true;
+    put(d);
+  }
+  w.addEventListener('touchstart', function(e){ startAt(e.touches[0].clientX); }, {passive:true});
+  w.addEventListener('touchmove', function(e){
+    if(!dragging) return;
+    moveTo(e.touches[0].clientX);
+    if(moved) e.preventDefault();
+  }, {passive:false});
+  w.addEventListener('touchend', function(){ dragging = false; end(); });
+  /* 滑鼠：用 Pointer Events，pointerType 是 touch 的交給上面那組，不要兩套一起跑 */
+  w.addEventListener('pointerdown', function(e){
+    if(e.pointerType === 'touch' || e.button) return;
+    w.setPointerCapture(e.pointerId); startAt(e.clientX);
+  });
+  w.addEventListener('pointermove', function(e){
+    if(e.pointerType === 'touch') return;
+    moveTo(e.clientX);
+  });
+  w.addEventListener('pointerup', function(e){
+    if(e.pointerType === 'touch') return;
+    dragging = false; end();
+  });
+}
+function confAct(id, what){
+  var r = CAL_ROWS.filter(function(x){ return x.id===id; })[0] || {};
+  if(what === 'back'){
+    if(!confirm(r.client + '\n\n取消確認、退回待確認？\n' +
+                (r.crew ? r.crew + ' 手機上的這一筆會消失，而且他會收到通知。' : ''))) return;
+    google.script.run
+      .withSuccessHandler(function(){
+        toast(r.client + ' 已退回待確認' + (r.crew ? ('　已通知 ' + r.crew) : ''));
+        calBust(); loadCal(null, true);
+      })
+      .withFailureHandler(function(e){ toast(e.message, true); })
+      .assignSchedule(CODE, id, '');
+    return;
+  }
+  /* 改派：沿用待確認那邊的下拉，只列語別對得上的人 */
+  /* 連滑兩張不要疊出兩個下拉。只清自己插的（.mv），
+     不要動 loadConf 本來就會畫的那三條 .dpalert 提醒。 */
+  [].forEach.call($('p-conf').querySelectorAll('.dpalert.mv'), function(x){
+    x.parentNode.removeChild(x); });
+  var sel = document.createElement('div');
+  sel.className = 'dpalert mv';
+  sel.innerHTML = '<b>改派　'+esc(r.client)+'</b>'+
+    '<s>目前是 '+esc(r.crew||'（還沒有人）')+'。換人之後他會收到通知。</s>'+
+    dpPick(id, '改給…');
+  var card = document.querySelector('.dpsw[data-id="'+id+'"]');
+  if(!card) return;
+  card.parentNode.insertBefore(sel, card);
+  var s2 = sel.querySelector('.dpsel');
+  if(s2) s2.onchange = function(){ if(this.value) dpDo(id, this.value); };
+}
+
 function dpPick(id, ph){
   var r = CAL_ROWS.filter(function(x){ return x.id===id; })[0] || {};
   var pool = CREW.filter(function(n){

@@ -3128,3 +3128,18 @@ body.tabsbottom .tabs.few button{min-width:120px}
 .swrole button i{font-style:normal;display:block;font-size:var(--t6);font-weight:400;
   color:var(--ink3);margin-top:.1rem}
 .swrole button.now i{color:rgba(255,255,255,.75)}
+
+
+/* ── 語別不符的人選（2026-10-01 雙向連動）──────────────
+   ⛔ 只是變淡，**不可以 pointer-events:none**——
+      有時候真的要找代打，擋死的話行政會改成不填語別來繞過。 */
+.dpp.dim{opacity:.34}
+
+/* ── 特助：已確認的行程往左滑出「改派／退回」───────────
+   軌道藏在卡片右邊外面，卡片與軌道要**一起位移**。 */
+.dpsw{position:relative;overflow:hidden;border-radius:var(--r2);margin-bottom:.5rem;
+  touch-action:pan-y}
+.dpsw>.dpcd{margin-bottom:0;position:relative;z-index:1;background:var(--card);
+  will-change:transform}
+.dpsw>.swrail{position:absolute;left:100%;top:0;bottom:0;display:flex;z-index:0;
+  will-change:transform}
