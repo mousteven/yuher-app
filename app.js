@@ -9889,7 +9889,13 @@ function confAct(id, what){
   if(!card) return;
   card.parentNode.insertBefore(sel, card);
   var s2 = sel.querySelector('.dpsel');
-  if(s2) s2.onchange = function(){ if(this.value) dpDo(id, this.value); };
+  /* ⚠ 下拉是沿用待確認那邊的 dpPick，裡面會包含**現在這個人**。
+     選到同一個人就什麼都不要做——不然會白送一則「你的行程換人了」給他。 */
+  if(s2) s2.onchange = function(){
+    if(!this.value) return;
+    if(this.value === r.crew){ sel.parentNode.removeChild(sel); return; }
+    dpDo(id, this.value);
+  };
 }
 
 function dpPick(id, ph){
