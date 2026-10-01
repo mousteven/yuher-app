@@ -180,7 +180,7 @@ function switchOK(){
   if(SWITCH_OK_.indexOf(STAFF_NAME) >= 0) return true;
   try { return localStorage.getItem(SWITCH_FLAG_) === '1'; } catch(e){ return false; }
 }
-var SWITCH_ROLES_ = ['行政', '特助', '副理', '總經理'];
+var SWITCH_ROLES_ = ['翻譯', '行政', '特助', '副理', '總經理'];
 
 function drawSwitch(){
   /* ⛔ 容器由這裡動態插入，**不要寫進 Service.html**。
@@ -210,14 +210,21 @@ function drawSwitch(){
 function drawSwitchRows(r){
   var box = $('outSwitch');
   if(!box || !r || !r.rows) return;
-  /* 每個角色只留一個代表，不要把十一個翻譯都列出來 */
+  /* 每個角色只留一個代表，不要把十一個翻譯都列出來。
+     ⛔ 2026-10-01 實測抓到：原本 SWITCH_ROLES_ **沒有「翻譯」**，
+        所以切成行政一之後清單變成「行政一／行政一／特助／副理／劉總」——
+        行政一重複兩次（一次是「我」、一次是行政的代表），
+        **而且完全回不去翻譯端**。按鈕有了、路卻是單向的。
+     翻譯那一格固定挑 SWITCH_OK_ 上的人（佑彬自己的帳號），他是從那裡出發的。
+     去重要用 code，不是用 role。 */
   var seen = {}, pick = [];
-  r.rows.forEach(function(x){
-    if(SWITCH_ROLES_.indexOf(x.role) < 0 || seen[x.role]) return;
-    seen[x.role] = 1; pick.push(x);
+  SWITCH_ROLES_.forEach(function(role){
+    var pool = r.rows.filter(function(x){ return x.role === role; });
+    var x = pool.filter(function(y){ return SWITCH_OK_.indexOf(y.name) >= 0; })[0] || pool[0];
+    if(x && !seen[x.code]){ seen[x.code] = 1; pick.push(x); }
   });
   var me = r.rows.filter(function(x){ return x.me; })[0];
-  if(me) pick.unshift(me);
+  if(me && !seen[me.code]){ seen[me.code] = 1; pick.unshift(me); }
   box.innerHTML = '<div class="swrole"><div class="swt">切換身分（測試用）</div>' +
     '<div class="swg">' + pick.map(function(x){
       return '<button type="button" class="' + (x.code === CODE ? 'now' : '') +
@@ -9493,8 +9500,38 @@ function dpPlus(s,n){ var p=s.split('-'), d=new Date(+p[0],+p[1]-1,+p[2]);
 
 /* ══ 行政：客戶（開單）════════════════════════ */
 var DP_CLI = '', DP_SUG = null, DP_MINEONLY = true;
+/* ⚠ 單獨一行宣告，不要併進上面那串。check_js_globals.js 只認
+   `var` 後面緊接的第一個名字，併在逗號後面會被誤報成「沒有宣告」。 */
+var DP_RESET_ = 0;
+/* ⛔ loadOrder 是**整塊 innerHTML 重畫**的，而點「建議誰去」就會呼叫它一次。
+      所以在 2026-10-01 之前，點一下人選會把**語別、事由、日期、備註、
+      打到一半的交代事項全部打回預設**——只是沒有人注意到。
+      加了語別連動之後它才浮出來：語別明明設成「英」，畫面上卻跳回空白。
+   做法：重畫前拍一張、重畫完貼回去。存檔成功後才讓它真的清空（DP_RESET_）。 */
+function dpSnap(){
+  if(!$('dpL')) return null;
+  if(DP_RESET_){ DP_RESET_ = 0; return null; }
+  return { b:$('dpB').value, s:$('dpS').value, l:$('dpL').value, u:$('dpU').value,
+           d:$('dpD').value, t:$('dpT').value, m:$('dpM').value,
+           todo: dpTodoRows(),
+           touched: (($('dpTodo')||{dataset:{}}).dataset||{}).touched };
+}
+function dpRestore(k){
+  if(!k || !$('dpL')) return;
+  $('dpB').value = k.b; $('dpB').onchange();      // 會重填「事由」那個下拉
+  $('dpS').value = k.s;
+  $('dpL').value = k.l;
+  $('dpU').value = k.u; $('dpU').onchange();      // 壓時間才顯示時間欄；它會改日期
+  $('dpD').value = k.d; $('dpT').value = k.t; $('dpM').value = k.m;
+  if(k.touched === '1'){
+    var bx = $('dpTodo');
+    if(bx){ bx.innerHTML = ''; bx.dataset.touched = '1'; k.todo.forEach(function(v){ dpTodoAdd(v); }); }
+  } else {
+    dpTodoDefaults();                             // 事由已經貼回去了，預設要重算
+  }
+}
 function loadOrder(){
-  var box = $('p-order');
+  var box = $('p-order'), keep = dpSnap();
   var own = PRESETS.filter(function(c){ return ADMIN_OF[c.c] === STAFF_NAME; });
   var pool = (DP_MINEONLY && own.length) ? own : PRESETS;
   if(!pool.length) pool = PRESETS;
@@ -9609,6 +9646,7 @@ function loadOrder(){
       $('dpD').value = (this.value==='loose') ? dpPlus(dpTomorrow(),13) : dpTomorrow();
     };
     $('dpSave').onclick = dpSave;
+    dpRestore(keep);
   }
 }
 /* ── 行政端的交代事項輸入 ──────────────────────────── */
@@ -9659,6 +9697,7 @@ function dpSave(){
       DP_SUG = null;
       toast(cli+' '+sub+' 開好了'+(picked
         ? ('　→ '+picked+' 的行事曆上會出現灰色預排') : '　→ 等特助配人'));
+      DP_SUG = null; DP_RESET_ = 1;   // 存好了才讓表單真的清空，見 dpSnap()
       calBust(); loadCal(null, true);
     })
     .withFailureHandler(function(e){
