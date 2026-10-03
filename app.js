@@ -9665,9 +9665,17 @@ function admFillBits(){
   if($('admSave')) return;
   var save = $('save');
   if(!save) return;
+  /* ⛔ 這兩顆要插在 `.btns` **裡面**（它是一列按鈕），
+     但交代事項那一塊要插在 `.btns` **前面**——
+     2026-10-03 我把它插在 #save 前面，結果整塊被當成按鈕列裡的一項，
+     夾在「存檔變更」與「清空」中間，三個東西擠成一排。 */
   save.insertAdjacentHTML('beforebegin',
+    '<button type="button" id="admCancel">取消</button>'+
     '<button type="button" class="p" id="admSave">存檔變更</button>');
   $('admSave').onclick = admSaveTrip;
+  $('admCancel').onclick = function(){
+    document.querySelector('.tabs button[data-t=cal]').click();
+  };
   /* 標題也要換掉，不然他還是以為自己在填服務紀錄 */
   var h = document.querySelector('#p-new .card h3');
   if(h && h.textContent.indexOf('這一趟') === 0) h.textContent = '改這一筆行程';
@@ -9709,7 +9717,8 @@ function admFillBits(){
   /* ② 交代事項搬到最下面，而且可以改字、可以加、可以刪。
      ⛔ 上面那個釘住的打勾清單是**翻譯在現場勾的**，行政改不了字也加不了條。 */
   if(!$('admTodo')){
-    save.insertAdjacentHTML('beforebegin',
+    var row = save.closest('.btns') || save;
+    row.insertAdjacentHTML('beforebegin',
       '<div class="f" id="admTodoBox"><label>交代給翻譯的事</label>'+
       '<div id="admTodo"></div>'+
       '<button type="button" class="dpsm" id="admTodoAdd">＋ 再加一項</button></div>');

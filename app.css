@@ -3280,3 +3280,10 @@ body.rotrip #roBar{display:block}
   font-size:var(--t3);font-weight:600}
 #roBar s{display:block;text-decoration:none;font-weight:400;color:var(--ink2);
   font-size:var(--t4);margin-top:3px}
+
+
+/* ② 行政改單頁底部：交代事項自己一整塊，底下只有兩顆按鈕。
+   ⛔ 「清空」在「改既有的那一筆」底下沒有意義，而且很容易誤按。 */
+body.filladm #reset{display:none}
+body.filladm #admTodoBox{margin-top:12px}
+body.filladm .btns{margin-top:14px}
