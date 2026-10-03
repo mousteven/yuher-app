@@ -269,6 +269,47 @@ function switchTo(code){
   login(code);
 }
 
+/* 廠商篩選列（行政專用）。
+   ⛔ 只列這個範圍內真的有排的，而且帶數量。換月份名單就跟著換。
+   ⚠ 容器用注入的，不寫進 Service.html——那是後端檔，改它要重新部署。 */
+function drawCalCli(live){
+  var box = $('calCli');
+  if(STAFF_ROLE !== '行政'){ if(box) box.style.display = 'none'; return; }
+  if(!box){
+    var anchor = $('calLangs');
+    if(!anchor) return;
+    box = document.createElement('div');
+    box.id = 'calCli';
+    box.className = 'calcli';
+    anchor.parentNode.insertBefore(box, anchor.nextSibling);
+  }
+  box.style.display = '';
+  var cnt = {}, order = [];
+  (live || []).forEach(function(r){
+    if(!r.client) return;
+    if(cnt[r.client] === undefined){ cnt[r.client] = 0; order.push(r.client); }
+    cnt[r.client]++;
+  });
+  order.sort(function(a, b){ return cnt[b] - cnt[a]; });
+  /* 名字太長會把整列撐爆，砍掉「股份有限公司」這種後綴就夠認了 */
+  var shortName = function(n){
+    return String(n).replace(/(股份)?有限公司$/, '').slice(0, 8);
+  };
+  box.innerHTML =
+    '<button type="button" data-cl="" class="'+(CAL_CLI?'':'on')+'">全部<s>'+
+      (live||[]).length+'</s></button>' +
+    order.map(function(n){
+      return '<button type="button" data-cl="'+esc(n)+'" class="'+
+        (CAL_CLI===n?'on':'')+'">'+esc(shortName(n))+'<s>'+cnt[n]+'</s></button>';
+    }).join('');
+  [].forEach.call(box.querySelectorAll('[data-cl]'), function(b){
+    b.onclick = function(){
+      CAL_CLI = (CAL_CLI === b.dataset.cl) ? '' : b.dataset.cl;
+      drawCal();
+    };
+  });
+}
+
 /* ── 數字鍵盤 ──────────────────────────────────────
    四位數按完自動送出。按錯的時候點會抖一下並轉紅，
    不用讀字也知道錯了——這比跳一個對話框快，也不用再點一次關掉。 */
@@ -1113,6 +1154,10 @@ var CAL_LG = [];                 // 語別過濾（空 = 全部）
 // 翻譯人員一打開先只看自己的。主管沒有自己的行程，維持看全部。
 var CAL_MINE = false;            // 只看我的
 var CAL_ST = '';                 // 狀態過濾（'' = 全部）
+/* 廠商過濾（行政用）。'' = 全部。
+   ⛔ 名單只列**目前這個月真的有排的**，而且帶數量——
+      309 家全部列出來等於沒有篩選（牟佑彬 2026-10-03）。 */
+var CAL_CLI = '';
 /* ⛔ 2026-09-22 設計檢視第 6 項：預設從「月」改成「日」。
    翻譯早上打開 App 只問一句：**今天要去哪**。
    月曆回答的是「這個月哪幾天有事」——那是排程的問題，不是出門前的問題。
@@ -1400,6 +1445,20 @@ function stKey(r){
   return 'ing';
 }
 // 顏色跟行事曆卡片上的狀態標籤同一套，篩選與卡片才對得起來
+/* 行政要的三個（牟佑彬 2026-10-03）。
+   ⛔ 審核那五個（待送審／審核中／已退回／審核通過）是**翻譯與副理**在看的，
+      行政不送審也不審核，列出來只是雜訊。 */
+var CAL_ST_ADM = [
+  { k:'pre',  t:'預排',   c:'#96A0B2' },
+  { k:'plan', t:'未完成', c:'#C99A3E' },
+  { k:'done', t:'已完成', c:'#1E9E72' }
+];
+function stAdm(r){
+  if (r.status === '已完成') return 'done';
+  return r.crew ? 'plan' : 'pre';
+}
+function stDefs(){ return (STAFF_ROLE === '行政') ? CAL_ST_ADM : CAL_ST_DEF; }
+
 var CAL_ST_DEF = [
   { k:'plan',  t:'未完成',   c:'#96A0B2' },
   { k:'nosub', t:'待送審',   c:'#C99A3E' },
@@ -1411,7 +1470,11 @@ var CAL_ST_DEF = [
 function visible(){
   return CAL_ROWS.filter(function(r){
     if(r.status === '取消') return false;
-    if(CAL_ST && stKey(r) !== CAL_ST) return false;
+    /* ⚠ 行政看的是預排／未完成／已完成，不是審核那五個。
+       這裡漏掉的話，按下「預排」會一筆都不剩——而且不會報錯。 */
+    var stOf2 = (STAFF_ROLE === '行政') ? stAdm : stKey;
+    if(CAL_ST && stOf2(r) !== CAL_ST) return false;
+    if(CAL_CLI && r.client !== CAL_CLI) return false;
     /* ⛔ 灰色預排也算「我的」。
        行政排給我、特助還沒確認的那幾筆，**我要看得到**
        （牟佑彬 2026-09-27：讓翻譯提早知道未來會有這樣的行程）。
@@ -1446,10 +1509,11 @@ function drawFilters(langs){
       mark+esc(txt)+'<b>'+n+'</b></button>';
   };
 
+  var stOf = (STAFF_ROLE === '行政') ? stAdm : stKey;
   $('calSt').innerHTML =
     chip(!CAL_ST, 'data-st=""', '', '全部', live.length) +
-    CAL_ST_DEF.map(function(d){
-      var n = live.filter(function(r){ return stKey(r) === d.k; }).length;
+    stDefs().map(function(d){
+      var n = live.filter(function(r){ return stOf(r) === d.k; }).length;
       return chip(CAL_ST===d.k, 'data-st="'+d.k+'"',
         '<i class="sq" style="background:'+d.c+'"></i>', d.t, n);
     }).join('');
@@ -1466,6 +1530,8 @@ function drawFilters(langs){
         '<i class="dot lg-'+esc(l)+'"></i>', l, n);
     }).join('') +
     (on ? '<button type="button" class="clr" id="calClr">取消全選</button>' : '');
+
+  drawCalCli(live);
 
   /* 收起來的時候：兩排都不畫，改成一顆「篩選」。
      ⚠ 有在篩的時候一定攤開——不然他會忘記自己開著篩選，
@@ -1848,6 +1914,17 @@ var SW_STEP_ = 52;          // 一格多寬，跟 CSS 的 .swst 一致
 var SW_ARM_  = 0.6;         // 露出六成就算數，不用推滿
 
 function swStops(r){
+  /* 行政看到的是別的三個（牟佑彬 2026-10-03）。
+     ⛔ 沒有「催確認」——他說改成跟翻譯一樣做追蹤。
+     ⛔ 已完成的只剩追蹤：那一筆連著一張服務紀錄，改不得也取消不得。 */
+  if(STAFF_ROLE === '行政'){
+    var done = (r.status === '已完成');
+    var z = [];
+    if(!done) z.push({ k:'edit', t:'改', i:'✎' });
+    z.push({ k:'track', t: r.caseId ? '看追蹤' : '追蹤', i:'◷' });
+    if(!done) z.push({ k:'del', t:'取消', i:'✕', bad:1 });
+    return z;
+  }
   var plan = r.status === '預排', rv = r.rv || '';
   var a = [];
   if(r.recCode && (rv === '未送審' || rv === '退回補正'))
@@ -2287,6 +2364,7 @@ function bindSwipe(w, r){
 /* 放開就執行。動作本身沿用長按選單那幾支，不要再寫第二份。
    ⛔ 取消要再問一次：手勢是會滑過頭的，而「取消行程」救不回來。 */
 function swDo(k, r){
+  if(k === 'edit') { openPlanEdit(r); return; }
   if(k === 'sub')  { cardSubmit(r); return; }
   if(k === 'date') { cardReschedule(r); return; }
   if(k === 'del')  {
@@ -2590,7 +2668,87 @@ $('calToday').addEventListener('click', function(){
 });
 
 /* ── 排行程 ── */
+/* 正在改的那一筆的行程代碼。'' = 開新的。 */
+var PLAN_EDIT = '';
+
+/* 行政要的四樣，planModal 本來沒有：
+     1. 日期可以改（原本是固定顯示 CAL_SEL）
+     2. 「建議誰去」可以不選——不選就是丟給特助配人
+     3. 交代清單
+     4. 存成「預排」，不是直接指派
+   ⚠ 這幾塊用注入的，不寫進 Service.html——那是後端檔，改它要重新部署，
+     而版本額度只剩 3 個。 */
+function planAdmBits(){
+  if(STAFF_ROLE !== '行政') return;
+  var p = $('planDate');
+  if(!$('planDateIn')){
+    p.innerHTML = '<label class="dplb" style="margin-right:6px">服務日期</label>' +
+      '<input type="date" id="planDateIn">';
+  }
+  $('planDateIn').value = CAL_SEL;
+  /* 建議誰去：最前面補一個空的 */
+  var cs = $('planCrew');
+  if(cs && !cs.querySelector('option[value=""]')){
+    cs.insertAdjacentHTML('afterbegin',
+      '<option value="">還沒決定，交給特助配人</option>');
+  }
+  var lb = cs && cs.parentNode.querySelector('label');
+  if(lb) lb.textContent = '建議誰去（可以不選）';
+  /* 交代清單 */
+  if(!$('planTodo')){
+    var topic = $('planTopic');
+    topic.parentNode.insertAdjacentHTML('afterend',
+      '<div class="f" style="margin-top:10px"><label>交代給翻譯的事</label>' +
+      '<div id="planTodo"></div>' +
+      '<button type="button" class="dpsm" id="planTodoAdd">＋ 再加一項</button></div>');
+    $('planTodoAdd').onclick = function(){
+      var bx = $('planTodo'); if(bx) bx.dataset.touched = '1';
+      planTodoAdd(''); };
+  }
+}
+function planTodoAdd(v){
+  var box = $('planTodo'); if(!box) return;
+  if(box.children.length >= 12) return;      // 上限跟後端 schedTodoStr_ 一致
+  var d = document.createElement('div');
+  d.className = 'tdrow';
+  d.innerHTML = '<input type="text" value="'+esc(v||'')+'" placeholder="例如：找會計部林小姐">'+
+    '<button type="button" class="dpsm" data-x="1">✕</button>';
+  d.querySelector('[data-x]').onclick = function(){
+    d.remove(); box.dataset.touched = '1'; };
+  d.querySelector('input').addEventListener('input', function(){
+    box.dataset.touched = '1'; });
+  box.appendChild(d);
+}
+function planTodoRows(){
+  return [].map.call(($('planTodo')||{children:[]}).children, function(r){
+    return (r.querySelector('input')||{}).value || ''; })
+    .map(function(v){ return v.trim(); }).filter(String);
+}
+
+/* 左滑的「改」。沿用同一個視窗，只是先把值填回去。 */
+function openPlanEdit(r){
+  PLAN_EDIT = r.id;
+  openPlan(r.client);
+  $('planTarget').value = (r.target && r.target.indexOf('工廠') !== 0) ? '家庭雇主' : '工廠';
+  $('planSlot').value = r.slot || '';
+  $('planBig').value = r.big || '';
+  $('planBig').dispatchEvent(new Event('change'));
+  $('planSub').value = r.sub || '';
+  $('planTopic').value = r.memo || '';
+  if($('planDateIn')) $('planDateIn').value = r.date || CAL_SEL;
+  if($('planCrew')) $('planCrew').value = r.crew || r.sug || '';
+  var bx = $('planTodo');
+  if(bx){
+    bx.innerHTML = ''; bx.dataset.touched = '1';
+    (r.todo || []).forEach(function(t){ planTodoAdd(t.t || t); });
+  }
+  /* 已確認的改完會退回待確認，按鈕上要先講 */
+  $('planSave').textContent = r.crew ? '存檔（會退回待確認）' : '存檔';
+  fillPlanWorkers(r.workers || '');
+}
+
 function openPlan(client){
+  PLAN_EDIT = PLAN_EDIT || '';
   $('planDate').textContent = CAL_SEL;
   $('planCrew').innerHTML = CREW.map(function(n){ return '<option>'+esc(n)+'</option>'; }).join('');
   if(CREW.indexOf(STAFF_NAME)!==-1) $('planCrew').value = STAFF_NAME;
@@ -2607,6 +2765,8 @@ function openPlan(client){
   }
   fillPlanBig();
   fillPlanWorkers();
+  planAdmBits();
+  if(!PLAN_EDIT) $('planSave').textContent = '排進行事曆';
   $('planModal').style.display='';
 }
 $('calAdd').addEventListener('click', function(){ openPlan(''); });
@@ -2623,11 +2783,16 @@ $('planBig').addEventListener('change', function(){
       c.s.map(function(x){ return '<option>'+esc(x.n)+'</option>'; }).join('')
     : '<option value="">先選類別</option>';
 });
-function fillPlanWorkers(){
+/* @param {string} picked 已經選過的移工，用「、」隔開（改單的時候帶回來）
+   ⛔ 沒有這個參數的話，行政按「改」進去會看到移工全部沒勾，
+      存檔就把本來選的人洗掉了——而且畫面上看不出來。 */
+function fillPlanWorkers(picked){
+  var was = String(picked || '').split('、').filter(String);
   var pz = presetOf($('planClient').value);
   $('planWorkers').innerHTML = (pz && pz.w.length)
     ? pz.w.map(function(w){
-        return '<label><input type="checkbox" value="'+esc(w.n)+'">'+
+        return '<label><input type="checkbox" value="'+esc(w.n)+'"'+
+          (was.indexOf(w.n) !== -1 ? ' checked' : '')+'>'+
           '<span>'+esc(w.n)+(w.o?'<span class="o">'+esc(w.o)+'</span>':'')+'</span>'+
           '<span class="lg">'+esc(w.l)+'</span></label>'; }).join('')
     : '<div class="empty">先選工廠／雇主</div>';
@@ -2670,6 +2835,10 @@ function fillPlanClients(){
 }
 $('planTarget').addEventListener('change', function(){ fillPlanClients(); fillPlanWorkers(); });
 $('planCancel').addEventListener('click', function(){ $('planModal').style.display='none'; });
+/* ⛔ 關掉視窗一定要清 PLAN_EDIT。漏掉的話下一次按「＋ 排一筆行程」
+   會變成**改到剛剛那一筆**，而且畫面上看不出來。 */
+$('planCancel').addEventListener('click', function(){ PLAN_EDIT = ''; });
+
 $('planSave').addEventListener('click', function(){
   if(!$('planClient').value){ toast('請選工廠／雇主名稱', true); return; }
   var pz = presetOf($('planClient').value);
@@ -2689,18 +2858,50 @@ $('planSave').addEventListener('click', function(){
         if(cnt[w.l]>best){ best=cnt[w.l]; lang=w.l; } });
     }
   }
+  var adm = (STAFF_ROLE === '行政');
+  var day = (adm && $('planDateIn')) ? $('planDateIn').value : CAL_SEL;
+  var who = $('planCrew').value;
   var b=$('planSave'); b.disabled=true;
+
+  /* 行政改既有的那一筆 */
+  if(adm && PLAN_EDIT){
+    google.script.run
+      .withSuccessHandler(function(res){
+        b.disabled=false; PLAN_EDIT=''; $('planModal').style.display='none';
+        toast('改好了' + (res && res.back
+          ? ('　已退回待確認' + (res.who ? ('，已通知 '+res.who) : '')) : ''));
+        calBust(); loadCal(null, true);
+      })
+      .withFailureHandler(function(e){ b.disabled=false; toast(e.message,true); })
+      .updateSchedule(CODE, PLAN_EDIT, {
+        date: day, slot: $('planSlot').value, lang: lang,
+        big: $('planBig').value, sub: $('planSub').value,
+        topic: $('planBig').value + ' ／ ' + $('planSub').value,
+        memo: $('planTopic').value.trim(),
+        workers: picked.join('、'), sug: who,
+        todo: planTodoRows()
+      });
+    return;
+  }
+
   google.script.run
     .withSuccessHandler(function(){
-      b.disabled=false; $('planModal').style.display='none';
-      toast('已排進行事曆'); calBust(); loadCal();
+      b.disabled=false; PLAN_EDIT=''; $('planModal').style.display='none';
+      toast(adm ? (who ? ('開好了　建議 '+who+'，等特助確認') : '開好了　等特助配人')
+                : '已排進行事曆');
+      calBust(); loadCal();
     })
     .withFailureHandler(function(e){ b.disabled=false; toast(e.message,true); })
-    .addSchedule(CODE, { date: CAL_SEL, slot: $('planSlot').value,
-      crew: $('planCrew').value, target: $('planTarget').value,
+    /* ⛔ 行政**不可以直接指派**。crew 一定要明確傳空字串——
+       不傳的話後端會掛給開單的人（行政自己），而行政不跑外勤，
+       特助也就永遠看不到待指派池（Schedule.gs 的 addSchedule 註解）。 */
+    .addSchedule(CODE, { date: day, slot: $('planSlot').value,
+      crew: adm ? '' : who, sug: adm ? who : '',
+      target: $('planTarget').value,
       client: $('planClient').value, lang: lang,
       big: $('planBig').value, sub: $('planSub').value,
       workers: picked.join('、'),
+      todo: adm ? planTodoRows().map(function(t){ return {t:t, d:0}; }) : [],
       topic: $('planTopic').value.trim() });
 });
 
@@ -9335,12 +9536,25 @@ if($('fdQ')){
 /* 角色決定看得到哪幾個底頁。
    ⛔ 這只是「看得到什麼」，不是權限——後端每一支都各自再驗一次。 */
 var ROLE_TABS_ = {
-  '行政':   ['cal', 'order', 'mine'],
+  /* 行政只剩行事曆（牟佑彬 2026-10-03）。
+     「客戶」與「我開的單」收進行事曆：客戶變成篩選列、我開的單變成一個開關。
+     ⚠ p-order／p-mine 的程式沒有刪掉——那兩支還有副理在用的路徑，
+       而且萬一要退回來只要把 'order','mine' 加回這一行。 */
+  '行政':   ['cal'],
   '特助':   ['cal', 'conf'],
   '副理':   ['cal', 'new', 'track', 'follow', 'stat', 'conf'],
   '總經理': ['cal', 'new', 'track', 'follow', 'stat', 'conf']
 };
+/* 行政換一套色票（牟佑彬 2026-10-03 指定公司色系的紅）。
+   ⛔ 「出事」的紅要跟主色分開，不然兩種紅混在一起誰都看不出差別——
+      所以 --bad-* 一起改成橘紅，只用在真的出事的地方。
+   ⚠ 掛在 body 上，不是每個元件各自改。app.css 的 body.adm 那一段就是全部。 */
+function applyRoleSkin(){
+  document.body.classList.toggle('adm', STAFF_ROLE === '行政');
+}
+
 function applyRoleTabs(){
+  applyRoleSkin();
   var want = ROLE_TABS_[STAFF_ROLE];
   var btns = document.querySelectorAll('.tabs button');
   if(!want){

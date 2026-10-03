@@ -3187,3 +3187,37 @@ body.tabsbottom .tabs.few button{min-width:120px}
 .aurow.bad .aun{color:var(--bad-ink);font-weight:800}
 .auno{width:16px;text-align:center;font-weight:800;flex:none}
 #auBox textarea{width:100%}
+
+
+/* ══ 行政的紅色主題（牟佑彬 2026-10-03）══════════════════
+   ⛔ 只換色票，元件一個都沒改。掛在 body.adm 上，
+      所以切換身分的時候跟著 applyRoleSkin() 一起變。
+   ⛔ 「出事」的紅（--bad-*）一起換成橘紅 #B4461A。
+      主色變紅之後，退回補正／取消／過期沒結案如果還是同一種紅，
+      兩者就分不出來了——紅色在這個 App 裡本來是有意義的。 */
+body.adm{
+  --brand:#8E2434; --brand-d:#5E1522; --brand-soft:#F6E7EA;
+  --chrome-bg:#8E2434;
+  --chrome-grad:linear-gradient(135deg,#5E1522 0%,#8E2434 50%,#A94457 100%);
+  --fill:#8E2434; --fill-ink:#fff;
+  --accent:#7A1E2C; --accent-soft:#F6E7EA;
+  --bad-ink:#B4461A; --bad-bg:#FBEDE5; --bad-line:#EDCFBB;
+  --bad-fill:#B4461A; --bad-bar:#B4461A; --danger:#B4461A; --rose:#B4461A;
+}
+body.adm.dark{
+  --brand:#E09AA6; --brand-soft:#2E1A1E;
+  --chrome-grad:linear-gradient(135deg,#2A0C13 0%,#4A121D 50%,#6B2130 100%);
+  --fill:#A33A4A; --fill-ink:#fff;
+  --accent:#C77C88; --accent-soft:#2E1A1E;
+  --bad-ink:#E0A179; --bad-bg:#2C1D13; --bad-line:#4A3422;
+  --bad-fill:#B4461A; --bad-bar:#C96A33; --danger:#E0A179; --rose:#E0A179;
+}
+
+/* 廠商篩選列。只列**這個範圍內真的有排的**，而且帶數量——
+   不是 309 家全部列出來（牟佑彬 2026-10-03）。 */
+.calcli{display:flex;gap:6px;overflow-x:auto;padding:0 0 8px;-webkit-overflow-scrolling:touch}
+.calcli button{flex:none;border:1px solid var(--line);background:var(--card);
+  border-radius:999px;padding:7px 12px;font:600 var(--t4)/1 inherit;color:var(--ink2);
+  min-height:34px;white-space:nowrap}
+.calcli button.on{background:var(--fill);color:var(--fill-ink);border-color:var(--fill)}
+.calcli s{text-decoration:none;opacity:.6;margin-left:5px;font-variant-numeric:tabular-nums}
