@@ -1725,6 +1725,7 @@ function drawDay(){
     /* 由右往左推，一格一個動作。軌道藏在卡片右邊外面，跟著卡片一起走。
        data-go 留在外層，「從填寫頁返回」要靠它把這一張找回來。 */
     var wrapA = '<div class="swwrap"' +
+      ' data-sid="'+esc(r.id||'')+'"' +
       (r.id ? ' data-go="'+esc(r.id)+'"' : '') +
       (r.recCode ? ' data-rc="'+esc(r.recCode)+'"' : '') +
       ' data-plan="'+(plan ? '1' : '')+'"' +
@@ -1794,7 +1795,17 @@ function todoBadge(r){
      ⚠ 這一段是十個人每天在用的畫面，能不動既有的就不動。 */
   function preCard(r){
     var l = (r.lang||'').split('、')[0] || '';
-    return '<div class="ev pre" data-pre="'+esc(r.id||'')+'">'+
+    /* 預排的卡以前**完全不能滑**——它是另外畫的一種卡，沒有軌道
+       （牟佑彬 2026-10-03 指出）。包進 .swwrap 之後就跟其他卡同一套。
+       ⛔ 但**不可以讓它拖曳改期**：下面 bindDrag 用的是 `.ev:not(.pre)`，
+          那一條要留著。還沒確認的行程被拖來拖去，特助會對不上。 */
+    return '<div class="swwrap" data-sid="'+esc(r.id||'')+'"'+
+      (r.id ? ' data-go="'+esc(r.id)+'"' : '')+
+      ' data-plan="1" data-client="'+esc(r.client||'')+'"'+
+      ' data-workers="'+esc(r.workers||'')+'" data-lang="'+esc(r.lang||'')+'"'+
+      ' data-big="'+esc(r.big||'')+'" data-sub="'+esc(r.sub||'')+'">'+
+      swRail(r)+
+      '<div class="ev pre" data-pre="'+esc(r.id||'')+'">'+
       '<span class="bar lg-'+esc(l)+'"></span>'+
       '<span class="b">'+
         '<span class="c4eye"><span class="sv">'+esc(r.topic || r.sub || '—')+'</span>'+
@@ -1802,12 +1813,16 @@ function todoBadge(r){
         '<span class="c4nm"><span class="n">'+esc(r.client)+'</span></span>'+
         (r.workers?'<span class="c4wk"><span class="c4ws">'+esc(r.workers)+'</span></span>':'')+
         '<span class="c4who">'+esc(r.slot||'未定時段')+'　'+esc(r.by||'')+' 排的，等特助確認</span>'+
+        /* ⚠ 「我那天不行」是**翻譯**的動作——那是請假資料最準的來源
+           （當事人自己講，而且是看到預排之後才講）。
+           行政按它沒有意義，所以行政不顯示（牟佑彬 2026-10-03）。 */
         (r.decline
           ? '<span class="c4no">你說了：'+esc(String(r.decline).split('：').slice(1).join('：')
               || r.decline)+'</span>'
-          : '<button type="button" class="c4nogo" data-nogo="'+esc(r.id||'')+'">'+
-            '我那天不行</button>')+
-      '</span></div>';
+          : (STAFF_ROLE === '行政' ? ''
+             : '<button type="button" class="c4nogo" data-nogo="'+esc(r.id||'')+'">'+
+               '我那天不行</button>'))+
+      '</span></div></div>';
   }
 
   var html = '';
@@ -1892,9 +1907,16 @@ function todoBadge(r){
      而且手上有整筆 r），不要兩套。 */
   /* 每一張卡片：點一下（預排＝開始填寫、已完成＝看紀錄）、
      由右往左推出四段選單（有哪幾格看這張卡的狀態）。 */
-  var si = 0;
+  /* ⛔ 以前這裡是「第幾個 .swwrap 配 all[si++]」，而 all 只有
+     plan.concat(done)——預排卡一旦也變成 .swwrap，順序就全部錯一位，
+     **滑到的會是別人的那筆**，而且畫面上完全看不出來。
+     改成用卡片自己身上的 data-sid 去找，順序怎麼變都不會配錯。
+     （同一個坑上面 bindDrag 那段註解也記了一次。） */
+  var byId = {};
+  CAL_ROWS.forEach(function(r){ if(r.id) byId[r.id] = r; });
   [].forEach.call($('calDayList').querySelectorAll('.swwrap'), function(w){
-    var r3 = all[si++]; if(r3) bindSwipe(w, r3);
+    var r3 = byId[w.dataset.sid];
+    if(r3) bindSwipe(w, r3);
   });
 }
 
@@ -4022,6 +4044,11 @@ $('reset').addEventListener('click', resetForm);
    翻譯再對著它重打一次沒有意義。 */
 var PASTE = null;
 
+/* ⛔ 「從 LINE 貼上整天行程」整個收起來（牟佑彬 2026-10-03，三個角色都拿掉）。
+   ⚠ **只從畫面拿掉，程式不刪**。後端那一整套解析（看得懂 LINE 的格式、
+      自動分類、對客戶名）還在 Paste.gs，要用回來把下面這行刪掉就有；
+      刪掉就要重寫。 */
+if($('calPaste')) $('calPaste').style.display = 'none';
 $('calPaste').addEventListener('click', function(){
   $('pasteBox').value = '';
   $('pasteOut').innerHTML = '';
@@ -9558,6 +9585,18 @@ function applyRoleSkin(){
   document.body.classList.toggle('adm', STAFF_ROLE === '行政');
 }
 
+/* 只剩一個分頁就把整條收起來（牟佑彬 2026-10-03）。
+   ⛔ 規則寫成「只剩一個就不畫」，不是寫死「行政不畫」——
+      以後行政若又多一個分頁，它會自己回來。 */
+function hideLoneTabs(){
+  var bar = document.querySelector('.tabs');
+  if(!bar) return;
+  var n = [].filter.call(bar.querySelectorAll('button'),
+    function(b){ return !b.hidden; }).length;
+  bar.style.display = (n <= 1) ? 'none' : '';
+  document.body.classList.toggle('notabs', n <= 1);
+}
+
 function applyRoleTabs(){
   applyRoleSkin();
   var want = ROLE_TABS_[STAFF_ROLE];
@@ -9575,6 +9614,7 @@ function applyRoleTabs(){
        翻譯那五顆（含中間的加號）完全不受影響。 */
   var bar = document.querySelector('.tabs');
   if(bar) bar.classList.toggle('few', want.length <= 3);
+  hideLoneTabs();
   /* 目前那一頁如果被藏起來了，要跳回第一個看得到的，
      不然畫面停在一個按不到的分頁上。 */
   var on = document.querySelector('.tabs button.on');

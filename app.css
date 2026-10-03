@@ -3221,3 +3221,9 @@ body.adm.dark{
   min-height:34px;white-space:nowrap}
 .calcli button.on{background:var(--fill);color:var(--fill-ink);border-color:var(--fill)}
 .calcli s{text-decoration:none;opacity:.6;margin-left:5px;font-variant-numeric:tabular-nums}
+
+/* 只剩一個分頁的時候整條收起來（行政）。
+   ⛔ 底欄不見了，內容區就要把原本讓給它的那段內距收回來，
+      不然畫面最下面會空一截。 */
+body.notabs .pane{padding-bottom:16px}
+body.notabs .evsticky,body.notabs .calfw{bottom:0}
