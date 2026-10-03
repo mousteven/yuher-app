@@ -3244,3 +3244,39 @@ body.filladm #p-new .card:has(.sig[data-sig="employer"]){display:none}
 body.filladm #preview,
 body.filladm #save{display:none}
 body.filladm #admNote{margin:-4px 0 12px}
+
+
+/* ③ 服務類別／細項搬到最上面之後，移工卡上那一組就不要了。 */
+body.filladm #workers [data-adm="one"]{display:none}
+
+/* ② 頂部那個釘住的打勾清單是翻譯在現場用的，行政看下面可編輯的那一組。 */
+body.filladm #todoBox{display:none}
+
+/* ④ 行政不需要簽到 QR、紙本簽到、結束簽到（牟佑彬 2026-10-03）。
+   ⚠ 參加人員的名單**要留著**——行政要決定這一場找哪幾位。 */
+body.filladm #briefStart,
+body.filladm #briefPaper,
+body.filladm #briefClose,
+body.filladm #briefRefresh,
+body.filladm #briefLive,
+body.filladm #briefCard .hint{display:none}
+
+/* 翻譯點「還沒確認」的預排＝只能看。
+   ⛔ 卡片上寫著「先不要去」，卻讓他點進去填服務紀錄，是互相矛盾的。 */
+body.rotrip #p-new input,
+body.rotrip #p-new select,
+body.rotrip #p-new textarea,
+body.rotrip #p-new .chips,
+body.rotrip #p-new .epkval{pointer-events:none;opacity:.72}
+body.rotrip #save,
+body.rotrip #preview,
+body.rotrip #wipe,
+body.rotrip #addWk,
+body.rotrip #p-new .sig [data-clear],
+body.rotrip #p-new .wkh button{display:none}
+body.rotrip #roBar{display:block}
+#roBar{display:none;border:1px solid var(--warn-line);background:var(--warn-bg);
+  color:var(--warn-ink);border-radius:var(--r2);padding:11px 13px;margin-bottom:12px;
+  font-size:var(--t3);font-weight:600}
+#roBar s{display:block;text-decoration:none;font-weight:400;color:var(--ink2);
+  font-size:var(--t4);margin-top:3px}

@@ -1846,12 +1846,16 @@ function todoBadge(r){
          行政改單 → 「被改過了，等特助重新確認」——**還是你的**，不要叫他別去。
          ⛔ 2026-10-03 之前只有前面那一句，行政一改日期，翻譯看到的是
             「不用你去了」，那是錯的。 */
-      var edited = /改單/.test(String(r.moved||''));
-      return '<div class="c4moved'+(edited?' ed':'')+'">'+(edited?'✎':'🔔')+
-        ' <b>'+esc(r.client)+' '+esc(r.topic||'')+
-        (edited?' 被行政改過了':' 不用你去了')+'</b>'+
-        '<span>'+esc(r.moved)+'</span>'+
-        (edited?'<span>等特助重新確認，先不要去。</span>':'')+'</div>';
+      /* ⛔ 「被行政改過了」那一張拿掉（牟佑彬 2026-10-03）：
+         「反正我也只是看，我也沒辦法去動。」行程本身還在行事曆上，
+         那張卡只是多占一塊位置。
+         ⚠ 代價他知道：行政把日期改到別天，他只會看到它換了位置，
+           不會知道「有人動過」。他選擇這樣。
+         換人那一張留著——那一筆是真的從他手上拿走了，不講他不會知道。 */
+      if(/改單/.test(String(r.moved||''))) return '';
+      return '<div class="c4moved">🔔'+
+        ' <b>'+esc(r.client)+' '+esc(r.topic||'')+' 不用你去了</b>'+
+        '<span>'+esc(r.moved)+'</span></div>';
     }).join('');
   }
   if(plan.length){
@@ -2648,6 +2652,19 @@ $('todoList') && $('todoList').addEventListener('click', function(e){
 function startFromSchedule(id){
   var r = CAL_ROWS.filter(function(x){ return x.id===id; })[0];
   if(!r) return;
+  /* 翻譯點「還沒確認」的預排＝只能看（牟佑彬 2026-10-03）。
+     ⛔ 卡片上就寫著「先不要去」，卻讓他點進去填服務紀錄，是互相矛盾的。
+     ⚠ 行政與特助不受影響——他們進去是要改行程（body.filladm）。 */
+  var ro = (!document.body.classList.contains('filladm') &&
+            r.status === '預排' && !r.crew);
+  document.body.classList.toggle('rotrip', ro);
+  /* 唯讀的時候一定要講清楚為什麼，不然他會以為當掉了。 */
+  if(!$('roBar')){
+    var pane = $('p-new');
+    if(pane) pane.insertAdjacentHTML('afterbegin',
+      '<div id="roBar">這一筆還沒確認，只能看<s>特助確認之後它會變成你的行程，'+
+      '那時候點進來才是填服務紀錄。現在先不要去。</s></div>');
+  }
   /* 切分頁之前先量，不然 backToTop() 已經把捲動位置歸零了 */
   var back = { id: id, rec: '', y: window.scrollY,
                view: CAL_VIEW, ym: CAL_YM, sel: CAL_SEL,
@@ -2661,7 +2678,7 @@ function startFromSchedule(id){
   window.scrollTo(0,0);
   toast(document.body.classList.contains('filladm')
     ? '可以改日期、翻譯、移工與服務項目'
-    : '已帶入行程，接著填服務內容');
+    : (ro ? '這一筆還沒確認，只能看' : '已帶入行程，接著填服務內容'));
 }
 
 /* 上一頁／下一頁依目前檢視移動：月跳月、週跳七天、日跳一天 */
@@ -6808,6 +6825,14 @@ function fillTripForm(r){
     }
   });
   renumber();
+  /* 行政版：把事由與交代事項填回最上面那兩塊（見 admFillBits）。 */
+  if(document.body.classList.contains('filladm') && $('admBig')){
+    $('admBig').value = r.big || '';
+    $('admBig').onchange();
+    if(r.sub) $('admSub').value = r.sub;
+    var tb = $('admTodo');
+    if(tb){ tb.innerHTML = ''; (r.todo || []).forEach(function(t){ admTodoAdd(t.t || t); }); }
+  }
 }
 
 /* 從案件開一張服務表：雇主、移工、服務項目、負責翻譯全部帶過去，
@@ -9652,6 +9677,60 @@ function admFillBits(){
   note.textContent = '行政在這裡只改行程內容：日期、翻譯、移工、服務項目。' +
     '處理經過與簽名是翻譯當天到現場才填的，所以這裡看不到。';
   if(h && h.parentNode) h.insertAdjacentElement('afterend', note);
+
+  /* ③ 服務類別／細項整筆共用一組，放在最上面。
+     ⛔ 這是他原本的設計：**行程一組事由、服務紀錄才一人一組**。
+        線上 S260925-RM 就是現成的例子——三位移工三種細項，
+        行程卡上只寫第一位那一組。
+        每張移工卡各選一組的話，行程表只有一個格子接得住，
+        第二、三位選的會靜默消失。 */
+  var card = document.querySelector('#p-new .card');
+  if(card && !$('admBig')){
+    card.insertAdjacentHTML('beforeend',
+      '<div class="g2" id="admItem" style="margin-top:10px">'+
+        '<div class="f"><label>服務類別</label><select id="admBig">'+
+          '<option value="">請選擇…</option>'+
+          ((TAX&&TAX.cats)||[]).map(function(c){ return '<option>'+esc(c.b)+'</option>'; }).join('')+
+        '</select></div>'+
+        '<div class="f"><label>服務細項</label><select id="admSub">'+
+          '<option value="">先選類別</option></select></div>'+
+      '</div>'+
+      '<p class="hint" style="margin:6px 0 0">這一趟要辦的事。'+
+      '幾位移工都是為了這件事去的——每個人實際發生什麼，是翻譯當天填的。</p>');
+    $('admBig').onchange = function(){
+      var c = ((TAX&&TAX.cats)||[]).filter(function(x){ return x.b === this.value; }.bind(this))[0];
+      $('admSub').innerHTML = c
+        ? '<option value="">請選擇…</option>' +
+          c.s.map(function(x){ return '<option>'+esc(x.n)+'</option>'; }).join('')
+        : '<option value="">先選類別</option>';
+    };
+  }
+
+  /* ② 交代事項搬到最下面，而且可以改字、可以加、可以刪。
+     ⛔ 上面那個釘住的打勾清單是**翻譯在現場勾的**，行政改不了字也加不了條。 */
+  if(!$('admTodo')){
+    save.insertAdjacentHTML('beforebegin',
+      '<div class="f" id="admTodoBox"><label>交代給翻譯的事</label>'+
+      '<div id="admTodo"></div>'+
+      '<button type="button" class="dpsm" id="admTodoAdd">＋ 再加一項</button></div>');
+    $('admTodoAdd').onclick = function(){ admTodoAdd(''); };
+  }
+}
+
+function admTodoAdd(v){
+  var box = $('admTodo'); if(!box) return;
+  if(box.children.length >= 12) return;      // 上限跟後端 schedTodoStr_ 一致
+  var d = document.createElement('div');
+  d.className = 'tdrow';
+  d.innerHTML = '<input type="text" value="'+esc(v||'')+'" placeholder="例如：找會計部林小姐">'+
+    '<button type="button" class="dpsm" data-x="1">✕</button>';
+  d.querySelector('[data-x]').onclick = function(){ d.remove(); };
+  box.appendChild(d);
+}
+function admTodoRows(){
+  return [].map.call(($('admTodo')||{children:[]}).children, function(r){
+    return (r.querySelector('input')||{}).value || ''; })
+    .map(function(v){ return v.trim(); }).filter(String);
 }
 
 /* 存檔變更：走 updateSchedule，**不會開服務紀錄、不會給編號**。 */
@@ -9666,10 +9745,9 @@ function admSaveTrip(){
                                           : (sel ? sel.value.trim() : '');
     if(n && names.indexOf(n) < 0) names.push(n);
   });
-  /* 服務類別／細項只取第一張卡——行程表上只有一組。 */
-  var c0 = cards[0];
-  var big = c0 ? (c0.querySelector('[data-k=big]')||{}).value || '' : '';
-  var sub = c0 ? (c0.querySelector('[data-k=sub]')||{}).value || '' : '';
+  /* 服務類別／細項讀最上面那一組（整筆共用，見 admFillBits 的註解）。 */
+  var big = ($('admBig')||{}).value || '';
+  var sub = ($('admSub')||{}).value || '';
   var b = $('admSave');
   b.disabled = true; b.textContent = '存檔中…';
   google.script.run
@@ -9688,7 +9766,8 @@ function admSaveTrip(){
       sug: $('crew').value,
       workers: names.join('、'),
       big: big, sub: sub,
-      topic: (big && sub) ? (big + ' ／ ' + sub) : big
+      topic: (big && sub) ? (big + ' ／ ' + sub) : big,
+      todo: admTodoRows().map(function(t){ return {t:t, d:0}; })
     });
 }
 
