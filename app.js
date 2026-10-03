@@ -9750,7 +9750,11 @@ function admTodoRows(){
 
 /* 存檔變更：走 updateSchedule，**不會開服務紀錄、不會給編號**。 */
 function admSaveTrip(){
-  if(!SCHED_ID){ toast('這一筆沒有對應的行程', true); return; }
+  /* ⛔ 這裡原本是「沒有 SCHED_ID 就擋下來」——那在只有「改既有行程」
+     的時候是對的。2026-10-04 加了「排一筆新的」之後，新增**本來就沒有**
+     行程代碼，於是永遠卡在這一行，畫面只跳「這一筆沒有對應的行程」。
+     加新路徑卻忘了鬆開舊的守門——他當場撞到。
+     現在改成：有代碼＝改既有的，沒有＝開新的（下面的 isNew 分流）。 */
   var cards = $('workers').children;
   var names = [];
   [].forEach.call(cards, function(c){
