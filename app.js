@@ -2652,7 +2652,7 @@ function startFromSchedule(id){
   document.querySelector('.tabs button[data-t=new]').click();
   showBack(back, 'form');          // 要在切完分頁之後，分頁切換會把它收起來
   window.scrollTo(0,0);
-  toast(STAFF_ROLE === '行政'
+  toast(document.body.classList.contains('filladm')
     ? '可以改日期、翻譯、移工與服務項目'
     : '已帶入行程，接著填服務內容');
 }
@@ -9104,14 +9104,16 @@ function fdDraw(){
     h += '<button type="button" class="fdrow" data-s="' + esc(r.id) + '">' +
       '<span class="k">行程</span><span class="m">' +
       esc((r.date || '').slice(5) + ' ' + (r.client || '') + ' ' + (r.topic || '')) +
-      '<u>' + esc(r.workers || '') + '</u></span></button>';
+      /* 查編號查到的，一定要把編號印出來——不然他拿著紙本對不起來。 */
+      '<u>' + esc(r.id || '') + (r.rec ? ('　→　' + esc(r.rec)) : '') +
+      (r.workers ? ('　' + esc(r.workers)) : '') + '</u></span></button>';
   });
   FD_HIT_.logs.slice(0, 3).forEach(function(r){
     h += '<button type="button" class="fdrow" data-l="' + esc(r.code) + '">' +
       '<span class="k">紀錄</span><span class="m">' +
       esc((r.date || '').slice(5) + ' ' + (r.name || r.client || '') + ' ' +
           (r.big || '')) +
-      '<u>' + esc(r.client || '') + '</u></span></button>';
+      '<u>' + esc(r.code || '') + '　' + esc(r.client || '') + '</u></span></button>';
   });
   h += '</div>';
 
@@ -9590,14 +9592,18 @@ var ROLE_TABS_ = {
 function applyRoleSkin(){
   var adm = (STAFF_ROLE === '行政');
   document.body.classList.toggle('adm', adm);
+  /* ⚠ 紅色只給行政；但「那一頁是改行程、不是填紀錄」**行政與特助都要**。
+     特助一樣不跑外勤、不填服務紀錄，點進去落到填寫頁同樣會誤存
+     （牟佑彬 2026-10-03）。所以兩個 class 的範圍故意不一樣。 */
+  var edit = adm || (STAFF_ROLE === '特助');
   /* 行政永遠不填服務紀錄，所以那一頁對他**永遠**是「改行程」的樣子。
      ⛔ 2026-10-03 之前他點進去看到的是翻譯要填的服務紀錄表，
         按下儲存會真的開出一筆正式紀錄、給編號、把行程標成已完成。
         線上已經因此多出兩筆錯的紀錄（填表人寫成行政一），已清除。
      ⚠ 用角色判斷而不是「進來的時候設、出去的時候清」——
         後者只要有一條路徑忘了清，就會卡在錯的模式。 */
-  document.body.classList.toggle('filladm', adm);
-  if(adm) admFillBits();
+  document.body.classList.toggle('filladm', edit);
+  if(edit) admFillBits();
 }
 
 /* 行政版那一頁要補的東西。只跑一次。 */
