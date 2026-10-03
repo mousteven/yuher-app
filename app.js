@@ -3318,6 +3318,7 @@ function startEdit(recCode){
     .withSuccessHandler(function(d){
       if(!d.canEdit){ toast('這一筆現在不能修改（' + d.status + '）', true); return; }
       fillFormFrom(d);
+      restoreSigs(recCode);
       EDIT_CODE = recCode;
       $('ebCode').textContent = recCode;
       $('ebWhy').textContent = d.reject || '';
@@ -3331,6 +3332,44 @@ function startEdit(recCode){
     })
     .withFailureHandler(function(e){ toast(e.message, true); })
     .getServiceLogForEdit(CODE, recCode);
+}
+
+/* 把原本的簽名畫回框裡。
+   ⛔ 不做的話三個框都是空的，看起來像「簽名不見了」——
+      而他很可能因此重簽，重簽會真的覆寫掉移工當場簽的那一張。
+   ⚠ 資料來源是 RV_DETAIL（審核視窗剛剛顯示過同一筆），
+      不是後端的 getServiceLogForEdit——那一支沒有回傳簽名。
+      這樣就不用改後端、不用部署。
+   ⚠ 塞進去的是雲端硬碟網址；後端只認 data:image 開頭的才算重簽，
+      所以原封不動存回去不會多存一份。 */
+function restoreSigs(recCode){
+  var d = RV_DETAIL;
+  if(!d || !d.trip || d.trip.code !== recCode) return;
+  var set = function(sel, url){
+    if(!url) return;
+    var box = document.querySelector(sel);
+    if(box && box.__sig) box.__sig.set(url);
+  };
+  set('[data-sig=employer]', d.trip.sigEmployer);
+  set('[data-sig=staff]', d.trip.sigStaff);
+  var ws = d.workers || [];
+  [].forEach.call($('workers').children, function(c, i){
+    var w = ws[i];
+    if(w && w.sigWorker){
+      var box = c.querySelector('[data-sig=worker]');
+      if(box && box.__sig) box.__sig.set(w.sigWorker);
+    }
+  });
+  /* 框裡有東西了，但那是「原本的」不是「剛簽的」——講清楚，
+     不然他會以為自己已經重簽過。 */
+  [].forEach.call(document.querySelectorAll('#p-new .sig .pad.on'), function(p){
+    if(!p.querySelector('.sigold')){
+      var tag = document.createElement('span');
+      tag.className = 'sigold';
+      tag.textContent = '原本的簽名　要換就點一下重簽';
+      p.appendChild(tag);
+    }
+  });
 }
 
 function endEdit(){

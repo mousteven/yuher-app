@@ -3288,3 +3288,24 @@ body.rotrip #roBar{display:block}
 body.filladm #reset{display:none}
 body.filladm #admTodoBox{margin-top:12px}
 body.filladm .btns{margin-top:14px}
+
+
+/* 編輯既有紀錄時，框裡畫的是**原本的**簽名，不是剛簽的。
+   不標出來的話他會以為自己已經重簽過了。 */
+.sig .pad .sigold{position:absolute;left:8px;bottom:6px;font-size:var(--t5);
+  color:var(--ink3);background:rgba(255,255,255,.82);border-radius:6px;
+  padding:1px 7px;pointer-events:none}
+.sig .pad{position:relative}
+
+/* ⛔ 行政版注入的那三塊（存檔變更、取消、可編輯的交代事項）
+   **只在行政／特助模式下出現**。
+   它們是 admFillBits() 一次注入、留在 DOM 裡的，切回翻譯只是拿掉
+   body.filladm——沒有這一條的話它們會留在翻譯的填寫頁上，
+   底下變成五顆按鈕，而且多一個翻譯根本不該編輯的交代事項
+   （牟佑彬 2026-10-04 實測踩到）。
+   ⚠ 這是今天第三次同一類問題：**某個角色注入／設定的東西，
+     切回去沒有收掉**。前兩次是底部分頁列與 filladm 本身。 */
+#admSave, #admCancel, #admTodoBox{display:none}
+body.filladm #admSave,
+body.filladm #admCancel{display:block}
+body.filladm #admTodoBox{display:block}
