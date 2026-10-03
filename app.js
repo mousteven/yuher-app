@@ -534,6 +534,7 @@ if($('outFind')) $('outFind').addEventListener('click', function(){
   document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.remove('on'); });
   document.querySelectorAll('.pane').forEach(function(p){ p.classList.remove('on'); });
   $('p-find').classList.add('on');
+  drawAudit();
   hideBack(); backToTop();
 });
 
@@ -1752,8 +1753,17 @@ function todoBadge(r){
   });
   if(moved.length){
     html += moved.map(function(r){
-      return '<div class="c4moved">🔔 <b>'+esc(r.client)+' '+esc(r.topic||'')+
-        ' 不用你去了</b><span>'+esc(r.moved)+'</span></div>';
+      /* 兩種情況共用這張卡，但話要講對：
+         換人 → 「不用你去了」
+         行政改單 → 「被改過了，等特助重新確認」——**還是你的**，不要叫他別去。
+         ⛔ 2026-10-03 之前只有前面那一句，行政一改日期，翻譯看到的是
+            「不用你去了」，那是錯的。 */
+      var edited = /改單/.test(String(r.moved||''));
+      return '<div class="c4moved'+(edited?' ed':'')+'">'+(edited?'✎':'🔔')+
+        ' <b>'+esc(r.client)+' '+esc(r.topic||'')+
+        (edited?' 被行政改過了':' 不用你去了')+'</b>'+
+        '<span>'+esc(r.moved)+'</span>'+
+        (edited?'<span>等特助重新確認，先不要去。</span>':'')+'</div>';
     }).join('');
   }
   if(plan.length){
@@ -9465,7 +9475,18 @@ function dpCard(r, acts){
 function dpGroup(title, list, tone){
   if(!list.length) return '';
   return '<div class="dphd '+(tone||'')+'">'+title+' <b>'+list.length+'</b></div>'+
-    list.map(function(r){ return dpCard(r); }).join('');
+    list.map(function(r){ return dpCard(r, dpEditBtn(r)); }).join('');
+}
+
+/* 開單的人自己可以改（牟佑彬 2026-10-03）。
+   ⛔ 已完成的不給改——那一筆連著一張服務紀錄。
+   ⚠ 已確認的也給改，但按鈕字要不一樣：改完會退回待確認，
+      這不是「小修一下」，要讓行政按之前就知道。 */
+function dpEditBtn(r){
+  if(!r || r.status === '已完成' || r.status === '取消') return '';
+  if(r.by !== STAFF_NAME && !/行政|特助|副理|總經理/.test(STAFF_ROLE || '')) return '';
+  return '<button type="button" class="dpsm" data-edit="'+esc(r.id)+'">'+
+    (r.crew ? '改（會退回重審）' : '改')+'</button>';
 }
 
 /* ── ⑴ 欠填紅點（2026-09-28 七天模擬列出來的破口之一）─────
@@ -9628,6 +9649,7 @@ function loadOrder(){
   });
   /* 反方向：改語別 → 重畫人選（不符的變淡）。
      ⚠ 如果目前選的人語別不符，不要自動取消他——行政可能是刻意找代打的。 */
+  bindEdit(box);
   var lsel = $('dpL');
   if(lsel) lsel.onchange = function(){ loadOrder(); };
   var nb = $('dpB');
@@ -9655,6 +9677,114 @@ function loadOrder(){
     dpRestore(keep);
   }
 }
+/* 行政改單的面板。
+   ⚠ 直接長在卡片上面，不另外開一頁——行政是在「哪一筆」的脈絡下改的，
+     跳頁會失去那個脈絡。
+   ⚠ 只放會改的那幾格。客戶不給改：換客戶等於換一筆單，
+     應該取消重開，不然這家客戶的待辦統計全部會錯。 */
+var DP_EDIT = null;
+/* 兩個面板都會畫出「改」，綁定寫一次就好。
+   ⚠ 每次重畫 innerHTML 之後都要再綁一次——舊的 onclick 跟著舊節點消失了。 */
+function bindEdit(pane){
+  if(!pane) return;
+  [].forEach.call(pane.querySelectorAll('[data-edit]'), function(b){
+    b.onclick = function(){ dpEditOpen(b.dataset.edit); };
+  });
+}
+function dpEditOpen(id){
+  var r = CAL_ROWS.filter(function(x){ return x.id===id; })[0];
+  if(!r) return;
+  var host = $('p-order').contains(document.querySelector('[data-edit="'+id+'"]'))
+    ? $('p-order') : $('p-mine');
+  [].forEach.call(document.querySelectorAll('.dpedit'), function(x){
+    x.parentNode.removeChild(x); });
+  if(DP_EDIT === id){ DP_EDIT = null; return; }     // 再按一次就收起來
+  DP_EDIT = id;
+  var cats = (TAX && TAX.cats) || [];
+  var bi = 0;
+  cats.forEach(function(c,i){ if(c.b === r.big) bi = i; });
+  var box = document.createElement('div');
+  box.className = 'dpedit';
+  box.innerHTML =
+    '<div class="dphd">改這一筆　'+esc(r.client)+'</div>'+
+    (r.crew ? '<div class="dpalert"><b>這一筆特助已經確認了</b>'+
+      '<s>改完會退回待確認，'+esc(r.crew)+' 手機上會變回灰色預排並收到通知，'+
+      '要等特助再確認一次。</s></div>' : '')+
+    '<div class="dpr"><label class="dplb">服務類別</label>'+
+      '<select data-f="big">'+cats.map(function(c,i){
+        return '<option value="'+i+'"'+(i===bi?' selected':'')+'>'+esc(c.b)+'</option>';
+      }).join('')+'</select>'+
+      '<label class="dplb">事由</label><select data-f="sub"></select></div>'+
+    '<div class="dpr"><label class="dplb">語別</label>'+
+      '<select data-f="lang"><option value="">不用翻譯</option>'+
+      ((TAX&&TAX.langs)||[]).map(function(l){
+        return '<option'+(l===r.lang?' selected':'')+'>'+esc(l)+'</option>'; }).join('')+
+      '</select>'+
+      '<input type="date" data-f="date" value="'+esc(r.date||'')+'">'+
+      '<input type="text" data-f="slot" placeholder="時段 09:00" '+
+      'style="max-width:96px" value="'+esc(r.slot||'')+'"></div>'+
+    '<div class="dpr"><input type="text" data-f="memo" placeholder="備註" '+
+      'value="'+esc(r.memo||'')+'"></div>'+
+    '<div class="dpr"><label class="dplb">建議誰去</label><div class="dpsug">'+
+      CREW.map(function(n){
+        var lg = dpCrewLang(n), want = r.lang || '';
+        var dim = want && lg && lg !== want;
+        return '<button type="button" class="dpp'+((r.crew||r.sug)===n?' on':'')+
+          (dim?' dim':'')+'" data-ep="'+esc(n)+'">'+esc(n)+
+          '<s>'+(lg||'外務')+'</s></button>';
+      }).join('')+'</div></div>'+
+    '<div class="dpr"><label class="dplb">跟他說一聲（可以不填）</label>'+
+      '<input type="text" data-f="why" maxlength="60" placeholder="例如：客戶改時間"></div>'+
+    '<div class="cfbt"><button type="button" class="dpsm" data-ecancel="1">算了</button>'+
+      '<button type="button" class="dpgo sm" data-esave="'+esc(id)+'">存檔</button></div>';
+  var card = (host || document).querySelector('[data-edit="'+esc(id)+'"]');
+  var anchor = card ? card.closest('.dpcd') : null;
+  if(!anchor) { DP_EDIT = null; return; }
+  anchor.parentNode.insertBefore(box, anchor);
+
+  var bsel = box.querySelector('[data-f="big"]');
+  var ssel = box.querySelector('[data-f="sub"]');
+  var fillSub = function(keep){
+    var cat = cats[+bsel.value] || { s: [] };
+    ssel.innerHTML = (cat.s||[]).map(function(x){
+      return '<option'+(keep && x.n===keep ? ' selected' : '')+'>'+esc(x.n)+'</option>';
+    }).join('');
+  };
+  fillSub(r.sub);
+  bsel.onchange = function(){ fillSub(''); };
+  var pick = (r.crew || r.sug || '');
+  [].forEach.call(box.querySelectorAll('[data-ep]'), function(b){
+    b.onclick = function(){
+      pick = (pick === b.dataset.ep) ? '' : b.dataset.ep;
+      [].forEach.call(box.querySelectorAll('[data-ep]'), function(x){
+        x.classList.toggle('on', x.dataset.ep === pick); });
+    };
+  });
+  box.querySelector('[data-ecancel]').onclick = function(){
+    DP_EDIT = null; box.parentNode.removeChild(box); };
+  box.querySelector('[data-esave]').onclick = function(){
+    var g = function(f){ var el = box.querySelector('[data-f="'+f+'"]');
+      return el ? el.value.trim() : ''; };
+    var btn = box.querySelector('[data-esave]');
+    btn.disabled = true; btn.textContent = '存檔中…';
+    google.script.run
+      .withSuccessHandler(function(res){
+        DP_EDIT = null;
+        toast(r.client + '　改好了' +
+          (res && res.back ? '　已退回待確認' + (res.who ? ('，已通知 '+res.who) : '') : ''));
+        calBust(); loadCal(null, true);
+      })
+      .withFailureHandler(function(e){
+        btn.disabled = false; btn.textContent = '存檔'; toast(e.message, true); })
+      .updateSchedule(CODE, id, {
+        date: g('date'), slot: g('slot'), lang: g('lang'),
+        big: (cats[+bsel.value]||{}).b || '', sub: ssel.value,
+        topic: ((cats[+bsel.value]||{}).b || '') + ' ／ ' + ssel.value,
+        memo: g('memo'), sug: pick, why: g('why')
+      });
+  };
+}
+
 /* ── 行政端的交代事項輸入 ──────────────────────────── */
 function dpTodoRows(){
   return [].map.call(($('dpTodo')||{children:[]}).children, function(r){
@@ -9739,6 +9869,7 @@ function loadMine(){
   h += '<p class="dpnote" style="margin-top:14px">'+
     '這裡跟翻譯行事曆是<b>同一批資料</b>，只有一份。</p>';
   $('p-mine').innerHTML = h;
+  bindEdit($('p-mine'));
 }
 
 /* ══ 特助：待確認 ════════════════════════════ */
@@ -9867,40 +9998,60 @@ function bindConfSwipe(w){
     dragging = false; end();
   });
 }
+/* 改派／退回共用同一個面板（牟佑彬 2026-10-03）。
+   ⛔ 兩個動作都會把某個人從他的行事曆上拿掉，**留一句話的需求是一樣的**——
+      退回其實更需要（那一筆直接變成沒有人）。不要一個有留話、一個沒有。
+   ⚠ 留話是**選填**。強迫填理由的欄位最後都會被填成「無」，比留白更沒資訊。
+   ⚠ 退回原本是 confirm() 一按就送。改成面板之後多一步，但那一步正好是
+      「要不要留話」，不是白加的。 */
 function confAct(id, what){
   var r = CAL_ROWS.filter(function(x){ return x.id===id; })[0] || {};
-  if(what === 'back'){
-    if(!confirm(r.client + '\n\n取消確認、退回待確認？\n' +
-                (r.crew ? r.crew + ' 手機上的這一筆會消失，而且他會收到通知。' : ''))) return;
-    google.script.run
-      .withSuccessHandler(function(){
-        toast(r.client + ' 已退回待確認' + (r.crew ? ('　已通知 ' + r.crew) : ''));
-        calBust(); loadCal(null, true);
-      })
-      .withFailureHandler(function(e){ toast(e.message, true); })
-      .assignSchedule(CODE, id, '');
-    return;
-  }
-  /* 改派：沿用待確認那邊的下拉，只列語別對得上的人 */
-  /* 連滑兩張不要疊出兩個下拉。只清自己插的（.mv），
+  /* 連滑兩張不要疊出兩個面板。只清自己插的（.mv），
      不要動 loadConf 本來就會畫的那三條 .dpalert 提醒。 */
   [].forEach.call($('p-conf').querySelectorAll('.dpalert.mv'), function(x){
     x.parentNode.removeChild(x); });
-  var sel = document.createElement('div');
-  sel.className = 'dpalert mv';
-  sel.innerHTML = '<b>改派　'+esc(r.client)+'</b>'+
-    '<s>目前是 '+esc(r.crew||'（還沒有人）')+'。換人之後他會收到通知。</s>'+
-    dpPick(id, '改給…');
   var card = document.querySelector('.dpsw[data-id="'+id+'"]');
   if(!card) return;
+  var who = r.crew || r.sug || '';
+  var back = (what === 'back');
+  var sel = document.createElement('div');
+  sel.className = 'dpalert mv';
+  sel.innerHTML =
+    '<b>'+(back?'退回待確認':'改派')+'　'+esc(r.client)+'</b>'+
+    '<s>目前是 '+esc(who||'（還沒有人）')+'。'+
+      (who ? esc(who)+' 手機上的這一筆會消失，而且會收到通知。' : '')+'</s>'+
+    (who ? '<div class="f" style="margin-top:8px">'+
+      '<label>跟 '+esc(who)+' 說一聲（可以不填）</label>'+
+      '<input type="text" data-why="1" maxlength="60" '+
+      'placeholder="例如：你今天另一邊壓時間"></div>' : '')+
+    (back ? '<div class="cfbt">'+
+        '<button type="button" class="dpsm" data-no="1">算了</button>'+
+        '<button type="button" class="dpgo sm" data-yes="1">確定退回</button></div>'
+      : dpPick(id, '改給…'));
   card.parentNode.insertBefore(sel, card);
+  var why = function(){
+    var i = sel.querySelector('[data-why]'); return i ? i.value.trim() : '';
+  };
+  var no = sel.querySelector('[data-no]');
+  if(no) no.onclick = function(){ sel.parentNode.removeChild(sel); };
+  var yes = sel.querySelector('[data-yes]');
+  if(yes) yes.onclick = function(){
+    var note = why();
+    google.script.run
+      .withSuccessHandler(function(){
+        toast(r.client + ' 已退回待確認' + (who ? ('　已通知 ' + who) : ''));
+        calBust(); loadCal(null, true);
+      })
+      .withFailureHandler(function(e){ toast(e.message, true); })
+      .assignSchedule(CODE, id, '', note);
+  };
   var s2 = sel.querySelector('.dpsel');
   /* ⚠ 下拉是沿用待確認那邊的 dpPick，裡面會包含**現在這個人**。
      選到同一個人就什麼都不要做——不然會白送一則「你的行程換人了」給他。 */
   if(s2) s2.onchange = function(){
     if(!this.value) return;
     if(this.value === r.crew){ sel.parentNode.removeChild(sel); return; }
-    dpDo(id, this.value);
+    dpDo(id, this.value, why());
   };
 }
 
@@ -9920,7 +10071,7 @@ function dpAct(r){
   return (r.sug?'<button type="button" class="dpgo sm" data-conf="'+esc(r.id)+
     '">確認</button>':'')+dpPick(r.id, r.sug?'換人…':'配人…');
 }
-function dpDo(id, who){
+function dpDo(id, who, why){
   var r = CAL_ROWS.filter(function(x){ return x.id===id; })[0] || {};
   var was = dpWho(r);
   google.script.run
@@ -9931,7 +10082,7 @@ function dpDo(id, who){
       calBust(); loadCal(null, true);
     })
     .withFailureHandler(function(e){ toast(e.message, true); })
-    .confirmSchedule(CODE, id, who || '');
+    .confirmSchedule(CODE, id, who || '', why || '');
 }
 function dpConfirmAll(list){
   if(!list.length) return;
@@ -9944,4 +10095,122 @@ function dpConfirmAll(list){
         toast('有幾筆沒過：'+e.message, true); calBust(); loadCal(null, true); } })
       .confirmSchedule(CODE, r.id, '');
   });
+}
+
+
+/* ══ 評鑑調閱（2026-10-03）══════════════════════════
+   委員指定一份移工名單，要看這些人有沒有被服務過。
+
+   ⛔ 這一頁的重點不是列印，是**先讓他知道誰查不到**。
+      所以查不到的排最上面、標紅，而且先講「幾個人查不到」再講總數。
+      排在最後面的話他要滑到底才發現，那通常已經在評鑑現場了。
+
+   ⚠ 容器用注入的，不寫進 Service.html——那是後端檔，改它要重新部署，
+     而版本額度是稀缺資源。 */
+function drawAudit(){
+  var pane = $('p-find');
+  if(!pane || $('auBox')) return;
+  var box = document.createElement('div');
+  box.id = 'auBox';
+  box.className = 'card';
+  box.innerHTML =
+    '<h3>評鑑調閱</h3>'+
+    '<p class="dpnote">把委員給的名單貼進來，一行一個名字。'+
+    '中文名、護照上的英文名都查得到。</p>'+
+    '<div class="f"><textarea id="auNames" rows="4" '+
+      'placeholder="阮文雄&#10;陳氏梅&#10;Dela Cruz, Maria"></textarea></div>'+
+    '<button type="button" class="dpgo" id="auGo">查這些人</button>'+
+    '<div id="auOut"></div>';
+  pane.appendChild(box);
+  $('auGo').onclick = auRun;
+}
+
+var AU_RES = null;
+function auRun(){
+  var txt = ($('auNames').value || '').trim();
+  if(!txt){ toast('先貼上名單', true); return; }
+  var b = $('auGo');
+  b.disabled = true; b.textContent = '查詢中…';
+  google.script.run
+    .withSuccessHandler(function(r){
+      b.disabled = false; b.textContent = '查這些人';
+      AU_RES = r; auDraw(r);
+    })
+    .withFailureHandler(function(e){
+      b.disabled = false; b.textContent = '查這些人'; toast(e.message, true); })
+    .auditLookup(CODE, txt);
+}
+
+function auDraw(r){
+  if(!r || !r.rows){ $('auOut').innerHTML = ''; return; }
+  var h = '';
+  /* 先講壞消息。 */
+  if(r.miss){
+    h += '<div class="dpalert big">⛔ <b>'+r.miss+' 個人查不到任何服務紀錄</b>'+
+      '<s>評鑑前要先處理這幾個。下面標紅的就是。</s></div>';
+  } else {
+    h += '<div class="dpalert"><b>'+r.total+' 個人都有紀錄</b>'+
+      '<s>總共 '+r.sheets+' 份服務紀錄表。</s></div>';
+  }
+  h += '<div class="aulst">' + r.rows.map(function(x, i){
+    return '<div class="aurow'+(x.n?'':' bad')+'">'+
+      (x.n ? '<input type="checkbox" data-pick="'+i+'" checked>'
+           : '<span class="auno">✕</span>')+
+      '<span class="aunm">'+esc(x.name)+
+        (x.client?'<s>'+esc(x.client)+'</s>':
+          (x.inRoster?'<s>名冊上有，但沒有服務紀錄</s>':'<s>名冊上也找不到這個名字</s>'))+
+      '</span>'+
+      '<span class="aun">'+x.n+' 筆</span></div>';
+  }).join('') + '</div>';
+  if(r.sheets){
+    h += '<button type="button" class="dpgo" id="auPrint" style="margin-top:10px">'+
+      '整理這 '+r.sheets+' 份服務紀錄表</button>'+
+      '<p class="dpnote">會把 PDF 收進一個雲端硬碟資料夾，'+
+      '你打開資料夾全選就能一次列印。</p>';
+  }
+  $('auOut').innerHTML = h;
+  var p = $('auPrint');
+  if(p) p.onclick = auExport;
+  [].forEach.call($('auOut').querySelectorAll('[data-pick]'), function(c){
+    c.onchange = auCount;
+  });
+}
+
+/* 勾選改變時按鈕上的數字要跟著動——按鈕寫的是「這 12 份」，
+   不是「列印」。現場要知道手上到底有幾份。 */
+function auCount(){
+  if(!AU_RES) return;
+  var n = 0;
+  [].forEach.call($('auOut').querySelectorAll('[data-pick]'), function(c){
+    if(c.checked) n += (AU_RES.rows[+c.dataset.pick] || {}).n || 0;
+  });
+  var p = $('auPrint');
+  if(p){ p.textContent = '整理這 ' + n + ' 份服務紀錄表'; p.disabled = !n; }
+}
+
+function auExport(){
+  if(!AU_RES) return;
+  var codes = [];
+  [].forEach.call($('auOut').querySelectorAll('[data-pick]'), function(c){
+    if(!c.checked) return;
+    ((AU_RES.rows[+c.dataset.pick] || {}).recs || []).forEach(function(x){
+      if(x.rec && codes.indexOf(x.rec) < 0) codes.push(x.rec);
+    });
+  });
+  if(!codes.length){ toast('沒有勾到任何人', true); return; }
+  if(codes.length > 40){ toast('一次最多 40 份，先取消勾幾個', true); return; }
+  var b = $('auPrint');
+  b.disabled = true; b.textContent = '整理中…（'+codes.length+' 份要一點時間）';
+  google.script.run
+    .withSuccessHandler(function(r){
+      b.disabled = false; auCount();
+      var h = '<div class="dpalert"><b>整理好了：'+r.n+' 份</b>'+
+        '<s>'+esc(r.name)+(r.bad && r.bad.length ? ('　有 '+r.bad.length+' 份產不出來') : '')+'</s>'+
+        '<a class="dpgo sm" href="'+esc(r.url)+'" target="_blank" '+
+        'style="display:inline-block;margin-top:8px">打開資料夾</a></div>';
+      $('auOut').insertAdjacentHTML('afterbegin', h);
+    })
+    .withFailureHandler(function(e){
+      b.disabled = false; auCount(); toast(e.message, true); })
+    .auditExport(CODE, codes);
 }

@@ -3150,3 +3150,40 @@ body.tabsbottom .tabs.few button{min-width:120px}
 .dpcode{float:right;font-family:Archivo,ui-monospace,monospace;font-size:.72rem;
   font-weight:600;color:var(--ink3);background:var(--sunk);border:1px solid var(--line2);
   border-radius:6px;padding:1px 6px;margin-left:8px;font-variant-numeric:tabular-nums}
+
+
+/* 改派／退回面板底下的兩顆按鈕（2026-10-03）。 */
+.cfbt{display:flex;gap:8px;margin-top:8px}
+.cfbt>button{flex:1}
+
+
+/* 行政改單的面板（2026-10-03）。長在卡片正上方，所以用一樣的圓角與邊框，
+   但底色沉一階，看得出是「正在編輯這一張」而不是另一張卡。 */
+.dpedit{background:var(--sunk);border:1px solid var(--line);border-radius:14px;
+  padding:12px;margin-bottom:8px}
+.dpedit .dphd{margin:0 0 8px}
+.dpedit .dpr{margin-bottom:8px}
+.dpedit .dpr:last-of-type{margin-bottom:0}
+
+
+/* 「被行政改過了」跟「不用你去了」不是同一件事：前者還是你的，
+   所以用提醒色，不要用紅的（紅的會讓人以為這筆沒了）。 */
+.c4moved.ed{border-color:var(--warn-line);background:var(--warn-bg)}
+.c4moved.ed b{color:var(--warn-ink)}
+
+
+/* ── 評鑑調閱（2026-10-03）─────────────────────────
+   查不到的那幾列要一眼就看得出來，所以整列換底色，不是只把數字變紅。 */
+.aulst{border:1px solid var(--line2);border-radius:var(--r2);overflow:hidden;
+  margin-top:10px;background:var(--card)}
+.aurow{display:flex;align-items:center;gap:9px;padding:9px 11px;
+  border-top:1px solid var(--line2);font-size:var(--t3)}
+.aurow:first-child{border-top:0}
+.aurow.bad{background:var(--bad-bg);color:var(--bad-ink)}
+.aunm{flex:1;min-width:0;display:flex;flex-direction:column}
+.aunm s{text-decoration:none;color:var(--ink3);font-size:var(--t5)}
+.aurow.bad .aunm s{color:var(--bad-ink);opacity:.8}
+.aun{font-variant-numeric:tabular-nums;color:var(--ink3);font-size:var(--t5)}
+.aurow.bad .aun{color:var(--bad-ink);font-weight:800}
+.auno{width:16px;text-align:center;font-weight:800;flex:none}
+#auBox textarea{width:100%}
