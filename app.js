@@ -6815,21 +6815,24 @@ function fillTripForm(r){
       }
       sel.dispatchEvent(new Event('change'));
     }
-    if(r.big){
+    /* 行政排程時幫這一位選好的項目優先；沒有才退回整趟的事由。
+       ⛔ 這就是加「移工項目」那一欄的目的——翻譯當天打開，
+          每張卡的服務項目已經填好了，不用一個一個重選
+          （牟佑彬 2026-10-03 指定的理由之二）。 */
+    var mine = (r.wkItems || []).filter(function(x){ return x.n === n; })[0] || {};
+    var bigV = mine.b || r.big, subV = mine.s || (mine.b ? '' : r.sub);
+    if(bigV){
       var bg = card.querySelector('[data-k=big]');
-      bg.value = r.big; bg.dispatchEvent(new Event('change'));
-      if(r.sub){
+      bg.value = bigV; bg.dispatchEvent(new Event('change'));
+      if(subV){
         var sb = card.querySelector('[data-k=sub]');
-        sb.value = r.sub; sb.dispatchEvent(new Event('change'));
+        sb.value = subV; sb.dispatchEvent(new Event('change'));
       }
     }
   });
   renumber();
-  /* 行政版：把事由與交代事項填回最上面那兩塊（見 admFillBits）。 */
-  if(document.body.classList.contains('filladm') && $('admBig')){
-    $('admBig').value = r.big || '';
-    $('admBig').onchange();
-    if(r.sub) $('admSub').value = r.sub;
+  /* 行政版：把交代事項填回下面那一塊（見 admFillBits）。 */
+  if(document.body.classList.contains('filladm')){
     var tb = $('admTodo');
     if(tb){ tb.innerHTML = ''; (r.todo || []).forEach(function(t){ admTodoAdd(t.t || t); }); }
   }
@@ -9686,34 +9689,6 @@ function admFillBits(){
     '處理經過與簽名是翻譯當天到現場才填的，所以這裡看不到。';
   if(h && h.parentNode) h.insertAdjacentElement('afterend', note);
 
-  /* ③ 服務類別／細項整筆共用一組，放在最上面。
-     ⛔ 這是他原本的設計：**行程一組事由、服務紀錄才一人一組**。
-        線上 S260925-RM 就是現成的例子——三位移工三種細項，
-        行程卡上只寫第一位那一組。
-        每張移工卡各選一組的話，行程表只有一個格子接得住，
-        第二、三位選的會靜默消失。 */
-  var card = document.querySelector('#p-new .card');
-  if(card && !$('admBig')){
-    card.insertAdjacentHTML('beforeend',
-      '<div class="g2" id="admItem" style="margin-top:10px">'+
-        '<div class="f"><label>服務類別</label><select id="admBig">'+
-          '<option value="">請選擇…</option>'+
-          ((TAX&&TAX.cats)||[]).map(function(c){ return '<option>'+esc(c.b)+'</option>'; }).join('')+
-        '</select></div>'+
-        '<div class="f"><label>服務細項</label><select id="admSub">'+
-          '<option value="">先選類別</option></select></div>'+
-      '</div>'+
-      '<p class="hint" style="margin:6px 0 0">這一趟要辦的事。'+
-      '幾位移工都是為了這件事去的——每個人實際發生什麼，是翻譯當天填的。</p>');
-    $('admBig').onchange = function(){
-      var c = ((TAX&&TAX.cats)||[]).filter(function(x){ return x.b === this.value; }.bind(this))[0];
-      $('admSub').innerHTML = c
-        ? '<option value="">請選擇…</option>' +
-          c.s.map(function(x){ return '<option>'+esc(x.n)+'</option>'; }).join('')
-        : '<option value="">先選類別</option>';
-    };
-  }
-
   /* ② 交代事項搬到最下面，而且可以改字、可以加、可以刪。
      ⛔ 上面那個釘住的打勾清單是**翻譯在現場勾的**，行政改不了字也加不了條。 */
   if(!$('admTodo')){
@@ -9754,9 +9729,23 @@ function admSaveTrip(){
                                           : (sel ? sel.value.trim() : '');
     if(n && names.indexOf(n) < 0) names.push(n);
   });
-  /* 服務類別／細項讀最上面那一組（整筆共用，見 admFillBits 的註解）。 */
-  var big = ($('admBig')||{}).value || '';
-  var sub = ($('admSub')||{}).value || '';
+  /* 每位移工各自的服務項目，整批存進行程的「移工項目」那一欄。
+     ⛔ 行程本身的 big/sub 是**整趟的事由**（行事曆卡片印的就是它），
+        取第一位那一組——跟翻譯當日直接填寫時 schedAutoComplete_ 的做法一致。
+        線上 S260925-RM 就是現成例子：三位移工三種細項，行程卡只寫一種。 */
+  var wkItems = [];
+  [].forEach.call(cards, function(c){
+    var sel = c.querySelector('[data-k=name]');
+    var oth = c.querySelector('[data-k=nameOther]');
+    var n = (sel && sel.value === OTHER_) ? (oth ? oth.value.trim() : '')
+                                          : (sel ? sel.value.trim() : '');
+    if(!n) return;
+    wkItems.push({ n: n,
+      b: (c.querySelector('[data-k=big]')||{}).value || '',
+      s: (c.querySelector('[data-k=sub]')||{}).value || '' });
+  });
+  var big = wkItems.length ? wkItems[0].b : '';
+  var sub = wkItems.length ? wkItems[0].s : '';
   var b = $('admSave');
   b.disabled = true; b.textContent = '存檔中…';
   google.script.run
@@ -9776,6 +9765,7 @@ function admSaveTrip(){
       workers: names.join('、'),
       big: big, sub: sub,
       topic: (big && sub) ? (big + ' ／ ' + sub) : big,
+      wkItems: wkItems,
       todo: admTodoRows().map(function(t){ return {t:t, d:0}; })
     });
 }

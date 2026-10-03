@@ -3246,8 +3246,9 @@ body.filladm #save{display:none}
 body.filladm #admNote{margin:-4px 0 12px}
 
 
-/* ③ 服務類別／細項搬到最上面之後，移工卡上那一組就不要了。 */
-body.filladm #workers [data-adm="one"]{display:none}
+/* ③ 每位移工各自選服務項目——跟翻譯那邊一樣（牟佑彬 2026-10-03）。
+   ⛔ 之前藏起來是因為「行程表只存得下一組」。現在後端多了一欄
+      「移工項目」，每一位都存得住，所以放出來。 */
 
 /* ② 頂部那個釘住的打勾清單是翻譯在現場用的，行政看下面可編輯的那一組。 */
 body.filladm #todoBox{display:none}
