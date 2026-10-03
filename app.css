@@ -3143,3 +3143,10 @@ body.tabsbottom .tabs.few button{min-width:120px}
   will-change:transform}
 .dpsw>.swrail{position:absolute;left:100%;top:0;bottom:0;display:flex;z-index:0;
   will-change:transform}
+
+
+/* 派工卡上的服務編號（2026-10-03）。
+   ⛔ 用等寬數字，不然 1 和 7 在不同寬度下對不齊，一排看下來很難掃。 */
+.dpcode{float:right;font-family:Archivo,ui-monospace,monospace;font-size:.72rem;
+  font-weight:600;color:var(--ink3);background:var(--sunk);border:1px solid var(--line2);
+  border-radius:6px;padding:1px 6px;margin-left:8px;font-variant-numeric:tabular-nums}

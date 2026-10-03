@@ -9426,7 +9426,13 @@ function dpCard(r, acts){
   var u = dpUrg(r), w = dpWho(r), pre = (!r.crew && r.sug);
   return '<div class="dpcd'+(pre?' pre':'')+(r.crew?' ok':'')+'">'+
     '<div class="dpb">'+
-      '<div class="dpk">'+esc(r.topic || r.sub || '—')+'</div>'+
+      '<div class="dpk">'+esc(r.topic || r.sub || '—')+
+        /* 做完的要印服務編號。行政拿著紙本三聯單找這一筆，
+           或是副理要調出來看，靠的就是這個號碼。
+           ⛔ 資料早就回來了（listSchedule 的 recCode），
+              **行事曆的卡片一直有印，派工台這張從來沒印過**——
+              而真正需要它的是行政與副理，不是翻譯（牟佑彬 2026-10-03）。 */
+        (r.recCode?'<span class="dpcode">'+esc(r.recCode)+'</span>':'')+'</div>'+
       '<div class="dpc">'+esc(r.client)+'</div>'+
       (r.workers?'<div class="dpw">'+esc(r.workers)+'</div>':'')+
       (r.memo?'<div class="dpw">'+esc(r.memo)+'</div>':'')+
