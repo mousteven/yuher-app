@@ -9484,7 +9484,10 @@ function dpGroup(title, list, tone){
       這不是「小修一下」，要讓行政按之前就知道。 */
 function dpEditBtn(r){
   if(!r || r.status === '已完成' || r.status === '取消') return '';
-  if(r.by !== STAFF_NAME && !/行政|特助|副理|總經理/.test(STAFF_ROLE || '')) return '';
+  /* 「看得到待確認分頁」＝有指派權，跟 ROLE_TABS_ 用同一個事實來源。
+     ⛔ 不要再寫一份角色名單——兩份遲早會不一致。 */
+  var tabs = ROLE_TABS_[STAFF_ROLE] || [];
+  if(r.by !== STAFF_NAME && tabs.indexOf('conf') < 0 && tabs.indexOf('order') < 0) return '';
   return '<button type="button" class="dpsm" data-edit="'+esc(r.id)+'">'+
     (r.crew ? '改（會退回重審）' : '改')+'</button>';
 }
@@ -9694,8 +9697,6 @@ function bindEdit(pane){
 function dpEditOpen(id){
   var r = CAL_ROWS.filter(function(x){ return x.id===id; })[0];
   if(!r) return;
-  var host = $('p-order').contains(document.querySelector('[data-edit="'+id+'"]'))
-    ? $('p-order') : $('p-mine');
   [].forEach.call(document.querySelectorAll('.dpedit'), function(x){
     x.parentNode.removeChild(x); });
   if(DP_EDIT === id){ DP_EDIT = null; return; }     // 再按一次就收起來
@@ -9737,7 +9738,7 @@ function dpEditOpen(id){
       '<input type="text" data-f="why" maxlength="60" placeholder="例如：客戶改時間"></div>'+
     '<div class="cfbt"><button type="button" class="dpsm" data-ecancel="1">算了</button>'+
       '<button type="button" class="dpgo sm" data-esave="'+esc(id)+'">存檔</button></div>';
-  var card = (host || document).querySelector('[data-edit="'+esc(id)+'"]');
+  var card = document.querySelector('[data-edit="'+esc(id)+'"]');
   var anchor = card ? card.closest('.dpcd') : null;
   if(!anchor) { DP_EDIT = null; return; }
   anchor.parentNode.insertBefore(box, anchor);
