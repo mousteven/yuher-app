@@ -1817,9 +1817,12 @@ function todoBadge(r){
         '<span class="c4pre">預排・還沒確認</span></span>'+
         '<span class="c4nm"><span class="n">'+esc(r.client)+'</span></span>'+
         (r.workers?'<span class="c4wk"><span class="c4ws">'+esc(r.workers)+'</span></span>':'')+
+        /* ⛔ 這裡原本還接一句「XXX 排的，等特助確認」。
+           但上面那條分組標題已經寫了「行政排好了，等特助確認——先不要去」，
+           每張卡再寫一次是重複的，而且把真正要看的（時段、配了誰）擠到左邊
+           （牟佑彬 2026-10-03 指出）。 */
         '<span class="c4who">'+esc(r.slot||'未定時段')+'　'+
-          (r.sug ? ('建議 '+esc(r.sug)) : '<b class="non">還沒配人</b>')+'　'+
-          esc(r.by||'')+' 排的，等特助確認</span>'+
+          (r.sug ? ('建議 '+esc(r.sug)) : '<b class="non">還沒配人</b>')+'</span>'+
         /* ⚠ 「我那天不行」是**翻譯**的動作——那是請假資料最準的來源
            （當事人自己講，而且是看到預排之後才講）。
            行政按它沒有意義，所以行政不顯示（牟佑彬 2026-10-03）。 */
@@ -2658,6 +2661,12 @@ function startFromSchedule(id){
   var ro = (!document.body.classList.contains('filladm') &&
             r.status === '預排' && !r.crew);
   document.body.classList.toggle('rotrip', ro);
+  /* 從「排一筆新的」切回「改這一筆」，標題與按鈕要變回來 */
+  if(document.body.classList.contains('filladm')){
+    var h2 = document.querySelector('#p-new .card h3');
+    if(h2) h2.textContent = '改這一筆行程';
+    if($('admSave')) $('admSave').textContent = '存檔變更';
+  }
   /* 唯讀的時候一定要講清楚為什麼，不然他會以為當掉了。 */
   if(!$('roBar')){
     var pane = $('p-new');
@@ -2822,7 +2831,29 @@ function openPlan(client){
   if(!PLAN_EDIT) $('planSave').textContent = '排進行事曆';
   $('planModal').style.display='';
 }
-$('calAdd').addEventListener('click', function(){ openPlan(''); });
+$('calAdd').addEventListener('click', function(){
+  /* 行政走同一張表單（牟佑彬 2026-10-03）。
+     ⛔ 不要再開 planModal——那是另一個版面，同一件事兩種長相。 */
+  if(document.body.classList.contains('filladm')){ admNewTrip(); return; }
+  openPlan('');
+});
+
+/* 行政：開一張空白的行程表。跟「改這一筆」是同一頁，差別只在沒有 SCHED_ID。 */
+function admNewTrip(){
+  SCHED_ID = '';
+  document.body.classList.remove('rotrip');
+  resetForm();
+  $('date').value = CAL_SEL;
+  $('workers').innerHTML = '';
+  addWorker();
+  document.querySelector('.tabs button[data-t=new]').click();
+  window.scrollTo(0, 0);
+  if($('admTodo')) $('admTodo').innerHTML = '';
+  var h = document.querySelector('#p-new .card h3');
+  if(h) h.textContent = '排一筆新的行程';
+  if($('admSave')) $('admSave').textContent = '排進行事曆';
+  toast('選工廠、要找誰、要辦什麼事');
+}
 /* 排程時就選好服務項目與移工，當天點「開始填寫」整張表已經填好一半 */
 function fillPlanBig(){
   $('planBig').innerHTML = '<option value="">請選擇…</option>' +
@@ -9742,12 +9773,46 @@ function admSaveTrip(){
     if(!n) return;
     wkItems.push({ n: n,
       b: (c.querySelector('[data-k=big]')||{}).value || '',
-      s: (c.querySelector('[data-k=sub]')||{}).value || '' });
+      s: (c.querySelector('[data-k=sub]')||{}).value || '',
+      /* lg 只給前端自己用（決定行事曆上那條色塊），不寫進試算表 */
+      lg: (langsOf(c) || '').split('、')[0] || '' });
   });
   var big = wkItems.length ? wkItems[0].b : '';
   var sub = wkItems.length ? wkItems[0].s : '';
   var b = $('admSave');
+  var isNew = !SCHED_ID;
+  if(isNew && !clientVal()){ toast('請先選工廠／雇主', true); return; }
+  if(isNew && !names.length){ toast('至少要選一位移工', true); return; }
   b.disabled = true; b.textContent = '存檔中…';
+
+  if(isNew){
+    google.script.run
+      .withSuccessHandler(function(){
+        b.disabled = false; b.textContent = '排進行事曆';
+        toast('開好了' + ($('crew').value
+          ? ('　建議 '+$('crew').value+'，等特助確認') : '　等特助配人'));
+        calBust();
+        document.querySelector('.tabs button[data-t=cal]').click();
+        loadCal(null, true);
+      })
+      .withFailureHandler(function(e){
+        b.disabled = false; b.textContent = '排進行事曆'; toast(e.message, true); })
+      /* ⛔ 行政不可以直接指派：crew 一定要明確傳空字串，
+         不傳的話後端會掛給開單的人（行政自己），特助就永遠看不到待指派池。 */
+      .addSchedule(CODE, {
+        date: $('date').value, slot: '',
+        crew: '', sug: $('crew').value,
+        target: $('target').value, client: clientVal(),
+        lang: (wkItems.map(function(x){ return x.lg; }).filter(Boolean)[0] || ''),
+        big: big, sub: sub,
+        topic: (big && sub) ? (big + ' ／ ' + sub) : big,
+        workers: names.join('、'),
+        wkItems: wkItems,
+        todo: admTodoRows().map(function(t){ return {t:t, d:0}; })
+      });
+    return;
+  }
+
   google.script.run
     .withSuccessHandler(function(res){
       b.disabled = false; b.textContent = '存檔變更';
