@@ -3227,3 +3227,20 @@ body.adm.dark{
       不然畫面最下面會空一截。 */
 body.notabs .pane{padding-bottom:16px}
 body.notabs .evsticky,body.notabs .calfw{bottom:0}
+
+
+/* ══ 行政版的服務紀錄頁（2026-10-03）══════════════════
+   行政點進行程看到的不是「填服務紀錄」，是「改這一筆行程」。
+   ⛔ 收起來的是**服務做完才填的那些**（處理經過、結果、費用、簽名）——
+      行程表上根本沒有這些欄位，留著只會讓行政白打一場。
+   ⚠ 「＋ 再加一位移工」要留著：行程常常從找一個人變成找三個
+      （牟佑彬 2026-10-03）。 */
+body.filladm [data-adm="hide"]{display:none !important}
+/* 服務類別／細項只在第一張移工卡上——行程表只有一組，
+   三張卡各填各的存不進去。 */
+body.filladm #workers .wk:not(:first-child) [data-adm="one"]{display:none}
+/* 「簽名」那整張卡、預覽、儲存紀錄都收起來 */
+body.filladm #p-new .card:has(.sig[data-sig="employer"]){display:none}
+body.filladm #preview,
+body.filladm #save{display:none}
+body.filladm #admNote{margin:-4px 0 12px}

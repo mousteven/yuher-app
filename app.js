@@ -2652,7 +2652,9 @@ function startFromSchedule(id){
   document.querySelector('.tabs button[data-t=new]').click();
   showBack(back, 'form');          // 要在切完分頁之後，分頁切換會把它收起來
   window.scrollTo(0,0);
-  toast('已帶入行程，接著填服務內容');
+  toast(STAFF_ROLE === '行政'
+    ? '可以改日期、翻譯、移工與服務項目'
+    : '已帶入行程，接著填服務內容');
 }
 
 /* 上一頁／下一頁依目前檢視移動：月跳月、週跳七天、日跳一天 */
@@ -3107,22 +3109,26 @@ function addWorker(){
      '<div class="f"><label>語別</label><div class="chips">'+
        TAX.langs.map(function(l){ return '<label><input type="radio" name="lg_'+id+'" value="'+l+'">'+l+'</label>'; }).join('')+
      '</div></div></div>'+
-   '<div class="g2">'+
+   /* data-adm="one" ＝行政只在第一張卡看得到。
+      行程表上只有一組服務類別／細項，三個移工各填各的會存不進去。 */
+   '<div class="g2" data-adm="one">'+
      '<div class="f"><label>服務類別</label><select data-k="big"><option value="">請選擇…</option>'+
        TAX.cats.map(function(c){ return '<option>'+esc(c.b)+'</option>'; }).join('')+'</select></div>'+
      '<div class="f"><label>服務細項</label><select data-k="sub"><option value="">先選類別</option></select></div>'+
    '</div>'+
-   '<div class="f"><label>處理經過（可複選）</label><div class="chips" data-do>'+
+   /* data-adm="hide" ＝服務做完才填的，行政看不到。
+      ⛔ 行程表上沒有這些欄位，留著只會讓行政白打一場。 */
+   '<div class="f" data-adm="hide"><label>處理經過（可複選）</label><div class="chips" data-do>'+
      '<span class="ph">先選服務細項</span></div>'+
      '<p class="hint">接著補寫細節：</p>'+
      '<textarea data-k="dnote" placeholder="例如：亞大醫院骨科，掛號費 350 已代墊"></textarea></div>'+
-   '<div class="f"><label>結果（可複選）</label><div class="chips" data-res>'+
+   '<div class="f" data-adm="hide"><label>結果（可複選）</label><div class="chips" data-res>'+
      '<span class="ph">先選服務細項</span></div>'+
      '<p class="hint">接著補寫細節：</p>'+
      '<textarea data-k="rnote" placeholder="例如：8/12 上午回診拆線，已跟工廠請假"></textarea></div>'+
-   '<div class="f"><label>費用</label><input data-k="fee" placeholder="車資200"></div>'+
-   '<div class="f"><label>備註</label><input data-k="memo" placeholder="選填"></div>'+
-   '<div class="sig" data-sig="worker">'+
+   '<div class="f" data-adm="hide"><label>費用</label><input data-k="fee" placeholder="車資200"></div>'+
+   '<div class="f" data-adm="hide"><label>備註</label><input data-k="memo" placeholder="選填"></div>'+
+   '<div class="sig" data-adm="hide" data-sig="worker">'+
      '<div class="lb"><label>移工簽名</label><button type="button" data-clear>清除</button></div>'+
      '<div class="pad"><div class="ph">點一下簽名</div></div></div>';
 
@@ -9582,7 +9588,73 @@ var ROLE_TABS_ = {
       所以 --bad-* 一起改成橘紅，只用在真的出事的地方。
    ⚠ 掛在 body 上，不是每個元件各自改。app.css 的 body.adm 那一段就是全部。 */
 function applyRoleSkin(){
-  document.body.classList.toggle('adm', STAFF_ROLE === '行政');
+  var adm = (STAFF_ROLE === '行政');
+  document.body.classList.toggle('adm', adm);
+  /* 行政永遠不填服務紀錄，所以那一頁對他**永遠**是「改行程」的樣子。
+     ⛔ 2026-10-03 之前他點進去看到的是翻譯要填的服務紀錄表，
+        按下儲存會真的開出一筆正式紀錄、給編號、把行程標成已完成。
+        線上已經因此多出兩筆錯的紀錄（填表人寫成行政一），已清除。
+     ⚠ 用角色判斷而不是「進來的時候設、出去的時候清」——
+        後者只要有一條路徑忘了清，就會卡在錯的模式。 */
+  document.body.classList.toggle('filladm', adm);
+  if(adm) admFillBits();
+}
+
+/* 行政版那一頁要補的東西。只跑一次。 */
+function admFillBits(){
+  if($('admSave')) return;
+  var save = $('save');
+  if(!save) return;
+  save.insertAdjacentHTML('beforebegin',
+    '<button type="button" class="p" id="admSave">存檔變更</button>');
+  $('admSave').onclick = admSaveTrip;
+  /* 標題也要換掉，不然他還是以為自己在填服務紀錄 */
+  var h = document.querySelector('#p-new .card h3');
+  if(h && h.textContent.indexOf('這一趟') === 0) h.textContent = '改這一筆行程';
+  var note = document.createElement('p');
+  note.className = 'hint';
+  note.id = 'admNote';
+  note.textContent = '行政在這裡只改行程內容：日期、翻譯、移工、服務項目。' +
+    '處理經過與簽名是翻譯當天到現場才填的，所以這裡看不到。';
+  if(h && h.parentNode) h.insertAdjacentElement('afterend', note);
+}
+
+/* 存檔變更：走 updateSchedule，**不會開服務紀錄、不會給編號**。 */
+function admSaveTrip(){
+  if(!SCHED_ID){ toast('這一筆沒有對應的行程', true); return; }
+  var cards = $('workers').children;
+  var names = [];
+  [].forEach.call(cards, function(c){
+    var sel = c.querySelector('[data-k=name]');
+    var oth = c.querySelector('[data-k=nameOther]');
+    var n = (sel && sel.value === OTHER_) ? (oth ? oth.value.trim() : '')
+                                          : (sel ? sel.value.trim() : '');
+    if(n && names.indexOf(n) < 0) names.push(n);
+  });
+  /* 服務類別／細項只取第一張卡——行程表上只有一組。 */
+  var c0 = cards[0];
+  var big = c0 ? (c0.querySelector('[data-k=big]')||{}).value || '' : '';
+  var sub = c0 ? (c0.querySelector('[data-k=sub]')||{}).value || '' : '';
+  var b = $('admSave');
+  b.disabled = true; b.textContent = '存檔中…';
+  google.script.run
+    .withSuccessHandler(function(res){
+      b.disabled = false; b.textContent = '存檔變更';
+      toast('改好了' + (res && res.back
+        ? ('　已退回待確認' + (res.who ? ('，已通知 '+res.who) : '')) : ''));
+      calBust();
+      document.querySelector('.tabs button[data-t=cal]').click();
+      loadCal(null, true);
+    })
+    .withFailureHandler(function(e){
+      b.disabled = false; b.textContent = '存檔變更'; toast(e.message, true); })
+    .updateSchedule(CODE, SCHED_ID, {
+      date: $('date').value,
+      sug: $('crew').value,
+      workers: names.join('、'),
+      big: big, sub: sub,
+      topic: (big && sub) ? (big + ' ／ ' + sub) : big
+    });
 }
 
 /* 只剩一個分頁就把整條收起來（牟佑彬 2026-10-03）。
