@@ -3473,9 +3473,14 @@ $('save').addEventListener('click', function(){
     }, function(msg, keep){
       b.disabled = false;
       if(keep){
-        /* 表還在手機裡，所以照樣清空畫面讓他做下一家——
-           ⛔ 如果留在原本的表單，他會以為沒存到而重打一次。 */
-        resetForm();
+        /* ⛔ 2026-10-04 之前這裡是 resetForm()，理由是「清空讓他做下一家，
+           不然他會以為沒存到而重打一次」。他實際用下來的回報剛好相反：
+           **畫面突然全空，更像是沒存到**。而且上面那條橘色的
+           「1 筆還在手機裡」已經講得很清楚。
+           改成：欄位全部留著，但把儲存鈕鎖起來，旁邊給一顆「做下一家」。
+           ⚠ 鎖起來是必要的——表單還在，再按一次儲存會排出**第二筆**。
+              cid 只防同一次送出的重試，不防他重新按。 */
+        offlineHold();
         toast('沒訊號，已存在手機裡，有訊號會自動送出', true);
       } else {
         toast(msg, true);
@@ -3923,6 +3928,38 @@ function svDoneBox(){
 /* 存過之後又動了東西。送審與 PDF 在這個狀態要停用——
    不然送出去的、印出來的是舊內容，而人以為是新的。 */
 var DIRTY_ = false;
+
+/* 沒訊號暫存之後：欄位留著、儲存鈕鎖住、旁邊給一顆「做下一家」。
+   動了任何一格就解鎖——那代表他真的要改這一筆，不是要開新的。 */
+var HOLD_ = false;
+function offlineHold(){
+  HOLD_ = true;
+  var sv = $('save');
+  if(sv){ sv.disabled = true; sv.textContent = '已存在手機裡'; }
+  if(!$('holdNext')){
+    var row = sv && sv.closest('.btns');
+    if(row) row.insertAdjacentHTML('afterbegin',
+      '<button type="button" id="holdNext">做下一家</button>');
+    var nx = $('holdNext');
+    if(nx) nx.onclick = function(){ offlineRelease(); resetForm(); };
+  }
+  var nx2 = $('holdNext'); if(nx2) nx2.style.display = '';
+}
+function offlineRelease(){
+  if(!HOLD_) return;
+  HOLD_ = false;
+  var sv = $('save');
+  if(sv){ sv.disabled = false; sv.textContent = EDIT_CODE ? '儲存修改' : '儲存'; }
+  var nx = $('holdNext'); if(nx) nx.style.display = 'none';
+}
+/* 使用者動了表單就解鎖。⚠ 用捕獲階段綁在整頁上，一個地方就攔得到，
+   不用每個欄位各綁一次（新加的移工卡也涵蓋得到）。 */
+document.addEventListener('input', function(e){
+  if(HOLD_ && e.target && e.target.closest && e.target.closest('#p-new')) offlineRelease();
+}, true);
+document.addEventListener('change', function(e){
+  if(HOLD_ && e.target && e.target.closest && e.target.closest('#p-new')) offlineRelease();
+}, true);
 var SUBMITTED_ = false;   // 這一筆在這個畫面按過送審了
 
 function markDirty(){
@@ -4115,6 +4152,7 @@ $('pvSign').addEventListener('click', function(){
 });
 
 function resetForm(){
+  offlineRelease();          // ⛔ 漏這行按鈕會卡在「已存在手機裡」
   hideSaved();                 // 存完的那一排收回去，換回原本的三顆
   /* 清空表單等於放棄這次修改。少了這一行，按「清除」之後填的新內容
      會被當成修改、覆寫掉原本那一筆。 */
