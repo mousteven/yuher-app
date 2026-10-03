@@ -9801,6 +9801,13 @@ function applyRoleTabs(){
        ⚠ 不可以反過來寫成「把不要的藏起來」——那樣新加角色時會漏。 */
     [].forEach.call(btns, function(b){
       b.hidden = (['order','mine','conf'].indexOf(b.dataset.t) !== -1); });
+    /* ⛔ 這裡以前直接 return，而 hideLoneTabs() 在下面——
+       從行政切回翻譯的時候，行政那邊設的 style.display='none' 與
+       body.notabs **沒有人清掉**，翻譯的底欄就整條不見了
+       （2026-10-03 他實測踩到）。
+       ⚠ 教訓：**凡是「某個角色才設的狀態」，一定要在每個角色都跑一次重設**，
+         不可以只在設的那一邊處理。 */
+    hideLoneTabs();
     return;
   }
   [].forEach.call(btns, function(b){ b.hidden = (want.indexOf(b.dataset.t) === -1); });
