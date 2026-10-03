@@ -2692,6 +2692,11 @@ function planAdmBits(){
     cs.insertAdjacentHTML('afterbegin',
       '<option value="">還沒決定，交給特助配人</option>');
   }
+  /* ⛔ openPlan 會把翻譯人員預選成「自己」，那是給翻譯自己排行程用的。
+     行政不跑外勤，預選成名單第一個（佑彬）的話，**每一單都會莫名其妙建議他**，
+     而且畫面上看起來很合理，不會有人發現。開新的一律從空白開始。
+     2026-10-03 端到端實測抓到。 */
+  if(cs && !PLAN_EDIT) cs.value = '';
   var lb = cs && cs.parentNode.querySelector('label');
   if(lb) lb.textContent = '建議誰去（可以不選）';
   /* 交代清單 */
