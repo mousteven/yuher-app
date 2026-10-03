@@ -1688,7 +1688,12 @@ function drawDay(){
   var list = visible().filter(function(r){ return r.date === d; });
   /* 三組：已確認的待處理／灰色預排／已完成。
      ⛔ 灰色的不可以混進「待處理」——那會讓人照著去跑，而它還沒定。 */
-  var pre  = list.filter(function(r){ return r.status === '預排' && !r.crew && r.sug; });
+  /* ⛔ 以前這裡還要求 `&& r.sug`（一定要有建議翻譯）。
+     結果「預排、但還沒想好給誰」的那一筆**三組都不收，整筆消失**——
+     而月曆上的點不看這個條件，所以會出現「有點、點進去卻說這天沒有行程」。
+     2026-10-03 線上有 5 筆是這種狀態。
+     ⚠ 這種「還沒配人」的才是最該被看到的：它是唯一一種沒有人在等它的行程。 */
+  var pre  = list.filter(function(r){ return r.status === '預排' && !r.crew; });
   var plan = list.filter(function(r){ return r.status === '預排' && r.crew; });
   var done = list.filter(function(r){ return r.status === '已完成'; });
   $('calDayCount').textContent = list.length
@@ -1812,7 +1817,9 @@ function todoBadge(r){
         '<span class="c4pre">預排・還沒確認</span></span>'+
         '<span class="c4nm"><span class="n">'+esc(r.client)+'</span></span>'+
         (r.workers?'<span class="c4wk"><span class="c4ws">'+esc(r.workers)+'</span></span>':'')+
-        '<span class="c4who">'+esc(r.slot||'未定時段')+'　'+esc(r.by||'')+' 排的，等特助確認</span>'+
+        '<span class="c4who">'+esc(r.slot||'未定時段')+'　'+
+          (r.sug ? ('建議 '+esc(r.sug)) : '<b class="non">還沒配人</b>')+'　'+
+          esc(r.by||'')+' 排的，等特助確認</span>'+
         /* ⚠ 「我那天不行」是**翻譯**的動作——那是請假資料最準的來源
            （當事人自己講，而且是看到預排之後才講）。
            行政按它沒有意義，所以行政不顯示（牟佑彬 2026-10-03）。 */
@@ -6766,7 +6773,12 @@ function fillTripForm(r){
   fillClients(); syncMode();
   setClientValue(r.client);
   applyPreset();
-  if(CREW.indexOf(r.crew) !== -1) $('crew').value = r.crew;
+  /* ⛔ 預排的 crew 本來就是空的，建議的人在 r.sug。
+     只看 r.crew 的話，行政點進去會看到空白的「翻譯人員」，
+     存檔就把原本的建議洗掉——2026-10-03 他實測踩到，
+     一筆行程因此從行事曆上消失。 */
+  var who0 = r.crew || r.sug || '';
+  if(CREW.indexOf(who0) !== -1) $('crew').value = who0;
   if(r.crewOwner && CREW.indexOf(r.crewOwner) !== -1) $('crewOwner').value = r.crewOwner;
 
   // 移工與服務項目一併帶進去，當天只要補處理經過與結果
@@ -9133,9 +9145,26 @@ function fdDraw(){
     b.addEventListener('click', function(){
       if(b.dataset.e) return pplOpen('w', b.dataset.e);
       if(b.dataset.c) return pplOpen('c', b.dataset.c);
-      if(b.dataset.s || b.dataset.l){
+      /* 查到了就要打得開。以前只跳一句「在行事曆或查詢頁裡打得開」，
+         等於叫他自己再找一次（牟佑彬 2026-10-03）。 */
+      if(b.dataset.l){
         fdClose();
-        toast('這一筆在行事曆或查詢頁裡打得開');
+        openRecord(b.dataset.l, { rec: b.dataset.l, y: window.scrollY,
+          label: '搜尋', name: b.dataset.l });
+        return;
+      }
+      if(b.dataset.s){
+        var row = (CAL_ROWS||[]).filter(function(x){ return x.id === b.dataset.s; })[0];
+        fdClose();
+        if(row){
+          CAL_SEL = row.date; CAL_VIEW = 'day';
+          document.querySelector('.tabs button[data-t=cal]').click();
+          drawCal();
+          toast(row.client + '　' + row.date);
+        } else {
+          toast('那一筆不在目前載入的月份，先把行事曆切到 ' +
+            (b.dataset.s.slice(1,3) + '/' + b.dataset.s.slice(3,5)));
+        }
       }
     });
   });
