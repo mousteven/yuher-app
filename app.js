@@ -11537,23 +11537,43 @@ function rtOver_(sel){
      ⚠ 有重疊的那幾個鄉鎮**一定要寫**，那是這一頁的重點。
      ⚠ 名字要擺在那一群點的**最上面**，不然會壓在點上。 */
   var named = {}, put = [];
-  function room_(x, y, must){
-    if(must) return true;
+  /* 這個位置可不可以放字：不可以壓到任何一個點，也不可以壓到別的名字。 */
+  function room_(x, y, w){
     for(var i = 0; i < put.length; i++){
-      if(Math.abs(put[i][0] - x) < fs * 2.6 && Math.abs(put[i][1] - y) < fs * 1.25)
-        return false;
+      if(Math.abs(put[i][0] - x) < (put[i][2] + w) / 2 + fs * 0.3 &&
+         Math.abs(put[i][1] - y) < fs * 1.15) return false;
+    }
+    for(var j = 0; j < all.length; j++){
+      if(Math.abs(all[j].x - x) < w / 2 + dotR * 0.85 &&
+         Math.abs(all[j].y - y) < fs * 0.55 + dotR * 0.85) return false;
     }
     return true;
   }
   all.forEach(function(q){
     if(!q.key || named[q.key]) return;
-    var top = q.y;
-    all.forEach(function(z){ if(z.key === q.key) top = Math.min(top, z.y); });
-    var ly = top - dotR - fs * 0.45;
-    if(!room_(q.hx, ly, !!hits[q.key])) return;
-    put.push([q.hx, ly]);
+    /* 這一群點的範圍 */
+    var x0 = q.x, x1 = q.x, y0 = q.y, y1 = q.y;
+    all.forEach(function(z){
+      if(z.key !== q.key) return;
+      x0 = Math.min(x0, z.x); x1 = Math.max(x1, z.x);
+      y0 = Math.min(y0, z.y); y1 = Math.max(y1, z.y);
+    });
+    var cx = (x0 + x1) / 2, w = q.st.town.length * fs * 0.98;
+    var up = y0 - dotR - fs * 0.62, dn = y1 + dotR + fs * 0.92;
+    var side = (x1 - x0) / 2 + dotR + w / 2 + fs * 0.25;
+    /* 上 → 下 → 右上 → 左上 → 右下 → 左下。⚠ 先試正上方，那是最好讀的。 */
+    var cand = [[cx, up], [cx, dn], [cx + side, up], [cx - side, up],
+                [cx + side, dn], [cx - side, dn],
+                [cx + side, (y0 + y1) / 2 + fs * 0.33],
+                [cx - side, (y0 + y1) / 2 + fs * 0.33]];
+    var at = null;
+    for(var c = 0; c < cand.length; c++){
+      if(room_(cand[c][0], cand[c][1], w)){ at = cand[c]; break; }
+    }
+    if(!at) return;                 // 擠不下就不寫，放大之後自然會有空間
+    put.push([at[0], at[1], w]);
     named[q.key] = 1;
-    h += '<text x="' + q.hx.toFixed(1) + '" y="' + ly.toFixed(1) +
+    h += '<text x="' + at[0].toFixed(1) + '" y="' + at[1].toFixed(1) +
       '" text-anchor="middle" font-size="' + fs.toFixed(2) + '" font-weight="' +
       (hits[q.key] ? '800' : '700') + '" fill="currentColor" opacity="' +
       (hits[q.key] ? '1' : '.75') + '" paint-order="stroke" stroke="var(--card)" ' +
