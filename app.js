@@ -11460,9 +11460,23 @@ function rtOver_(sel){
 
   sel.forEach(function(g, gi){
     var col = one ? null : RT_COL_[gi % RT_COL_.length];
+    /* ⛔ 同一個鄉鎮有好幾站的話，點會完全重疊、號碼看不到。
+       沿著一個小圈把它們散開——散開是「這裡有好幾站」的意思，
+       不是真的位置（本來也只精確到鄉鎮）。 */
+    var nSame = {};
+    rtStops_(g).forEach(function(st){ nSame[st.key] = (nSame[st.key] || 0) + 1; });
+    var iSame = {};
     var pts = rtStops_(g).map(function(st){
       var p = rtPos_(st.key);
-      return p ? { x: p[0], y: p[1], st: st } : null;
+      if(!p) return null;
+      var n = nSame[st.key], x = p[0], y = p[1];
+      if(n > 1){
+        var k = iSame[st.key] = (iSame[st.key] || 0);
+        iSame[st.key]++;
+        var a = (k / n) * Math.PI * 2 - Math.PI / 2;
+        x += Math.cos(a) * rr * 1.9; y += Math.sin(a) * rr * 1.9;
+      }
+      return { x: x, y: y, st: st };
     }).filter(function(x){ return x; });
     if(pts.length > 1){
       h += '<path d="' + pts.map(function(p, i){
@@ -11489,11 +11503,25 @@ function rtOver_(sel){
   });
 
   /* 鄉鎮名只寫一次，不然多人疊起來會糊成一團 */
-  var named = {};
+  /* ⛔ 擠在一起的鄉鎮名先不寫——寫了會糊成一團，反而什麼都看不到。
+     放大之後距離拉開，名字自己就會出現（每次縮放都重算）。
+     ⚠ 有重疊的那幾個鄉鎮**一定要寫**，那是這一頁的重點。 */
+  var named = {}, put = [];
+  function room_(x, y, must){
+    if(must) return true;
+    for(var i = 0; i < put.length; i++){
+      if(Math.abs(put[i][0] - x) < fs * 2.6 && Math.abs(put[i][1] - y) < fs * 1.25)
+        return false;
+    }
+    return true;
+  }
   sel.forEach(function(g){
     rtStops_(g).forEach(function(st){
       if(!st.key || named[st.key]) return;
       var p = rtPos_(st.key); if(!p) return;
+      var ly = p[1] - rr * 2;
+      if(!room_(p[0], ly, !!hits[st.key])) return;
+      put.push([p[0], ly]);
       named[st.key] = 1;
       h += '<text x="' + p[0] + '" y="' + (p[1] - rr * 2).toFixed(1) +
         '" text-anchor="middle" font-size="' + fs.toFixed(2) + '" font-weight="' +
@@ -11699,7 +11727,7 @@ function drawRT(){
     '<div class="rtz"><button type="button" data-rz="in" aria-label="放大">＋</button>' +
     '<button type="button" data-rz="out" aria-label="縮小">−</button>' +
     '<button type="button" data-rz="fit" class="f">看全部</button></div>' +
-    '<div class="rtnote">兩指可以縮放、一指可以拖。點標在**鄉鎮的中心**，不是門牌' +
+    '<div class="rtnote">兩指可以縮放、一指可以拖　·　點標在鄉鎮的中心，不是門牌' +
     (np.length ? '　·　' + np.length + ' 家沒有地址，圖上沒有畫（' +
       esc(np.slice(0, 3).join('、')) + (np.length > 3 ? '…' : '') + '）' : '') +
     '</div></div>';
@@ -11717,7 +11745,8 @@ function drawRT(){
         var dk = rtDist_(prev.key, st.key);
         h += '<div class="rthop' + (cross ? ' far' : '') + '">↓　' +
           esc(prev.town || '？') + ' → ' + esc(st.town || '？') +
-          (dk ? '　約 ' + (dk < 10 ? dk.toFixed(1) : Math.round(dk)) + ' 公里' : '') +
+          (prev.key && prev.key === st.key ? '　同一區'
+            : dk ? '　約 ' + (dk < 10 ? dk.toFixed(1) : Math.round(dk)) + ' 公里' : '') +
           (cross ? '　跨縣市' : '') + '</div>';
       }
       var z = psZoneOf_(st.r);
