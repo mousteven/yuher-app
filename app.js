@@ -10703,6 +10703,11 @@ function psBad_(rows){
 function psRows_(){
   return dpDay(PS_DAY).filter(function(r){ return r.status === '預排'; });
 }
+/* 跟這一筆同一個翻譯、同一天的所有行程。順序是一個人一組，不是整天一組。 */
+function psMine_(r){
+  var w = dpWho(r);
+  return psRows_().filter(function(x){ return dpWho(x) === w; });
+}
 function psGroups_(){
   var rows = psRows_(), bad = psBad_(rows), by = {};
   rows.forEach(function(r){
@@ -10794,8 +10799,12 @@ function psOrdered_(rows){
   out.forEach(function(r, i){ r._no = i + 1; });
   return out;
 }
-/* 拖完存回去。⛔ 一次送一整天，不要一筆一筆打後端——
-   六七筆就要打六七次，她在手機上會等到以為當掉。 */
+/* 拖完存回去。
+   ⛔ 一次送一個翻譯的一整天，不要一筆一筆打後端——
+      六七筆就要打六七次，她在手機上會等到以為當掉。
+   ⛔ 順序是**一個翻譯一組 1234**，不是整天累加。
+      2026-10-04 第一版傳了整天 72 筆進來，存出來變成 5、16、17、37…
+      排序still對，但數字看起來莫名其妙，而且一旦改派給別人就全亂了。 */
 function psSaveOrder_(rows){
   var list = psOrdered_(rows).map(function(r){ return { id: r.id, ord: r._no }; });
   if(!list.length) return;
@@ -11049,15 +11058,16 @@ function psDragBind(){
       });
       psDraw();
 
-      var day = psRows_();
+      /* ⛔ 只存這一個翻譯的，不要整天——順序是一個人一組 1234。 */
+      var mine = psMine_(r);
       if(moved){
         google.script.run
-          .withSuccessHandler(function(){ psSaveOrder_(day); })
+          .withSuccessHandler(function(){ psSaveOrder_(mine); })
           .withFailureHandler(function(e){ toast(e.message, true); loadPS('ps1'); })
           .updateSchedule(CODE, id, { slot: want });
         toast(r.client + '　→　' + (want || '不壓時間'));
       } else {
-        psSaveOrder_(day);
+        psSaveOrder_(mine);
       }
     }
 
@@ -11137,7 +11147,7 @@ document.addEventListener('click', function(e){
     r.slot = z;
     psDraw();
     google.script.run
-      .withSuccessHandler(function(){ psSaveOrder_(psRows_()); })
+      .withSuccessHandler(function(){ psSaveOrder_(psMine_(r)); })
       .withFailureHandler(function(e){ toast(e.message, true); loadPS('ps1'); })
       .updateSchedule(CODE, id, { slot: z });
     toast(r.client + '　→　' + (z || '不壓時間'));
