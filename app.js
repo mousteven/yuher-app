@@ -11431,81 +11431,106 @@ function rtBase_(sel){
   return h;
 }
 
-/* 點、線、字。縮放時只重畫這一層，字跟點的大小跟著縮放補回去 → 螢幕上大小固定。 */
+/* 點、線、字。縮放時只重畫這一層，字跟點的大小跟著縮放補回去 → 螢幕上大小固定。
+
+   ⛔ 點不可以互相蓋住。他 2026-10-04 傳圖：烏日區兩個人，小愛的第一站
+      被蓋在底下，號碼完全看不到。
+   ⚠ 不是只有「同一個鄉鎮」會這樣——市區那幾個小區（北區、西區、南屯…）
+      中心點本來就只差一兩公里，點的半徑有五六公里，照樣疊在一起。
+   ✓ 所以用通則：每個點先放在自己鄉鎮的中心，然後**互相推開**，
+      同時有一條橡皮筋把它拉回自己的中心。放大之後點與點的實際距離變大、
+      推力自然變小，點就慢慢回到真正的位置。 */
 function rtOver_(sel){
   if(!TWM_ || !RT_VB) return '';
   var one = (sel.length === 1), vb = RT_VB;
   var fs = vb.w / 26, rr = vb.w / 42;
+  var dotR = rr * 1.5;                 // 點的半徑
   var hits = {};
   rtOverlap_(sel).forEach(function(o){ hits[o.key] = o.n; });
 
-  /* ⛔ 散開要**全部選到的人一起算**。一個人算一次的話，
-     「兩個不同的人各去烏日區一次」兩邊都算出「只有一站、不用散」，
-     結果畫在同一個點上，後畫的直接蓋住先畫的——
-     他 2026-10-04 傳圖問「小愛的第一個行程被蓋住了怎麼辦」就是這個。
-     ⚠ fan[key] 是那個鄉鎮總共幾個點；fanI_ 是發號碼機。 */
-  var fan = {}, fanI = {};
-  sel.forEach(function(g){
-    rtStops_(g).forEach(function(st){
-      if(rtPos_(st.key)) fan[st.key] = (fan[st.key] || 0) + 1; }); });
-  /* 散開的半徑：點多就撐大一點，但不要大到看起來像兩個不同的鄉鎮。 */
-  function fanR_(n){ return rr * (n <= 2 ? 1.75 : n <= 4 ? 2.0 : 2.4); }
-  function fanAt_(key){
-    var p = rtPos_(key);
-    if(!p) return null;
-    var n = fan[key] || 1;
-    if(n < 2) return { x: p[0], y: p[1] };
-    var k = fanI[key] = (fanI[key] || 0);
-    fanI[key]++;
-    var a = (k / n) * Math.PI * 2 - Math.PI / 2;
-    return { x: p[0] + Math.cos(a) * fanR_(n), y: p[1] + Math.sin(a) * fanR_(n) };
+  /* ── 一、先把所有的點攤平，放在自己鄉鎮的中心 ── */
+  var all = [];
+  sel.forEach(function(g, gi){
+    rtStops_(g).forEach(function(st, i){
+      var p = rtPos_(st.key);
+      if(!p) return;
+      /* ⚠ 完全重合的兩個點推不開（方向是 0/0），所以先給一個很小的錯開量。
+         用索引算，不要用亂數——每次重畫位置要一樣，不然縮放時會跳。 */
+      var a = (all.length * 2.39996);               // 黃金角，散得比較平均
+      all.push({ gi: gi, i: i, st: st, key: st.key,
+                 hx: p[0], hy: p[1],
+                 x: p[0] + Math.cos(a) * dotR * 0.35,
+                 y: p[1] + Math.sin(a) * dotR * 0.35 });
+    });
+  });
+
+  /* ── 二、互相推開 ── */
+  var MIN = dotR * 2.15;               // 兩點中心至少要隔這麼遠才不會蓋住
+  for(var pass = 0; pass < 60; pass++){
+    var moved = 0;
+    for(var i = 0; i < all.length; i++){
+      for(var j = i + 1; j < all.length; j++){
+        var A2 = all[i], B2 = all[j];
+        var dx = B2.x - A2.x, dy = B2.y - A2.y;
+        var d = Math.sqrt(dx * dx + dy * dy) || 0.0001;
+        if(d >= MIN) continue;
+        var push = (MIN - d) / 2 * 0.5;
+        var ux = dx / d, uy = dy / d;
+        A2.x -= ux * push; A2.y -= uy * push;
+        B2.x += ux * push; B2.y += uy * push;
+        moved++;
+      }
+    }
+    /* 橡皮筋：拉回自己鄉鎮的中心。⛔ 沒有這條，一群點會整團飄走。 */
+    all.forEach(function(q){
+      q.x += (q.hx - q.x) * 0.10;
+      q.y += (q.hy - q.y) * 0.10;
+    });
+    if(!moved) break;
   }
 
   var h = '';
+  /* 重疊的鄉鎮先畫一圈光暈，線蓋上去才看得到底下有東西 */
   Object.keys(hits).forEach(function(k){
     var p = rtPos_(k); if(!p) return;
-    h += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' +
-      (fanR_(fan[k] || 1) + rr * 1.9).toFixed(2) +
+    var far = 0;
+    all.forEach(function(q){ if(q.key === k)
+      far = Math.max(far, Math.sqrt(Math.pow(q.x-p[0],2) + Math.pow(q.y-p[1],2))); });
+    h += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (far + dotR * 1.3).toFixed(2) +
       '" fill="currentColor" fill-opacity=".13"/>';
   });
 
+  /* ── 三、一個人一條線、一個顏色 ── */
   sel.forEach(function(g, gi){
     var col = one ? null : RT_COL_[gi % RT_COL_.length];
-    /* 同一個鄉鎮的點沿著一個小圈散開，誰都不會被蓋住。
-       ⚠ 散開是「這裡有好幾站」的意思，不是真的位置（本來也只精確到鄉鎮）。 */
-    var pts = rtStops_(g).map(function(st){
-      var q = fanAt_(st.key);
-      return q ? { x: q.x, y: q.y, st: st } : null;
-    }).filter(function(x){ return x; });
+    var pts = all.filter(function(q){ return q.gi === gi; });
     if(pts.length > 1){
       h += '<path d="' + pts.map(function(p, i){
-          return (i ? 'L' : 'M') + p.x + ' ' + p.y; }).join(' ') +
-        '" fill="none" stroke="' + (col || 'var(--fill)') + '" stroke-opacity="' +
-        (one ? '.8' : '.8') + '" stroke-width="' + (rr * 0.5).toFixed(2) +
+          return (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join(' ') +
+        '" fill="none" stroke="' + (col || 'var(--fill)') + '" stroke-opacity=".8"' +
+        ' stroke-width="' + (rr * 0.5).toFixed(2) +
         '" stroke-dasharray="' + (rr * 1.1).toFixed(2) + ' ' + (rr * 0.8).toFixed(2) + '"/>';
     }
     pts.forEach(function(p, i){
       var fill = one
-        /* ⛔ 跨縣市的點以前是紅的，他 2026-10-04 說不要紅色。
-           改用深色＋上下午原本的顏色，跨不跨縣市看清單上的小膠囊就知道。 */
+        /* ⛔ 跨縣市的點以前是紅的，他 2026-10-04 說不要紅色。 */
         ? ({ '上午':'var(--warn-fill)', '下午':'var(--info-ink)' }[psZoneOf_(p.st.r)]
             || 'var(--fill)')
         : col;
-      /* ⛔ 多選的時候也要印 1234（牟佑彬 2026-10-04 特別交代）。
-         所以點不能縮小——縮小了數字就擠不進去。 */
-      h += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (rr * 1.5).toFixed(2) +
-        '" fill="' + fill + '" stroke="#fff" stroke-opacity=".85" stroke-width="' +
-        (rr * 0.22).toFixed(2) + '"/>' +
-        '<text x="' + p.x + '" y="' + (p.y + fs * 0.33).toFixed(1) +
+      /* ⛔ 多選的時候也要印 1234（他 2026-10-04 特別交代）。 */
+      h += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' +
+        dotR.toFixed(2) + '" fill="' + fill +
+        '" stroke="#fff" stroke-opacity=".85" stroke-width="' + (rr * 0.22).toFixed(2) + '"/>' +
+        '<text x="' + p.x.toFixed(1) + '" y="' + (p.y + fs * 0.33).toFixed(1) +
           '" text-anchor="middle" font-size="' + (fs * 0.86).toFixed(2) +
           '" font-weight="800" fill="#fff">' + (i + 1) + '</text>';
     });
   });
 
-  /* 鄉鎮名只寫一次，不然多人疊起來會糊成一團 */
-  /* ⛔ 擠在一起的鄉鎮名先不寫——寫了會糊成一團，反而什麼都看不到。
-     放大之後距離拉開，名字自己就會出現（每次縮放都重算）。
-     ⚠ 有重疊的那幾個鄉鎮**一定要寫**，那是這一頁的重點。 */
+  /* ── 四、鄉鎮名 ──
+     ⛔ 擠在一起的先不寫，寫了會糊成一團。放大之後距離拉開，名字自己就會出現。
+     ⚠ 有重疊的那幾個鄉鎮**一定要寫**，那是這一頁的重點。
+     ⚠ 名字要擺在那一群點的**最上面**，不然會壓在點上。 */
   var named = {}, put = [];
   function room_(x, y, must){
     if(must) return true;
@@ -11515,21 +11540,20 @@ function rtOver_(sel){
     }
     return true;
   }
-  sel.forEach(function(g){
-    rtStops_(g).forEach(function(st){
-      if(!st.key || named[st.key]) return;
-      var p = rtPos_(st.key); if(!p) return;
-      var ly = p[1] - (fan[st.key] > 1 ? fanR_(fan[st.key]) + rr * 1.8 : rr * 2);
-      if(!room_(p[0], ly, !!hits[st.key])) return;
-      put.push([p[0], ly]);
-      named[st.key] = 1;
-      h += '<text x="' + p[0] + '" y="' + ly.toFixed(1) +
-        '" text-anchor="middle" font-size="' + fs.toFixed(2) + '" font-weight="' +
-        (hits[st.key] ? '800' : '700') + '" fill="currentColor" opacity="' +
-        (hits[st.key] ? '1' : '.75') + '" paint-order="stroke" stroke="var(--card)" ' +
-        'stroke-width="' + (fs * 0.26).toFixed(2) + '" stroke-linejoin="round">' +
-        esc(st.town) + '</text>';
-    });
+  all.forEach(function(q){
+    if(!q.key || named[q.key]) return;
+    var top = q.y;
+    all.forEach(function(z){ if(z.key === q.key) top = Math.min(top, z.y); });
+    var ly = top - dotR - fs * 0.45;
+    if(!room_(q.hx, ly, !!hits[q.key])) return;
+    put.push([q.hx, ly]);
+    named[q.key] = 1;
+    h += '<text x="' + q.hx.toFixed(1) + '" y="' + ly.toFixed(1) +
+      '" text-anchor="middle" font-size="' + fs.toFixed(2) + '" font-weight="' +
+      (hits[q.key] ? '800' : '700') + '" fill="currentColor" opacity="' +
+      (hits[q.key] ? '1' : '.75') + '" paint-order="stroke" stroke="var(--card)" ' +
+      'stroke-width="' + (fs * 0.26).toFixed(2) + '" stroke-linejoin="round">' +
+      esc(q.st.town) + '</text>';
   });
   return h;
 }
