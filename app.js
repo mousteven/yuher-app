@@ -10703,20 +10703,21 @@ function psBad_(rows){
       bad[r.id] = { why: dpWho(r) + ' 那天請假', tag: '請假' }; return; }
     (by[dpWho(r)] = by[dpWho(r)] || []).push(r);
   });
-  /* ⛔ 只有「兩邊都壓了時間而且同一個時段」才算撞。未定時段是有彈性的。
-     ⚠ 一個時段撞幾件就記幾件，但**算卡住的時候算一組**——
-        牟佑彬 2026-10-04 看到「卡住 7」：上午五件撞在一起全標紅，
-        整片紅等於沒有訊號，她看不出要先修哪一個。 */
+  /* ⛔ 「同一個上午有三件」**不算撞**（牟佑彬 2026-10-04 問「撞在一起的原因是什麼？」）。
+     系統裡根本沒有「幾點」這筆資料——時段只有上午／下午／全天／未定，
+     所以同一個上午排三件只代表「那個上午很滿」，一個翻譯本來就跑得完。
+     標成紅色的結果是整片紅，等於沒有訊號。改掉。
+
+     ⚠ 唯一真的撞得到的是**全天**：全天就是整天都被佔走，
+        那天再排任何一件壓了時段的，兩件一定有一件跑不掉。
+     ⚠ 要真的抓「09:30 跟 10:00 撞到」，得先讓行政在開單時填得了時間——
+        那要動後端（時段那一欄本來就存得下 HH:mm），他還沒決定要不要做。 */
   Object.keys(by).forEach(function(w){
-    var byS = {};
-    by[w].filter(function(r){ return r.slot; }).forEach(function(r){
-      (byS[r.slot] = byS[r.slot] || []).push(r); });
-    Object.keys(byS).forEach(function(sl){
-      if(byS[sl].length < 2) return;
-      var why = w + ' 那天' + sl + '有 ' + byS[sl].length + ' 件';
-      var tag = sl + '撞 ' + byS[sl].length + ' 件';
-      byS[sl].forEach(function(r){ bad[r.id] = { why: why, tag: tag }; });
-    });
+    var day = by[w].filter(function(r){ return r.slot; });
+    var full = day.filter(function(r){ return r.slot === '全天'; });
+    if(!full.length || day.length < 2) return;
+    var why = w + ' 那天有「全天」的行程，又排了另外 ' + (day.length - 1) + ' 件';
+    day.forEach(function(r){ bad[r.id] = { why: why, tag: '全天卡到' }; });
   });
   return bad;
 }
@@ -10868,13 +10869,15 @@ function psZones_(g, bad){
   var rows = psOrdered_(g.rows), h = '';
   PS_ZONES_.forEach(function(z){
     var list = rows.filter(function(r){ return psZoneOf_(r) === z; });
+    /* ⚠ 標題只陳述「這一區幾件」，不要說「撞在一起」——
+       同一個上午三件不是撞，是那個上午很滿（牟佑彬 2026-10-04）。
+       三件以上才補一句「排得滿」，而且不標紅。 */
+    var nbad = list.filter(function(r){ return bad[r.id]; }).length;
     h += '<div class="pszone" data-z="' + esc(z) + '" data-who="' + esc(g.who) + '">' +
-      '<div class="pszh' + (z && list.length > 1 ? ' b' : '') + '">' +
+      '<div class="pszh' + (nbad ? ' b' : '') + '">' +
         (z === '' ? '不壓時間（翻譯自己跟工廠約）' : z) +
-        /* ⚠ 同一個壓了時間的時段有兩件以上＝撞在一起，標題直接講。
-           這比每一塊都標「卡住」清楚——她要處理的是「這一區」，不是五個個別的。 */
         '<s>' + list.length + ' 件' +
-        (z && list.length > 1 ? '　⚠ 撞在一起' : '') + '</s></div>' +
+        (z && list.length >= 3 ? '　排得滿' : '') + '</s></div>' +
       (list.length
         ? list.map(function(r){ return psTrip_(r, bad[r.id]); }).join('')
         : '<div class="pszm">（空的，可以拖進來）</div>') +
