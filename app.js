@@ -2708,6 +2708,12 @@ function backToCal(){
 function paintTodo(r){
   var box = $('todoBox');
   if(!box) return;                        // 舊版 Service.html 沒有這一塊
+  /* 標題改成跟「服務日期」「處理方式」同一種寫法，不要用繪文字。
+     ⛔ 直接改文字節點，不動 Service.html——那是後端檔，改它要重新部署。
+     ⚠ 只改第一個文字節點，<em id="todoN"> 的數字要留著。 */
+  var hd = box.querySelector('.todohd');
+  if(hd && hd.firstChild && hd.firstChild.nodeType === 3)
+    hd.firstChild.nodeValue = '行政交代';
   var t = (r && r.todo) || [];
   if(!t.length){ box.style.display = 'none'; box.dataset.id = ''; return; }
   box.dataset.id = r.id || '';
@@ -2765,13 +2771,10 @@ function startFromSchedule(id){
     if(h2) h2.textContent = '改這一筆行程';
     if($('admSave')) $('admSave').textContent = '存檔變更';
   }
-  /* 唯讀的時候一定要講清楚為什麼，不然他會以為當掉了。 */
-  if(!$('roBar')){
-    var pane = $('p-new');
-    if(pane) pane.insertAdjacentHTML('afterbegin',
-      '<div id="roBar">這一筆還沒確認，只能看<s>特助確認之後它會變成你的行程，'+
-      '那時候點進來才是填服務紀錄。現在先不要去。</s></div>');
-  }
+  /* ⛔ 這裡原本會在表單最上面插一條橘色的「這一筆還沒確認，只能看」。
+     牟佑彬 2026-10-04 要求拿掉——那一條佔掉整個第一屏，而且每次點進來都要再看一次。
+     ⚠ 唯讀的理由**還是要講**，只是改成一次性的 toast（下面那行）：
+       欄位本來就是鎖住的，他看得出來，不需要一塊常駐的橫幅重複講。 */
   /* 切分頁之前先量，不然 backToTop() 已經把捲動位置歸零了 */
   var back = { id: id, rec: '', y: window.scrollY,
                view: CAL_VIEW, ym: CAL_YM, sel: CAL_SEL,
