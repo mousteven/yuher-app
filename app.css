@@ -1197,7 +1197,40 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .cell .dots i.hollow{background:transparent!important;box-shadow:inset 0 0 0 1.5px currentColor}
 .lg-越{background:#2E7D8A;color:#2E7D8A} .lg-泰{background:#B4632A;color:#B4632A}
 .lg-印{background:#4B6B2F;color:#4B6B2F} .lg-英{background:#7A4E9E;color:#7A4E9E}
+/* ⚠ 名冊裡寫的是「菲律賓」三個字，不是「菲」——少了這一條色帶那一段會是透明的 */
+.lg-菲律賓{background:#2F5EA8;color:#2F5EA8} .lg-菲{background:#2F5EA8;color:#2F5EA8}
 .lg-{background:#8A959B;color:#8A959B}
+
+/* 月曆格子：一條語別色帶 ＋ 總筆數（牟佑彬 2026-10-05 選的方案丙）。
+   ⛔ 以前是點點，一格最多六顆——28 筆只看得到 5 顆。
+   ⚠ 數字要用等寬數字，不然 1 跟 28 的格子看起來會歪。 */
+.cell .cbd{display:flex;width:78%;height:3.5px;border-radius:999px;overflow:hidden}
+.cell .cbd i{display:block;height:100%}
+.cell .cnum{font-size:var(--t2);font-weight:800;line-height:1.05;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.cell .cnum.z{color:var(--line);font-weight:700}
+.cell.sel .cnum{color:var(--fill-ink)}
+.cell.today .cnum{color:var(--brand)}
+
+/* 行程卡上的地址：自己一行、◎ 開頭（牟佑彬 2026-10-05 選的方案甲）。
+   ⛔ 樣子要跟排班頁 .pstr .ad 與路線頁 .rtst .a 一致——同一件事不要三種長相。
+   ⚠ 跨縣市與「現場」都用中性的小膠囊，**不要用警示紅**（他 2026-10-04 說不要紅色）。 */
+.ev .b>span.c4ad{display:flex;gap:5px;align-items:baseline;margin-top:4px;
+  font-size:var(--t5);color:var(--ink2)}
+.c4ad i{font-style:normal;flex:none;opacity:.5}
+.c4ad .far,.c4ad .st{color:var(--ink);font-weight:800;border-radius:5px;padding:0 4px;
+  background:color-mix(in srgb,var(--ink) 9%,transparent)}
+.c4ad .far{margin-right:2px}
+.c4ad .st{margin-left:6px}
+
+/* 排完直接確認。⚠ 沒挑人的時候整列變灰，而且勾不動。 */
+.plango{display:flex;align-items:center;gap:8px;margin:12px 0 0;padding:11px 12px;
+  border:1px solid var(--line);border-radius:var(--r1);background:var(--card);
+  font-size:var(--t3);font-weight:800;cursor:pointer}
+.plango input{width:19px;height:19px;flex:none;accent-color:var(--fill);margin:0}
+.plango s{text-decoration:none;margin-left:auto;font-size:var(--t5);font-weight:700;
+  color:var(--ink3)}
+.plango.off{opacity:.45;cursor:not-allowed}
 
 .daylist{margin-top:16px;border-top:1px solid var(--line);padding-top:13px}
 /* 「9月11日（五）　待處理 4　已完成 3」這一行要跟著捲動留在上面，

@@ -1688,13 +1688,23 @@ function drawCal(){
         var out = (d.getMonth()+1 !== m);
         if(!out) has = true;
         var list = byDay[ds] || [];
+        /* 一格裡放「一條語別色帶 ＋ 總筆數」（牟佑彬 2026-10-05 選的方案丙）。
+           ⛔ 以前是點點、一格最多畫六顆：10/5 有 28 筆卻只看得到 5 顆，
+              那一格等於在騙人。
+           ⚠ list 是 visible() 之後的，所以**篩了語別數字就跟著變**。 */
+        var byLg = {};
+        list.forEach(function(r){
+          var l = (r.lang||'').split('、')[0] || '';
+          byLg[l] = (byLg[l] || 0) + 1; });
+        var band = Object.keys(byLg).map(function(l){
+          return '<i class="lg-'+esc(l)+'" style="flex:'+byLg[l]+'"></i>'; }).join('');
         week += '<div class="cell'+(out?' dim':'')+
           (ds===todayStr()?' today':'')+(ds===CAL_SEL?' sel':'')+'" data-d="'+ds+'">'+
-          '<span class="d">'+d.getDate()+'</span><span class="dots">'+
-          list.slice(0,6).map(function(r){
-            var l = (r.lang||'').split('、')[0] || '';
-            return '<i class="lg-'+esc(l)+(r.status==='預排'?' hollow':'')+'"></i>';
-          }).join('')+'</span></div>';
+          '<span class="d">'+d.getDate()+'</span>'+
+          (list.length
+            ? '<span class="cbd">'+band+'</span><span class="cnum">'+list.length+'</span>'
+            : '<span class="cnum z">·</span>')+
+          '</div>';
       }
       if(!has) break;
       html += week;
@@ -1835,6 +1845,7 @@ function drawDay(){
         '</span>'+
         // 移工名（自然截斷）＋ 人數標（永遠不縮）。一對多改成「全廠宣導」
         cardWkLine_(r)+
+        evAddr_(r)+
         // 時段與翻譯降到最後一行的小字。排一天的行程時還是要看得到。
         /* 時段與翻譯那一列的右邊掛交代，收著的時候卡片一行都不多。
            ⛔ 項目預設**不攤開**——一天五筆、每筆三四條，攤開要捲很久
@@ -1846,7 +1857,19 @@ function drawDay(){
   }
 
 
-/* 灰色預排的卡片**刻意另外寫一個**，不重用上面那支。
+/* 這一筆要去的地方。**現場地址優先，沒填才用名冊上的**（牟佑彬 2026-10-05）。
+     ⚠ r.site 要等後端那一欄上線才會有值；現在一律落在名冊地址，不會壞。
+     ⚠ 名冊地址只留到路名——完整門牌太長，一張卡會被撐掉一行半。
+       要門牌的時候看「用 Google 地圖導航」，那邊用的是完整地址。 */
+  function evAddr_(r){
+    var site = String(r.site || '').trim();
+    if(site) return '<span class="c4ad"><i>◎</i>'+esc(site)+
+      '<b class="st">現場</b></span>';
+    var sh = psAddrShort_(r.client);
+    return sh ? '<span class="c4ad"><i>◎</i>'+sh+'</span>' : '';
+  }
+
+  /* 灰色預排的卡片**刻意另外寫一個**，不重用上面那支。
      ⛔ 那一支帶著側滑軌道、長按拖曳改期、點開填服務紀錄——
         那些動作對「還沒確認的行程」全部都不該有。
         與其在 card() 裡到處加 if，不如給預排一張安靜的卡。
@@ -1887,6 +1910,7 @@ function drawDay(){
         '<span class="c4pre">預排・還沒確認</span></span>'+
         '<span class="c4nm"><span class="n">'+esc(r.client)+'</span></span>'+
         cardWkLine_(r)+
+        evAddr_(r)+
         /* ⛔ 這裡原本還接一句「XXX 排的，等特助確認」。
            但上面那條分組標題已經寫了「行政排好了，等特助確認——先不要去」，
            每張卡再寫一次是重複的，而且把真正要看的（時段、配了誰）擠到左邊
@@ -2842,6 +2866,39 @@ var PLAN_EDIT = '';
      4. 存成「預排」，不是直接指派
    ⚠ 這幾塊用注入的，不寫進 Service.html——那是後端檔，改它要重新部署，
      而版本額度只剩 3 個。 */
+/* 誰可以「排完直接確認」。
+   ⛔ 跟後端 staffCanDispatch_ 一模一樣的名單——兩邊不一致的話，
+      畫面上給得出按鈕、後端卻丟例外，她會以為系統壞了。 */
+function canDispatch_(){
+  return ['特助', '副理', '總經理'].indexOf(STAFF_ROLE) !== -1;
+}
+
+/* 排完直接確認。自己臨時加的行程本來就不用再自己確認一次
+   （牟佑彬 2026-10-05）。⚠ 沒挑人就不能確認，所以那時候自己變灰。 */
+function planGoBits(){
+  var box = $('planSave');
+  if(!box || !canDispatch_()){
+    var old = $('planGoWrap');
+    if(old) old.parentNode.removeChild(old);
+    return;
+  }
+  if(!$('planGoWrap')){
+    box.insertAdjacentHTML('beforebegin',
+      '<label class="plango" id="planGoWrap">' +
+      '<input type="checkbox" id="planGo"><span>排完直接確認</span>' +
+      '<s>不用再去排班頁按一次</s></label>');
+  }
+  var cs = $('planCrew'), go = $('planGo'), wrap = $('planGoWrap');
+  function sync(){
+    var ok = !!(cs && cs.value);
+    wrap.classList.toggle('off', !ok);
+    go.disabled = !ok;
+    if(!ok) go.checked = false;
+  }
+  if(cs && !cs.dataset.goSync){ cs.dataset.goSync = '1'; cs.addEventListener('change', sync); }
+  sync();
+}
+
 function planAdmBits(){
   if(STAFF_ROLE !== '行政') return;
   var p = $('planDate');
@@ -2935,6 +2992,7 @@ function openPlan(client){
   fillPlanBig();
   fillPlanWorkers();
   planAdmBits();
+  planGoBits();
   if(!PLAN_EDIT) $('planSave').textContent = '排進行事曆';
   $('planModal').style.display='';
 }
@@ -3086,9 +3144,23 @@ $('planSave').addEventListener('click', function(){
     return;
   }
 
+  /* 勾了「排完直接確認」就接著打一次 confirmSchedule。
+     ⛔ 一定要把人明確傳進去——addSchedule 把特助挑的人寫在「翻譯人員」，
+        建議欄是空的，不傳人後端會丟「這一筆行政沒有建議人選」。 */
+  var goNow = !!($('planGo') && $('planGo').checked && who && canDispatch_());
   google.script.run
-    .withSuccessHandler(function(){
+    .withSuccessHandler(function(res){
       b.disabled=false; PLAN_EDIT=''; $('planModal').style.display='none';
+      if(goNow && res && res.id){
+        google.script.run
+          .withSuccessHandler(function(){ toast('排好了，而且已經確認給 '+who);
+            calBust(); loadCal(null, true); })
+          .withFailureHandler(function(e){
+            toast('排好了，但確認沒過：'+e.message, true);
+            calBust(); loadCal(null, true); })
+          .confirmSchedule(CODE, res.id, who, '');
+        return;
+      }
       toast(adm ? (who ? ('開好了　建議 '+who+'，等特助確認') : '開好了　等特助配人')
                 : '已排進行事曆');
       calBust(); loadCal();
