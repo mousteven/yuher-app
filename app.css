@@ -3377,3 +3377,91 @@ body.filladm #admTodoBox{display:block}
 .c4many{flex:none;font-size:var(--t6);font-weight:800;white-space:nowrap;
   color:var(--info-ink);background:var(--info-bg);
   border-radius:var(--r2);padding:1px 6px}
+
+
+/* ══ 行政的行程總表（牟佑彬 2026-10-04）══════════════════════════
+   一眼掃完：哪幾趟還沒配人、特助後來派了誰、文件哪天還。
+   ⚠ 全部用既有的 token，所以 body.adm 一換色票整頁就跟著變紅，
+     不用為行政再寫一份。
+   ⚠ 間距一律落在 8 的倍數上。 */
+.sumhd{margin:0 0 12px}
+.sumhd h3{margin:0;font-size:1.15rem;font-weight:800;letter-spacing:-.01em}
+.sumhd h3 s{text-decoration:none;display:block;margin-top:2px;
+  font-size:var(--t4);font-weight:600;color:var(--ink3);letter-spacing:0}
+
+/* 篩選：每一顆都帶數量，沒有裸數字 */
+.sumf{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.sumf button{font:inherit;cursor:pointer;display:inline-flex;align-items:baseline;gap:6px;
+  padding:7px 12px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);font-size:var(--t4);font-weight:700;
+  -webkit-tap-highlight-color:transparent;
+  transition:border-color .16s ease,box-shadow .16s ease,transform .1s ease}
+.sumf button:active{transform:scale(.97)}
+.sumf button em{font-style:normal;font-weight:800;font-size:.95rem;
+  font-variant-numeric:tabular-nums;color:var(--ink2)}
+.sumf button.on{border-color:var(--fill);color:var(--fill);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--fill) 13%,transparent)}
+.sumf button.on em{color:var(--fill)}
+
+.sumbar{display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap}
+.sumbar > b{font-size:var(--t4);font-weight:800;color:var(--ink2)}
+.sumbar .sp{flex:1}
+.sumsort{display:inline-flex;border:1px solid var(--line);border-radius:9px;
+  overflow:hidden;background:var(--card)}
+.sumsort button{font:inherit;font-size:var(--t5);font-weight:700;cursor:pointer;
+  padding:6px 11px;border:0;background:transparent;color:var(--ink3);
+  -webkit-tap-highlight-color:transparent}
+.sumsort button.on{background:var(--fill);color:#fff}
+
+.sumday{margin:16px 2px 8px;font-size:var(--t4);font-weight:800;color:var(--ink3);
+  display:flex;align-items:baseline;gap:8px}
+.sumday.now{color:var(--fill)}
+.sumday u{text-decoration:none;font-weight:700;font-size:var(--t5);
+  background:var(--fill);color:#fff;border-radius:999px;padding:1px 8px}
+
+/* 一列一筆。日期固定寬、客戶一行、事由一行、右邊狀態與誰去 */
+.sumrow{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
+  padding:10px 12px;margin-bottom:8px;display:grid;gap:2px 10px;cursor:pointer;
+  grid-template-columns:48px 1fr auto;align-items:center;
+  -webkit-tap-highlight-color:transparent;
+  transition:border-color .16s ease,transform .1s ease}
+.sumrow:active{transform:scale(.995);border-color:var(--fill)}
+/* 還沒配人＝他要抓的漏網之魚。⛔ 用橘紅，不可以用品牌紅——行政整頁都是紅的。 */
+.sumrow.gap{border-style:dashed;
+  border-color:color-mix(in srgb,var(--bad-ink) 50%,var(--line));
+  background:color-mix(in srgb,var(--bad-ink) 5%,var(--card))}
+.sdt{grid-row:1/3;font-size:.95rem;font-weight:800;line-height:1.15;
+  font-variant-numeric:tabular-nums;color:var(--ink)}
+.sdt u{display:block;text-decoration:none;font-size:var(--t6);font-weight:700;
+  color:var(--ink3);letter-spacing:.04em}
+.scl{grid-column:2;font-size:.92rem;font-weight:700;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ssb{grid-column:2;font-size:var(--t4);color:var(--ink3);min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srt{grid-row:1/3;grid-column:3;display:flex;flex-direction:column;
+  align-items:flex-end;gap:4px}
+.spill{font-size:var(--t6);font-weight:800;padding:2px 8px;border-radius:999px;
+  white-space:nowrap;border:1px solid transparent}
+.s-pre{background:var(--line2);color:var(--ink3);border-color:var(--line);
+  border-style:dashed}
+.s-ok{background:color-mix(in srgb,var(--fill) 11%,var(--card));color:var(--fill);
+  border-color:color-mix(in srgb,var(--fill) 28%,var(--card))}
+.s-done{background:var(--ok-bg);color:var(--ok-ink);border-color:var(--ok-line)}
+.s-cancel{background:var(--line2);color:var(--ink3);border-color:var(--line);
+  text-decoration:line-through}
+.scw{font-size:var(--t5);font-weight:700;color:var(--ink3);white-space:nowrap}
+.scw.none{color:var(--bad-ink)}
+.scw.sug{color:var(--warn-ink)}
+.stag{grid-column:2/4;display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.sdoc{font-size:var(--t6);font-weight:700;padding:2px 8px;border-radius:7px;
+  background:var(--warn-bg);color:var(--warn-ink);border:1px solid var(--warn-line)}
+.sdoc.back{background:var(--ok-bg);color:var(--ok-ink);border-color:var(--ok-line)}
+
+/* 「有沒有忘記排」 */
+.summiss{margin:24px 0 8px;background:var(--card);border:1px solid var(--line);
+  border-left:3px solid var(--bad-ink);border-radius:var(--r2);padding:12px 14px}
+.summiss h4{margin:0 0 8px;font-size:var(--t4);font-weight:800}
+.summiss .cs{display:flex;gap:6px;flex-wrap:wrap}
+.summiss .cs span{font-size:var(--t5);font-weight:700;padding:4px 9px;
+  border-radius:8px;background:var(--bg);border:1px solid var(--line2)}
+.summiss .cs .more{background:transparent;border-color:transparent;color:var(--ink3)}

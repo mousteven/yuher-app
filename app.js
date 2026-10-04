@@ -1126,8 +1126,12 @@ $('paperFile').addEventListener('change', function(){
 });
 
 /* ── 分頁 ─────────────────────────────── *//* ── 分頁 ─────────────────────────────── */
-document.querySelectorAll('.tabs button').forEach(function(b){
-  b.addEventListener('click', function(){
+/* ⛔ 以前是載入時對每一顆按鈕各綁一次，所以**後來注入的分頁按不動**。
+   行政的「總表」是注入的（寫進 Service.html 就要重新部署、吃版本額度），
+   改成委派之後，以後再加分頁都不用動這裡。 */
+document.querySelector('.tabs').addEventListener('click', function(ev){
+  var b = ev.target.closest('button[data-t]');
+  if(b){
     document.querySelectorAll('.tabs button').forEach(function(x){ x.className = x===b?'on':''; });
     document.querySelectorAll('.pane').forEach(function(p){ p.classList.remove('on'); });
     $('p-'+b.dataset.t).classList.add('on');
@@ -1141,9 +1145,10 @@ document.querySelectorAll('.tabs button').forEach(function(b){
     if(b.dataset.t==='order') loadOrder();
     if(b.dataset.t==='mine')  loadMine();
     if(b.dataset.t==='conf')  loadConf();
+    if(b.dataset.t==='sum')   loadSum();
     /* 離開填寫頁＝手上的事告一段落，這時候更新不會弄丟東西。 */
     tryUpdate();
-  });
+  }
 });
 
 /* ── 行事曆 ────────────────────────────────────────
@@ -9882,7 +9887,9 @@ var ROLE_TABS_ = {
      「客戶」與「我開的單」收進行事曆：客戶變成篩選列、我開的單變成一個開關。
      ⚠ p-order／p-mine 的程式沒有刪掉——那兩支還有副理在用的路徑，
        而且萬一要退回來只要把 'order','mine' 加回這一行。 */
-  '行政':   ['cal'],
+  /* 總表是行政自己掃全月用的（牟佑彬 2026-10-04）：
+     誰還沒配人、特助後來派了誰、文件哪天還。資料跟行事曆同一份。 */
+  '行政':   ['cal', 'sum'],
   '特助':   ['cal', 'conf'],
   '副理':   ['cal', 'new', 'track', 'follow', 'stat', 'conf'],
   '總經理': ['cal', 'new', 'track', 'follow', 'stat', 'conf']
@@ -9891,9 +9898,29 @@ var ROLE_TABS_ = {
    ⛔ 「出事」的紅要跟主色分開，不然兩種紅混在一起誰都看不出差別——
       所以 --bad-* 一起改成橘紅，只用在真的出事的地方。
    ⚠ 掛在 body 上，不是每個元件各自改。app.css 的 body.adm 那一段就是全部。 */
+/* 總表的圖示：橫線清單。24 格、線寬 1.75、圓頭圓角，跟其他分頁同一套。 */
+var SUM_IC_ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+  ' stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M9 6.4h10M9 12h10M9 17.6h10"/>' +
+  '<path d="M4.6 6.4h.01M4.6 12h.01M4.6 17.6h.01"/></svg>';
+
+/* 行政的「行程總表」分頁。
+   ⚠ 用注入的，不寫進 Service.html——那是後端檔，改它要重新部署、吃版本額度。
+     planModal 的行政欄位也是同一個理由（見 planAdmBits）。 */
+function sumBits(){
+  if($('p-sum')) return;
+  var cal = $('p-cal');
+  if(!cal) return;
+  cal.insertAdjacentHTML('afterend', '<div class="pane" id="p-sum"></div>');
+  var cb = document.querySelector('.tabs button[data-t=cal]');
+  if(cb) cb.insertAdjacentHTML('afterend',
+    '<button data-t="sum">' + SUM_IC_ + '<span>總表</span></button>');
+}
+
 function applyRoleSkin(){
   var adm = (STAFF_ROLE === '行政');
   document.body.classList.toggle('adm', adm);
+  if(adm) sumBits();            // 要在 applyRoleTabs 挑分頁之前就生出來
   /* ⚠ 紅色只給行政；但「那一頁是改行程、不是填紀錄」**行政與特助都要**。
      特助一樣不跑外勤、不填服務紀錄，點進去落到填寫頁同樣會誤存
      （牟佑彬 2026-10-03）。所以兩個 class 的範圍故意不一樣。 */
@@ -10299,6 +10326,225 @@ function dpRestore(k){
     dpTodoDefaults();                             // 事由已經貼回去了，預設要重算
   }
 }
+/* ══ 行政的行程總表（牟佑彬 2026-10-04）══════════════════════════
+   他要的是「一眼掃完」：哪幾趟還沒配人、特助後來派了誰、文件哪天還、
+   還有有沒有哪一家整個月被忘記。
+
+   ⛔ 資料跟行事曆**同一份**（CAL_CACHE），不另外去抓。
+      另外抓的話兩邊會對不起來，而且多打兩次後端。
+   ⚠ 固定看「這個月 ＋ 下個月」。行政是往前排的，看過去意義不大；
+      要查舊的用放大鏡搜尋。
+   ⛔ 文件那一欄是**用關鍵字猜的**——系統目前沒有「文件」這個欄位，
+      收還是打在交代清單的自由文字裡（例如「跟王 收居留證」）。
+      所以它會漏，不可以當成完整清單。要真的管得住，
+      交代那一條要多一個「這是要收／還的文件」的勾（待他決定）。 */
+var SUM_F = 'all';
+var SUM_S = 'date';
+var SUM_MINE = true;
+var SUM_DOC_ = /\u8b49|\u8b77\u7167|\u6587\u4ef6|\u6263\u7e73|\u7c3d\u7f72|\u6b78\u9084/;
+
+function sumMonths_(){
+  var d = new Date(), y = d.getFullYear(), m = d.getMonth();
+  function k(yy, mm){ if(mm > 11){ yy++; mm -= 12; } return yy + '-' + ('0' + (mm + 1)).slice(-2); }
+  return [k(y, m), k(y, m + 1)];
+}
+function sumOwn_(){
+  return PRESETS.filter(function(c){ return ADMIN_OF[c.c] === STAFF_NAME; });
+}
+function sumRows_(){
+  var out = [];
+  sumMonths_().forEach(function(m){
+    (CAL_CACHE[m] || []).forEach(function(r){ out.push(r); });
+  });
+  var own = sumOwn_();
+  if(SUM_MINE && own.length){
+    var mine = {};
+    own.forEach(function(c){ mine[c.c] = 1; });
+    out = out.filter(function(r){ return mine[r.client]; });
+  }
+  return out;
+}
+function sumDoc_(r){
+  var t = (r.todo || []).map(function(x){ return x.t || x; })
+            .filter(function(x){ return SUM_DOC_.test(x); });
+  if(!t.length) return null;
+  return { tx: t[0], back: /\u9084/.test(t.join('')) };
+}
+function sumCrew_(r){
+  if(r.crew) return ['', r.crew];
+  if(r.sug)  return ['sug', '\u5efa\u8b70 ' + r.sug];
+  return ['none', '\u9084\u6c92\u914d\u4eba'];
+}
+/* \u26d4 \u56de\u5b8c\u6574\u7684\u985e\u5225\u540d\uff0c\u4e0d\u8981\u5728\u6a23\u677f\u88e1\u62fc 's-'+x\u2014\u2014
+   \u6aa2\u67e5\u5668\u53ea\u770b\u5f97\u5230 's-'\uff0c\u6703\u8aa4\u5831\u300c\u7528\u5230\u4e86\u4f46\u4e00\u884c\u6a23\u5f0f\u90fd\u6c92\u6709\u300d\u3002 */
+function sumSt_(r){
+  if(r.status === '\u5df2\u5b8c\u6210') return ['s-done', '\u5df2\u5b8c\u6210'];
+  if(r.status === '\u53d6\u6d88')       return ['s-cancel', '\u53d6\u6d88'];
+  if(r.crew)                            return ['s-ok', '\u5df2\u78ba\u8a8d'];
+  return ['s-pre', '\u9810\u6392'];
+}
+var SUM_FILT_ = [
+  ['all',    '\u5168\u90e8',           function(){ return true; }],
+  ['pre',    '\u9810\u6392',           function(r){ return r.status === '\u9810\u6392' && !r.crew; }],
+  ['ok',     '\u5df2\u78ba\u8a8d',     function(r){ return r.status === '\u9810\u6392' && !!r.crew; }],
+  ['done',   '\u5df2\u5b8c\u6210',     function(r){ return r.status === '\u5df2\u5b8c\u6210'; }],
+  ['nobody', '\u9084\u6c92\u914d\u4eba', function(r){ return r.status === '\u9810\u6392' && !r.crew && !r.sug; }],
+  ['doc',    '\u6709\u6587\u4ef6',     function(r){ return !!sumDoc_(r); }]
+];
+
+/* 星期幾與「10 月 3 日（六）」 */
+function wdOf_(d){
+  var p = String(d).split('-');
+  if(p.length !== 3) return '';
+  return '\u65e5\u4e00\u4e8c\u4e09\u56db\u4e94\u516d'
+    .charAt(new Date(+p[0], +p[1] - 1, +p[2]).getDay());
+}
+function sumDayLabel_(d){
+  var p = String(d).split('-');
+  if(p.length !== 3) return d;
+  return (+p[1]) + ' \u6708 ' + (+p[2]) + ' \u65e5\uff08' + wdOf_(d) + '\uff09';
+}
+
+function loadSum(force){
+  var box = $('p-sum');
+  if(!box) return;
+  var ms = sumMonths_();
+  var need = ms.filter(function(m){
+    return force || !CAL_CACHE[m] || (Date.now() - (CAL_CACHE_AT[m] || 0)) > CAL_TTL;
+  });
+  if(!need.length){ drawSum(); return; }
+  if(ms.some(function(m){ return CAL_CACHE[m]; })) drawSum();
+  else box.innerHTML = '<div class="mid" style="padding:26px">\u8f09\u5165\u4e2d\u2026</div>';
+  var left = need.length;
+  need.forEach(function(m){
+    google.script.run
+      .withSuccessHandler(function(r){
+        CAL_CACHE[m] = r.rows || [];
+        CAL_CACHE_AT[m] = Date.now();
+        if(!CREW.length) CREW = r.crew || [];
+        if(--left === 0){ drawSum(); refreshed(); }
+      })
+      .withFailureHandler(function(e){
+        if(--left === 0){ drawSum(); refreshed(); }
+        toast(e.message, true);
+      })
+      .listSchedule(CODE, m);
+  });
+}
+
+function drawSum(){
+  var box = $('p-sum');
+  if(!box) return;
+  var all = sumRows_();
+  var f = SUM_FILT_.filter(function(x){ return x[0] === SUM_F; })[0] || SUM_FILT_[0];
+  var rows = all.filter(f[2]).slice();
+
+  if(SUM_S === 'date') rows.sort(function(a, b){
+    return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+  if(SUM_S === 'client') rows.sort(function(a, b){
+    return String(a.client).localeCompare(String(b.client), 'zh-Hant') ||
+           (a.date < b.date ? -1 : 1); });
+  if(SUM_S === 'status') rows.sort(function(a, b){
+    var o = { '\u9810\u6392': 0, '\u5df2\u5b8c\u6210': 1, '\u53d6\u6d88': 2 };
+    return ((o[a.status] || 0) - (o[b.status] || 0)) || (a.date < b.date ? -1 : 1); });
+
+  var own = sumOwn_();
+  var h = '<div class="sumhd"><h3>\u884c\u7a0b\u7e3d\u8868<s>' +
+    esc(sumMonths_().join(' \u8207 ')) + '\u3000\u5171 ' + all.length + ' \u7b46</s></h3></div>';
+
+  h += '<div class="sumf">' + SUM_FILT_.map(function(x){
+    return '<button type="button" data-sf="' + x[0] + '"' +
+      (x[0] === SUM_F ? ' class="on"' : '') + '>' + esc(x[1]) +
+      '<em>' + all.filter(x[2]).length + '</em></button>';
+  }).join('') + '</div>';
+
+  h += '<div class="sumbar"><b>' + esc(f[1]) + ' ' + rows.length + ' \u7b46</b>' +
+    (own.length
+      ? '<button type="button" class="dpsm" id="sumMine">' +
+        (SUM_MINE ? ('\u53ea\u770b\u6211\u7684 ' + own.length + ' \u5bb6')
+                  : ('\u5168\u90e8 ' + PRESETS.length + ' \u5bb6')) + '</button>'
+      : '') +
+    '<span class="sp"></span><span class="sumsort">' +
+    [['date', '\u4f9d\u65e5\u671f'], ['client', '\u4f9d\u5ba2\u6236'],
+     ['status', '\u4f9d\u72c0\u614b']].map(function(k){
+      return '<button type="button" data-ss="' + k[0] + '"' +
+        (SUM_S === k[0] ? ' class="on"' : '') + '>' + k[1] + '</button>';
+    }).join('') + '</span></div>';
+
+  if(!own.length) h += '<p class="dpnote">\u300c\u884c\u653f\u8ca0\u8cac\u5ba2\u6236\u300d' +
+    '\u90a3\u5f35\u8868\u9084\u6c92\u586b\uff0c\u6240\u4ee5\u73fe\u5728\u5217\u7684\u662f' +
+    '<b>\u5168\u90e8\u7684\u884c\u7a0b</b>\u3002\u586b\u597d\u4e4b\u5f8c\u9019\u88e1\u5c31' +
+    '\u53ea\u6703\u770b\u5230\u4f60\u8ca0\u8cac\u7684\u90a3\u5e7e\u5bb6\u3002</p>';
+
+  if(!rows.length) h += '<div class="mid" style="padding:28px">' +
+    '\u9019\u500b\u689d\u4ef6\u4e0b\u6c92\u6709\u884c\u7a0b</div>';
+
+  var today = todayStr(), last = '';
+  rows.forEach(function(r){
+    var key = SUM_S === 'client' ? r.client : (SUM_S === 'status' ? r.status : r.date);
+    if(key !== last){
+      last = key;
+      h += '<div class="sumday' + (SUM_S === 'date' && r.date === today ? ' now' : '') + '">' +
+        esc(SUM_S === 'date' ? sumDayLabel_(r.date) : (key || '\u2014')) +
+        (SUM_S === 'date' && r.date === today ? '<u>\u4eca\u5929</u>' : '') + '</div>';
+    }
+    var cw = sumCrew_(r), st = sumSt_(r), dc = sumDoc_(r);
+    var p = String(r.date).split('-');
+    h += '<div class="sumrow' +
+      (cw[0] === 'none' && r.status === '\u9810\u6392' ? ' gap' : '') +
+      '" data-sday="' + esc(r.date) + '">' +
+      '<span class="sdt">' + (+p[1]) + '/' + (+p[2]) +
+        '<u>' + wdOf_(r.date) + '</u></span>' +
+      '<span class="scl">' + esc(r.client || '\u2014') + '</span>' +
+      '<span class="ssb">' + esc(r.topic || r.sub || '\uff08\u9084\u6c92\u586b\u4e8b\u7531\uff09') +
+        (r.workers ? ('\u3000\u00b7\u3000' + esc(r.workers)) : '') + '</span>' +
+      '<span class="srt"><span class="spill ' + st[0] + '">' + st[1] + '</span>' +
+        '<span class="scw ' + cw[0] + '">' + esc(cw[1]) + '</span></span>' +
+      (dc ? '<span class="stag"><span class="sdoc' + (dc.back ? ' back' : '') + '">' +
+        (dc.back ? '\u6587\u4ef6\u8981\u9084' : '\u6587\u4ef6') + '\u3000' +
+        esc(dc.tx) + '</span></span>' : '') +
+      '</div>';
+  });
+
+  /* 有客戶、但這兩個月一筆行程都沒有。這就是他要的「有沒有忘記排」。 */
+  var hasTrip = {};
+  all.forEach(function(r){ hasTrip[r.client] = 1; });
+  var pool = (SUM_MINE && own.length) ? own : PRESETS;
+  var miss = pool.filter(function(c){ return !hasTrip[c.c]; });
+  if(miss.length){
+    h += '<div class="summiss"><h4>\u9019 ' + miss.length +
+      ' \u5bb6\u9019\u5169\u500b\u6708\u9084\u6c92\u6709\u4efb\u4f55\u884c\u7a0b</h4>' +
+      '<div class="cs">' + miss.slice(0, 20).map(function(c){
+        return '<span>' + esc(c.c) + '</span>'; }).join('') +
+      (miss.length > 20
+        ? '<span class="more">\u2026\u9084\u6709 ' + (miss.length - 20) + ' \u5bb6</span>'
+        : '') + '</div></div>';
+  }
+  box.innerHTML = h;
+}
+
+/* 篩選、排序、只看我的、點一列跳回行事曆的那一天。
+   ⚠ 用委派綁在整頁上，畫面重畫之後不用重綁。 */
+document.addEventListener('click', function(e){
+  var t = e.target;
+  if(!t || !t.closest || !t.closest('#p-sum')) return;
+  var b = t.closest('[data-sf]');
+  if(b){ SUM_F = b.dataset.sf; drawSum(); return; }
+  var sb = t.closest('[data-ss]');
+  if(sb){ SUM_S = sb.dataset.ss; drawSum(); return; }
+  if(t.closest('#sumMine')){ SUM_MINE = !SUM_MINE; drawSum(); return; }
+  var row = t.closest('[data-sday]');
+  if(row){
+    /* 點一列跳到行事曆的那一天。
+       ⛔ 不要直接開表單——他在總表上是在「掃」，掃到可疑的那一筆才要進去看。 */
+    CAL_SEL = row.dataset.sday;
+    CAL_YM = CAL_SEL.slice(0, 7);
+    CAL_VIEW = 'day';
+    goTab('cal');
+    loadCal(CAL_YM);
+  }
+}, false);
+
 function loadOrder(){
   var box = $('p-order'), keep = dpSnap();
   var own = PRESETS.filter(function(c){ return ADMIN_OF[c.c] === STAFF_NAME; });
