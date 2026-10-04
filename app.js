@@ -10696,14 +10696,18 @@ function psBad_(rows){
       bad[r.id] = dpWho(r) + ' 那天請假'; return; }
     (by[dpWho(r)] = by[dpWho(r)] || []).push(r);
   });
-  /* ⛔ 只有「兩邊都壓了時間而且同一個時段」才算撞。未定時段是有彈性的。 */
+  /* ⛔ 只有「兩邊都壓了時間而且同一個時段」才算撞。未定時段是有彈性的。
+     ⚠ 一個時段撞幾件就記幾件，但**算卡住的時候算一組**——
+        牟佑彬 2026-10-04 看到「卡住 7」：上午五件撞在一起全標紅，
+        整片紅等於沒有訊號，她看不出要先修哪一個。 */
   Object.keys(by).forEach(function(w){
-    var seen = {};
+    var byS = {};
     by[w].filter(function(r){ return r.slot; }).forEach(function(r){
-      if(seen[r.slot]){
-        bad[r.id] = w + ' 那天' + r.slot + '有兩件';
-        bad[seen[r.slot].id] = bad[r.id];
-      } else seen[r.slot] = r;
+      (byS[r.slot] = byS[r.slot] || []).push(r); });
+    Object.keys(byS).forEach(function(sl){
+      if(byS[sl].length < 2) return;
+      var why = w + ' 那天' + sl + '有 ' + byS[sl].length + ' 件';
+      byS[sl].forEach(function(r){ bad[r.id] = why; });
     });
   });
   return bad;
@@ -10724,8 +10728,13 @@ function psGroups_(){
     (by[w] = by[w] || []).push(r);
   });
   return Object.keys(by).map(function(w){
-    return { who: w, rows: by[w],
-             bad: by[w].filter(function(r){ return bad[r.id]; }).length };
+    /* ⛔ 卡住算「幾件事要處理」，不是「幾筆被標到」。
+       上午五件撞在一起是**一件事**，標成 5 只會讓整片變紅
+       （牟佑彬 2026-10-04 指出）。 */
+    var why = {};
+    by[w].forEach(function(r){ if(bad[r.id]) why[bad[r.id]] = 1; });
+    return { who: w, rows: by[w], bad: Object.keys(why).length,
+             hit: by[w].filter(function(r){ return bad[r.id]; }).length };
   }).sort(function(a, b){
     return b.bad - a.bad || String(a.who).localeCompare(String(b.who), 'zh-Hant');
   });
@@ -10848,9 +10857,12 @@ function psZones_(g, bad){
   PS_ZONES_.forEach(function(z){
     var list = rows.filter(function(r){ return psZoneOf_(r) === z; });
     h += '<div class="pszone" data-z="' + esc(z) + '" data-who="' + esc(g.who) + '">' +
-      '<div class="pszh">' +
+      '<div class="pszh' + (z && list.length > 1 ? ' b' : '') + '">' +
         (z === '' ? '不壓時間（翻譯自己跟工廠約）' : z) +
-        '<s>' + list.length + ' 件</s></div>' +
+        /* ⚠ 同一個壓了時間的時段有兩件以上＝撞在一起，標題直接講。
+           這比每一塊都標「卡住」清楚——她要處理的是「這一區」，不是五個個別的。 */
+        '<s>' + list.length + ' 件' +
+        (z && list.length > 1 ? '　⚠ 撞在一起' : '') + '</s></div>' +
       (list.length
         ? list.map(function(r){ return psTrip_(r, bad[r.id]); }).join('')
         : '<div class="pszm">（空的，可以拖進來）</div>') +
@@ -10984,90 +10996,132 @@ function psSheet_(box){
 }
 
 
-/* ══ 長按拖曳排序（牟佑彬 2026-10-04）══════════════════════════
+/* ══ 長按拖曳排序：佔位法（牟佑彬 2026-10-04 說第一版不順）══════════
+   ⛔ 第一版為什麼會抖（我的錯）：元素用 translateY 跟著手指，
+      但**每換一次位置就把基準點重設**，所以每交換一次畫面就跳一下；
+      還疊了 scale，位移與縮放同時變更晃；而且拖到邊緣不會自動捲。
+
+   ✓ 佔位法：浮起來的那一塊改成 position:fixed **精準跟著手指**，
+     原位留一個同高的佔位格，要插到哪裡就把佔位格移到哪裡，放開就歸位。
+
    ⛔ 長按不可以跳出選取文字／放大鏡，不然拖不動。三道一起上：
       ① CSS user-select:none ＋ -webkit-touch-callout:none
       ② 進入拖曳後 touchmove preventDefault（{passive:false} 才擋得住）
       ③ contextmenu 直接擋掉
-   ⚠ 長按 380ms 才算拖曳；之前手指移超過 10px 就當成捲動放行。 */
+   ⚠ 長按 260ms 才算拖曳；之前手指移超過 10px 就當成捲動放行。 */
 document.addEventListener('contextmenu', function(e){
   if(e.target && e.target.closest && e.target.closest('.pstr')) e.preventDefault();
 });
 
-var PSD_ = null;      // { el, sy, lift }
+var PSD_ = null;   // { el, ph, dy, x, w }
+
+function psDragStop_(){
+  if(!PSD_) return;
+  var d = PSD_; PSD_ = null;
+  d.el.classList.remove('lift');
+  d.el.style.position = ''; d.el.style.left = ''; d.el.style.top = '';
+  d.el.style.width = ''; d.el.style.zIndex = ''; d.el.style.pointerEvents = '';
+  if(d.ph && d.ph.parentNode){
+    d.ph.parentNode.insertBefore(d.el, d.ph);
+    d.ph.parentNode.removeChild(d.ph);
+  }
+  [].forEach.call(document.querySelectorAll('.pszone'), function(q){
+    q.classList.remove('hit'); });
+  document.body.classList.remove('psdrag');
+  return d;
+}
+
+/* 手指靠近上下邊緣就自動捲。⚠ 不做的話拖到螢幕外就卡住了。 */
+function psAutoScroll_(y){
+  var h = window.innerHeight || 800;
+  if(y < 110) window.scrollBy(0, -Math.max(6, (110 - y) / 4));
+  else if(y > h - 110) window.scrollBy(0, Math.max(6, (y - (h - 110)) / 4));
+}
 
 function psDragBind(){
   [].forEach.call(document.querySelectorAll('#p-ps1 .pstr, #p-ps2 .pstr'), function(el){
     if(el._psd) return;
     el._psd = 1;
-    var timer = null;
+    var timer = null, sy = 0, sx = 0, armed = false;
 
+    function lift(y){
+      var r = el.getBoundingClientRect();
+      var ph = document.createElement('div');
+      ph.className = 'psph';
+      ph.style.height = r.height + 'px';
+      el.parentNode.insertBefore(ph, el);
+      el.style.position = 'fixed';
+      el.style.left = r.left + 'px';
+      el.style.width = r.width + 'px';
+      el.style.top = r.top + 'px';
+      el.style.zIndex = '60';
+      el.classList.add('lift');
+      document.body.classList.add('psdrag');
+      PSD_ = { el: el, ph: ph, dy: y - r.top };
+      if(navigator.vibrate) try { navigator.vibrate(12); } catch(e2){}
+    }
     function start(y, x){
-      PSD_ = { el: el, sy: y, sx: x, lift: false };
-      timer = setTimeout(function(){
-        if(!PSD_) return;
-        PSD_.lift = true;
-        el.classList.add('lift');
-        if(navigator.vibrate) try { navigator.vibrate(12); } catch(e2){}
-      }, 380);
+      sy = y; sx = x; armed = true;
+      timer = setTimeout(function(){ if(armed) lift(y); }, 260);
     }
     function move(y, x, ev){
-      if(!PSD_) return;
-      if(!PSD_.lift){
-        if(Math.abs(y - PSD_.sy) > 10 || Math.abs(x - PSD_.sx) > 10){
-          clearTimeout(timer); PSD_ = null;
+      if(!PSD_){
+        if(armed && (Math.abs(y - sy) > 10 || Math.abs(x - sx) > 10)){
+          clearTimeout(timer); armed = false;
         }
         return;
       }
       if(ev && ev.cancelable) ev.preventDefault();
-      el.style.transform = 'scale(1.02) translateY(' + (y - PSD_.sy) + 'px)';
+      el.style.top = (y - PSD_.dy) + 'px';
+      psAutoScroll_(y);
+
+      /* ⛔ 要先把自己關掉，不然 elementFromPoint 永遠打到自己身上。 */
+      el.style.pointerEvents = 'none';
       var over = document.elementFromPoint(x, y);
-      var z = over && over.closest ? over.closest('.pszone') : null;
+      el.style.pointerEvents = '';
+      if(!over || !over.closest) return;
+
+      var zone = over.closest('.pszone');
+      if(!zone) return;
       [].forEach.call(document.querySelectorAll('.pszone'), function(q){
-        q.classList.toggle('hit', q === z); });
-      var t = over && over.closest ? over.closest('.pstr') : null;
-      if(t && t !== el && t.parentNode === el.parentNode){
-        var b = t.getBoundingClientRect();
-        t.parentNode.insertBefore(el, (y < b.top + b.height / 2) ? t : t.nextSibling);
-        PSD_.sy = y;
-        el.style.transform = 'scale(1.02)';
+        q.classList.toggle('hit', q === zone); });
+
+      var row = over.closest('.pstr');
+      var ph = PSD_.ph;
+      if(row && row !== el && row !== ph){
+        var rr = row.getBoundingClientRect();
+        zone.insertBefore(ph, (y < rr.top + rr.height / 2) ? row : row.nextSibling);
+      } else if(!row && ph.parentNode !== zone){
+        zone.appendChild(ph);           // 拖進空的區塊
       }
     }
     function end(y, x){
-      clearTimeout(timer);
-      if(!PSD_){ return; }
-      var was = PSD_.lift;
-      PSD_ = null;
-      el.classList.remove('lift');
-      el.style.transform = '';
-      [].forEach.call(document.querySelectorAll('.pszone'), function(q){
-        q.classList.remove('hit'); });
-      if(!was) return;
+      clearTimeout(timer); armed = false;
+      if(!PSD_) return;
+      var zone = PSD_.ph.parentNode;
+      psDragStop_();
 
-      var over = document.elementFromPoint(x, y);
-      var zEl = over && over.closest ? over.closest('.pszone') : el.closest('.pszone');
-      if(!zEl) { psDraw(); return; }
       var id = el.dataset.id;
       var r = CAL_ROWS.filter(function(q){ return q.id === id; })[0];
-      if(!r) { psDraw(); return; }
+      if(!r || !zone){ psDraw(); return; }
 
-      var want = zEl.dataset.z;
+      var want = zone.dataset.z;
       var moved = (psZoneOf_(r) !== want);
-      if(moved){ r.slot = want; }
+      if(moved) r.slot = want;
 
-      /* 畫面上現在的先後就是新的順序——照 DOM 重新編號，再整天存一次。 */
-      var seen = {}, n = 0;
-      [].forEach.call(document.querySelectorAll(
-        '#' + (el.closest('#p-ps2') ? 'p-ps2' : 'p-ps1') + ' .pszone'), function(q){
-        [].forEach.call(q.querySelectorAll('.pstr'), function(t2){
-          var rr = CAL_ROWS.filter(function(x2){ return x2.id === t2.dataset.id; })[0];
-          if(rr && !seen[rr.id]){ seen[rr.id] = 1; rr.ord = ++n;
-            if(q.dataset.z !== undefined && rr.id === id) rr.slot = q.dataset.z; }
+      /* 畫面上現在的先後就是新的順序——照 DOM 重新編號。
+         ⛔ 只算這一個翻譯的，順序是一個人一組 1234。 */
+      var pane = el.closest('#p-ps2') ? '#p-ps2' : '#p-ps1';
+      var card = el.closest('.pspc');
+      var n = 0;
+      [].forEach.call(card.querySelectorAll('.pszone'), function(q){
+        [].forEach.call(q.querySelectorAll('.pstr'), function(t){
+          var rr = CAL_ROWS.filter(function(x2){ return x2.id === t.dataset.id; })[0];
+          if(rr){ rr.ord = ++n; if(t === el) rr.slot = q.dataset.z; }
         });
       });
       psDraw();
 
-      /* ⛔ 只存這一個翻譯的，不要整天——順序是一個人一組 1234。 */
       var mine = psMine_(r);
       if(moved){
         google.script.run
@@ -11081,18 +11135,15 @@ function psDragBind(){
     }
 
     el.addEventListener('touchstart', function(e){
+      if(e.target.closest('button')) return;
       var t = e.touches[0]; start(t.clientY, t.clientX); }, { passive: true });
     el.addEventListener('touchmove', function(e){
       var t = e.touches[0]; move(t.clientY, t.clientX, e); }, { passive: false });
     el.addEventListener('touchend', function(e){
       var t = e.changedTouches[0]; end(t.clientY, t.clientX); });
     el.addEventListener('touchcancel', function(){
-      clearTimeout(timer); PSD_ = null;
-      el.classList.remove('lift'); el.style.transform = '';
-      [].forEach.call(document.querySelectorAll('.pszone'), function(q){
-        q.classList.remove('hit'); });
-    });
-    /* 桌機也能拖，方便我驗證 */
+      clearTimeout(timer); armed = false; psDragStop_(); });
+    /* 桌機也能拖，方便驗證 */
     el.addEventListener('mousedown', function(e){
       if(e.target.closest('button')) return;
       start(e.clientY, e.clientX);

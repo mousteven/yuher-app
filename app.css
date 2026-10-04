@@ -3575,6 +3575,8 @@ body.filladm #admTodoBox{display:block}
 .pszh{display:flex;align-items:baseline;gap:7px;padding:1px 4px 6px;
   font-size:var(--t5);font-weight:800;color:var(--ink3)}
 .pszh s{text-decoration:none;margin-left:auto;font-weight:700;font-size:var(--t6)}
+/* 同一個壓了時間的時段有兩件以上＝撞在一起，標題直接講，比每一塊都標「卡住」清楚 */
+.pszh.b{color:var(--bad-ink)}
 .pszm{padding:6px 4px;font-size:var(--t5);color:var(--ink3)}
 
 /* ⛔ 可以拖的那一塊：長按不可以跳出選取文字／放大鏡，不然拖不動。
@@ -3586,8 +3588,15 @@ body.filladm #admTodoBox{display:block}
 .pstr:last-child{margin-bottom:0}
 .pstr.b{border-color:var(--bad-line);
   background:color-mix(in srgb,var(--bad-ink) 5%,var(--card))}
-.pstr.lift{box-shadow:0 10px 22px -8px rgba(10,14,20,.45);transform:scale(1.02);
-  border-color:var(--fill);cursor:grabbing;position:relative;z-index:3}
+/* 浮起來的那一塊：position:fixed 精準跟著手指。
+   ⛔ 不要再疊 scale——位移與縮放同時變看起來會晃（第一版的錯）。 */
+.pstr.lift{box-shadow:0 14px 28px -10px rgba(10,14,20,.5);
+  border-color:var(--fill);cursor:grabbing;opacity:.97;margin:0}
+/* 原位留一個同高的佔位格，要插到哪裡就把它移到哪裡 */
+.psph{border:1px dashed var(--fill);border-radius:var(--r1);margin-bottom:5px;
+  background:color-mix(in srgb,var(--fill) 8%,transparent)}
+/* 拖的時候整頁不要選字、不要跟著捲 */
+body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contain}
 .pstr .no{flex:none;width:21px;height:21px;border-radius:7px;background:var(--fill);
   color:var(--fill-ink);font-size:var(--t6);font-weight:800;
   display:flex;align-items:center;justify-content:center;margin-top:1px}
