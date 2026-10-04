@@ -11313,43 +11313,43 @@ function psAfter_(msg){
    ⚠ 那種連結最多 10 個點（終點＋中間 9 個 waypoints），超過要拆兩段。
    ⚠ 導航要**完整地址**（門牌），畫面上只顯示到路名——兩個都留著。 */
 
-/* 鄉鎮的相對位置。⛔ 示意，不是座標。
-   涵蓋名冊地址裡真的出現過的鄉鎮；沒收錄的落在中間，並標「位置不確定」。 */
-var RT_POS_ = {
-  /* 台中：海線在左、山線在右、北在上 */
-  '大甲區':[.13,.08], '大安區':[.09,.14], '外埔區':[.20,.13], '清水區':[.17,.21],
-  '梧棲區':[.11,.26], '后里區':[.31,.13], '神岡區':[.36,.23], '豐原區':[.44,.20],
-  '沙鹿區':[.18,.31], '大雅區':[.33,.32], '潭子區':[.45,.29], '新社區':[.62,.28],
-  '東勢區':[.72,.23], '龍井區':[.16,.40], '西屯區':[.33,.42], '北屯區':[.46,.39],
-  '北區':[.40,.45], '西區':[.37,.48], '東區':[.44,.49], '南區':[.39,.53],
-  '太平區':[.57,.47], '大肚區':[.22,.52], '南屯區':[.32,.52], '烏日區':[.38,.60],
-  '大里區':[.49,.56], '霧峰區':[.53,.67],
-  /* 彰化：台中西南 */
-  '伸港鄉':[.12,.56], '鹿港鎮':[.08,.64], '福興鄉':[.09,.70], '彰化市':[.23,.63],
-  '大村鄉':[.22,.73], '芬園鄉':[.40,.70], '溪州鄉':[.16,.86],
-  /* 南投：台中東南 */
-  '草屯鎮':[.56,.72], '南投市':[.60,.80], '名間鄉':[.57,.88], '集集鎮':[.66,.86],
-  '竹山鎮':[.62,.93], '埔里鎮':[.76,.63],
-  /* 遠的 */
-  '造橋鄉':[.30,.02], '頭份市':[.34,.01], '龜山區':[.76,.02], '文山區':[.86,.06],
-  '太保市':[.26,.95]
-};
-/* 不是台中的要標出來——跨縣市＝要留半天 */
-var RT_FAR_ = {
-  '伸港鄉':'彰化','鹿港鎮':'彰化','福興鄉':'彰化','彰化市':'彰化',
-  '大村鄉':'彰化','芬園鄉':'彰化','溪州鄉':'彰化',
-  '草屯鎮':'南投','南投市':'南投','名間鄉':'南投','集集鎮':'南投',
-  '竹山鎮':'南投','埔里鎮':'南投',
-  '造橋鄉':'苗栗','頭份市':'苗栗','龜山區':'桃園','文山區':'台北','太保市':'嘉義'
-};
+/* 地圖資料（縣市／鄉鎮輪廓＋鄉鎮中心點）。**用到才載**，125KB。
+   座標＝以 120.0E / 23.5N 為原點的公里平面，x 往東、y 往南 → 兩點相減約略是公里。
 
-function rtTown_(client){
-  var a = psAddrRaw_(client);
-  var m = /^.{2,3}[市縣](.{1,4}[區鄉鎮市])/.exec(a);
-  return m ? m[1] : '';
+   ⛔ 中心點是**鄉鎮的中心**，不是門牌位置。畫面上的「約 N 公里」是鄉鎮對鄉鎮的
+      直線距離，實際開車一定更遠——所以文案只寫「大約」，不給分鐘數。
+      要精確到門牌得做地理編碼，那要付錢（他還沒同意）。 */
+var TWM_ = null;
+var TWM_ERR_ = false;
+function twLoad_(then){
+  if(window.TWMAP){ TWM_ = window.TWMAP; then(); return; }
+  if(TWM_ERR_){ then(); return; }
+  if(twLoad_.busy){ twLoad_.wait.push(then); return; }
+  twLoad_.busy = 1; twLoad_.wait = [then];
+  var el = document.createElement('script');
+  el.src = 'https://mousteven.github.io/yuher-app/twmap.js?v=1';
+  el.crossOrigin = 'anonymous';
+  el.onload = function(){
+    TWM_ = window.TWMAP; twLoad_.busy = 0;
+    twLoad_.wait.forEach(function(f){ f(); }); twLoad_.wait = [];
+  };
+  el.onerror = function(){
+    TWM_ERR_ = true; twLoad_.busy = 0;
+    twLoad_.wait.forEach(function(f){ f(); }); twLoad_.wait = [];
+  };
+  document.head.appendChild(el);
 }
-function rtDist_(a, b){
-  var p = RT_POS_[a], q = RT_POS_[b];
+
+/* 地址 → 地圖上的鍵（縣市＋鄉鎮）。⚠ 名冊裡「臺」「台」兩種寫法都有，統一成「台」。 */
+function rtKey_(client){
+  var a = String(psAddrRaw_(client) || '').replace(/臺/g, '台');
+  var m = /^(.{2,3}[市縣])(.{1,4}[區鄉鎮市])/.exec(a);
+  return m ? (m[1] + m[2]) : '';
+}
+function rtPos_(key){ return (TWM_ && TWM_.p[key]) || null; }
+/* 兩個鄉鎮中心的直線距離（公里）。沒有座標就回 0，呼叫端要自己當成「不知道」。 */
+function rtDist_(ka, kb){
+  var p = rtPos_(ka), q = rtPos_(kb);
   if(!p || !q) return 0;
   return Math.sqrt(Math.pow(p[0]-q[0], 2) + Math.pow(p[1]-q[1], 2));
 }
@@ -11376,85 +11376,114 @@ function rtSelected_(){
 }
 function rtStops_(g){
   return psOrdered_(g.rows).map(function(r){
-    return { r: r, c: r.client, town: rtTown_(r.client),
+    var key = rtKey_(r.client);
+    var m = /^(.{2,3}[市縣])(.+)$/.exec(key) || ['', '', key];
+    var cty = m[1];
+    return { r: r, c: r.client, key: key, cty: cty, town: m[2],
+             far: (cty && cty !== '台中市') ? cty.replace(/[市縣]$/, '') : '',
              addr: psAddrRaw_(r.client), short: psAddrShort_(r.client) };
   });
 }
 /* 哪些鄉鎮有兩個以上的人要去。這就是他要的「重疊或在附近」。
-   ⚠ 只能用鄉鎮當代理——我們沒有真的距離。 */
+   ⚠ 比的是**同一個鄉鎮**，不是半徑幾公里——隔壁鄉鎮其實很近也不會被抓出來。 */
 function rtOverlap_(sel){
-  var byTown = {};
+  var by = {};
   sel.forEach(function(g){
-    rtStops_(g).forEach(function(s){
-      if(!s.town) return;
-      (byTown[s.town] = byTown[s.town] || []).push({ who: g.who, s: s });
+    rtStops_(g).forEach(function(st){
+      if(!st.key) return;
+      (by[st.key] = by[st.key] || []).push({ who: g.who, s: st });
     });
   });
-  return Object.keys(byTown).map(function(t){
+  return Object.keys(by).map(function(k){
     var who = {};
-    byTown[t].forEach(function(x){ who[x.who] = (who[x.who] || 0) + 1; });
-    return { town: t, who: who, n: Object.keys(who).length,
-             stops: byTown[t] };
+    by[k].forEach(function(x){ who[x.who] = (who[x.who] || 0) + 1; });
+    return { key: k, town: by[k][0].s.town, far: by[k][0].s.far,
+             who: who, n: Object.keys(who).length, stops: by[k] };
   }).filter(function(x){ return x.n >= 2; })
     .sort(function(a, b){ return b.stops.length - a.stops.length; });
 }
 
-/* 疊圖。sel 是選到的那幾個人，一人一條線一個顏色。
-   ⛔ 一個人的時候點上印 1234；多人的時候不印——點變小、字擠不下，
-      而且多人模式要看的是「誰跟誰重疊」，不是誰的第幾站。 */
-function rtMap_(sel){
-  var W = 100, H = 108, one = (sel.length === 1);
+/* ══ 地圖：真的縣市輪廓，可以兩指縮放、一指拖移 ═══════════════════
+   ⛔ 分兩層畫：輪廓那層只在換人的時候重畫，縮放時**只重畫上面那層**
+      （點、線、字）。368 個鄉鎮路徑每一幀重畫會卡。
+   ⛔ 輪廓用 vector-effect="non-scaling-stroke"，放大之後線才不會變粗。 */
+var RT_AR_ = 108 / 100;        // 高 ÷ 寬，跟 CSS 的 aspect-ratio 要一致
+var RT_VB = null;              // 現在看到的範圍 {x,y,w,h}，單位公里
+var RT_NOW = [];               // 現在選到的人，縮放時重畫要用
+
+function rtFit_(sel){
+  var xs = [], ys = [];
+  sel.forEach(function(g){
+    rtStops_(g).forEach(function(st){
+      var p = rtPos_(st.key); if(p){ xs.push(p[0]); ys.push(p[1]); } }); });
+  if(!xs.length) return { x: -60, y: -125, w: 160, h: 160 * RT_AR_ };
+  var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
+  var y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+  var w = Math.max(x1 - x0, 10), hh = Math.max(y1 - y0, 10);
+  var pad = Math.max(w, hh) * 0.18 + 5;
+  w += pad * 2; hh += pad * 2;
+  if(hh / w < RT_AR_) hh = w * RT_AR_; else w = hh / RT_AR_;
+  return { x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - hh / 2, w: w, h: hh };
+}
+
+/* 輪廓層：全台縣市 ＋ 這次會去到的那幾個縣市的鄉鎮界 */
+function rtBase_(sel){
+  if(!TWM_) return '';
+  var ctys = {};
+  sel.forEach(function(g){ rtStops_(g).forEach(function(st){
+    if(st.cty) ctys[st.cty] = 1; }); });
+  var h = '';
+  Object.keys(TWM_.t).forEach(function(k){
+    if(!ctys[k.slice(0, 3)]) return;
+    h += '<path d="' + TWM_.t[k] + '" class="tw"/>';
+  });
+  Object.keys(TWM_.c).forEach(function(k){
+    h += '<path d="' + TWM_.c[k] + '" class="cw"/>';
+  });
+  return h;
+}
+
+/* 點、線、字。縮放時只重畫這一層，字跟點的大小跟著縮放補回去 → 螢幕上大小固定。 */
+function rtOver_(sel){
+  if(!TWM_ || !RT_VB) return '';
+  var one = (sel.length === 1), vb = RT_VB;
+  var fs = vb.w / 26, rr = vb.w / 42;
   var hits = {};
-  rtOverlap_(sel).forEach(function(o){ hits[o.town] = o.n; });
+  rtOverlap_(sel).forEach(function(o){ hits[o.key] = o.n; });
 
-  var h = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
-    esc(sel.map(function(g){ return g.who; }).join('、')) + ' 那天的停靠順序示意圖">' +
-    '<defs><marker id="rtmk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" ' +
-      'markerHeight="4" orient="auto-start-reverse">' +
-      '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
-    '<rect x="2" y="2" width="' + (W-4) + '" height="' + (H-4) + '" rx="4" fill="none" ' +
-      'stroke="currentColor" stroke-opacity=".12"/>' +
-    '<text x="' + (W/2) + '" y="7" text-anchor="middle" font-size="3.4" ' +
-      'fill="currentColor" opacity=".3">北</text>' +
-    '<text x="5" y="' + (H/2) + '" font-size="3.4" fill="currentColor" opacity=".3">海</text>' +
-    '<text x="' + (W-7) + '" y="' + (H/2) + '" font-size="3.4" fill="currentColor" ' +
-      'opacity=".3">山</text>';
-
-  /* 重疊的鄉鎮先畫一圈光暈，線蓋上去才看得到底下有東西 */
-  Object.keys(hits).forEach(function(t){
-    var p = RT_POS_[t]; if(!p) return;
-    h += '<circle cx="' + (8 + p[0]*(W-16)).toFixed(1) + '" cy="' +
-      (6 + p[1]*(H-12)).toFixed(1) + '" r="8" fill="currentColor" fill-opacity=".1"/>';
+  var h = '';
+  Object.keys(hits).forEach(function(k){
+    var p = rtPos_(k); if(!p) return;
+    h += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (rr * 3).toFixed(2) +
+      '" fill="currentColor" fill-opacity=".13"/>';
   });
 
   sel.forEach(function(g, gi){
     var col = one ? null : RT_COL_[gi % RT_COL_.length];
     var pts = rtStops_(g).map(function(st){
-      var p = RT_POS_[st.town] || [.5, .5];
-      return { x: 8 + p[0]*(W-16), y: 6 + p[1]*(H-12), st: st, ok: !!RT_POS_[st.town] };
-    });
+      var p = rtPos_(st.key);
+      return p ? { x: p[0], y: p[1], st: st } : null;
+    }).filter(function(x){ return x; });
     if(pts.length > 1){
       h += '<path d="' + pts.map(function(p, i){
-          return (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join(' ') +
-        '" fill="none" stroke="' + (col || 'currentColor') + '" stroke-opacity="' +
-        (one ? '.42' : '.75') + '" stroke-width="' + (one ? 1 : 1.2) +
-        '" stroke-dasharray="2.4 1.8" marker-end="url(#rtmk)"/>';
+          return (i ? 'L' : 'M') + p.x + ' ' + p.y; }).join(' ') +
+        '" fill="none" stroke="' + (col || 'var(--fill)') + '" stroke-opacity="' +
+        (one ? '.8' : '.8') + '" stroke-width="' + (rr * 0.5).toFixed(2) +
+        '" stroke-dasharray="' + (rr * 1.1).toFixed(2) + ' ' + (rr * 0.8).toFixed(2) + '"/>';
     }
     pts.forEach(function(p, i){
-      var far = RT_FAR_[p.st.town];
       var fill = one
-        ? (far ? 'var(--bad-ink)'
-               : ({ '上午':'var(--warn-fill)', '下午':'var(--info-ink)' }[psZoneOf_(p.st.r)]
-                  || 'var(--fill)'))
+        ? (p.st.far ? 'var(--bad-ink)'
+             : ({ '上午':'var(--warn-fill)', '下午':'var(--info-ink)' }[psZoneOf_(p.st.r)]
+                || 'var(--fill)'))
         : col;
-      h += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' +
-        (one ? 4.2 : 2.8) + '" fill="' + fill + '"' +
-        (p.ok ? '' : ' stroke="currentColor" stroke-dasharray="1 1" stroke-width=".5"') +
-        '/>';
+      h += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' +
+        (one ? rr * 1.5 : rr * 1.05).toFixed(2) + '" fill="' + fill +
+        '" stroke="#fff" stroke-opacity=".85" stroke-width="' + (rr * 0.22).toFixed(2) + '"/>';
       if(one){
-        h += '<text x="' + p.x.toFixed(1) + '" y="' + (p.y+1.6).toFixed(1) + '" ' +
-          'text-anchor="middle" font-size="4.4" font-weight="800" fill="#fff">' +
-          (i+1) + '</text>';
+        h += '<text x="' + p.x + '" y="' + (p.y + fs * 0.33).toFixed(1) +
+          '" text-anchor="middle" font-size="' + (fs * 0.86).toFixed(2) +
+          '" font-weight="800" fill="#fff">' + (i + 1) + '</text>';
       }
     });
   });
@@ -11463,17 +11492,152 @@ function rtMap_(sel){
   var named = {};
   sel.forEach(function(g){
     rtStops_(g).forEach(function(st){
-      if(!st.town || named[st.town]) return;
-      named[st.town] = 1;
-      var p = RT_POS_[st.town] || [.5, .5];
-      h += '<text x="' + (8 + p[0]*(W-16)).toFixed(1) + '" y="' +
-        (6 + p[1]*(H-12) - (one ? 5.6 : 4.4)).toFixed(1) + '" text-anchor="middle" ' +
-        'font-size="3.6" font-weight="' + (hits[st.town] ? '800' : '700') +
-        '" fill="currentColor" opacity="' + (hits[st.town] ? '1' : '.72') + '">' +
+      if(!st.key || named[st.key]) return;
+      var p = rtPos_(st.key); if(!p) return;
+      named[st.key] = 1;
+      h += '<text x="' + p[0] + '" y="' + (p[1] - rr * 2).toFixed(1) +
+        '" text-anchor="middle" font-size="' + fs.toFixed(2) + '" font-weight="' +
+        (hits[st.key] ? '800' : '700') + '" fill="currentColor" opacity="' +
+        (hits[st.key] ? '1' : '.75') + '" paint-order="stroke" stroke="var(--card)" ' +
+        'stroke-width="' + (fs * 0.26).toFixed(2) + '" stroke-linejoin="round">' +
         esc(st.town) + '</text>';
     });
   });
-  return h + '</svg>';
+  return h;
+}
+
+/* 沒有座標的停靠點（名冊沒地址、或鄉鎮名怪怪的）要講出來，不可以安靜不畫。 */
+function rtNoPos_(sel){
+  var bad = [];
+  sel.forEach(function(g){ rtStops_(g).forEach(function(st){
+    if(!rtPos_(st.key)) bad.push(st.c); }); });
+  return bad;
+}
+
+function rtPaintOver_(){
+  var g = document.querySelector('#p-ps3 .rtsvg .ov');
+  if(g) g.innerHTML = rtOver_(RT_NOW);
+}
+function rtApplyVB_(){
+  var svg = document.querySelector('#p-ps3 .rtsvg');
+  if(!svg || !RT_VB) return;
+  svg.setAttribute('viewBox', RT_VB.x.toFixed(2) + ' ' + RT_VB.y.toFixed(2) + ' ' +
+    RT_VB.w.toFixed(2) + ' ' + RT_VB.h.toFixed(2));
+  rtPaintOver_();
+}
+/* 縮放。f 是倍率，(cx,cy) 是螢幕上的焦點（公里座標），焦點要固定不動。 */
+var RT_MINW_ = 3;
+var RT_MAXW_ = 460;
+function rtZoom_(f, cx, cy){
+  if(!RT_VB) return;
+  var w = Math.min(RT_MAXW_, Math.max(RT_MINW_, RT_VB.w / f));
+  f = RT_VB.w / w;
+  var hh = w * RT_AR_;
+  RT_VB = { x: cx - (cx - RT_VB.x) / f, y: cy - (cy - RT_VB.y) / f, w: w, h: hh };
+  rtApplyVB_();
+}
+
+function rtBind_(){
+  var box = document.querySelector('#p-ps3 .rtmap');
+  if(!box || box._rtb) return;
+  box._rtb = 1;
+  var svg = box.querySelector('.rtsvg');
+  function km(cx, cy){
+    var r = svg.getBoundingClientRect();
+    return { x: RT_VB.x + (cx - r.left) / r.width * RT_VB.w,
+             y: RT_VB.y + (cy - r.top) / r.height * RT_VB.h };
+  }
+  function gap(t){
+    return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
+  var st = null, raf = 0;
+  function paint(){ if(raf) return; raf = requestAnimationFrame(function(){
+    raf = 0; rtApplyVB_(); }); }
+
+  box.addEventListener('touchstart', function(e){
+    if(!RT_VB) return;
+    if(e.touches.length === 1){
+      st = { m: 1, x: e.touches[0].clientX, y: e.touches[0].clientY,
+             vb: { x: RT_VB.x, y: RT_VB.y, w: RT_VB.w, h: RT_VB.h } };
+    } else if(e.touches.length === 2){
+      var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      var my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      st = { m: 2, d: gap(e.touches), c: km(mx, my), mx: mx, my: my,
+             vb: { x: RT_VB.x, y: RT_VB.y, w: RT_VB.w, h: RT_VB.h } };
+    }
+  }, { passive: true });
+
+  box.addEventListener('touchmove', function(e){
+    if(!st || !RT_VB) return;
+    var r = svg.getBoundingClientRect();
+    if(st.m === 1 && e.touches.length === 1){
+      e.preventDefault();
+      RT_VB = { x: st.vb.x - (e.touches[0].clientX - st.x) / r.width * st.vb.w,
+                y: st.vb.y - (e.touches[0].clientY - st.y) / r.height * st.vb.h,
+                w: st.vb.w, h: st.vb.h };
+      paint();
+    } else if(st.m === 2 && e.touches.length === 2){
+      e.preventDefault();
+      var f = gap(e.touches) / (st.d || 1);
+      var w = Math.min(RT_MAXW_, Math.max(RT_MINW_, st.vb.w / f));
+      var hh = w * RT_AR_;
+      /* 焦點（兩指中間）在螢幕上的比例固定 → 那個點就不會跑掉 */
+      var px = (st.mx - r.left) / r.width, py = (st.my - r.top) / r.height;
+      RT_VB = { x: st.c.x - px * w, y: st.c.y - py * hh, w: w, h: hh };
+      paint();
+    }
+  }, { passive: false });
+
+  box.addEventListener('touchend', function(){ st = null; });
+  box.addEventListener('touchcancel', function(){ st = null; });
+
+  /* 桌機：滾輪縮放、拖曳平移（驗證用，手機不會走到這裡） */
+  box.addEventListener('wheel', function(e){
+    if(!RT_VB) return;
+    e.preventDefault();
+    var c = km(e.clientX, e.clientY);
+    rtZoom_(e.deltaY < 0 ? 1.18 : 1 / 1.18, c.x, c.y);
+  }, { passive: false });
+  box.addEventListener('mousedown', function(e){
+    if(!RT_VB || e.target.closest('button')) return;
+    var sx = e.clientX, sy = e.clientY;
+    var vb = { x: RT_VB.x, y: RT_VB.y, w: RT_VB.w, h: RT_VB.h };
+    var r = svg.getBoundingClientRect();
+    function mm(ev){
+      RT_VB = { x: vb.x - (ev.clientX - sx) / r.width * vb.w,
+                y: vb.y - (ev.clientY - sy) / r.height * vb.h, w: vb.w, h: vb.h };
+      paint();
+    }
+    function mu(){ document.removeEventListener('mousemove', mm);
+      document.removeEventListener('mouseup', mu); }
+    document.addEventListener('mousemove', mm);
+    document.addEventListener('mouseup', mu);
+  });
+
+  box.addEventListener('click', function(e){
+    var b = e.target.closest('[data-rz]'); if(!b || !RT_VB) return;
+    var z = b.dataset.rz;
+    if(z === 'fit'){ RT_VB = rtFit_(RT_NOW); rtApplyVB_(); return; }
+    var c = { x: RT_VB.x + RT_VB.w / 2, y: RT_VB.y + RT_VB.h / 2 };
+    rtZoom_(z === 'in' ? 1.6 : 1 / 1.6, c.x, c.y);
+  });
+}
+
+/* 畫整張圖。sel 換了才呼叫——縮放只走 rtApplyVB_。 */
+function rtPaint_(sel){
+  RT_NOW = sel;
+  var svg = document.querySelector('#p-ps3 .rtsvg');
+  if(!svg) return;
+  if(!TWM_){
+    var box = document.querySelector('#p-ps3 .rtmap');
+    if(box) box.innerHTML = '<div class="rtfail">' +
+      (TWM_ERR_ ? '地圖資料載不到（可能是沒有網路），下面的清單還是可以用'
+                : '地圖載入中…') + '</div>';
+    return;
+  }
+  RT_VB = rtFit_(sel);
+  svg.querySelector('.bs').innerHTML = rtBase_(sel);
+  rtApplyVB_();
+  rtBind_();
 }
 
 /* ⛔ 不給 origin → Google 從**現在的位置**開始導（他 2026-10-04 交代的）。 */
@@ -11517,8 +11681,19 @@ function drawRT(){
     ? '點名字可以多選，路線會疊在一起看'
     : '點第二個名字，就能看兩個人的路線有沒有重疊') + '</p>';
 
-  h += '<div class="rtmap">' + rtMap_(sel) +
-    '<div class="rtnote">位置是相對的示意，不是座標</div></div>';
+  /* ⛔ 骨架先放著，實際的圖在 box.innerHTML 之後由 rtPaint_ 填——
+     地圖資料是用到才載的，這裡可能還沒到。 */
+  var np = rtNoPos_(sel);
+  h += '<div class="rtmap"><svg class="rtsvg" role="img" aria-label="' +
+    esc(sel.map(function(g){ return g.who; }).join('、')) + ' 那天要跑的地方">' +
+    '<g class="bs"></g><g class="ov"></g></svg>' +
+    '<div class="rtz"><button type="button" data-rz="in" aria-label="放大">＋</button>' +
+    '<button type="button" data-rz="out" aria-label="縮小">−</button>' +
+    '<button type="button" data-rz="fit" class="f">看全部</button></div>' +
+    '<div class="rtnote">兩指可以縮放、一指可以拖。點標在**鄉鎮的中心**，不是門牌' +
+    (np.length ? '　·　' + np.length + ' 家沒有地址，圖上沒有畫（' +
+      esc(np.slice(0, 3).join('、')) + (np.length > 3 ? '…' : '') + '）' : '') +
+    '</div></div>';
 
   if(sel.length === 1){
     /* ── 一個人：照 1234 的停靠清單 ── */
@@ -11528,10 +11703,12 @@ function drawRT(){
     stops.forEach(function(st, i){
       if(i){
         var prev = stops[i-1];
-        var cross = (RT_FAR_[prev.town] || '台中') !== (RT_FAR_[st.town] || '台中');
+        var cross = prev.cty !== st.cty;
         if(cross) far++;
+        var dk = rtDist_(prev.key, st.key);
         h += '<div class="rthop' + (cross ? ' far' : '') + '">↓　' +
           esc(prev.town || '？') + ' → ' + esc(st.town || '？') +
+          (dk ? '　約 ' + (dk < 10 ? dk.toFixed(1) : Math.round(dk)) + ' 公里' : '') +
           (cross ? '　跨縣市' : '') + '</div>';
       }
       var z = psZoneOf_(st.r);
@@ -11543,13 +11720,17 @@ function drawRT(){
         '</span></span>' +
         '<span class="sl">' + esc(st.r.slot || '不壓') + '</span></div>';
     });
-    for(var k = 2; k < stops.length; k++){
-      var d0 = rtDist_(stops[k-2].town, stops[k].town);
-      var d1 = rtDist_(stops[k-2].town, stops[k-1].town);
+    var tot = 0;
+    for(var k = 1; k < stops.length; k++) tot += rtDist_(stops[k-1].key, stops[k].key);
+    for(var k2 = 2; k2 < stops.length; k2++){
+      var d0 = rtDist_(stops[k2-2].key, stops[k2].key);
+      var d1 = rtDist_(stops[k2-2].key, stops[k2-1].key);
       if(d1 > 0 && d0 < d1 * 0.6) back++;
     }
+    /* ⛔ 只寫「直線」。鄉鎮中心對鄉鎮中心，實際開車一定更遠，不要給分鐘數。 */
     h += '</div><div class="rtsum"><b>' + esc(g.who) + '</b> 這一天 ' +
       stops.length + ' 站' +
+      (tot ? '　·　直線約 ' + Math.round(tot) + ' 公里' : '') +
       (far ? '　·　<span class="w">跨縣市 ' + far + ' 次</span>' : '　·　都在同一個縣市') +
       (back ? '　·　<span class="w">看起來有 ' + back + ' 段折回頭</span>'
             : '　·　路線沒有明顯折返') + '</div>';
@@ -11569,7 +11750,7 @@ function drawRT(){
     }
     ov.forEach(function(o){
       h += '<div class="rtov"><div class="t">' + esc(o.town) +
-        (RT_FAR_[o.town] ? '<b class="far">' + esc(RT_FAR_[o.town]) + '</b>' : '') +
+        (o.far ? '<b class="far">' + esc(o.far) + '</b>' : '') +
         '<s>' + o.n + ' 個人</s></div>' +
         o.stops.map(function(x){
           return '<div class="r"><i style="background:' +
@@ -11588,9 +11769,12 @@ function drawRT(){
         ' 個鄉鎮兩個人都要去——看看能不能併給同一個人</span>' : '') + '</div>';
   }
   box.innerHTML = h;
+  rtPaint_(sel);
 }
 
 function loadRT(){
+  /* 地圖資料跟行程資料同時開始抓，誰先到都不影響另一邊。 */
+  twLoad_(function(){ if($('p-ps3') && $('p-ps3').innerHTML) rtPaint_(rtSelected_()); });
   if(!PS_DAY) PS_DAY = psTomorrow_();
   var m = PS_DAY.slice(0, 7);
   if(CAL_CACHE[m] && (Date.now() - (CAL_CACHE_AT[m] || 0)) <= CAL_TTL){

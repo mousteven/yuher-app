@@ -3728,9 +3728,28 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .rtsum .pp{display:inline-flex;align-items:center;gap:5px;margin-right:10px;font-weight:700}
 .rtsum .pp i{width:9px;height:9px;border-radius:50%;display:inline-block}
 
-.rtmap{border:1px solid var(--line);border-radius:var(--r2);background:var(--bg);
-  padding:6px;margin-bottom:10px}
-.rtmap svg{display:block;width:100%;height:auto}
+/* ⛔ aspect-ratio 要跟 app.js 的 RT_AR_（108/100）一致，
+   不然縮放的時候圖會被拉扁，而且兩指的焦點會跑掉。 */
+.rtmap{position:relative;border:1px solid var(--line);border-radius:var(--r2);
+  background:var(--bg);padding:6px;margin-bottom:10px;overflow:hidden;
+  touch-action:none;-webkit-user-select:none;user-select:none}
+.rtmap .rtsvg{display:block;width:100%;aspect-ratio:100/108;
+  background:var(--card);border-radius:calc(var(--r2) - 4px)}
+/* 輪廓：放大之後線不可以跟著變粗 */
+.rtmap .cw{fill:none;stroke:currentColor;stroke-opacity:.42;stroke-width:1.1;
+  vector-effect:non-scaling-stroke}
+.rtmap .tw{fill:currentColor;fill-opacity:.035;stroke:currentColor;stroke-opacity:.16;
+  stroke-width:.8;vector-effect:non-scaling-stroke}
+.rtz{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:5px}
+.rtz button{font:inherit;font-size:var(--t4);font-weight:800;cursor:pointer;
+  width:32px;height:32px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12);
+  display:flex;align-items:center;justify-content:center;padding:0}
+.rtz button.f{width:auto;height:26px;padding:0 9px;font-size:var(--t6)}
+/* 兩層各自的 currentColor：輪廓那層要淡，點與字那層要清楚 */
+.rtmap .bs{color:var(--ink3)}
+.rtmap .ov{color:var(--ink)}
+.rtfail{padding:26px 12px;text-align:center;font-size:var(--t5);color:var(--ink3)}
 .rtnote{font-size:var(--t6);color:var(--ink3);text-align:center;padding:4px 2px 1px}
 
 .rtlist{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
