@@ -3550,17 +3550,12 @@ body.filladm #admTodoBox{display:block}
 /* 一個翻譯一條 */
 .pspc{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
   margin-bottom:8px;overflow:hidden}
-.pspc.bad{border-color:var(--bad-line)}
 .pshdr{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;
   -webkit-tap-highlight-color:transparent}
 .pshdr b{font-size:.95rem;font-weight:800}
 .pshdr .lg{font-size:var(--t6);font-weight:800;color:var(--ink3);
   background:var(--line2);border-radius:999px;padding:1px 7px}
 .pshdr s{text-decoration:none;font-size:var(--t5);color:var(--ink3);font-weight:700}
-.pshdr .fl{margin-left:auto;font-size:var(--t6);font-weight:800;padding:2px 8px;
-  border-radius:999px;background:var(--ok-bg);color:var(--ok-ink);
-  border:1px solid var(--ok-line);white-space:nowrap}
-.pshdr .fl.b{background:var(--bad-bg);color:var(--bad-ink);border-color:var(--bad-line)}
 .psin{display:none;border-top:1px solid var(--line2);padding:4px 12px 12px}
 .pspc.open .psin{display:block}
 
@@ -3586,8 +3581,6 @@ body.filladm #admTodoBox{display:block}
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
   cursor:grab;transition:box-shadow .16s ease,transform .16s ease}
 .pstr:last-child{margin-bottom:0}
-.pstr.b{border-color:var(--bad-line);
-  background:color-mix(in srgb,var(--bad-ink) 5%,var(--card))}
 /* 浮起來的那一塊：position:fixed 精準跟著手指。
    ⛔ 不要再疊 scale——位移與縮放同時變看起來會晃（第一版的錯）。 */
 .pstr.lift{box-shadow:0 14px 28px -10px rgba(10,14,20,.5);
@@ -3605,8 +3598,6 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
   color:var(--fill-ink);font-size:var(--t6);font-weight:800;
   display:flex;align-items:center;justify-content:center}
 .pstr .nz .sl{font-size:9px;font-weight:800;color:var(--ink3);white-space:nowrap}
-.pstr.b .no{background:var(--bad-ink)}
-.pstr.b .nz .sl{color:var(--bad-ink)}
 .pstr .bd{flex:1;min-width:0}
 .pstr .c{font-size:var(--t4);font-weight:800;display:block}
 .pstr .t{font-size:var(--t5);color:var(--ink3);margin-top:1px;display:block}
@@ -3617,28 +3608,14 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .pstr .ad i{font-style:normal;flex:none;opacity:.55}
 .pstr .ad .far{color:var(--bad-ink);font-weight:800;margin-right:2px}
 .pstr .ad .non{opacity:.6;font-style:normal}
+/* 灰字註記：請假／說那天不行／語言對不上。**只寫事實，不做判斷** */
+.pstr .nt{display:block;font-size:var(--t6);color:var(--ink3);margin-top:5px}
 .pstr .mv{display:flex;gap:5px;margin-top:6px}
 .pstr .mv button{flex:1;font:inherit;font-size:var(--t6);font-weight:800;cursor:pointer;
   padding:6px 3px;border-radius:7px;border:1px solid var(--line);
   background:var(--card);color:var(--ink2);-webkit-tap-highlight-color:transparent}
 .pstr .gp{flex:none;width:20px;align-self:center;text-align:center;color:var(--ink3);
   font-size:1rem;line-height:1;letter-spacing:-1px}
-/* 卡住的那一塊直接寫原因，不要只寫「卡住」——原因有五種，
-   她看著整片紅問過「卡住的原因是什麼」（2026-10-04）。 */
-.pstr .f{flex:none;max-width:72px;text-align:right;font-size:var(--t6);font-weight:800;
-  color:var(--bad-ink);align-self:center;line-height:1.3}
-
-/* 卡住的那一塊＋四個動作 */
-.pswarn{background:var(--bad-bg);border:1px solid var(--bad-line);
-  border-radius:var(--r1);padding:10px 11px;margin-top:10px}
-.pswh{font-size:var(--t4);font-weight:800;color:var(--bad-ink);margin-bottom:7px}
-.pswl{font-size:var(--t5);font-weight:700;margin:8px 0 2px}
-.psact{display:grid;gap:6px;grid-template-columns:1fr 1fr}
-.psact button{font:inherit;font-size:var(--t5);font-weight:800;cursor:pointer;
-  padding:9px 5px;border-radius:var(--r1);border:1px solid var(--line);
-  background:var(--card);color:var(--ink);-webkit-tap-highlight-color:transparent}
-.psact button.p{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
-.psact button:active{transform:scale(.98)}
 
 .psok{width:100%;margin-top:10px;font:inherit;font-size:var(--t4);font-weight:800;
   cursor:pointer;padding:10px;border-radius:var(--r1);border:1px solid var(--line);

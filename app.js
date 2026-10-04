@@ -10688,57 +10688,17 @@ function psShift_(day, n){
    ⛔ 只寫「卡住」兩個字她看不出為什麼——原因有五種
       （撞時段、語言不對、請假、本人說不行、沒有人），
       牟佑彬 2026-10-04 看著整片紅問「卡住的原因是什麼」。 */
-/* 兩件行程至少要隔多久才不算撞。一趟工廠加上開車本來就不只一小時。
-   ⚠ 他覺得太鬆或太緊就改這個數字，只有這裡用到。 */
-var PS_GAP_ = 60;
-
-function psBad_(rows){
-  var bad = {}, by = {};
-  rows.forEach(function(r){
-    if(!dpWho(r)){
-      bad[r.id] = { why: '還沒有人', tag: '沒有人' }; return; }
-    if(r.decline){
-      bad[r.id] = { why: dpWho(r) + ' 說那天不行', tag: '他說不行' }; return; }
-    var lg = dpCrewLang(dpWho(r));
-    if(r.lang && lg && lg !== r.lang){
-      bad[r.id] = { why: dpWho(r) + ' 是' + lg + '文，這一場是' + r.lang + '文',
-                    tag: lg + '文 ≠ ' + r.lang + '文' }; return; }
-    if((LEAVE_[dpWho(r)] || []).indexOf(r.date) !== -1){
-      bad[r.id] = { why: dpWho(r) + ' 那天請假', tag: '請假' }; return; }
-    (by[dpWho(r)] = by[dpWho(r)] || []).push(r);
-  });
-  /* ⛔ 「同一個上午有三件」**不算撞**（牟佑彬 2026-10-04 問「撞在一起的原因是什麼？」）。
-     系統裡根本沒有「幾點」這筆資料——時段只有上午／下午／全天／未定，
-     所以同一個上午排三件只代表「那個上午很滿」，一個翻譯本來就跑得完。
-     標成紅色的結果是整片紅，等於沒有訊號。改掉。
-
-     ⚠ 唯一真的撞得到的是**全天**：全天就是整天都被佔走，
-        那天再排任何一件壓了時段的，兩件一定有一件跑不掉。
-     ⚠ 要真的抓「09:30 跟 10:00 撞到」，得先讓行政在開單時填得了時間——
-        那要動後端（時段那一欄本來就存得下 HH:mm），他還沒決定要不要做。 */
-  Object.keys(by).forEach(function(w){
-    var day = by[w].filter(function(r){ return r.slot; });
-    var full = day.filter(function(r){ return r.slot === '全天'; });
-    if(full.length && day.length > 1){
-      var why = w + ' 那天有「全天」的行程，又排了另外 ' + (day.length - 1) + ' 件';
-      day.forEach(function(r){ bad[r.id] = { why: why, tag: '全天卡到' }; });
-      return;
-    }
-    /* ⛔ 只有**兩件都填了時間**才比得出撞不撞。
-       沒填時間的那一件本來就有彈性（他的原話），不可以算成衝突。
-       ⚠ 差不到 PS_GAP_ 分鐘就算撞——一趟工廠加上開車本來就不只一小時。 */
-    var timed = by[w].filter(function(r){ return psTimeOf_(r) !== null; })
-      .sort(function(a, b){ return psTimeOf_(a) - psTimeOf_(b); });
-    for(var i = 1; i < timed.length; i++){
-      var d = psTimeOf_(timed[i]) - psTimeOf_(timed[i-1]);
-      if(d >= PS_GAP_) continue;
-      var w2 = w + ' 那天 ' + timed[i-1].slot + ' 跟 ' + timed[i].slot +
-        ' 只差 ' + d + ' 分鐘';
-      bad[timed[i-1].id] = { why: w2, tag: '時間撞到' };
-      bad[timed[i].id] = { why: w2, tag: '時間撞到' };
-    }
-  });
-  return bad;
+/* 這一塊要不要補一句灰字。**只寫事實，不做判斷**——
+   撞不撞由特助自己看（牟佑彬 2026-10-04：「那個就由特助自己個人去判斷」）。
+   ⛔ 回傳空字串＝什麼都不寫。不要為了「有東西可寫」硬湊。 */
+function psNote_(r){
+  var w = dpWho(r);
+  if(!w) return '';
+  if(r.decline) return w + ' 說那天不行';
+  if((LEAVE_[w] || []).indexOf(r.date) !== -1) return w + ' 那天請假';
+  var lg = dpCrewLang(w);
+  if(r.lang && lg && lg !== r.lang) return w + ' 是' + lg + '文，這一場是' + r.lang + '文';
+  return '';
 }
 
 function psRows_(){
@@ -10750,78 +10710,18 @@ function psMine_(r){
   return psRows_().filter(function(x){ return dpWho(x) === w; });
 }
 function psGroups_(){
-  var rows = psRows_(), bad = psBad_(rows), by = {};
+  var rows = psRows_(), by = {};
   rows.forEach(function(r){
     var w = dpWho(r) || '（還沒有人）';
     (by[w] = by[w] || []).push(r);
   });
   return Object.keys(by).map(function(w){
-    /* ⛔ 卡住算「幾件事要處理」，不是「幾筆被標到」。
-       上午五件撞在一起是**一件事**，標成 5 只會讓整片變紅
-       （牟佑彬 2026-10-04 指出）。 */
-    var why = {};
-    by[w].forEach(function(r){ if(bad[r.id]) why[bad[r.id].why] = 1; });
-    return { who: w, rows: by[w], bad: Object.keys(why).length,
-             hit: by[w].filter(function(r){ return bad[r.id]; }).length };
+    return { who: w, rows: by[w] };
   }).sort(function(a, b){
-    return b.bad - a.bad || String(a.who).localeCompare(String(b.who), 'zh-Hant');
+    /* ⛔ 不再「有問題的排前面」——沒有誰有問題了。照名字排，
+       每天打開順序一樣，她才找得到人。 */
+    return String(a.who).localeCompare(String(b.who), 'zh-Hant');
   });
-}
-
-/* 誰可以頂。排序：能不能去 → 語別 → 順不順路 → 那天幾件。
-   ⚠ 「順不順路」現在只能用**同一個客戶**當代理——
-     客戶的鄉鎮在「專責翻譯_草稿」，正式名單那一欄還是空的。 */
-function psRank_(job){
-  var day = psRows_();
-  return CREW.map(function(n){
-    var lg = dpCrewLang(n);
-    var mine = day.filter(function(r){ return dpWho(r) === n && r.id !== job.id; });
-    var clash = job.slot ? mine.filter(function(r){ return r.slot === job.slot; }) : [];
-    var flex = mine.filter(function(r){ return !r.slot; }).length;
-    var same = mine.filter(function(r){ return r.client === job.client; }).length;
-    var off = (LEAVE_[n] || []).indexOf(job.date) !== -1;
-    var langNo = !!(job.lang && lg && lg !== job.lang);
-    var stop = off ? '那天請假'
-             : (clash.length ? ('那天' + job.slot + '已經有一件：' + clash[0].client) : '');
-    var bits = [lg ? (lg + '文') : '外務'];
-    if(same) bits.push('那天本來就要去這一家');
-    bits.push(mine.length
-      ? ('那天 ' + mine.length + ' 件' + (flex ? ('，' + flex + ' 件未定時段可以調') : ''))
-      : '那天還沒有行程');
-    var sc = 0;
-    if(stop) sc -= 1000;
-    if(langNo) sc -= 100;
-    sc += same * 20;
-    sc -= mine.length * 5;
-    return { n: n, stop: stop, langNo: langNo, bits: bits, sc: sc };
-  }).sort(function(a, b){
-    return b.sc - a.sc || a.n.localeCompare(b.n, 'zh-Hant');
-  });
-}
-
-
-/* 地址只留到路名（牟佑彬 2026-10-04）。
-   ⛔ 完整地址太長，一塊卡片會被它撐掉一行半。她要的是「順不順路」，
-      門牌號對那件事沒有幫助。
-   ⚠ 但縣市要留：台中以外的（南投、彰化、桃園…）標出來，
-     因為跨縣市就是「要留半天」的訊號。
-   ⚠ 資料來源是 PRESETS[].p——後端 svcClients_ 早就把
-     工作地址＋聯絡人＋電話串成那一欄送過來了，不用改後端。 */
-function psAddrRaw_(client){
-  var pz = presetOf(client);
-  return (pz && pz.p) ? String(pz.p).split('　')[0] : '';
-}
-function psAddrShort_(client){
-  var a = psAddrRaw_(client);
-  if(!a) return '';
-  var m = /^(.{2,3}[市縣])(.{1,4}[區鄉鎮市])(?:.{1,5}里)?(.*)$/.exec(a);
-  if(!m) return a;
-  var city = m[1], dist = m[2], rest = m[3] || '';
-  var r = /^(.*?[路街道])((?:[一二三四五六七八九十\d０-９]+段)?)/.exec(rest);
-  var road = r ? (r[1] + (r[2] || '')) : rest.replace(/[\d０-９].*$/, '');
-  var far = (city !== '臺中市' && city !== '台中市');
-  return (far ? ('<b class="far">' + esc(city) + '</b>') : '') +
-    esc(dist) + '　' + esc(road);
 }
 
 /* 那天跑的順序：上午 → 下午／全天 → 不壓時間，各區內照存起來的 ord。
@@ -10876,11 +10776,11 @@ function psSaveOrder_(rows){
     .setScheduleOrder(CODE, list);
 }
 
-function psTrip_(r, why){
-  var ad = psAddrShort_(r.client);
+function psTrip_(r){
+  var ad = psAddrShort_(r.client), note = psNote_(r);
   /* ⚠ 時段標在編號下面。區塊標題雖然也寫了，但她看的是「這一塊」，
      而且全天會落在下午那一區，不標就看不出來（牟佑彬 2026-10-04）。 */
-  return '<div class="pstr' + (why ? ' b' : '') + '" data-id="' + esc(r.id) + '">' +
+  return '<div class="pstr" data-id="' + esc(r.id) + '">' +
     '<span class="nz"><span class="no">' + (r._no || '?') + '</span>' +
       '<span class="sl">' + esc(r.slot || '不壓') + '</span></span>' +
     '<span class="bd">' +
@@ -10889,65 +10789,46 @@ function psTrip_(r, why){
         (r.workers ? ('　·　' + esc(r.workers)) : '') + '</span>' +
       '<span class="ad"><i>◎</i>' +
         (ad || '<i class="non">名冊上沒有地址</i>') + '</span>' +
+      (note ? '<span class="nt">' + esc(note) + '</span>' : '') +
+      /* ⛔ 「改時間／換人／改天」原本只長在警告面板裡。面板拿掉了，
+         就得搬到每一塊自己身上——不然她只能動被標到的那幾件。 */
       '<span class="mv">' +
         '<button type="button" data-ps="zone" data-z="上午" data-id="' + esc(r.id) + '">↑ 上午</button>' +
         '<button type="button" data-ps="zone" data-z="下午" data-id="' + esc(r.id) + '">↓ 下午</button>' +
         '<button type="button" data-ps="zone" data-z="" data-id="' + esc(r.id) + '">不壓時間</button>' +
+      '</span>' +
+      '<span class="mv">' +
+        '<button type="button" data-ps="time" data-id="' + esc(r.id) + '">幾點</button>' +
+        '<button type="button" data-ps="pick" data-id="' + esc(r.id) + '">換人</button>' +
+        '<button type="button" data-ps="day" data-id="' + esc(r.id) + '">改天</button>' +
       '</span></span>' +
-    (why ? '<span class="f">' + esc(why.tag || '卡住') + '</span>'
-         : '<span class="gp">⠿</span>') +
+    '<span class="gp">⠿</span>' +
     '</div>';
 }
 
 /* 三個區塊。拖進哪一區就變成那個時段（他說直接改，不用再問一次）。 */
-function psZones_(g, bad){
+function psZones_(g){
   var rows = psOrdered_(g.rows), h = '';
   PS_ZONES_.forEach(function(z){
     var list = rows.filter(function(r){ return psZoneOf_(r) === z; });
-    /* ⚠ 標題只陳述「這一區幾件」，不要說「撞在一起」——
-       同一個上午三件不是撞，是那個上午很滿（牟佑彬 2026-10-04）。
-       三件以上才補一句「排得滿」，而且不標紅。 */
-    var nbad = list.filter(function(r){ return bad[r.id]; }).length;
+    /* ⚠ 標題只陳述「這一區幾件」。不講撞、不講滿——那是特助自己判斷的事。 */
     h += '<div class="pszone" data-z="' + esc(z) + '" data-who="' + esc(g.who) + '">' +
-      '<div class="pszh' + (nbad ? ' b' : '') + '">' +
+      '<div class="pszh">' +
         (z === '' ? '不壓時間（翻譯自己跟工廠約）' : z) +
-        '<s>' + list.length + ' 件' +
-        (z && list.length >= 3 ? '　排得滿' : '') + '</s></div>' +
+        '<s>' + list.length + ' 件</s></div>' +
       (list.length
-        ? list.map(function(r){ return psTrip_(r, bad[r.id]); }).join('')
+        ? list.map(function(r){ return psTrip_(r); }).join('')
         : '<div class="pszm">（空的，可以拖進來）</div>') +
       '</div>';
   });
   return h;
 }
-function psActs_(r){
-  return '<div class="psact">' +
-    '<button type="button" data-ps="time" data-id="' + esc(r.id) + '">改時間</button>' +
-    '<button type="button" class="p" data-ps="pick" data-id="' + esc(r.id) + '">換人</button>' +
-    '<button type="button" data-ps="day" data-id="' + esc(r.id) + '">改天</button>' +
-    '<button type="button" data-ps="flex" data-id="' + esc(r.id) + '">這件不動</button>' +
-    '</div>';
-}
-function psWarn_(g, bad){
-  var bs = g.rows.filter(function(r){ return bad[r.id]; });
-  if(!bs.length) return '';
-  var h = '';
-  var seen = {};
-  bs.forEach(function(r){
-    var w = bad[r.id].why;
-    if(!seen[w]){ seen[w] = 1; h += '<div class="pswh">⚠ ' + esc(w) + '</div>'; }
-    h += '<div class="pswl">' + (r._no ? (r._no + '. ') : '') + esc(r.client) +
-      '　' + esc(r.slot || '不壓時間') + '</div>' + psActs_(r);
-  });
-  return '<div class="pswarn">' + h + '</div>';
-}
 function psHead_(){
-  var gs = psGroups_(), nbad = gs.filter(function(g){ return g.bad; }).length;
+  var gs = psGroups_();
   return '<div class="pshd">' +
     '<button type="button" class="psnav" data-ps="prev">‹</button>' +
     '<span class="d"><b>' + esc(dpLabel(PS_DAY)) + '</b>' +
-      '<s>' + psRows_().length + ' 筆' +
-      (nbad ? ('　·　' + nbad + ' 位要你看') : '　·　都排好了') + '</s></span>' +
+      '<s>' + psRows_().length + ' 筆　·　' + gs.length + ' 位翻譯</s></span>' +
     '<button type="button" class="psnav" data-ps="next">›</button>' +
     '</div>' +
     (PS_DAY !== psTomorrow_()
@@ -10957,27 +10838,22 @@ function psHead_(){
 /* 甲：摺疊條。卡住的排前面，點開才看細節。 */
 function drawPS1(){
   var box = $('p-ps1'); if(!box) return;
-  var gs = psGroups_(), bad = psBad_(psRows_());
+  var gs = psGroups_();
   var h = psHead_();
   if(!gs.length) h += '<div class="mid" style="padding:30px">這一天還沒有預排的行程</div>';
   gs.forEach(function(g){
-    h += '<div class="pspc' + (g.bad ? ' bad' : '') +
-      (PS_OPEN === g.who ? ' open' : '') + '">' +
+    h += '<div class="pspc' + (PS_OPEN === g.who ? ' open' : '') + '">' +
       '<div class="pshdr" data-ps="open" data-who="' + esc(g.who) + '">' +
         '<b>' + esc(g.who) + '</b>' +
         (dpCrewLang(g.who) ? '<span class="lg">' + esc(dpCrewLang(g.who)) + '</span>' : '') +
-        '<s>' + g.rows.length + ' 件</s>' +
-        '<span class="fl' + (g.bad ? ' b' : '') + '">' +
-          (g.bad ? ('卡住 ' + g.bad) : '沒問題') + '</span></div>' +
-      '<div class="psin">' + psZones_(g, bad) + psWarn_(g, bad) +
-        (g.bad ? '' : '<button type="button" class="psok" data-ps="okall" data-who="' +
-          esc(g.who) + '">確認 ' + g.rows.length + ' 筆</button>') +
+        '<s>' + g.rows.length + ' 件</s></div>' +
+      '<div class="psin">' + psZones_(g) +
+        '<button type="button" class="psok" data-ps="okall" data-who="' +
+          esc(g.who) + '">確認 ' + g.rows.length + ' 筆</button>' +
       '</div></div>';
   });
-  var allOk = gs.filter(function(g){ return !g.bad; });
-  if(allOk.length) h += '<button type="button" class="psall" data-ps="okgood">' +
-    '沒問題的全部確認（' +
-    allOk.reduce(function(a, g){ return a + g.rows.length; }, 0) + ' 筆）</button>';
+  if(gs.length) h += '<button type="button" class="psall" data-ps="okgood">' +
+    '全部確認（' + psRows_().length + ' 筆）</button>';
   box.innerHTML = h;
   psSheet_(box);
 }
@@ -10985,7 +10861,7 @@ function drawPS1(){
 /* 戊：一人一頁，左右翻。 */
 function drawPS2(){
   var box = $('p-ps2'); if(!box) return;
-  var gs = psGroups_(), bad = psBad_(psRows_());
+  var gs = psGroups_();
   var h = psHead_();
   if(!gs.length){
     box.innerHTML = h + '<div class="mid" style="padding:30px">這一天還沒有預排的行程</div>';
@@ -10997,16 +10873,15 @@ function drawPS2(){
     '<button type="button" class="psnav" data-ps="pprev">‹</button>' +
     '<span class="m"><b>' + esc(g.who) + '</b>' +
       (dpCrewLang(g.who) ? '<span class="lg">' + esc(dpCrewLang(g.who)) + '</span>' : '') +
-      '<s>' + g.rows.length + ' 件　·　' +
-      (g.bad ? ('卡住 ' + g.bad) : '沒問題') + '</s></span>' +
+      '<s>' + g.rows.length + ' 件</s></span>' +
     '<button type="button" class="psnav" data-ps="pnext">›</button></div>' +
-    '<div class="pspc' + (g.bad ? ' bad' : '') + ' open"><div class="psin">' +
-      psZones_(g, bad) + psWarn_(g, bad) +
-      (g.bad ? '' : '<button type="button" class="psok" data-ps="okall" data-who="' +
-        esc(g.who) + '">確認 ' + g.rows.length + ' 筆</button>') +
+    '<div class="pspc open"><div class="psin">' +
+      psZones_(g) +
+      '<button type="button" class="psok" data-ps="okall" data-who="' +
+        esc(g.who) + '">確認 ' + g.rows.length + ' 筆</button>' +
     '</div></div>' +
     '<div class="psdots">' + gs.map(function(x, i){
-      return '<i class="' + (i === PS_CUR ? 'on ' : '') + (x.bad ? 'b' : '') +
+      return '<i class="' + (i === PS_CUR ? 'on' : '') +
         '" data-ps="dot" data-i="' + i + '"></i>';
     }).join('') + '</div>';
   box.innerHTML = h;
@@ -11320,8 +11195,7 @@ document.addEventListener('click', function(e){
     var gs = psGroups_();
     var list = (a === 'okall')
       ? (gs.filter(function(g){ return g.who === b.dataset.who; })[0] || {rows:[]}).rows
-      : gs.filter(function(g){ return !g.bad; })
-          .reduce(function(acc, g){ return acc.concat(g.rows); }, []);
+      : gs.reduce(function(acc, g){ return acc.concat(g.rows); }, []);
     if(!list.length) return;
     var left = list.length, n = 0, err = '';
     list.forEach(function(x){
@@ -11551,14 +11425,14 @@ function rtOver_(sel){
              : ({ '上午':'var(--warn-fill)', '下午':'var(--info-ink)' }[psZoneOf_(p.st.r)]
                 || 'var(--fill)'))
         : col;
-      h += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' +
-        (one ? rr * 1.5 : rr * 1.05).toFixed(2) + '" fill="' + fill +
-        '" stroke="#fff" stroke-opacity=".85" stroke-width="' + (rr * 0.22).toFixed(2) + '"/>';
-      if(one){
-        h += '<text x="' + p.x + '" y="' + (p.y + fs * 0.33).toFixed(1) +
+      /* ⛔ 多選的時候也要印 1234（牟佑彬 2026-10-04 特別交代）。
+         所以點不能縮小——縮小了數字就擠不進去。 */
+      h += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (rr * 1.5).toFixed(2) +
+        '" fill="' + fill + '" stroke="#fff" stroke-opacity=".85" stroke-width="' +
+        (rr * 0.22).toFixed(2) + '"/>' +
+        '<text x="' + p.x + '" y="' + (p.y + fs * 0.33).toFixed(1) +
           '" text-anchor="middle" font-size="' + (fs * 0.86).toFixed(2) +
           '" font-weight="800" fill="#fff">' + (i + 1) + '</text>';
-      }
     });
   });
 
@@ -11798,7 +11672,7 @@ function drawRT(){
   h += '<div class="rtwho">' + gs.map(function(x){
     var on = !!onName[x.who];
     return '<button type="button" data-rt="who" data-who="' + esc(x.who) + '"' +
-      (on ? ' class="on"' : (x.bad ? ' class="b"' : '')) +
+      (on ? ' class="on"' : '') +
       (on && sel.length > 1 ? ' style="background:' + onName[x.who] +
         ';border-color:' + onName[x.who] + '"' : '') + '>' +
       esc(x.who) + '<s>' + x.rows.length + '</s></button>'; }).join('') +
