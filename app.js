@@ -1814,6 +1814,11 @@ function todoBadge(r){
       '<span class="bar lg-'+esc(l)+'"></span>'+
       '<span class="b">'+
         '<span class="c4eye"><span class="sv">'+esc(r.topic || r.sub || '—')+'</span>'+
+        /* 掛了追蹤就要標出來（牟佑彬 2026-10-04）。
+           ⛔ 預排的卡是另外畫的一張，所以 card() 裡那個標籤它沒有，
+              他按了追蹤、畫面上什麼都沒變，只能回試算表才看得到。 */
+        (r.caseId ? '<span class="c4tk">◷ '+esc(SHORT_[r.caseKind] || r.caseKind || '追蹤')+
+          (r.caseN ? ' '+r.caseN+'/'+r.caseTotal : '')+'</span>' : '')+
         '<span class="c4pre">預排・還沒確認</span></span>'+
         '<span class="c4nm"><span class="n">'+esc(r.client)+'</span></span>'+
         (r.workers?'<span class="c4wk"><span class="c4ws">'+esc(r.workers)+'</span></span>':'')+
@@ -2069,7 +2074,11 @@ function cardMenuDo(a){
 
 /* 選單要的欄位跟右滑那個面板一樣，湊成同一個形狀就好，不要兩套 */
 function cardData(r){
-  return { rc: r.recCode || '', go: r.id || '', client: r.client || '',
+  /* ⚠ date 一定要帶。不帶的話後端用「今天」當開案日——
+     他 2026-10-04 在 10/7 的行程上按追蹤，開案日變成 10/4
+     （牟佑彬：「追蹤是以行程當天為追蹤，不應該變成是今日的日期」）。 */
+  return { rc: r.recCode || '', go: r.id || '', date: r.date || '',
+           client: r.client || '',
            target: r.target || '', workers: r.workers || '', lang: r.lang || '',
            big: r.big || '', sub: r.sub || '' };
 }
@@ -2943,13 +2952,30 @@ $('planSave').addEventListener('click', function(){
     }
   }
   var adm = (STAFF_ROLE === '行政');
-  var day = (adm && $('planDateIn')) ? $('planDateIn').value : CAL_SEL;
+  /* ⛔ 這一行是 10/7 行程被搬到 10/4 的兇手。
+     行政改單走的是下面的 updateSchedule，裡面送 date: day。
+     注入的 #planDateIn 只要有一次沒生出來（planAdmBits 是注入的，
+     openPlanEdit 第 2809 行也只在它存在時才填 r.date），
+     day 就變成 CAL_SEL ——**當時行事曆上選的那一天**，
+     於是整趟行程被無聲搬走，沒有任何提示。
+     改法：拿不到真的日期欄位就**整個不要送 date**（後端沒傳就不動）。 */
+  var dayIn = (adm && $('planDateIn')) ? $('planDateIn').value : '';
+  var day = dayIn || CAL_SEL;        // 新增行程還是要有一天
   var who = $('planCrew').value;
   var b=$('planSave'); b.disabled=true;
 
   /* 行政改既有的那一筆 */
   if(adm && PLAN_EDIT){
-    if(!askMoveDate(PLAN_EDIT, day)){ b.disabled = false; return; }
+    if(dayIn && !askMoveDate(PLAN_EDIT, dayIn)){ b.disabled = false; return; }
+    var patch = {
+      slot: $('planSlot').value, lang: lang,
+      big: $('planBig').value, sub: $('planSub').value,
+      topic: $('planBig').value + ' ／ ' + $('planSub').value,
+      memo: $('planTopic').value.trim(),
+      workers: picked.join('、'), sug: who,
+      todo: planTodoRows()
+    };
+    if(dayIn) patch.date = dayIn;        // 沒有日期欄位就不碰那一欄
     google.script.run
       .withSuccessHandler(function(res){
         b.disabled=false; PLAN_EDIT=''; $('planModal').style.display='none';
@@ -2958,14 +2984,7 @@ $('planSave').addEventListener('click', function(){
         calBust(); loadCal(null, true);
       })
       .withFailureHandler(function(e){ b.disabled=false; toast(e.message,true); })
-      .updateSchedule(CODE, PLAN_EDIT, {
-        date: day, slot: $('planSlot').value, lang: lang,
-        big: $('planBig').value, sub: $('planSub').value,
-        topic: $('planBig').value + ' ／ ' + $('planSub').value,
-        memo: $('planTopic').value.trim(),
-        workers: picked.join('、'), sug: who,
-        todo: planTodoRows()
-      });
+      .updateSchedule(CODE, PLAN_EDIT, patch);
     return;
   }
 
@@ -6907,7 +6926,14 @@ function fillTripForm(r){
      雇主就空了；移工名單跟著雇主長，所以移工也一起沒了。
      客戶名單自己就知道每一家是工廠還是家庭雇主——用它當準。 */
   var pz = presetOf(r.client);
-  $('target').value = (pz && pz.t) ? pz.t : (r.target || '工廠');
+  /* ⛔ 「工廠宣導（一對多）」不是客戶的屬性，是**這一趟的做法**。
+     客戶名單只知道每一家是工廠還是家庭雇主，它不可以蓋掉一對多。
+     蓋掉的結果（牟佑彬 2026-10-04 連試兩次）：
+       改成一對多 → 存檔（試算表真的寫進去了）→ 再點進來又顯示「工廠」
+       → 再存一次就把一對多洗掉 → 看起來像「怎麼改都沒用」。
+     applyPreset() 早就用 !isBrief() 擋過同一件事，這裡漏了。 */
+  $('target').value = (/一對多/.test(r.target || '')) ? r.target
+                    : ((pz && pz.t) ? pz.t : (r.target || '工廠'));
   if(!$('target').value) $('target').value = '工廠';
   fillClients(); syncMode();
   setClientValue(r.client);
@@ -7180,6 +7206,8 @@ function pickNew(kind){
     .addCase(CODE, {
       kind: kind, client: d.client || '', workers: d.workers || '',
       lang: d.lang || '', big: d.big || '', sub: d.sub || '',
+      date: d.date || '',          // 空的話後端才用今天
+
       // 服務對象沒傳的話後端會用預設的「工廠」，家庭雇主就記錯了
       target: d.target || '',
       title: d.sub || '', recCode: d.rc || '',
