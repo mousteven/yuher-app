@@ -2949,6 +2949,7 @@ $('planSave').addEventListener('click', function(){
 
   /* 行政改既有的那一筆 */
   if(adm && PLAN_EDIT){
+    if(!askMoveDate(PLAN_EDIT, day)){ b.disabled = false; return; }
     google.script.run
       .withSuccessHandler(function(res){
         b.disabled=false; PLAN_EDIT=''; $('planModal').style.display='none';
@@ -3931,6 +3932,19 @@ var DIRTY_ = false;
 
 /* 沒訊號暫存之後：欄位留著、儲存鈕鎖住、旁邊給一顆「做下一家」。
    動了任何一格就解鎖——那代表他真的要改這一筆，不是要開新的。 */
+/* 改單要搬日期的時候問一句。回 false 就是他說不要。
+   ⛔ 兩條路都要用：點卡片進去改、左滑按「改」。
+      只擋一條等於沒擋。 */
+function askMoveDate(id, newDate){
+  var r = (CAL_ROWS || []).filter(function(x){ return x.id === id; })[0];
+  if(!r || !r.date || !newDate || r.date === newDate) return true;
+  return confirm(
+    '這一趟要從 ' + r.date + ' 搬到 ' + newDate + ' 嗎？\n\n' +
+    (r.client || '') + (r.workers ? ('　' + r.workers) : '') + '\n' +
+    (r.crew ? (r.crew + ' 手機上的這一筆會換到新的那一天。')
+            : (r.sug ? ('建議給 ' + r.sug + '，他看到的也會換天。') : '')));
+}
+
 var HOLD_ = false;
 function offlineHold(){
   HOLD_ = true;
@@ -9860,6 +9874,7 @@ function admSaveTrip(){
   });
   var big = wkItems.length ? wkItems[0].b : '';
   var sub = wkItems.length ? wkItems[0].s : '';
+  if(SCHED_ID && !askMoveDate(SCHED_ID, $('date').value)) return;
   var b = $('admSave');
   var isNew = !SCHED_ID;
   if(isNew && !clientVal()){ toast('請先選工廠／雇主', true); return; }
@@ -9906,6 +9921,8 @@ function admSaveTrip(){
     .withFailureHandler(function(e){
       b.disabled = false; b.textContent = '存檔變更'; toast(e.message, true); })
     .updateSchedule(CODE, SCHED_ID, {
+      /* ⛔ target 以前沒送，所以改成「一對多」按了沒反應。 */
+      target: $('target').value,
       date: $('date').value,
       sug: $('crew').value,
       workers: names.join('、'),
