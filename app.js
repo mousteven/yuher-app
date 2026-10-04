@@ -890,6 +890,9 @@ function syncMode(){
     });
     var sg = el.querySelector('[data-sig=worker]');
     if(sg) sg.style.display = b ? 'none' : '';         // 簽名在簽到表上
+    /* 宣導只留一張卡，「同上」沒有上一位可以複製、「移除」移掉就沒了 */
+    var hb = el.querySelector('.wkh > div');
+    if(hb) hb.style.display = b ? 'none' : '';
   });
   var h = $('workers').querySelector('.wkh b');
   if(h) h.textContent = b ? '宣導內容' : '移工 1';
@@ -2091,10 +2094,11 @@ function caseTag_(r){
 /* 卡片上那一行移工。一對多要講「這是整廠的場次」，不要只印一個人名。 */
 function cardWkLine_(r){
   var n = wkCount_(r);
-  if(isManyRow_(r)){
-    return '<span class="c4wk"><span class="c4ws">全廠宣導</span>'+
-      (n ? '<span class="c4cnt">'+n+' 人應到</span>' : '')+'</span>';
-  }
+  /* ⚠ 一對多不要報人數。翻譯那邊的宣導紀錄從頭到尾不提個別的人
+     （服務表上那一列就叫「宣導內容（一對多）」），
+     卡片報「1 人應到」只會讓人以為這一趟只有一個人
+     （牟佑彬 2026-10-04：「應到為什麼 1 人？」）。 */
+  if(isManyRow_(r)) return '<span class="c4wk"><span class="c4ws">全廠宣導</span></span>';
   if(!n) return '';
   return '<span class="c4wk"><span class="c4ws">'+esc(r.workers)+'</span>'+
     (n>1?'<span class="c4cnt">'+n+' 人</span>':'')+'</span>';
@@ -3251,8 +3255,13 @@ function addWorker(){
   initSig(d.querySelector('[data-sig=worker]'));
 }
 function renumber(){
+  /* ⛔ 這一行以前無條件寫「移工 N」，所以每次重建卡片，
+     syncMode() 設好的「宣導內容」就被蓋回去了——
+     行政點進一對多的行程，底下還是出現「移工 1」
+     （牟佑彬 2026-10-04：「一對多的下面為什麼還有出現一個移工的欄位？」）。 */
+  var b = isBrief();
   [].forEach.call($('workers').children, function(el,i){
-    el.querySelector('.wkh b').textContent='移工 '+(i+1); });
+    el.querySelector('.wkh b').textContent = (b && i===0) ? '宣導內容' : ('移工 '+(i+1)); });
 }
 $('addWk').addEventListener('click', addWorker);
 
@@ -7006,6 +7015,9 @@ function fillTripForm(r){
     }
   });
   renumber();
+  /* ⛔ 上面 syncMode() 跑在重建卡片**之前**，所以宣導模式套在舊卡片上，
+     重建完就沒了。卡片換過就要再套一次。 */
+  syncMode();
   /* 行政版：把交代事項填回下面那一塊（見 admFillBits）。 */
   if(document.body.classList.contains('filladm')){
     var tb = $('admTodo');
@@ -10116,7 +10128,7 @@ function dpCard(r, acts){
       /* 一對多要講「整廠的場次」，不要只印一個人名——
          這三張卡（翻譯的行事曆、預排、特助的派工台）要長得一樣。 */
       (isManyRow_(r)
-        ? '<div class="dpw">全廠宣導'+(wkCount_(r)?'　'+wkCount_(r)+' 人應到':'')+'</div>'
+        ? '<div class="dpw">全廠宣導</div>'
         : (r.workers?'<div class="dpw">'+esc(r.workers)+'</div>':''))+
       (r.memo?'<div class="dpw">'+esc(r.memo)+'</div>':'')+
       '<div class="dpm">'+dpLabel(r.date)+'　'+esc(r.slot||'未定時段')+'　'+
