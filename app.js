@@ -10127,7 +10127,10 @@ function applyRoleTabs(){
      所以把兩條路合成一條：翻譯用預設的五個，後面的程式只寫一次。
      ⚠ 以後要再加「某個角色才有的狀態」，就加在這條唯一的路上。 */
   var want = ROLE_TABS_[STAFF_ROLE] || ['cal', 'new', 'track', 'follow', 'stat'];
-  var btns = document.querySelectorAll('.tabs button');
+  /* ⛔ 只管有 data-t 的那些。行政那顆加號（#admAdd）故意沒有 data-t——
+     它不是分頁、不切 pane。以前這一行會把它算成「不在名單上」而藏起來，
+     於是加號生出來了卻看不見（2026-10-04 實測踩到）。 */
+  var btns = document.querySelectorAll('.tabs button[data-t]');
   [].forEach.call(btns, function(b){ b.hidden = (want.indexOf(b.dataset.t) === -1); });
   /* 只剩兩三顆的時候不要每顆撐到半個畫面——那看起來像壞掉。
      ⚠ 用 class 標記而不是改 .tabs button 的通則，
