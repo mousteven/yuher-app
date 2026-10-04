@@ -3563,16 +3563,52 @@ body.filladm #admTodoBox{display:block}
 .psin{display:none;border-top:1px solid var(--line2);padding:4px 12px 12px}
 .pspc.open .psin{display:block}
 
-.pstl{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid var(--line2);
-  align-items:baseline}
-.pstl:last-child{border-bottom:0}
-.pstl u{text-decoration:none;flex:none;font-size:var(--t5);font-weight:800;
-  color:var(--ink3);width:46px}
-.pstl.b u{color:var(--bad-ink)}
-.pstl .n{flex:1;min-width:0;font-size:var(--t4);font-weight:700}
-.pstl .n s{display:block;text-decoration:none;font-weight:600;color:var(--ink3);
-  font-size:var(--t5);margin-top:1px}
-.pstl .f{flex:none;font-size:var(--t6);font-weight:800;color:var(--bad-ink)}
+/* ── 三個區塊：上午／下午／不壓時間（牟佑彬 2026-10-04）────────
+   ⛔ 第三區原本叫「清掉時間」，他看不懂——「清掉？什麼時間？」。
+      它其實是**不綁上午也不綁下午，讓翻譯自己跟工廠約**，也就是他說的常態。
+      按鈕與區塊一律叫「不壓時間」，用同一個詞。 */
+.pszone{border:1px dashed var(--line);border-radius:var(--r1);padding:6px;
+  margin-bottom:8px;background:var(--bg);min-height:46px}
+.pszone.hit{border-color:var(--fill);border-style:solid;
+  background:color-mix(in srgb,var(--fill) 7%,var(--card))}
+.pszh{display:flex;align-items:baseline;gap:7px;padding:1px 4px 6px;
+  font-size:var(--t5);font-weight:800;color:var(--ink3)}
+.pszh s{text-decoration:none;margin-left:auto;font-weight:700;font-size:var(--t6)}
+.pszm{padding:6px 4px;font-size:var(--t5);color:var(--ink3)}
+
+/* ⛔ 可以拖的那一塊：長按不可以跳出選取文字／放大鏡，不然拖不動。
+   這裡是第一道（另外兩道在 app.js：touchmove preventDefault、擋 contextmenu）。 */
+.pstr{background:var(--card);border:1px solid var(--line);border-radius:var(--r1);
+  padding:8px 10px;margin-bottom:5px;display:flex;gap:9px;align-items:flex-start;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  cursor:grab;transition:box-shadow .16s ease,transform .16s ease}
+.pstr:last-child{margin-bottom:0}
+.pstr.b{border-color:var(--bad-line);
+  background:color-mix(in srgb,var(--bad-ink) 5%,var(--card))}
+.pstr.lift{box-shadow:0 10px 22px -8px rgba(10,14,20,.45);transform:scale(1.02);
+  border-color:var(--fill);cursor:grabbing;position:relative;z-index:3}
+.pstr .no{flex:none;width:21px;height:21px;border-radius:7px;background:var(--fill);
+  color:var(--fill-ink);font-size:var(--t6);font-weight:800;
+  display:flex;align-items:center;justify-content:center;margin-top:1px}
+.pstr.b .no{background:var(--bad-ink)}
+.pstr .bd{flex:1;min-width:0}
+.pstr .c{font-size:var(--t4);font-weight:800;display:block}
+.pstr .t{font-size:var(--t5);color:var(--ink3);margin-top:1px;display:block}
+/* 每一塊最後一行是工廠地址（只留到路名）。台中以外的縣市標紅——
+   跨縣市就是「要留半天」的訊號。 */
+.pstr .ad{font-size:var(--t5);color:var(--ink2);margin-top:4px;display:flex;
+  gap:5px;align-items:baseline}
+.pstr .ad i{font-style:normal;flex:none;opacity:.55}
+.pstr .ad .far{color:var(--bad-ink);font-weight:800;margin-right:2px}
+.pstr .ad .non{opacity:.6;font-style:normal}
+.pstr .mv{display:flex;gap:5px;margin-top:6px}
+.pstr .mv button{flex:1;font:inherit;font-size:var(--t6);font-weight:800;cursor:pointer;
+  padding:6px 3px;border-radius:7px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink2);-webkit-tap-highlight-color:transparent}
+.pstr .gp{flex:none;width:20px;align-self:center;text-align:center;color:var(--ink3);
+  font-size:1rem;line-height:1;letter-spacing:-1px}
+.pstr .f{flex:none;font-size:var(--t6);font-weight:800;color:var(--bad-ink);
+  align-self:center}
 
 /* 卡住的那一塊＋四個動作 */
 .pswarn{background:var(--bad-bg);border:1px solid var(--bad-line);

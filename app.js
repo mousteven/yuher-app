@@ -10748,13 +10748,97 @@ function psRank_(job){
   });
 }
 
+
+/* 地址只留到路名（牟佑彬 2026-10-04）。
+   ⛔ 完整地址太長，一塊卡片會被它撐掉一行半。她要的是「順不順路」，
+      門牌號對那件事沒有幫助。
+   ⚠ 但縣市要留：台中以外的（南投、彰化、桃園…）標出來，
+     因為跨縣市就是「要留半天」的訊號。
+   ⚠ 資料來源是 PRESETS[].p——後端 svcClients_ 早就把
+     工作地址＋聯絡人＋電話串成那一欄送過來了，不用改後端。 */
+function psAddrRaw_(client){
+  var pz = presetOf(client);
+  return (pz && pz.p) ? String(pz.p).split('　')[0] : '';
+}
+function psAddrShort_(client){
+  var a = psAddrRaw_(client);
+  if(!a) return '';
+  var m = /^(.{2,3}[市縣])(.{1,4}[區鄉鎮市])(?:.{1,5}里)?(.*)$/.exec(a);
+  if(!m) return a;
+  var city = m[1], dist = m[2], rest = m[3] || '';
+  var r = /^(.*?[路街道])((?:[一二三四五六七八九十\d０-９]+段)?)/.exec(rest);
+  var road = r ? (r[1] + (r[2] || '')) : rest.replace(/[\d０-９].*$/, '');
+  var far = (city !== '臺中市' && city !== '台中市');
+  return (far ? ('<b class="far">' + esc(city) + '</b>') : '') +
+    esc(dist) + '　' + esc(road);
+}
+
+/* 那天跑的順序：上午 → 下午／全天 → 不壓時間，各區內照存起來的 ord。
+   ⛔ 編號 1234 一直接續，不管上下午（他 2026-10-04 指定）。 */
+var PS_ZONES_ = ['上午', '下午', ''];
+function psZoneOf_(r){
+  if(r.slot === '上午') return '上午';
+  if(r.slot) return '下午';          // 下午與全天都歸下午那一區
+  return '';
+}
+function psOrdered_(rows){
+  var out = [];
+  PS_ZONES_.forEach(function(z){
+    rows.filter(function(r){ return psZoneOf_(r) === z; })
+      .sort(function(a, b){
+        return (a.ord || 9999) - (b.ord || 9999) ||
+               String(a.id).localeCompare(String(b.id));
+      })
+      .forEach(function(r){ out.push(r); });
+  });
+  out.forEach(function(r, i){ r._no = i + 1; });
+  return out;
+}
+/* 拖完存回去。⛔ 一次送一整天，不要一筆一筆打後端——
+   六七筆就要打六七次，她在手機上會等到以為當掉。 */
+function psSaveOrder_(rows){
+  var list = psOrdered_(rows).map(function(r){ return { id: r.id, ord: r._no }; });
+  if(!list.length) return;
+  google.script.run
+    .withSuccessHandler(function(){ toast('順序存好了'); })
+    .withFailureHandler(function(e){ toast(e.message, true); loadPS('ps1'); })
+    .setScheduleOrder(CODE, list);
+}
+
 function psTrip_(r, why){
-  return '<div class="pstl' + (why ? ' b' : '') + '">' +
-    '<u>' + esc(r.slot || '未定') + '</u>' +
-    '<span class="n">' + esc(r.client) +
-      '<s>' + esc(r.topic || r.sub || '—') +
-      (r.workers ? ('　·　' + esc(r.workers)) : '') + '</s></span>' +
-    (why ? '<span class="f">卡住</span>' : '') + '</div>';
+  var ad = psAddrShort_(r.client);
+  return '<div class="pstr' + (why ? ' b' : '') + '" data-id="' + esc(r.id) + '">' +
+    '<span class="no">' + (r._no || '?') + '</span>' +
+    '<span class="bd">' +
+      '<span class="c">' + esc(r.client) + '</span>' +
+      '<span class="t">' + esc(r.topic || r.sub || '—') +
+        (r.workers ? ('　·　' + esc(r.workers)) : '') + '</span>' +
+      '<span class="ad"><i>◎</i>' +
+        (ad || '<i class="non">名冊上沒有地址</i>') + '</span>' +
+      '<span class="mv">' +
+        '<button type="button" data-ps="zone" data-z="上午" data-id="' + esc(r.id) + '">↑ 上午</button>' +
+        '<button type="button" data-ps="zone" data-z="下午" data-id="' + esc(r.id) + '">↓ 下午</button>' +
+        '<button type="button" data-ps="zone" data-z="" data-id="' + esc(r.id) + '">不壓時間</button>' +
+      '</span></span>' +
+    (why ? '<span class="f">卡住</span>' : '<span class="gp">⠿</span>') +
+    '</div>';
+}
+
+/* 三個區塊。拖進哪一區就變成那個時段（他說直接改，不用再問一次）。 */
+function psZones_(g, bad){
+  var rows = psOrdered_(g.rows), h = '';
+  PS_ZONES_.forEach(function(z){
+    var list = rows.filter(function(r){ return psZoneOf_(r) === z; });
+    h += '<div class="pszone" data-z="' + esc(z) + '" data-who="' + esc(g.who) + '">' +
+      '<div class="pszh">' +
+        (z === '' ? '不壓時間（翻譯自己跟工廠約）' : z) +
+        '<s>' + list.length + ' 件</s></div>' +
+      (list.length
+        ? list.map(function(r){ return psTrip_(r, bad[r.id]); }).join('')
+        : '<div class="pszm">（空的，可以拖進來）</div>') +
+      '</div>';
+  });
+  return h;
 }
 function psActs_(r){
   return '<div class="psact">' +
@@ -10805,9 +10889,7 @@ function drawPS1(){
         '<s>' + g.rows.length + ' 件</s>' +
         '<span class="fl' + (g.bad ? ' b' : '') + '">' +
           (g.bad ? ('卡住 ' + g.bad) : '沒問題') + '</span></div>' +
-      '<div class="psin">' +
-        g.rows.map(function(r){ return psTrip_(r, bad[r.id]); }).join('') +
-        psWarn_(g, bad) +
+      '<div class="psin">' + psZones_(g, bad) + psWarn_(g, bad) +
         (g.bad ? '' : '<button type="button" class="psok" data-ps="okall" data-who="' +
           esc(g.who) + '">確認 ' + g.rows.length + ' 筆</button>') +
       '</div></div>';
@@ -10839,8 +10921,7 @@ function drawPS2(){
       (g.bad ? ('卡住 ' + g.bad) : '沒問題') + '</s></span>' +
     '<button type="button" class="psnav" data-ps="pnext">›</button></div>' +
     '<div class="pspc' + (g.bad ? ' bad' : '') + ' open"><div class="psin">' +
-      g.rows.map(function(r){ return psTrip_(r, bad[r.id]); }).join('') +
-      psWarn_(g, bad) +
+      psZones_(g, bad) + psWarn_(g, bad) +
       (g.bad ? '' : '<button type="button" class="psok" data-ps="okall" data-who="' +
         esc(g.who) + '">確認 ' + g.rows.length + ' 筆</button>') +
     '</div></div>' +
@@ -10884,7 +10965,129 @@ function psSheet_(box){
     '</div></div>');
 }
 
-function psDraw(){ drawPS1(); drawPS2(); }
+
+/* ══ 長按拖曳排序（牟佑彬 2026-10-04）══════════════════════════
+   ⛔ 長按不可以跳出選取文字／放大鏡，不然拖不動。三道一起上：
+      ① CSS user-select:none ＋ -webkit-touch-callout:none
+      ② 進入拖曳後 touchmove preventDefault（{passive:false} 才擋得住）
+      ③ contextmenu 直接擋掉
+   ⚠ 長按 380ms 才算拖曳；之前手指移超過 10px 就當成捲動放行。 */
+document.addEventListener('contextmenu', function(e){
+  if(e.target && e.target.closest && e.target.closest('.pstr')) e.preventDefault();
+});
+
+var PSD_ = null;      // { el, sy, lift }
+
+function psDragBind(){
+  [].forEach.call(document.querySelectorAll('#p-ps1 .pstr, #p-ps2 .pstr'), function(el){
+    if(el._psd) return;
+    el._psd = 1;
+    var timer = null;
+
+    function start(y, x){
+      PSD_ = { el: el, sy: y, sx: x, lift: false };
+      timer = setTimeout(function(){
+        if(!PSD_) return;
+        PSD_.lift = true;
+        el.classList.add('lift');
+        if(navigator.vibrate) try { navigator.vibrate(12); } catch(e2){}
+      }, 380);
+    }
+    function move(y, x, ev){
+      if(!PSD_) return;
+      if(!PSD_.lift){
+        if(Math.abs(y - PSD_.sy) > 10 || Math.abs(x - PSD_.sx) > 10){
+          clearTimeout(timer); PSD_ = null;
+        }
+        return;
+      }
+      if(ev && ev.cancelable) ev.preventDefault();
+      el.style.transform = 'scale(1.02) translateY(' + (y - PSD_.sy) + 'px)';
+      var over = document.elementFromPoint(x, y);
+      var z = over && over.closest ? over.closest('.pszone') : null;
+      [].forEach.call(document.querySelectorAll('.pszone'), function(q){
+        q.classList.toggle('hit', q === z); });
+      var t = over && over.closest ? over.closest('.pstr') : null;
+      if(t && t !== el && t.parentNode === el.parentNode){
+        var b = t.getBoundingClientRect();
+        t.parentNode.insertBefore(el, (y < b.top + b.height / 2) ? t : t.nextSibling);
+        PSD_.sy = y;
+        el.style.transform = 'scale(1.02)';
+      }
+    }
+    function end(y, x){
+      clearTimeout(timer);
+      if(!PSD_){ return; }
+      var was = PSD_.lift;
+      PSD_ = null;
+      el.classList.remove('lift');
+      el.style.transform = '';
+      [].forEach.call(document.querySelectorAll('.pszone'), function(q){
+        q.classList.remove('hit'); });
+      if(!was) return;
+
+      var over = document.elementFromPoint(x, y);
+      var zEl = over && over.closest ? over.closest('.pszone') : el.closest('.pszone');
+      if(!zEl) { psDraw(); return; }
+      var id = el.dataset.id;
+      var r = CAL_ROWS.filter(function(q){ return q.id === id; })[0];
+      if(!r) { psDraw(); return; }
+
+      var want = zEl.dataset.z;
+      var moved = (psZoneOf_(r) !== want);
+      if(moved){ r.slot = want; }
+
+      /* 畫面上現在的先後就是新的順序——照 DOM 重新編號，再整天存一次。 */
+      var seen = {}, n = 0;
+      [].forEach.call(document.querySelectorAll(
+        '#' + (el.closest('#p-ps2') ? 'p-ps2' : 'p-ps1') + ' .pszone'), function(q){
+        [].forEach.call(q.querySelectorAll('.pstr'), function(t2){
+          var rr = CAL_ROWS.filter(function(x2){ return x2.id === t2.dataset.id; })[0];
+          if(rr && !seen[rr.id]){ seen[rr.id] = 1; rr.ord = ++n;
+            if(q.dataset.z !== undefined && rr.id === id) rr.slot = q.dataset.z; }
+        });
+      });
+      psDraw();
+
+      var day = psRows_();
+      if(moved){
+        google.script.run
+          .withSuccessHandler(function(){ psSaveOrder_(day); })
+          .withFailureHandler(function(e){ toast(e.message, true); loadPS('ps1'); })
+          .updateSchedule(CODE, id, { slot: want });
+        toast(r.client + '　→　' + (want || '不壓時間'));
+      } else {
+        psSaveOrder_(day);
+      }
+    }
+
+    el.addEventListener('touchstart', function(e){
+      var t = e.touches[0]; start(t.clientY, t.clientX); }, { passive: true });
+    el.addEventListener('touchmove', function(e){
+      var t = e.touches[0]; move(t.clientY, t.clientX, e); }, { passive: false });
+    el.addEventListener('touchend', function(e){
+      var t = e.changedTouches[0]; end(t.clientY, t.clientX); });
+    el.addEventListener('touchcancel', function(){
+      clearTimeout(timer); PSD_ = null;
+      el.classList.remove('lift'); el.style.transform = '';
+      [].forEach.call(document.querySelectorAll('.pszone'), function(q){
+        q.classList.remove('hit'); });
+    });
+    /* 桌機也能拖，方便我驗證 */
+    el.addEventListener('mousedown', function(e){
+      if(e.target.closest('button')) return;
+      start(e.clientY, e.clientX);
+      function mm(ev){ move(ev.clientY, ev.clientX, ev); }
+      function mu(ev){ end(ev.clientY, ev.clientX);
+        document.removeEventListener('mousemove', mm);
+        document.removeEventListener('mouseup', mu); }
+      document.addEventListener('mousemove', mm);
+      document.addEventListener('mouseup', mu);
+    });
+  });
+}
+
+function psDraw(){ drawPS1(); drawPS2(); psDragBind(); }
 
 function loadPS(which){
   var box = $('p-' + which); if(!box) return;
@@ -10926,6 +11129,20 @@ document.addEventListener('click', function(e){
     PS_CUR = (PS_CUR + 1) % n2; psDraw(); return; }
   if(a === 'dot'){ PS_CUR = +b.dataset.i; psDraw(); return; }
   if(a === 'pick'){ PS_SHEET = id; psDraw(); return; }
+  if(a === 'zone'){
+    /* 搬到別的區塊＝改時段，**直接改不要再問**（他 2026-10-04 指定）。
+       ⚠ 畫面先動，不要等後端——她一天要搬好幾次。 */
+    var z = b.dataset.z;
+    if(r.slot === z){ return; }
+    r.slot = z;
+    psDraw();
+    google.script.run
+      .withSuccessHandler(function(){ psSaveOrder_(psRows_()); })
+      .withFailureHandler(function(e){ toast(e.message, true); loadPS('ps1'); })
+      .updateSchedule(CODE, id, { slot: z });
+    toast(r.client + '　→　' + (z || '不壓時間'));
+    return;
+  }
   if(a === 'close'){ PS_SHEET = null; psDraw(); return; }
 
   if(a === 'take'){
