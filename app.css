@@ -513,7 +513,10 @@ body.tabsbottom .tabs .badge{position:absolute;top:1px;left:calc(50% + 5px);
 
 /* 中間那顆加號。實心圓＋白色的加，是整條選單上唯一有顏色的東西，
    所以其他項目才敢一律用灰階——對比一拉開，主要動作自己會跳出來。 */
-body.tabsbottom .tabs button[data-t=new]{justify-content:center;gap:0;
+/* 行政那顆加號跟翻譯共用同一套樣式。
+   ⛔ 不要再寫一份——寫兩份以後只會改到一邊。 */
+body.tabsbottom .tabs button[data-t=new],
+body.tabsbottom .tabs #admAdd{justify-content:center;gap:0;
   padding-top:0;padding-bottom:0}
 body.tabsbottom .tabs button[data-t=new] span{display:none}
 body.tabsbottom .tabs .plus{display:block;position:relative;
@@ -526,7 +529,8 @@ body.tabsbottom .tabs .plus::after{content:"";position:absolute;left:50%;top:50%
   background:#fff;border-radius:var(--r0);transform:translate(-50%,-50%)}
 body.tabsbottom .tabs .plus::before{width:1rem;height:2.3px}
 body.tabsbottom .tabs .plus::after{width:2.3px;height:1rem}
-body.tabsbottom .tabs button[data-t=new]:active .plus{transform:scale(.9)}
+body.tabsbottom .tabs button[data-t=new]:active .plus,
+body.tabsbottom .tabs #admAdd:active .plus{transform:scale(.9)}
 body.tabsbottom .tabs button[data-t=new].on .plus{
   box-shadow:0 0 0 4px var(--brand-soft)}
 
@@ -539,6 +543,8 @@ body.tabsbottom .tabs button[data-t=stat]{order:5}
 /* 總表排在行事曆後面。⛔ 沒給 order 的話預設是 0，會跑到行事曆前面
    （行事曆是 order:1）——2026-10-04 實拍才發現。 */
 body.tabsbottom .tabs button[data-t=sum]{order:6}
+/* 加號要在行事曆與總表的正中間 */
+body.tabsbottom .tabs #admAdd{order:3;flex:1}
 
 /* 內容要留出分頁列的高度，不然最後一筆會被蓋住 */
 body.tabsbottom{padding-bottom:calc(58px + var(--sab, env(safe-area-inset-bottom, 0px)))}
@@ -3404,8 +3410,17 @@ body.filladm #admTodoBox{display:block}
   font-size:var(--t4);font-weight:600;color:var(--ink3);letter-spacing:0}
 
 /* 篩選：每一顆都帶數量，沒有裸數字 */
-.sumf{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
-.sumf button{font:inherit;cursor:pointer;display:inline-flex;align-items:baseline;gap:6px;
+/* 一行排完，超出去的左右滑（牟佑彬 2026-10-04）。
+   ⛔ 本來是 flex-wrap:wrap，六顆佔掉兩行，把行程擠到下面去。
+   ⚠ 兩側要往外撐滿，不然滑到底會看到卡片邊緣切一半；
+     用負的 margin ＋ 同樣大小的 padding 抵銷。 */
+.sumf{display:flex;gap:8px;flex-wrap:nowrap;margin:0 -16px 16px;
+  padding:2px 16px 4px;overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  scroll-snap-type:x proximity}
+.sumf::-webkit-scrollbar{display:none}
+.sumf button{flex:none;scroll-snap-align:start;
+  font:inherit;cursor:pointer;display:inline-flex;align-items:baseline;gap:6px;
   padding:7px 12px;border-radius:10px;border:1px solid var(--line);
   background:var(--card);color:var(--ink);font-size:var(--t4);font-weight:700;
   -webkit-tap-highlight-color:transparent;

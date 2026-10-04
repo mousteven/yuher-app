@@ -1582,6 +1582,60 @@ function drawFilters(langs){
   if(c) c.addEventListener('click', function(){ CAL_LG=[]; CAL_MINE=false; drawCal(); });
 }
 
+/* 交代清單的圖示。
+   ⛔ 不用繪文字（📌）：顏色、粗細、圓角全都不歸我們管，每支手機還長得不一樣，
+      而且它本身是尖的，跟整張卡的圓角打架（牟佑彬 2026-10-04）。
+   ⚠ 24 格、線寬 1.75、圓頭圓角——跟底下那排分頁圖示同一套畫法。
+      外框圓角 4.6/24 ≈ 卡片 12px 圓角縮到 13px 的比例。 */
+var TODO_IC_ = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+  ' stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<rect x="3.7" y="3.7" width="16.6" height="16.6" rx="4.6"/>' +
+  '<path d="M8.1 9.4h7.8M8.1 14.6h5"/></svg>';
+
+/* 右下角那顆。只有圖示與「做完幾件／共幾件」（牟佑彬 2026-10-04 選的「丁」）。 */
+function todoPill_(r){
+  var t = r.todo || [];
+  if(!t.length) return '';
+  var done = t.filter(function(x){ return x.d; }).length;
+  return '<span class="c4todo'+(done === t.length ? ' ok' : '')+'" data-tdg="1"'+
+    ' aria-label="交代事項 '+done+' / '+t.length+'">'+
+    TODO_IC_+'<span class="nm">'+done+' / '+t.length+'</span><i class="ar">⌄</i></span>';
+}
+function todoList_(r){
+  var t = r.todo || [];
+  if(!t.length) return '';
+  return '<span class="c4tdl"><span class="c4tdin"><span>'+t.map(function(x){
+    return '<b'+(x.d?' class="done"':'')+'><u>'+(x.d?'✓':'□')+'</u>'+
+      esc(x.t||x||'')+'</b>';
+  }).join('')+'</span></span></span>';
+}
+/* 卡片的最後一列：左邊原本就有的東西，右邊掛交代。
+   ⛔ 以前交代是卡片最底下一條**整寬**的把手，每張卡都因此長高一截，
+      一天五筆就多出一百多 px（牟佑彬 2026-10-04：「為了不讓區塊變太長」）。
+      現在收著的時候**一行都不多**——它佔的是那一列本來就空著的右邊。
+   ⚠ 沒有交代事項的話一個字都不動，維持原樣。 */
+function todoRow_(inner, r){
+  var p = todoPill_(r);
+  if(!p) return inner;
+  return '<span class="c4row">'+inner+p+'</span>'+todoList_(r);
+}
+
+/* ⚠ 一定要走捕獲階段。卡片外層 .swwrap 自己有一個 click（點了會開表單），
+   冒泡階段攔不住它——點「交代」會變成點開整張卡。 */
+document.addEventListener('click', function(e){
+  var g = e.target.closest && e.target.closest('[data-tdg]');
+  if(!g) return;
+  e.stopPropagation(); e.preventDefault();
+  var open = !g.classList.contains('open');
+  g.classList.toggle('open', open);
+  /* ⛔ 清單是 .c4row 的**下一個**兄弟，不是那顆膠囊的——
+     膠囊在 .c4row 裡面。寫成 g.nextElementSibling 會抓到 null。
+     ⚠ 行事曆的卡片外層是 .b，總表的列是 .sumrow，兩邊共用這一支。 */
+  var box = g.closest('.b') || g.closest('.sumrow');
+  var l = box && box.querySelector('.c4tdl');
+  if(l) l.classList.toggle('on', open);
+}, true);
+
 function drawCal(){
   /* ⛔ 紅點與派工三頁掛在這裡，不掛在「CAL_ROWS = …」那一行。
      CAL_ROWS 有兩個賦值點（drawSched 直接給、mergeCache 合併後給），
@@ -1787,61 +1841,6 @@ function drawDay(){
       '</div></div>';
   }
 
-  /* 卡片上的交代進度。沒有交代事項就整個不顯示——
-   不要留一個「0 / 0」在那裡。 */
-/* 交代清單的圖示。
-   ⛔ 不用繪文字（📌）：顏色、粗細、圓角全都不歸我們管，每支手機還長得不一樣，
-      而且它本身是尖的，跟整張卡的圓角打架（牟佑彬 2026-10-04）。
-   ⚠ 24 格、線寬 1.75、圓頭圓角——跟底下那排分頁圖示同一套畫法。
-      外框圓角 4.6/24 ≈ 卡片 12px 圓角縮到 13px 的比例。 */
-var TODO_IC_ = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
-  ' stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-  '<rect x="3.7" y="3.7" width="16.6" height="16.6" rx="4.6"/>' +
-  '<path d="M8.1 9.4h7.8M8.1 14.6h5"/></svg>';
-
-/* 右下角那顆。只有圖示與「做完幾件／共幾件」（牟佑彬 2026-10-04 選的「丁」）。 */
-function todoPill_(r){
-  var t = r.todo || [];
-  if(!t.length) return '';
-  var done = t.filter(function(x){ return x.d; }).length;
-  return '<span class="c4todo'+(done === t.length ? ' ok' : '')+'" data-tdg="1"'+
-    ' aria-label="交代事項 '+done+' / '+t.length+'">'+
-    TODO_IC_+'<span class="nm">'+done+' / '+t.length+'</span><i class="ar">⌄</i></span>';
-}
-function todoList_(r){
-  var t = r.todo || [];
-  if(!t.length) return '';
-  return '<span class="c4tdl"><span class="c4tdin"><span>'+t.map(function(x){
-    return '<b'+(x.d?' class="done"':'')+'><u>'+(x.d?'✓':'□')+'</u>'+
-      esc(x.t||x||'')+'</b>';
-  }).join('')+'</span></span></span>';
-}
-/* 卡片的最後一列：左邊原本就有的東西，右邊掛交代。
-   ⛔ 以前交代是卡片最底下一條**整寬**的把手，每張卡都因此長高一截，
-      一天五筆就多出一百多 px（牟佑彬 2026-10-04：「為了不讓區塊變太長」）。
-      現在收著的時候**一行都不多**——它佔的是那一列本來就空著的右邊。
-   ⚠ 沒有交代事項的話一個字都不動，維持原樣。 */
-function todoRow_(inner, r){
-  var p = todoPill_(r);
-  if(!p) return inner;
-  return '<span class="c4row">'+inner+p+'</span>'+todoList_(r);
-}
-
-/* ⚠ 一定要走捕獲階段。卡片外層 .swwrap 自己有一個 click（點了會開表單），
-   冒泡階段攔不住它——點「交代」會變成點開整張卡。 */
-document.addEventListener('click', function(e){
-  var g = e.target.closest && e.target.closest('[data-tdg]');
-  if(!g) return;
-  e.stopPropagation(); e.preventDefault();
-  var open = !g.classList.contains('open');
-  g.classList.toggle('open', open);
-  /* ⛔ 清單是 .c4row 的**下一個**兄弟，不是那顆膠囊的——
-     膠囊在 .c4row 裡面。寫成 g.nextElementSibling 會抓到 null。
-     ⚠ 行事曆的卡片外層是 .b，總表的列是 .sumrow，兩邊共用這一支。 */
-  var box = g.closest('.b') || g.closest('.sumrow');
-  var l = box && box.querySelector('.c4tdl');
-  if(l) l.classList.toggle('on', open);
-}, true);
 
 /* 灰色預排的卡片**刻意另外寫一個**，不重用上面那支。
      ⛔ 那一支帶著側滑軌道、長按拖曳改期、點開填服務紀錄——
@@ -9917,8 +9916,26 @@ function sumBits(){
   if(!cal) return;
   cal.insertAdjacentHTML('afterend', '<div class="pane" id="p-sum"></div>');
   var cb = document.querySelector('.tabs button[data-t=cal]');
-  if(cb) cb.insertAdjacentHTML('afterend',
+  if(!cb) return;
+  cb.insertAdjacentHTML('afterend',
     '<button data-t="sum">' + SUM_IC_ + '<span>總表</span></button>');
+  /* 中間那顆加號，跟翻譯那邊一樣（牟佑彬 2026-10-04）。
+     翻譯按下去是「填服務紀錄」，行政按下去是「排一筆新的行程」。
+     ⛔ 故意不給 data-t：分頁委派只認 data-t，不給它就不會被當成分頁去切 pane。 */
+  if(!$('admAdd')) cb.insertAdjacentHTML('afterend',
+    '<button type="button" id="admAdd" aria-label="排一筆行程">' +
+    '<i class="plus" aria-hidden="true"></i></button>');
+  var ad = $('admAdd');
+  if(ad && !ad.dataset.on){
+    ad.dataset.on = '1';
+    ad.onclick = function(){
+      /* 沒選日期就用今天。⛔ 不要沿用上一次留著的 CAL_SEL——
+         他可能是從總表按進來的，那個日期跟現在要排的沒關係。 */
+      if(!CAL_SEL) CAL_SEL = todayStr();
+      goTab('cal');
+      admNewTrip();
+    };
+  }
 }
 
 function applyRoleSkin(){
@@ -10453,9 +10470,12 @@ function drawSum(){
     return ((o[a.status] || 0) - (o[b.status] || 0)) || (a.date < b.date ? -1 : 1); });
 
   var own = sumOwn_();
-  var h = '<div class="sumhd"><h3>\u884c\u7a0b\u7e3d\u8868<s>' +
-    esc(sumMonths_().join(' \u8207 ')) + '\u3000\u5171 ' + all.length + ' \u7b46</s></h3></div>';
+  /* \u26d4 \u6a19\u984c\u5e95\u4e0b\u90a3\u884c\u300c2026-10 \u8207 2026-11\u3000\u5171 15 \u7b46\u300d\u62ff\u6389\u4e86\uff08\u725f\u4f51\u5f6c 2026-10-04 \u5283\u6389\uff09\u3002
+     \u7b46\u6578\u4e0b\u9762\u90a3\u6392\u7be9\u9078\u6bcf\u4e00\u9846\u90fd\u6709\uff0c\u9019\u88e1\u518d\u5beb\u4e00\u6b21\u662f\u91cd\u8907\u7684\u3002 */
+  var h = '<div class="sumhd"><h3>\u884c\u7a0b\u7e3d\u8868</h3></div>';
 
+  /* \u4e00\u884c\u6392\u5b8c\uff0c\u8d85\u51fa\u53bb\u7684\u5de6\u53f3\u6ed1\uff08\u725f\u4f51\u5f6c 2026-10-04\uff09\u3002
+     \u26d4 \u672c\u4f86\u662f\u6298\u884c\uff0c\u516d\u9846\u4f54\u6389\u5169\u884c\uff0c\u628a\u884c\u7a0b\u64e0\u5230\u4e0b\u9762\u53bb\u3002 */
   h += '<div class="sumf">' + SUM_FILT_.map(function(x){
     return '<button type="button" data-sf="' + x[0] + '"' +
       (x[0] === SUM_F ? ' class="on"' : '') + '>' + esc(x[1]) +
@@ -10475,10 +10495,9 @@ function drawSum(){
         (SUM_S === k[0] ? ' class="on"' : '') + '>' + k[1] + '</button>';
     }).join('') + '</span></div>';
 
-  if(!own.length) h += '<p class="dpnote">\u300c\u884c\u653f\u8ca0\u8cac\u5ba2\u6236\u300d' +
-    '\u90a3\u5f35\u8868\u9084\u6c92\u586b\uff0c\u6240\u4ee5\u73fe\u5728\u5217\u7684\u662f' +
-    '<b>\u5168\u90e8\u7684\u884c\u7a0b</b>\u3002\u586b\u597d\u4e4b\u5f8c\u9019\u88e1\u5c31' +
-    '\u53ea\u6703\u770b\u5230\u4f60\u8ca0\u8cac\u7684\u90a3\u5e7e\u5bb6\u3002</p>';
+  /* \u26d4 \u300c\u884c\u653f\u8ca0\u8cac\u5ba2\u6236\u90a3\u5f35\u8868\u9084\u6c92\u586b\u300d\u90a3\u6bb5\u8aaa\u660e\u62ff\u6389\u4e86\uff08\u725f\u4f51\u5f6c 2026-10-04 \u5283\u6389\uff09\u3002
+     \u26a0 \u4e8b\u5be6\u6c92\u8b8a\uff1a\u6c92\u586b\u7684\u8a71\u9019\u88e1\u9084\u662f\u5217\u5168\u90e8\u7684\u884c\u7a0b\uff0c\u53ea\u662f\u4e0d\u518d\u6bcf\u6b21\u90fd\u8ddf\u4ed6\u8b1b\u4e00\u6b21\u3002
+       \u586b\u597d\u4e4b\u5f8c\u300c\u53ea\u770b\u6211\u7684\u300d\u90a3\u9846\u6309\u9215\u6703\u81ea\u5df1\u51fa\u73fe\u3002 */
 
   if(!rows.length) h += '<div class="mid" style="padding:28px">' +
     '\u9019\u500b\u689d\u4ef6\u4e0b\u6c92\u6709\u884c\u7a0b</div>';
