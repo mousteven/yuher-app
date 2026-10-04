@@ -11439,32 +11439,43 @@ function rtOver_(sel){
   var hits = {};
   rtOverlap_(sel).forEach(function(o){ hits[o.key] = o.n; });
 
+  /* ⛔ 散開要**全部選到的人一起算**。一個人算一次的話，
+     「兩個不同的人各去烏日區一次」兩邊都算出「只有一站、不用散」，
+     結果畫在同一個點上，後畫的直接蓋住先畫的——
+     他 2026-10-04 傳圖問「小愛的第一個行程被蓋住了怎麼辦」就是這個。
+     ⚠ fan[key] 是那個鄉鎮總共幾個點；fanI_ 是發號碼機。 */
+  var fan = {}, fanI = {};
+  sel.forEach(function(g){
+    rtStops_(g).forEach(function(st){
+      if(rtPos_(st.key)) fan[st.key] = (fan[st.key] || 0) + 1; }); });
+  /* 散開的半徑：點多就撐大一點，但不要大到看起來像兩個不同的鄉鎮。 */
+  function fanR_(n){ return rr * (n <= 2 ? 1.75 : n <= 4 ? 2.0 : 2.4); }
+  function fanAt_(key){
+    var p = rtPos_(key);
+    if(!p) return null;
+    var n = fan[key] || 1;
+    if(n < 2) return { x: p[0], y: p[1] };
+    var k = fanI[key] = (fanI[key] || 0);
+    fanI[key]++;
+    var a = (k / n) * Math.PI * 2 - Math.PI / 2;
+    return { x: p[0] + Math.cos(a) * fanR_(n), y: p[1] + Math.sin(a) * fanR_(n) };
+  }
+
   var h = '';
   Object.keys(hits).forEach(function(k){
     var p = rtPos_(k); if(!p) return;
-    h += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (rr * 3).toFixed(2) +
+    h += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' +
+      (fanR_(fan[k] || 1) + rr * 1.9).toFixed(2) +
       '" fill="currentColor" fill-opacity=".13"/>';
   });
 
   sel.forEach(function(g, gi){
     var col = one ? null : RT_COL_[gi % RT_COL_.length];
-    /* ⛔ 同一個鄉鎮有好幾站的話，點會完全重疊、號碼看不到。
-       沿著一個小圈把它們散開——散開是「這裡有好幾站」的意思，
-       不是真的位置（本來也只精確到鄉鎮）。 */
-    var nSame = {};
-    rtStops_(g).forEach(function(st){ nSame[st.key] = (nSame[st.key] || 0) + 1; });
-    var iSame = {};
+    /* 同一個鄉鎮的點沿著一個小圈散開，誰都不會被蓋住。
+       ⚠ 散開是「這裡有好幾站」的意思，不是真的位置（本來也只精確到鄉鎮）。 */
     var pts = rtStops_(g).map(function(st){
-      var p = rtPos_(st.key);
-      if(!p) return null;
-      var n = nSame[st.key], x = p[0], y = p[1];
-      if(n > 1){
-        var k = iSame[st.key] = (iSame[st.key] || 0);
-        iSame[st.key]++;
-        var a = (k / n) * Math.PI * 2 - Math.PI / 2;
-        x += Math.cos(a) * rr * 1.9; y += Math.sin(a) * rr * 1.9;
-      }
-      return { x: x, y: y, st: st };
+      var q = fanAt_(st.key);
+      return q ? { x: q.x, y: q.y, st: st } : null;
     }).filter(function(x){ return x; });
     if(pts.length > 1){
       h += '<path d="' + pts.map(function(p, i){
@@ -11508,11 +11519,11 @@ function rtOver_(sel){
     rtStops_(g).forEach(function(st){
       if(!st.key || named[st.key]) return;
       var p = rtPos_(st.key); if(!p) return;
-      var ly = p[1] - rr * 2;
+      var ly = p[1] - (fan[st.key] > 1 ? fanR_(fan[st.key]) + rr * 1.8 : rr * 2);
       if(!room_(p[0], ly, !!hits[st.key])) return;
       put.push([p[0], ly]);
       named[st.key] = 1;
-      h += '<text x="' + p[0] + '" y="' + (p[1] - rr * 2).toFixed(1) +
+      h += '<text x="' + p[0] + '" y="' + ly.toFixed(1) +
         '" text-anchor="middle" font-size="' + fs.toFixed(2) + '" font-weight="' +
         (hits[st.key] ? '800' : '700') + '" fill="currentColor" opacity="' +
         (hits[st.key] ? '1' : '.75') + '" paint-order="stroke" stroke="var(--card)" ' +
