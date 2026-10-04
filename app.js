@@ -1862,10 +1862,7 @@ function drawDay(){
      ⚠ 名冊地址只留到路名——完整門牌太長，一張卡會被撐掉一行半。
        要門牌的時候看「用 Google 地圖導航」，那邊用的是完整地址。 */
   function evAddr_(r){
-    var site = String(r.site || '').trim();
-    if(site) return '<span class="c4ad"><i>◎</i>'+esc(site)+
-      '<b class="st">現場</b></span>';
-    var sh = psAddrShort_(r.client);
+    var sh = psAddrShort_(r);
     return sh ? '<span class="c4ad"><i>◎</i>'+sh+'</span>' : '';
   }
 
@@ -2866,6 +2863,30 @@ var PLAN_EDIT = '';
      4. 存成「預排」，不是直接指派
    ⚠ 這幾塊用注入的，不寫進 Service.html——那是後端檔，改它要重新部署，
      而版本額度只剩 3 個。 */
+/* 「這一次去哪裡？」——填了就蓋過客戶名單上的地址（牟佑彬 2026-10-05）。
+   ⚠ 上面那一行灰字是名單上的地址，要跟著選到的客戶換，
+     不然他對照的是上一家的。 */
+function planSiteBits(){
+  var t = $('planTopic');
+  if(!t) return;
+  if(!$('planSite')){
+    t.parentNode.insertAdjacentHTML('beforebegin',
+      '<div class="f" id="planSiteF" style="margin-top:10px">' +
+      '<label>這一次去哪裡？（不填就用名冊上的地址）</label>' +
+      '<div class="psrc" id="planSiteSrc">名冊上的地址：—</div>' +
+      '<input type="text" id="planSite" placeholder="工廠搬了、約在二廠、要去醫院…">' +
+      '</div>');
+  }
+  planSiteSrc();
+}
+/* 把名單上的地址寫到那一行灰字 */
+function planSiteSrc(){
+  var el = $('planSiteSrc');
+  if(!el) return;
+  var a = psAddrRaw_($('planClient') ? $('planClient').value : '');
+  el.textContent = a ? ('名冊上的地址：' + a) : '名冊上沒有這一家的地址';
+}
+
 /* 誰可以「排完直接確認」。
    ⛔ 跟後端 staffCanDispatch_ 一模一樣的名單——兩邊不一致的話，
       畫面上給得出按鈕、後端卻丟例外，她會以為系統壞了。 */
@@ -2963,6 +2984,7 @@ function openPlanEdit(r){
   $('planTopic').value = r.memo || '';
   if($('planDateIn')) $('planDateIn').value = r.date || CAL_SEL;
   if($('planCrew')) $('planCrew').value = r.crew || r.sug || '';
+  if($('planSite')) $('planSite').value = r.site || '';
   var bx = $('planTodo');
   if(bx){
     bx.innerHTML = ''; bx.dataset.touched = '1';
@@ -2975,6 +2997,9 @@ function openPlanEdit(r){
 
 function openPlan(client){
   PLAN_EDIT = PLAN_EDIT || '';
+  /* ⛔ 現場地址一定要清。不清的話下一筆會沿用上一家的地址，
+     而且畫面上看起來很合理，沒有人會發現。 */
+  if($('planSite')) $('planSite').value = '';
   $('planDate').textContent = CAL_SEL;
   $('planCrew').innerHTML = CREW.map(function(n){ return '<option>'+esc(n)+'</option>'; }).join('');
   if(CREW.indexOf(STAFF_NAME)!==-1) $('planCrew').value = STAFF_NAME;
@@ -2992,6 +3017,7 @@ function openPlan(client){
   fillPlanBig();
   fillPlanWorkers();
   planAdmBits();
+  planSiteBits();
   planGoBits();
   if(!PLAN_EDIT) $('planSave').textContent = '排進行事曆';
   $('planModal').style.display='';
@@ -3058,6 +3084,8 @@ var PLAN_PK_ = {
   id: 'planPk', mode: 'svc', list: [], allowNew: true,
   onPick: function(c){ setPlanClient(c); fillPlanWorkers(); }
 };
+/* ⚠ 換了客戶，灰字那一行要跟著換。setPlanClient 是唯一的入口
+   （下拉、搜尋、改單回填都走它），掛在這裡就不會漏。 */
 function setPlanClient(c){
   c = c || '';
   $('planClient').value = c;
@@ -3066,6 +3094,7 @@ function setPlanClient(c){
   $('planPkVal').classList.remove('open');
   $('planPkPop').style.display = 'none';
   if($('planPkQ')) $('planPkQ').value = '';
+  planSiteSrc();
 }
 pkWire(PLAN_PK_);
 
@@ -3129,7 +3158,9 @@ $('planSave').addEventListener('click', function(){
       topic: $('planBig').value + ' ／ ' + $('planSub').value,
       memo: $('planTopic').value.trim(),
       workers: picked.join('、'), sug: who,
-      todo: planTodoRows()
+      todo: planTodoRows(),
+      /* 清空＝改回用名冊地址。⛔ 所以一律送，不要「有值才送」。 */
+      site: $('planSite') ? $('planSite').value.trim() : ''
     };
     if(dayIn) patch.date = dayIn;        // 沒有日期欄位就不碰那一欄
     google.script.run
@@ -3176,6 +3207,7 @@ $('planSave').addEventListener('click', function(){
       big: $('planBig').value, sub: $('planSub').value,
       workers: picked.join('、'),
       todo: adm ? planTodoRows().map(function(t){ return {t:t, d:0}; }) : [],
+      site: $('planSite') ? $('planSite').value.trim() : '',
       topic: $('planTopic').value.trim() });
 });
 
@@ -10807,21 +10839,36 @@ function psGroups_(){
      因為跨縣市就是「要留半天」的訊號。
    ⚠ 資料來源是 PRESETS[].p——後端 svcClients_ 早就把
      工作地址＋聯絡人＋電話串成那一欄送過來了，不用改後端。 */
-function psAddrRaw_(client){
-  var pz = presetOf(client);
+/* 這一筆要去的地方。**現場地址優先，沒填才用客戶名單上的**（牟佑彬 2026-10-05）。
+   ⛔ 只有這一支會去碰客戶名單。行事曆、排班、路線都呼叫它，
+      不要在各自的地方再寫一次 `r.site || 名單地址`——遲早會漏掉一個。
+   ⚠ 傳進來的可以是整筆行程，也可以只是客戶名（舊呼叫端）。 */
+function psAddrRaw_(x){
+  if(x && typeof x === 'object'){
+    var st = String(x.site || '').trim();
+    if(st) return st;
+    x = x.client;
+  }
+  var pz = presetOf(x);
   return (pz && pz.p) ? String(pz.p).split('　')[0] : '';
 }
-function psAddrShort_(client){
-  var a = psAddrRaw_(client);
+/* 這一筆用的是現場地址嗎（畫面上要標「現場」，不然看起來像名單寫錯了）。 */
+function psIsSite_(x){
+  return !!(x && typeof x === 'object' && String(x.site || '').trim());
+}
+function psAddrShort_(x){
+  var a = psAddrRaw_(x);
   if(!a) return '';
+  var site = psIsSite_(x) ? '<b class="st">現場</b>' : '';
   var m = /^(.{2,3}[市縣])(.{1,4}[區鄉鎮市])(?:.{1,5}里)?(.*)$/.exec(a);
-  if(!m) return a;
+  /* 現場地址是手打的，不一定寫得出「○○市○○區」——認不出來就整句照印。 */
+  if(!m) return esc(a) + site;
   var city = m[1], dist = m[2], rest = m[3] || '';
   var r = /^(.*?[路街道])((?:[一二三四五六七八九十\d０-９]+段)?)/.exec(rest);
   var road = r ? (r[1] + (r[2] || '')) : rest.replace(/[\d０-９].*$/, '');
   var far = (city !== '臺中市' && city !== '台中市');
   return (far ? ('<b class="far">' + esc(city) + '</b>') : '') +
-    esc(dist) + '　' + esc(road);
+    esc(dist) + '　' + esc(road) + site;
 }
 /* 誰可以頂。排序：能不能去 → 語別 → 順不順路 → 那天幾件。
    ⚠ 「順不順路」現在只能用**同一個客戶**當代理——
@@ -10907,7 +10954,7 @@ function psSaveOrder_(rows){
 }
 
 function psTrip_(r){
-  var ad = psAddrShort_(r.client), note = psNote_(r);
+  var ad = psAddrShort_(r), note = psNote_(r);
   /* ⚠ 時段標在編號下面。區塊標題雖然也寫了，但她看的是「這一塊」，
      而且全天會落在下午那一區，不標就看不出來（牟佑彬 2026-10-04）。 */
   return '<div class="pstr" data-id="' + esc(r.id) + '">' +
@@ -11497,8 +11544,8 @@ function twLoad_(then){
 }
 
 /* 地址 → 地圖上的鍵（縣市＋鄉鎮）。⚠ 名冊裡「臺」「台」兩種寫法都有，統一成「台」。 */
-function rtKey_(client){
-  var a = String(psAddrRaw_(client) || '').replace(/臺/g, '台');
+function rtKey_(x){
+  var a = String(psAddrRaw_(x) || '').replace(/臺/g, '台');
   var m = /^(.{2,3}[市縣])(.{1,4}[區鄉鎮市])/.exec(a);
   return m ? (m[1] + m[2]) : '';
 }
@@ -11532,12 +11579,12 @@ function rtSelected_(){
 }
 function rtStops_(g){
   return psOrdered_(g.rows).map(function(r){
-    var key = rtKey_(r.client);
+    var key = rtKey_(r);
     var m = /^(.{2,3}[市縣])(.+)$/.exec(key) || ['', '', key];
     var cty = m[1];
     return { r: r, c: r.client, key: key, cty: cty, town: m[2],
              far: (cty && cty !== '台中市') ? cty.replace(/[市縣]$/, '') : '',
-             addr: psAddrRaw_(r.client), short: psAddrShort_(r.client) };
+             addr: psAddrRaw_(r), short: psAddrShort_(r) };
   });
 }
 /* 哪些鄉鎮有兩個以上的人要去。這就是他要的「重疊或在附近」。

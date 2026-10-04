@@ -1223,6 +1223,9 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .c4ad .far{margin-right:2px}
 .c4ad .st{margin-left:6px}
 
+/* 名冊上的地址（唯讀，給她對照用）。⚠ 這一行不是輸入框，不要做得像可以改。 */
+.psrc{font-size:var(--t5);color:var(--ink3);margin:-2px 0 6px;line-height:1.5}
+
 /* 排完直接確認。⚠ 沒挑人的時候整列變灰，而且勾不動。 */
 .plango{display:flex;align-items:center;gap:8px;margin:12px 0 0;padding:11px 12px;
   border:1px solid var(--line);border-radius:var(--r1);background:var(--card);
