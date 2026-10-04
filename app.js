@@ -11393,8 +11393,9 @@ function drawRT(){
     h += '<div class="rtst ' + zc + '">' +
       '<span class="no">' + (i+1) + '</span>' +
       '<span class="bd"><span class="c">' + esc(s.c) + '</span>' +
-      '<span class="a">' + (RT_FAR_[s.town]
-        ? ('<b class="far">' + esc(RT_FAR_[s.town]) + '</b>') : '') +
+      /* ⛔ 不要再加縣市——psAddrShort_ 自己就會把非台中的縣市標紅了。
+         2026-10-04 實測印出「彰化彰化縣芬園鄉」，縣市出現兩次。 */
+      '<span class="a">' +
         (s.short || '<i class="non">名冊上沒有地址</i>') + '</span></span>' +
       '<span class="sl">' + (z || '不壓') + '</span></div>';
   });
