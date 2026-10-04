@@ -11357,6 +11357,13 @@ function rtDist_(a, b){
 /* 複選。⚠ 一次看幾個人的路線疊在一起，才看得出「兩個人同一天都往烏日跑」。 */
 var RT_SEL = {};
 
+/* 這一天有配到人的翻譯。⛔ 沒有人的那一筆不畫路線——它還沒有人要跑。 */
+function rtGroups_(){
+  return psGroups_().filter(function(g){ return g.who !== '（還沒有人）'; })
+    .sort(function(a, b){
+      return String(a.who).localeCompare(String(b.who), 'zh-Hant'); });
+}
+
 /* 疊圖用的顏色。⚠ 要在日間與夜間都看得見，所以用中間調，不要太淺或太深。
    ⛔ 多人模式下**不在點上印號碼**——點變小、字擠不下，而且重點是「誰跟誰重疊」。 */
 var RT_COL_ = ['#3F8F6F', '#C05A6C', '#4A7FD0', '#D08040', '#8E73C4', '#3F96A3'];
