@@ -545,6 +545,9 @@ body.tabsbottom .tabs button[data-t=stat]{order:5}
 body.tabsbottom .tabs button[data-t=sum]{order:6}
 /* 加號要在行事曆與總表的正中間 */
 body.tabsbottom .tabs #admAdd{order:3;flex:1}
+/* 特助：行事曆 ｜ 排班甲 ｜ ＋ ｜ 排班戊 ｜ 總表 */
+body.tabsbottom .tabs button[data-t=ps1]{order:2}
+body.tabsbottom .tabs button[data-t=ps2]{order:4}
 /* ⛔ **只有行政看得到**。注入出來的東西一旦生出來就不會自己消失，
    而切身分只重設「有 data-t 的分頁」——2026-10-04 佑彬的底欄因此出現
    **兩顆加號**（他自己那顆 ＋ 行政留下來的那顆）。
@@ -3525,3 +3528,111 @@ body.filladm #admTodoBox{display:block}
 .summiss .cs span{font-size:var(--t5);font-weight:700;padding:4px 9px;
   border-radius:8px;background:var(--bg);border:1px solid var(--line2)}
 .summiss .cs .more{background:transparent;border-color:transparent;color:var(--ink3)}
+
+
+/* ══ 特助排班（牟佑彬 2026-10-04）══════════════════════════════
+   甲（摺疊條）與戊（一人一頁）共用同一套元件，只有外框不一樣。
+   ⚠ 全部用既有的 token，所以 body.ass 一換色票整頁就跟著變黑。
+   ⚠ 間距一律落在 8 的倍數上。 */
+.pshd{display:flex;align-items:center;gap:8px;margin:0 0 12px}
+.pshd .d{flex:1;min-width:0;text-align:center}
+.pshd .d b{display:block;font-size:1.05rem;font-weight:800}
+.pshd .d s{display:block;text-decoration:none;font-size:var(--t5);color:var(--ink3);
+  font-weight:700;margin-top:1px}
+.psnav{flex:none;font:inherit;font-size:1.1rem;font-weight:800;cursor:pointer;
+  width:36px;height:36px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);-webkit-tap-highlight-color:transparent}
+.pstm{display:block;margin:0 auto 12px;font:inherit;font-size:var(--t5);font-weight:700;
+  cursor:pointer;padding:5px 13px;border-radius:999px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink3)}
+
+/* 一個翻譯一條 */
+.pspc{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
+  margin-bottom:8px;overflow:hidden}
+.pspc.bad{border-color:var(--bad-line)}
+.pshdr{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+.pshdr b{font-size:.95rem;font-weight:800}
+.pshdr .lg{font-size:var(--t6);font-weight:800;color:var(--ink3);
+  background:var(--line2);border-radius:999px;padding:1px 7px}
+.pshdr s{text-decoration:none;font-size:var(--t5);color:var(--ink3);font-weight:700}
+.pshdr .fl{margin-left:auto;font-size:var(--t6);font-weight:800;padding:2px 8px;
+  border-radius:999px;background:var(--ok-bg);color:var(--ok-ink);
+  border:1px solid var(--ok-line);white-space:nowrap}
+.pshdr .fl.b{background:var(--bad-bg);color:var(--bad-ink);border-color:var(--bad-line)}
+.psin{display:none;border-top:1px solid var(--line2);padding:4px 12px 12px}
+.pspc.open .psin{display:block}
+
+.pstl{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid var(--line2);
+  align-items:baseline}
+.pstl:last-child{border-bottom:0}
+.pstl u{text-decoration:none;flex:none;font-size:var(--t5);font-weight:800;
+  color:var(--ink3);width:46px}
+.pstl.b u{color:var(--bad-ink)}
+.pstl .n{flex:1;min-width:0;font-size:var(--t4);font-weight:700}
+.pstl .n s{display:block;text-decoration:none;font-weight:600;color:var(--ink3);
+  font-size:var(--t5);margin-top:1px}
+.pstl .f{flex:none;font-size:var(--t6);font-weight:800;color:var(--bad-ink)}
+
+/* 卡住的那一塊＋四個動作 */
+.pswarn{background:var(--bad-bg);border:1px solid var(--bad-line);
+  border-radius:var(--r1);padding:10px 11px;margin-top:10px}
+.pswh{font-size:var(--t4);font-weight:800;color:var(--bad-ink);margin-bottom:7px}
+.pswl{font-size:var(--t5);font-weight:700;margin:8px 0 2px}
+.psact{display:grid;gap:6px;grid-template-columns:1fr 1fr}
+.psact button{font:inherit;font-size:var(--t5);font-weight:800;cursor:pointer;
+  padding:9px 5px;border-radius:var(--r1);border:1px solid var(--line);
+  background:var(--card);color:var(--ink);-webkit-tap-highlight-color:transparent}
+.psact button.p{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
+.psact button:active{transform:scale(.98)}
+
+.psok{width:100%;margin-top:10px;font:inherit;font-size:var(--t4);font-weight:800;
+  cursor:pointer;padding:10px;border-radius:var(--r1);border:1px solid var(--line);
+  background:var(--card);color:var(--ink2)}
+.psall{width:100%;margin-top:8px;font:inherit;font-size:var(--t3);font-weight:800;
+  cursor:pointer;padding:13px;border-radius:var(--r1);border:0;
+  background:var(--fill);color:var(--fill-ink)}
+
+/* 戊：一人一頁 */
+.pssw{display:flex;align-items:center;gap:8px;margin:0 0 10px}
+.pssw .m{flex:1;min-width:0;text-align:center}
+.pssw .m b{font-size:1rem;font-weight:800}
+.pssw .m .lg{font-size:var(--t6);font-weight:800;color:var(--ink3);
+  background:var(--line2);border-radius:999px;padding:1px 7px;margin-left:6px}
+.pssw .m s{display:block;text-decoration:none;font-size:var(--t5);color:var(--ink3);
+  font-weight:700;margin-top:1px}
+.psdots{display:flex;gap:5px;justify-content:center;margin:12px 0 0}
+.psdots i{width:7px;height:7px;border-radius:50%;background:var(--line);cursor:pointer}
+.psdots i.on{background:var(--fill);width:18px;border-radius:99px}
+.psdots i.b{background:var(--bad-ink)}
+
+/* 換人面板 */
+.pssheet{position:fixed;inset:0;background:rgba(8,10,14,.45);z-index:60;
+  display:flex;align-items:flex-end;justify-content:center}
+.psbx{background:var(--card);width:100%;max-width:520px;border-radius:16px 16px 0 0;
+  padding:14px 14px 22px;max-height:84vh;overflow-y:auto;
+  animation:psup .26s cubic-bezier(.32,.72,0,1)}
+@keyframes psup{from{transform:translateY(14px);opacity:.5}to{transform:none;opacity:1}}
+.psbx h4{margin:0 0 2px;font-size:1rem;font-weight:800}
+.psbx .mt{margin:0 0 12px;font-size:var(--t5);color:var(--ink3)}
+.pspk{border:1px solid var(--line);border-radius:var(--r1);overflow:hidden}
+.pspk .sec{padding:6px 11px;font-size:var(--t6);font-weight:800;letter-spacing:.05em;
+  color:var(--ink3);background:var(--bg);border-top:1px solid var(--line2)}
+.pspk .sec:first-child{border-top:0}
+.psit{display:flex;gap:9px;align-items:center;padding:11px;cursor:pointer;
+  border-top:1px solid var(--line2);background:var(--card);
+  -webkit-tap-highlight-color:transparent}
+.psit:first-child{border-top:0}
+.psit.no{background:var(--bg);cursor:not-allowed}
+.psit.no .nm,.psit.no .rs{color:var(--ink3)}
+.psit .bd{flex:1;min-width:0}
+.psit .nm{font-size:.92rem;font-weight:800;display:flex;align-items:baseline;gap:6px}
+.psit .nm .bk{font-size:var(--t6);font-weight:800;color:var(--ok-ink);
+  background:var(--ok-bg);border:1px solid var(--ok-line);border-radius:999px;padding:1px 7px}
+.psit .rs{font-size:var(--t5);color:var(--ink2);margin-top:2px}
+.psit .rs .stop{color:var(--bad-ink);font-weight:700}
+.psit .go{flex:none;font-size:var(--t5);font-weight:800;color:var(--fill)}
+.pscls{width:100%;margin-top:11px;font:inherit;font-weight:800;font-size:var(--t3);
+  padding:12px;border-radius:var(--r1);border:1px solid var(--line);
+  background:var(--card);color:var(--ink2);cursor:pointer}
+@media (prefers-reduced-motion:reduce){ .psbx{animation:none} }

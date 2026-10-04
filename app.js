@@ -1146,6 +1146,8 @@ document.querySelector('.tabs').addEventListener('click', function(ev){
     if(b.dataset.t==='mine')  loadMine();
     if(b.dataset.t==='conf')  loadConf();
     if(b.dataset.t==='sum')   loadSum();
+    if(b.dataset.t==='ps1')   loadPS('ps1');
+    if(b.dataset.t==='ps2')   loadPS('ps2');
     /* 離開填寫頁＝手上的事告一段落，這時候更新不會弄丟東西。 */
     tryUpdate();
   }
@@ -1427,6 +1429,7 @@ function loadCal(ym, force){
         CAL_CACHE[m] = r.rows || [];
         CAL_CACHE_AT[m] = Date.now();
         if(!CREW.length) CREW = r.crew || [];
+        if(r.leave) LEAVE_ = r.leave;      // 誰哪天不在
         /* ⛔ 只有最後一個月份也回來了才算更新完成。
            上面那段會先拿舊快取畫一次（不要整片變成載入中），
            如果把 refreshed() 放在 drawCal 裡面，下拉的轉圈會在
@@ -9895,10 +9898,11 @@ var ROLE_TABS_ = {
   /* 總表是行政自己掃全月用的（牟佑彬 2026-10-04）：
      誰還沒配人、特助後來派了誰、文件哪天還。資料跟行事曆同一份。 */
   '行政':   ['cal', 'sum'],
-  /* 特助沿用行政那一套（行事曆＋總表），再加上她本來的派工台。
-     牟佑彬 2026-10-04：「她的部分沿用行政的專區」。
-     ⚠ 這一輪只讓它長出來，權限與功能等下一輪。 */
-  '特助':   ['cal', 'sum', 'conf'],
+  /* 特助：行事曆 ＋ 排班甲 ＋ 排班戊 ＋ 總表。
+     ⛔ 「待確認」（conf）先收起來——牟佑彬 2026-10-04 說拿掉，
+        排班那兩頁就是它的替代。後端一行都沒動，要回來把 'conf' 加回這一行就好。
+     ⚠ 甲與戊是**讓他試用的兩種做法**，選完之後砍掉沒選的那一個。 */
+  '特助':   ['cal', 'ps1', 'ps2', 'sum'],
   '副理':   ['cal', 'new', 'track', 'follow', 'stat', 'conf'],
   '總經理': ['cal', 'new', 'track', 'follow', 'stat', 'conf']
 };
@@ -9915,6 +9919,31 @@ var SUM_IC_ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
 /* 行政的「行程總表」分頁。
    ⚠ 用注入的，不寫進 Service.html——那是後端檔，改它要重新部署、吃版本額度。
      planModal 的行政欄位也是同一個理由（見 planAdmBits）。 */
+/* 排班那兩頁的圖示。左邊是摺疊清單，右邊是一人一頁。 */
+var PS1_IC_ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+  ' stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M4.4 6.2h15.2M4.4 12h15.2M4.4 17.8h15.2"/>' +
+  '<path d="m8.6 4.4 1.6 1.8 1.6-1.8"/></svg>';
+var PS2_IC_ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+  ' stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<rect x="7.4" y="4.6" width="9.2" height="14.8" rx="2.6"/>' +
+  '<path d="M4.2 8.4v7.2M19.8 8.4v7.2"/></svg>';
+
+/* 特助的兩個排班分頁。
+   ⚠ 一樣用注入的，不寫進 Service.html——那是後端檔，改它要重新部署。 */
+function assBits(){
+  if($('p-ps1')) return;
+  var cal = $('p-cal');
+  if(!cal) return;
+  cal.insertAdjacentHTML('afterend',
+    '<div class="pane" id="p-ps1"></div><div class="pane" id="p-ps2"></div>');
+  var cb = document.querySelector('.tabs button[data-t=cal]');
+  if(!cb) return;
+  cb.insertAdjacentHTML('afterend',
+    '<button data-t="ps1">' + PS1_IC_ + '<span>排班甲</span></button>' +
+    '<button data-t="ps2">' + PS2_IC_ + '<span>排班戊</span></button>');
+}
+
 function sumBits(){
   if($('p-sum')) return;
   var cal = $('p-cal');
@@ -9954,6 +9983,7 @@ function applyRoleSkin(){
      ⛔ 可見性一律綁在角色 class 上（#admAdd 綁 body.adm/body.ass），
         不要靠「切身分的時候記得收回去」——那一招已經漏過四次。 */
   if(adm || ass) sumBits();     // 要在 applyRoleTabs 挑分頁之前就生出來
+  if(ass) assBits();            // 特助的兩個排班分頁，同理
   /* 填寫頁的標題依角色決定。
      ⛔ 以前是行政注入的時候改一次，切回翻譯沒有人改回來，
         於是佑彬看到「改這一筆行程」「排一筆新的行程」（2026-10-04 他的截圖）。
@@ -10178,6 +10208,10 @@ function dpLabel(d){
 }
 function dpCrewLang(n){ return (TAX && TAX.crewLang && TAX.crewLang[n]) || CREW_LANG_[n] || ''; }
 var CREW_LANG_ = {};   // 由 bootstrap 帶進來（svcBootstrap 的 crewLang）
+/* 誰哪一天不在。⛔ listSchedule 每次都有回 leave，前端從來沒收過——
+   「排給請假的人＝整筆白排」是 2026-09-28 七天模擬列出的六個破口之一。
+   ⚠ 那張表現在是空的（沒人登記，也還沒有登記入口），所以目前永遠不會亮。 */
+var LEAVE_ = {};       // 姓名 -> ['yyyy-MM-dd', …]
 
 /* ── 衝突偵測 ────────────────────────────────────
    四種：撞時間／語言不對／本人說不行／可能太滿。
@@ -10471,6 +10505,7 @@ function loadSum(force){
         CAL_CACHE[m] = r.rows || [];
         CAL_CACHE_AT[m] = Date.now();
         if(!CREW.length) CREW = r.crew || [];
+        if(r.leave) LEAVE_ = r.leave;      // 誰哪天不在
         if(--left === 0){ drawSum(); refreshed(); }
       })
       .withFailureHandler(function(e){
@@ -10607,6 +10642,362 @@ document.addEventListener('click', function(e){
     loadCal(CAL_YM);
   }
 }, false);
+
+/* ══ 特助排班（牟佑彬 2026-10-04 定案的流程）══════════════════════
+   卡到 → ① 問行政調時間 → ② 其他翻譯 → ③ 非翻譯＋電話 → ④ 改天 → 退回
+
+   ⛔ 系統不排班，系統只負責「把要她判斷的那幾筆挑出來」。
+      ①③④三關的答案都在人身上（工廠肯不肯、這場要不要翻譯、能不能延），
+      系統猜了反而要她花時間推翻。能自動的只有兩件：
+      **算出誰卡到了**、**算出誰可以頂**。
+
+   ⚠ 甲（摺疊條）與戊（一人一頁）是**讓他試用的兩種做法**，
+     他看過實體介面之後會挑一個，沒選的那一個要砍掉。
+
+   ⛔ 未定時段不算撞——他的原話：「沒填表示該行程有彈性」。
+   ⛔ 不准用件數門檻判斷「太滿」——他的原話：「不一定。相近的當然能多跑一點。」
+   ══════════════════════════════════════════════════════════════ */
+var PS_DAY = '';          // 看哪一天，預設明天
+var PS_OPEN = '';         // 甲：展開的是誰
+var PS_CUR = 0;           // 戊：翻到第幾個人
+var PS_SHEET = null;      // 開著換人面板的那一筆
+
+function psTomorrow_(){
+  var d = new Date(); d.setDate(d.getDate() + 1);
+  return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) +
+    '-' + ('0'+d.getDate()).slice(-2);
+}
+function psShift_(day, n){
+  var p = String(day).split('-');
+  var d = new Date(+p[0], +p[1]-1, +p[2]); d.setDate(d.getDate() + n);
+  return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) +
+    '-' + ('0'+d.getDate()).slice(-2);
+}
+
+/* 這一天為什麼卡住。只認他確認過的那幾種，不自己加。 */
+function psBad_(rows){
+  var bad = {}, by = {};
+  rows.forEach(function(r){
+    if(!dpWho(r)){ bad[r.id] = '還沒有人'; return; }
+    if(r.decline){ bad[r.id] = dpWho(r) + ' 說那天不行'; return; }
+    var lg = dpCrewLang(dpWho(r));
+    if(r.lang && lg && lg !== r.lang){
+      bad[r.id] = dpWho(r) + ' 是' + lg + '文，這一場是' + r.lang + '文'; return; }
+    if((LEAVE_[dpWho(r)] || []).indexOf(r.date) !== -1){
+      bad[r.id] = dpWho(r) + ' 那天請假'; return; }
+    (by[dpWho(r)] = by[dpWho(r)] || []).push(r);
+  });
+  /* ⛔ 只有「兩邊都壓了時間而且同一個時段」才算撞。未定時段是有彈性的。 */
+  Object.keys(by).forEach(function(w){
+    var seen = {};
+    by[w].filter(function(r){ return r.slot; }).forEach(function(r){
+      if(seen[r.slot]){
+        bad[r.id] = w + ' 那天' + r.slot + '有兩件';
+        bad[seen[r.slot].id] = bad[r.id];
+      } else seen[r.slot] = r;
+    });
+  });
+  return bad;
+}
+
+function psRows_(){
+  return dpDay(PS_DAY).filter(function(r){ return r.status === '預排'; });
+}
+function psGroups_(){
+  var rows = psRows_(), bad = psBad_(rows), by = {};
+  rows.forEach(function(r){
+    var w = dpWho(r) || '（還沒有人）';
+    (by[w] = by[w] || []).push(r);
+  });
+  return Object.keys(by).map(function(w){
+    return { who: w, rows: by[w],
+             bad: by[w].filter(function(r){ return bad[r.id]; }).length };
+  }).sort(function(a, b){
+    return b.bad - a.bad || String(a.who).localeCompare(String(b.who), 'zh-Hant');
+  });
+}
+
+/* 誰可以頂。排序：能不能去 → 語別 → 順不順路 → 那天幾件。
+   ⚠ 「順不順路」現在只能用**同一個客戶**當代理——
+     客戶的鄉鎮在「專責翻譯_草稿」，正式名單那一欄還是空的。 */
+function psRank_(job){
+  var day = psRows_();
+  return CREW.map(function(n){
+    var lg = dpCrewLang(n);
+    var mine = day.filter(function(r){ return dpWho(r) === n && r.id !== job.id; });
+    var clash = job.slot ? mine.filter(function(r){ return r.slot === job.slot; }) : [];
+    var flex = mine.filter(function(r){ return !r.slot; }).length;
+    var same = mine.filter(function(r){ return r.client === job.client; }).length;
+    var off = (LEAVE_[n] || []).indexOf(job.date) !== -1;
+    var langNo = !!(job.lang && lg && lg !== job.lang);
+    var stop = off ? '那天請假'
+             : (clash.length ? ('那天' + job.slot + '已經有一件：' + clash[0].client) : '');
+    var bits = [lg ? (lg + '文') : '外務'];
+    if(same) bits.push('那天本來就要去這一家');
+    bits.push(mine.length
+      ? ('那天 ' + mine.length + ' 件' + (flex ? ('，' + flex + ' 件未定時段可以調') : ''))
+      : '那天還沒有行程');
+    var sc = 0;
+    if(stop) sc -= 1000;
+    if(langNo) sc -= 100;
+    sc += same * 20;
+    sc -= mine.length * 5;
+    return { n: n, stop: stop, langNo: langNo, bits: bits, sc: sc };
+  }).sort(function(a, b){
+    return b.sc - a.sc || a.n.localeCompare(b.n, 'zh-Hant');
+  });
+}
+
+function psTrip_(r, why){
+  return '<div class="pstl' + (why ? ' b' : '') + '">' +
+    '<u>' + esc(r.slot || '未定') + '</u>' +
+    '<span class="n">' + esc(r.client) +
+      '<s>' + esc(r.topic || r.sub || '—') +
+      (r.workers ? ('　·　' + esc(r.workers)) : '') + '</s></span>' +
+    (why ? '<span class="f">卡住</span>' : '') + '</div>';
+}
+function psActs_(r){
+  return '<div class="psact">' +
+    '<button type="button" data-ps="time" data-id="' + esc(r.id) + '">改時間</button>' +
+    '<button type="button" class="p" data-ps="pick" data-id="' + esc(r.id) + '">換人</button>' +
+    '<button type="button" data-ps="day" data-id="' + esc(r.id) + '">改天</button>' +
+    '<button type="button" data-ps="flex" data-id="' + esc(r.id) + '">這件不動</button>' +
+    '</div>';
+}
+function psWarn_(g, bad){
+  var bs = g.rows.filter(function(r){ return bad[r.id]; });
+  if(!bs.length) return '';
+  var h = '';
+  var seen = {};
+  bs.forEach(function(r){
+    var w = bad[r.id];
+    if(!seen[w]){ seen[w] = 1; h += '<div class="pswh">⚠ ' + esc(w) + '</div>'; }
+    h += '<div class="pswl">' + esc(r.client) + '　' + esc(r.slot || '未定時段') + '</div>' +
+      psActs_(r);
+  });
+  return '<div class="pswarn">' + h + '</div>';
+}
+function psHead_(){
+  var gs = psGroups_(), nbad = gs.filter(function(g){ return g.bad; }).length;
+  return '<div class="pshd">' +
+    '<button type="button" class="psnav" data-ps="prev">‹</button>' +
+    '<span class="d"><b>' + esc(dpLabel(PS_DAY)) + '</b>' +
+      '<s>' + psRows_().length + ' 筆' +
+      (nbad ? ('　·　' + nbad + ' 位要你看') : '　·　都排好了') + '</s></span>' +
+    '<button type="button" class="psnav" data-ps="next">›</button>' +
+    '</div>' +
+    (PS_DAY !== psTomorrow_()
+      ? '<button type="button" class="pstm" data-ps="tmr">回到明天</button>' : '');
+}
+
+/* 甲：摺疊條。卡住的排前面，點開才看細節。 */
+function drawPS1(){
+  var box = $('p-ps1'); if(!box) return;
+  var gs = psGroups_(), bad = psBad_(psRows_());
+  var h = psHead_();
+  if(!gs.length) h += '<div class="mid" style="padding:30px">這一天還沒有預排的行程</div>';
+  gs.forEach(function(g){
+    h += '<div class="pspc' + (g.bad ? ' bad' : '') +
+      (PS_OPEN === g.who ? ' open' : '') + '">' +
+      '<div class="pshdr" data-ps="open" data-who="' + esc(g.who) + '">' +
+        '<b>' + esc(g.who) + '</b>' +
+        (dpCrewLang(g.who) ? '<span class="lg">' + esc(dpCrewLang(g.who)) + '</span>' : '') +
+        '<s>' + g.rows.length + ' 件</s>' +
+        '<span class="fl' + (g.bad ? ' b' : '') + '">' +
+          (g.bad ? ('卡住 ' + g.bad) : '沒問題') + '</span></div>' +
+      '<div class="psin">' +
+        g.rows.map(function(r){ return psTrip_(r, bad[r.id]); }).join('') +
+        psWarn_(g, bad) +
+        (g.bad ? '' : '<button type="button" class="psok" data-ps="okall" data-who="' +
+          esc(g.who) + '">確認 ' + g.rows.length + ' 筆</button>') +
+      '</div></div>';
+  });
+  var allOk = gs.filter(function(g){ return !g.bad; });
+  if(allOk.length) h += '<button type="button" class="psall" data-ps="okgood">' +
+    '沒問題的全部確認（' +
+    allOk.reduce(function(a, g){ return a + g.rows.length; }, 0) + ' 筆）</button>';
+  box.innerHTML = h;
+  psSheet_(box);
+}
+
+/* 戊：一人一頁，左右翻。 */
+function drawPS2(){
+  var box = $('p-ps2'); if(!box) return;
+  var gs = psGroups_(), bad = psBad_(psRows_());
+  var h = psHead_();
+  if(!gs.length){
+    box.innerHTML = h + '<div class="mid" style="padding:30px">這一天還沒有預排的行程</div>';
+    return;
+  }
+  if(PS_CUR >= gs.length) PS_CUR = 0;
+  var g = gs[PS_CUR];
+  h += '<div class="pssw">' +
+    '<button type="button" class="psnav" data-ps="pprev">‹</button>' +
+    '<span class="m"><b>' + esc(g.who) + '</b>' +
+      (dpCrewLang(g.who) ? '<span class="lg">' + esc(dpCrewLang(g.who)) + '</span>' : '') +
+      '<s>' + g.rows.length + ' 件　·　' +
+      (g.bad ? ('卡住 ' + g.bad) : '沒問題') + '</s></span>' +
+    '<button type="button" class="psnav" data-ps="pnext">›</button></div>' +
+    '<div class="pspc' + (g.bad ? ' bad' : '') + ' open"><div class="psin">' +
+      g.rows.map(function(r){ return psTrip_(r, bad[r.id]); }).join('') +
+      psWarn_(g, bad) +
+      (g.bad ? '' : '<button type="button" class="psok" data-ps="okall" data-who="' +
+        esc(g.who) + '">確認 ' + g.rows.length + ' 筆</button>') +
+    '</div></div>' +
+    '<div class="psdots">' + gs.map(function(x, i){
+      return '<i class="' + (i === PS_CUR ? 'on ' : '') + (x.bad ? 'b' : '') +
+        '" data-ps="dot" data-i="' + i + '"></i>';
+    }).join('') + '</div>';
+  box.innerHTML = h;
+  psSheet_(box);
+}
+
+/* 換人面板。⚠ 兩頁共用同一支，改一次兩邊都變。 */
+function psSheet_(box){
+  if(!PS_SHEET) return;
+  var job = CAL_ROWS.filter(function(r){ return r.id === PS_SHEET; })[0];
+  if(!job) { PS_SHEET = null; return; }
+  var list = psRank_(job);
+  var ok = list.filter(function(x){ return !x.stop && !x.langNo; });
+  var wn = list.filter(function(x){ return !x.stop && x.langNo; });
+  var no = list.filter(function(x){ return x.stop; });
+  function it(x){
+    return '<div class="psit' + (x.stop ? ' no' : '') + '"' +
+      (x.stop ? '' : ' data-ps="take" data-id="' + esc(job.id) + '" data-who="' +
+        esc(x.n) + '"') + '>' +
+      '<span class="bd"><span class="nm">' + esc(x.n) +
+        (dpCrewLang(x.n) ? '' : '<span class="bk">非翻譯</span>') + '</span>' +
+      '<span class="rs">' + (x.stop ? '<span class="stop">' + esc(x.stop) + '</span> · ' : '') +
+        esc(x.bits.join(' · ')) + '</span></span>' +
+      (x.stop ? '' : '<span class="go">換他 ›</span>') + '</div>';
+  }
+  box.insertAdjacentHTML('beforeend',
+    '<div class="pssheet"><div class="psbx">' +
+    '<h4>換誰去</h4><p class="mt">' + esc(job.client) + '　' +
+      esc(job.topic || job.sub || '') +
+      (job.lang ? ('　·　這一場是' + esc(job.lang) + '文') : '') + '</p>' +
+    '<div class="pspk">' +
+      (ok.length ? '<div class="sec">建議這幾位</div>' + ok.map(it).join('') : '') +
+      (wn.length ? '<div class="sec">語言不對，但人有空</div>' + wn.map(it).join('') : '') +
+      (no.length ? '<div class="sec">那天不能去</div>' + no.map(it).join('') : '') +
+    '</div><button type="button" class="pscls" data-ps="close">算了</button>' +
+    '</div></div>');
+}
+
+function psDraw(){ drawPS1(); drawPS2(); }
+
+function loadPS(which){
+  var box = $('p-' + which); if(!box) return;
+  if(!PS_DAY) PS_DAY = psTomorrow_();
+  var m = PS_DAY.slice(0, 7);
+  if(CAL_CACHE[m] && (Date.now() - (CAL_CACHE_AT[m] || 0)) <= CAL_TTL){
+    calMerge([m]); psDraw(); return;
+  }
+  if(!CAL_CACHE[m]) box.innerHTML = '<div class="mid" style="padding:26px">載入中…</div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      CAL_CACHE[m] = r.rows || []; CAL_CACHE_AT[m] = Date.now();
+      if(!CREW.length) CREW = r.crew || [];
+      if(r.leave) LEAVE_ = r.leave;
+      calMerge([m]); psDraw(); refreshed();
+    })
+    .withFailureHandler(function(e){ toast(e.message, true); psDraw(); })
+    .listSchedule(CODE, m);
+}
+
+/* 動作。⚠ 用委派綁在整頁上，畫面重畫之後不用重綁。 */
+document.addEventListener('click', function(e){
+  var t = e.target;
+  if(!t || !t.closest) return;
+  var b = t.closest('[data-ps]');
+  if(!b || !b.closest('#p-ps1, #p-ps2')) return;
+  e.stopPropagation(); e.preventDefault();
+  var a = b.dataset.ps, id = b.dataset.id;
+  var r = id ? (CAL_ROWS.filter(function(x){ return x.id === id; })[0] || {}) : {};
+
+  if(a === 'prev'){ PS_DAY = psShift_(PS_DAY, -1); PS_CUR = 0; loadPS('ps1'); return; }
+  if(a === 'next'){ PS_DAY = psShift_(PS_DAY, 1);  PS_CUR = 0; loadPS('ps1'); return; }
+  if(a === 'tmr'){  PS_DAY = psTomorrow_();        PS_CUR = 0; loadPS('ps1'); return; }
+  if(a === 'open'){ PS_OPEN = (PS_OPEN === b.dataset.who) ? '' : b.dataset.who;
+    psDraw(); return; }
+  if(a === 'pprev'){ var n1 = psGroups_().length;
+    PS_CUR = (PS_CUR - 1 + n1) % n1; psDraw(); return; }
+  if(a === 'pnext'){ var n2 = psGroups_().length;
+    PS_CUR = (PS_CUR + 1) % n2; psDraw(); return; }
+  if(a === 'dot'){ PS_CUR = +b.dataset.i; psDraw(); return; }
+  if(a === 'pick'){ PS_SHEET = id; psDraw(); return; }
+  if(a === 'close'){ PS_SHEET = null; psDraw(); return; }
+
+  if(a === 'take'){
+    /* 換人＝確認給他。⛔ confirmSchedule 帶 who 就是改派，後端會順便通知原本那個人。 */
+    PS_SHEET = null;
+    psRun_(function(ok, bad){
+      google.script.run.withSuccessHandler(ok).withFailureHandler(bad)
+        .confirmSchedule(CODE, id, b.dataset.who, '');
+    }, '已改派給 ' + b.dataset.who);
+    return;
+  }
+  if(a === 'flex'){
+    /* 「這件不動」＝把時間清掉讓它有彈性。他的原話：沒填表示該行程有彈性。 */
+    psRun_(function(ok, bad){
+      google.script.run.withSuccessHandler(ok).withFailureHandler(bad)
+        .updateSchedule(CODE, id, { slot: '' });
+    }, '改成未定時段，讓它有彈性');
+    return;
+  }
+  if(a === 'time'){
+    var now = r.slot || '';
+    var pick = prompt('改成哪個時段？\n\n' +
+      '留白＝不壓時間（最常用）\n可以填：上午、下午、全天', now);
+    if(pick === null) return;
+    pick = String(pick).trim();
+    psRun_(function(ok, bad){
+      google.script.run.withSuccessHandler(ok).withFailureHandler(bad)
+        .updateSchedule(CODE, id, { slot: pick });
+    }, pick ? ('改成 ' + pick) : '時間清掉了，變成有彈性');
+    return;
+  }
+  if(a === 'day'){
+    var d = prompt('改到哪一天？（yyyy-MM-dd）\n\n' +
+      r.client + '　' + (r.topic || ''), psShift_(PS_DAY, 1));
+    if(d === null) return;
+    d = String(d).trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ toast('日期格式要像 2026-10-08', true); return; }
+    psRun_(function(ok, bad){
+      google.script.run.withSuccessHandler(ok).withFailureHandler(bad)
+        .updateSchedule(CODE, id, { date: d });
+    }, '已改到 ' + d);
+    return;
+  }
+  if(a === 'okall' || a === 'okgood'){
+    var gs = psGroups_();
+    var list = (a === 'okall')
+      ? (gs.filter(function(g){ return g.who === b.dataset.who; })[0] || {rows:[]}).rows
+      : gs.filter(function(g){ return !g.bad; })
+          .reduce(function(acc, g){ return acc.concat(g.rows); }, []);
+    if(!list.length) return;
+    var left = list.length, n = 0, err = '';
+    list.forEach(function(x){
+      google.script.run
+        .withSuccessHandler(function(){ n++; if(!--left) psAfter_(n + ' 筆確認完'); })
+        .withFailureHandler(function(er){ err = er.message;
+          if(!--left) psAfter_(n ? (n + ' 筆過了，有幾筆沒過：' + err) : err); })
+        .confirmSchedule(CODE, x.id, '');
+    });
+    return;
+  }
+}, true);
+
+/* 做完一定要重抓——畫面上的是快取，不重抓她會以為沒生效。 */
+function psRun_(go, msg){
+  go(function(){ psAfter_(msg); },
+     function(e){ toast(e.message, true); });
+}
+function psAfter_(msg){
+  toast(msg);
+  calBust(PS_DAY.slice(0, 7));
+  loadPS('ps1');
+}
 
 function loadOrder(){
   var box = $('p-order'), keep = dpSnap();
