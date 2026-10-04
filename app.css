@@ -536,6 +536,9 @@ body.tabsbottom .tabs button[data-t=find]{order:2}
 body.tabsbottom .tabs button[data-t=new]{order:3}
 body.tabsbottom .tabs button[data-t=follow]{order:4}
 body.tabsbottom .tabs button[data-t=stat]{order:5}
+/* 總表排在行事曆後面。⛔ 沒給 order 的話預設是 0，會跑到行事曆前面
+   （行事曆是 order:1）——2026-10-04 實拍才發現。 */
+body.tabsbottom .tabs button[data-t=sum]{order:6}
 
 /* 內容要留出分頁列的高度，不然最後一筆會被蓋住 */
 body.tabsbottom{padding-bottom:calc(58px + var(--sab, env(safe-area-inset-bottom, 0px)))}

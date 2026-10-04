@@ -10506,19 +10506,24 @@ function drawSum(){
       '</div>';
   });
 
-  /* 有客戶、但這兩個月一筆行程都沒有。這就是他要的「有沒有忘記排」。 */
-  var hasTrip = {};
-  all.forEach(function(r){ hasTrip[r.client] = 1; });
-  var pool = (SUM_MINE && own.length) ? own : PRESETS;
-  var miss = pool.filter(function(c){ return !hasTrip[c.c]; });
-  if(miss.length){
-    h += '<div class="summiss"><h4>\u9019 ' + miss.length +
-      ' \u5bb6\u9019\u5169\u500b\u6708\u9084\u6c92\u6709\u4efb\u4f55\u884c\u7a0b</h4>' +
-      '<div class="cs">' + miss.slice(0, 20).map(function(c){
-        return '<span>' + esc(c.c) + '</span>'; }).join('') +
-      (miss.length > 20
-        ? '<span class="more">\u2026\u9084\u6709 ' + (miss.length - 20) + ' \u5bb6</span>'
-        : '') + '</div></div>';
+  /* 「有沒有忘記排」。
+     ⛔ 只有在「行政負責客戶」填好之後才顯示——沒填的話名單是全部 304 家，
+        印出「這 304 家還沒有行程」完全沒有用，而且會把真正要看的擠掉
+        （2026-10-04 實拍發現）。會亂叫的提醒比沒有提醒更糟。 */
+  if(own.length){
+    var hasTrip = {};
+    all.forEach(function(r){ hasTrip[r.client] = 1; });
+    var miss = own.filter(function(c){ return !hasTrip[c.c]; });
+    if(miss.length){
+      h += '<div class="summiss"><h4>你負責的 ' + own.length +
+        ' 家裡，這 ' + miss.length +
+        ' 家這兩個月還沒有行程</h4>' +
+        '<div class="cs">' + miss.slice(0, 20).map(function(c){
+          return '<span>' + esc(c.c) + '</span>'; }).join('') +
+        (miss.length > 20
+          ? '<span class="more">…還有 ' + (miss.length - 20) + ' 家</span>'
+          : '') + '</div></div>';
+    }
   }
   box.innerHTML = h;
 }
