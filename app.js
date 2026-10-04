@@ -10724,6 +10724,60 @@ function psGroups_(){
   });
 }
 
+/* 地址只留到路名（牟佑彬 2026-10-04）。
+   ⛔ 完整地址太長，一塊卡片會被它撐掉一行半。她要的是「順不順路」，
+      門牌號對那件事沒有幫助。
+   ⚠ 但縣市要留：台中以外的（南投、彰化、桃園…）標出來，
+     因為跨縣市就是「要留半天」的訊號。
+   ⚠ 資料來源是 PRESETS[].p——後端 svcClients_ 早就把
+     工作地址＋聯絡人＋電話串成那一欄送過來了，不用改後端。 */
+function psAddrRaw_(client){
+  var pz = presetOf(client);
+  return (pz && pz.p) ? String(pz.p).split('　')[0] : '';
+}
+function psAddrShort_(client){
+  var a = psAddrRaw_(client);
+  if(!a) return '';
+  var m = /^(.{2,3}[市縣])(.{1,4}[區鄉鎮市])(?:.{1,5}里)?(.*)$/.exec(a);
+  if(!m) return a;
+  var city = m[1], dist = m[2], rest = m[3] || '';
+  var r = /^(.*?[路街道])((?:[一二三四五六七八九十\d０-９]+段)?)/.exec(rest);
+  var road = r ? (r[1] + (r[2] || '')) : rest.replace(/[\d０-９].*$/, '');
+  var far = (city !== '臺中市' && city !== '台中市');
+  return (far ? ('<b class="far">' + esc(city) + '</b>') : '') +
+    esc(dist) + '　' + esc(road);
+}
+/* 誰可以頂。排序：能不能去 → 語別 → 順不順路 → 那天幾件。
+   ⚠ 「順不順路」現在只能用**同一個客戶**當代理——
+     客戶的鄉鎮在「專責翻譯_草稿」，正式名單那一欄還是空的。 */
+function psRank_(job){
+  var day = psRows_();
+  return CREW.map(function(n){
+    var lg = dpCrewLang(n);
+    var mine = day.filter(function(r){ return dpWho(r) === n && r.id !== job.id; });
+    var clash = job.slot ? mine.filter(function(r){ return r.slot === job.slot; }) : [];
+    var flex = mine.filter(function(r){ return !r.slot; }).length;
+    var same = mine.filter(function(r){ return r.client === job.client; }).length;
+    var off = (LEAVE_[n] || []).indexOf(job.date) !== -1;
+    var langNo = !!(job.lang && lg && lg !== job.lang);
+    var stop = off ? '那天請假'
+             : (clash.length ? ('那天' + job.slot + '已經有一件：' + clash[0].client) : '');
+    var bits = [lg ? (lg + '文') : '外務'];
+    if(same) bits.push('那天本來就要去這一家');
+    bits.push(mine.length
+      ? ('那天 ' + mine.length + ' 件' + (flex ? ('，' + flex + ' 件未定時段可以調') : ''))
+      : '那天還沒有行程');
+    var sc = 0;
+    if(stop) sc -= 1000;
+    if(langNo) sc -= 100;
+    sc += same * 20;
+    sc -= mine.length * 5;
+    return { n: n, stop: stop, langNo: langNo, bits: bits, sc: sc };
+  }).sort(function(a, b){
+    return b.sc - a.sc || a.n.localeCompare(b.n, 'zh-Hant');
+  });
+}
+
 /* 那天跑的順序：上午 → 下午／全天 → 不壓時間，各區內照存起來的 ord。
    ⛔ 編號 1234 一直接續，不管上下午（他 2026-10-04 指定）。 */
 var PS_ZONES_ = ['上午', '下午', ''];
