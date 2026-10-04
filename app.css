@@ -3106,8 +3106,20 @@ body.tabsbottom .tabs.few button{min-width:120px}
 .c4todo{display:inline-flex;align-items:center;gap:.3rem;background:var(--warn-bg);
   border:1px solid var(--warn-line);border-radius:99px;padding:.1rem .5rem;
   font-size:var(--t6);font-weight:700;color:var(--warn-ink);margin-top:.25rem;
-  align-self:flex-start}
+  align-self:flex-start;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .c4todo.ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
+/* 點一下攤開交代的內容（牟佑彬 2026-10-04）。
+   ⛔ 預設收起來——一天五筆、每筆三四條，全部攤開要捲很久才看得到下一筆。 */
+.c4todo i{font-style:normal;font-size:.9em;line-height:1;
+  transition:transform .18s cubic-bezier(.32,.72,0,1)}
+.c4todo.open i{transform:rotate(180deg)}
+.c4tdl{display:none;align-self:stretch;margin-top:.3rem;
+  border-left:2px solid var(--warn-line);padding:.1rem 0 .1rem .5rem}
+.c4tdl.on{display:flex;flex-direction:column;gap:.2rem}
+.c4tdl b{font-size:var(--t5);font-weight:600;color:var(--ink2);
+  display:flex;gap:.3rem;align-items:baseline}
+.c4tdl b.ok{color:var(--ink3);text-decoration:line-through}
+@media (prefers-reduced-motion:reduce){ .c4todo i{transition:none} }
 /* 行政端：一行一條、可刪 */
 .tdrow{display:flex;gap:.4rem;align-items:center;margin-bottom:.35rem}
 .tdrow input{flex:1;min-width:0}
@@ -3240,7 +3252,9 @@ body.notabs .evsticky,body.notabs .calfw{bottom:0}
 body.filladm [data-adm="hide"]{display:none !important}
 /* 服務類別／細項只在第一張移工卡上——行程表只有一組，
    三張卡各填各的存不進去。 */
-body.filladm #workers .wk:not(:first-child) [data-adm="one"]{display:none}
+/* ⛔ 這條規則拿掉了（牟佑彬 2026-10-04）：行政只有第一張卡看得到服務項目。
+   原因是以前行程表只有一組服務類別／細項，加了「移工項目」那一欄之後
+   每位各選各的存得進去了，規則卻忘了拿掉。 */
 /* 「簽名」那整張卡、預覽、儲存紀錄都收起來 */
 body.filladm #p-new .card:has(.sig[data-sig="employer"]){display:none}
 body.filladm #preview,

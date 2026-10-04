@@ -1789,9 +1789,27 @@ function todoBadge(r){
   if(!t.length) return '';
   var done = t.filter(function(x){ return x.d; }).length;
   var all = done === t.length;
-  return '<span class="c4todo'+(all?' ok':'')+'">'+(all?'✓':'📌')+
-    ' 交代 '+done+' / '+t.length+'</span>';
+  /* 點一下攤開（牟佑彬 2026-10-04）。
+     ⛔ 預設還是收起來的——2026-09-30 比過五種放法才定的：
+        一天五筆、每筆三四條，全部攤開要捲很久才看得到下一筆。
+        「收起來、點得開」兩邊都顧得到。 */
+  return '<span class="c4todo'+(all?' ok':'')+'" data-tdg="1">'+(all?'✓':'📌')+
+    ' 交代 '+done+' / '+t.length+'<i>⌄</i></span>'+
+    '<span class="c4tdl">'+t.map(function(x){
+      return '<b'+(x.d?' class="ok"':'')+'>'+(x.d?'✓':'□')+' '+esc(x.t||x||'')+'</b>';
+    }).join('')+'</span>';
 }
+
+/* ⚠ 一定要走捕獲階段。卡片外層 .swwrap 自己有一個 click（點了會開表單），
+   冒泡階段攔不住它——點「交代」會變成點開整張卡。 */
+document.addEventListener('click', function(e){
+  var g = e.target.closest && e.target.closest('[data-tdg]');
+  if(!g) return;
+  e.stopPropagation(); e.preventDefault();
+  g.classList.toggle('open');
+  var l = g.nextElementSibling;
+  if(l && l.classList.contains('c4tdl')) l.classList.toggle('on');
+}, true);
 
 /* 灰色預排的卡片**刻意另外寫一個**，不重用上面那支。
      ⛔ 那一支帶著側滑軌道、長按拖曳改期、點開填服務紀錄——
@@ -1837,6 +1855,9 @@ function todoBadge(r){
           : (STAFF_ROLE === '行政' ? ''
              : '<button type="button" class="c4nogo" data-nogo="'+esc(r.id||'')+'">'+
                '我那天不行</button>'))+
+        /* 行政交代的事，預排的卡以前整個沒有——而**預排正是行政剛交代完的時候**
+           （牟佑彬 2026-10-04：「預排的交代事項在行程區塊要顯示」）。 */
+        todoBadge(r)+
       '</span></div></div>';
   }
 
@@ -3215,9 +3236,12 @@ function addWorker(){
      '<div class="f"><label>語別</label><div class="chips">'+
        TAX.langs.map(function(l){ return '<label><input type="radio" name="lg_'+id+'" value="'+l+'">'+l+'</label>'; }).join('')+
      '</div></div></div>'+
-   /* data-adm="one" ＝行政只在第一張卡看得到。
-      行程表上只有一組服務類別／細項，三個移工各填各的會存不進去。 */
-   '<div class="g2" data-adm="one">'+
+   /* ⛔ 這裡以前標 data-adm="one"，行政只有第一張卡看得到服務項目，
+      理由是「行程表上只有一組服務類別／細項」。
+      那個理由在加了「移工項目」那一欄（方案乙）之後就不成立了，
+      但標記忘了拿掉——他 2026-10-04 又踩到：
+      「第二個的服務項目也要開放讓我選擇，跟翻譯端的一樣」。 */
+   '<div class="g2">'+
      '<div class="f"><label>服務類別</label><select data-k="big"><option value="">請選擇…</option>'+
        TAX.cats.map(function(c){ return '<option>'+esc(c.b)+'</option>'; }).join('')+'</select></div>'+
      '<div class="f"><label>服務細項</label><select data-k="sub"><option value="">先選類別</option></select></div>'+
