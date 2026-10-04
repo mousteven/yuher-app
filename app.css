@@ -551,7 +551,8 @@ body.tabsbottom .tabs #admAdd{order:3;flex:1}
    同一類事故第四次，所以這次用 class 擋死：
    body.adm 每次 applyRoleSkin 都會重算，漏不掉。 */
 #admAdd{display:none}
-body.adm #admAdd{display:flex}
+body.adm #admAdd,
+body.ass #admAdd{display:flex}
 
 /* 內容要留出分頁列的高度，不然最後一筆會被蓋住 */
 body.tabsbottom{padding-bottom:calc(58px + var(--sab, env(safe-area-inset-bottom, 0px)))}
@@ -3304,6 +3305,26 @@ body.adm.dark{
   --accent:#C77C88; --accent-soft:#2E1A1E;
   --bad-ink:#E0A179; --bad-bg:#2C1D13; --bad-line:#4A3422;
   --bad-fill:#B4461A; --bad-bar:#C96A33; --danger:#E0A179; --rose:#E0A179;
+}
+
+/* ── 特助：黑色（牟佑彬 2026-10-04「有質感的黑」）──────────────
+   ⛔ 只換色票，元件一個都沒改——跟 body.adm 同一個骨架。
+   ⚠ 不用純黑 #000。純黑在手機上會跟螢幕邊框連成一片，而且陰影做不出層次。
+     這裡用帶一點藍的石墨色 #1C1F26，比純黑「有東西」，印出來也不會糊成一塊。
+   ⚠ 「出事」的紅維持原本的酒紅：主色是黑的，不會跟狀態色打架，
+     所以不像行政那樣要把它推成橘紅。 */
+body.ass{
+  --brand:#23262E; --brand-d:#101216; --brand-soft:#E8EAEE;
+  --chrome-bg:#1C1F26;
+  --chrome-grad:linear-gradient(135deg,#0E1014 0%,#23262E 52%,#3A3F4A 100%);
+  --fill:#23262E; --fill-ink:#fff;
+  --accent:#3A3F4A; --accent-soft:#E8EAEE;
+}
+body.ass.dark{
+  --brand:#C3C8D2; --brand-soft:#23262E;
+  --chrome-grad:linear-gradient(135deg,#07080A 0%,#14161B 52%,#2A2E37 100%);
+  --fill:#2E323C; --fill-ink:#fff;
+  --accent:#9BA3B2; --accent-soft:#23262E;
 }
 
 /* 廠商篩選列。只列**這個範圍內真的有排的**，而且帶數量——

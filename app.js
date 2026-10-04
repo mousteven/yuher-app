@@ -9895,7 +9895,10 @@ var ROLE_TABS_ = {
   /* 總表是行政自己掃全月用的（牟佑彬 2026-10-04）：
      誰還沒配人、特助後來派了誰、文件哪天還。資料跟行事曆同一份。 */
   '行政':   ['cal', 'sum'],
-  '特助':   ['cal', 'conf'],
+  /* 特助沿用行政那一套（行事曆＋總表），再加上她本來的派工台。
+     牟佑彬 2026-10-04：「她的部分沿用行政的專區」。
+     ⚠ 這一輪只讓它長出來，權限與功能等下一輪。 */
+  '特助':   ['cal', 'sum', 'conf'],
   '副理':   ['cal', 'new', 'track', 'follow', 'stat', 'conf'],
   '總經理': ['cal', 'new', 'track', 'follow', 'stat', 'conf']
 };
@@ -9942,19 +9945,26 @@ function sumBits(){
 
 function applyRoleSkin(){
   var adm = (STAFF_ROLE === '行政');
+  var ass = (STAFF_ROLE === '特助');
   document.body.classList.toggle('adm', adm);
-  if(adm) sumBits();            // 要在 applyRoleTabs 挑分頁之前就生出來
+  /* 特助一套黑的（牟佑彬 2026-10-04 指定）。
+     ⚠ 跟 body.adm 完全同一個骨架，只換色票——元件一個都沒改。 */
+  document.body.classList.toggle('ass', ass);
+  /* 總表與加號：行政與特助共用。
+     ⛔ 可見性一律綁在角色 class 上（#admAdd 綁 body.adm/body.ass），
+        不要靠「切身分的時候記得收回去」——那一招已經漏過四次。 */
+  if(adm || ass) sumBits();     // 要在 applyRoleTabs 挑分頁之前就生出來
   /* 填寫頁的標題依角色決定。
      ⛔ 以前是行政注入的時候改一次，切回翻譯沒有人改回來，
         於是佑彬看到「改這一筆行程」「排一筆新的行程」（2026-10-04 他的截圖）。
      ⚠ 這支每次切身分都會跑，寫在這裡就不可能漏。
        行政按「＋」開新的那一次，admNewTrip() 會再改成「排一筆新的行程」。 */
   var h3 = document.querySelector('#p-new .card h3');
-  if(h3) h3.textContent = (adm || STAFF_ROLE === '特助') ? '改這一筆行程' : '這一趟';
+  if(h3) h3.textContent = (adm || ass) ? '改這一筆行程' : '這一趟';
   /* ⚠ 紅色只給行政；但「那一頁是改行程、不是填紀錄」**行政與特助都要**。
      特助一樣不跑外勤、不填服務紀錄，點進去落到填寫頁同樣會誤存
      （牟佑彬 2026-10-03）。所以兩個 class 的範圍故意不一樣。 */
-  var edit = adm || (STAFF_ROLE === '特助');
+  var edit = adm || ass;
   /* 行政永遠不填服務紀錄，所以那一頁對他**永遠**是「改行程」的樣子。
      ⛔ 2026-10-03 之前他點進去看到的是翻譯要填的服務紀錄表，
         按下儲存會真的開出一筆正式紀錄、給編號、把行程標成已完成。
