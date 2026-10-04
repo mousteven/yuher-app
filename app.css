@@ -3119,7 +3119,7 @@ body.tabsbottom .tabs.few button{min-width:120px}
 
 /* 只有圖示與「做完幾件／共幾件」。
    ⚠ 圖示的顏色繼承文字，所以全部做完變綠的時候它會一起變。 */
-.ev .b > span.c4todo{display:inline-flex;align-items:center;gap:5px;flex:none;
+.c4row > span.c4todo{display:inline-flex;align-items:center;gap:5px;flex:none;
   box-sizing:border-box;cursor:pointer;-webkit-tap-highlight-color:transparent;
   padding:4px 8px;border-radius:999px;margin:0;
   font-size:11.5px;font-weight:800;line-height:1.35;white-space:nowrap;
@@ -3137,7 +3137,7 @@ body.tabsbottom .tabs.few button{min-width:120px}
      所以不會出現「圓角裡包一個直角」。 */
 .ev .b > span.c4tdl{display:grid;grid-template-rows:0fr;margin:0 -12px;
   transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1)}
-.c4tdl.on{grid-template-rows:1fr;margin-bottom:-11px}
+.ev .b > span.c4tdl.on{grid-template-rows:1fr;margin-bottom:-11px}
 .c4tdin{overflow:hidden;display:block;
   background:color-mix(in srgb,var(--ink3) 4%,var(--card))}
 .c4tdl.on .c4tdin{border-top:1px solid var(--line2)}
