@@ -3138,6 +3138,11 @@ body.tabsbottom .tabs.few button{min-width:120px}
   color:var(--ink2);background:color-mix(in srgb,var(--ink3) 12%,var(--card));
   border:0;transition:background-color .16s ease,color .16s ease}
 .c4todo:active{background:color-mix(in srgb,var(--ink3) 22%,var(--card))}
+/* ⛔ 膠囊本身只有 23.5px 高，低於手指該有的 44px。
+   視覺不動，用一層看不見的覆蓋把可點範圍往外撐 10px——
+   他在工廠裡用手機，點不到等於沒有這個功能。 */
+.c4todo{position:relative}
+.c4todo::after{content:"";position:absolute;inset:-11px -10px}
 .c4todo.ok{color:var(--ok-ink);background:var(--ok-bg)}
 .c4todo .ic{width:13px;height:13px;flex:none;display:block}
 .c4todo .ar{font-style:normal;font-size:1.15em;line-height:1;margin-left:-1px;
@@ -3147,8 +3152,13 @@ body.tabsbottom .tabs.few button{min-width:120px}
 /* 展開：0fr → 1fr，收著的時候高度真的是 0，不用寫死高度、幾條都順。
    ⚠ 整條貼齊卡片左右兩緣，下緣的圓角交給 .swwrap（它有 overflow:hidden），
      所以不會出現「圓角裡包一個直角」。 */
-.ev .b > span.c4tdl{display:grid;grid-template-rows:0fr;margin:0 -12px;
+.ev .b > span.c4tdl,
+.sumrow > .c4tdl{display:grid;grid-template-rows:0fr;margin:0 -12px;
   transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1)}
+/* 總表的列是 grid，清單要跨整列，而且貼齊左右兩緣 */
+.sumrow > .c4tdl{grid-column:1/-1;margin-top:6px;margin-bottom:-10px}
+.sumrow > .c4tdl.on{grid-template-rows:1fr}
+.sumrow .c4tdin{border-radius:0 0 11px 11px}
 .ev .b > span.c4tdl.on{grid-template-rows:1fr;margin-bottom:-11px}
 .c4tdin{overflow:hidden;display:block;
   background:color-mix(in srgb,var(--ink3) 4%,var(--card))}

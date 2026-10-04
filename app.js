@@ -1836,8 +1836,9 @@ document.addEventListener('click', function(e){
   var open = !g.classList.contains('open');
   g.classList.toggle('open', open);
   /* ⛔ 清單是 .c4row 的**下一個**兄弟，不是那顆膠囊的——
-     膠囊在 .c4row 裡面。寫成 g.nextElementSibling 會抓到 null。 */
-  var box = g.closest('.b');
+     膠囊在 .c4row 裡面。寫成 g.nextElementSibling 會抓到 null。
+     ⚠ 行事曆的卡片外層是 .b，總表的列是 .sumrow，兩邊共用這一支。 */
+  var box = g.closest('.b') || g.closest('.sumrow');
   var l = box && box.querySelector('.c4tdl');
   if(l) l.classList.toggle('on', open);
 }, true);
@@ -10503,9 +10504,18 @@ function drawSum(){
         (r.workers ? ('\u3000\u00b7\u3000' + esc(r.workers)) : '') + '</span>' +
       '<span class="srt"><span class="spill ' + st[0] + '">' + st[1] + '</span>' +
         '<span class="scw ' + cw[0] + '">' + esc(cw[1]) + '</span></span>' +
-      (dc ? '<span class="stag"><span class="sdoc' + (dc.back ? ' back' : '') + '">' +
-        (dc.back ? '\u6587\u4ef6\u8981\u9084' : '\u6587\u4ef6') + '\u3000' +
-        esc(dc.tx) + '</span></span>' : '') +
+      /* 交代與文件同一排。交代那顆點了會在這一列底下攤開
+         （牟佑彬 2026-10-04：「也要做下拉式」）。
+         ⚠ 跟行事曆卡片用的是**同一支** todoPill_／todoList_，
+           改一邊兩邊一起變，不會又長出第二種樣子。 */
+      (dc || (r.todo || []).length
+        ? '<span class="stag">' +
+          (dc ? '<span class="sdoc' + (dc.back ? ' back' : '') + '">' +
+            (dc.back ? '\u6587\u4ef6\u8981\u9084' : '\u6587\u4ef6') + '\u3000' +
+            esc(dc.tx) + '</span>' : '') +
+          todoPill_(r) + '</span>'
+        : '') +
+      todoList_(r) +
       '</div>';
   });
 
