@@ -10688,6 +10688,10 @@ function psShift_(day, n){
    ⛔ 只寫「卡住」兩個字她看不出為什麼——原因有五種
       （撞時段、語言不對、請假、本人說不行、沒有人），
       牟佑彬 2026-10-04 看著整片紅問「卡住的原因是什麼」。 */
+/* 兩件行程至少要隔多久才不算撞。一趟工廠加上開車本來就不只一小時。
+   ⚠ 他覺得太鬆或太緊就改這個數字，只有這裡用到。 */
+var PS_GAP_ = 60;
+
 function psBad_(rows){
   var bad = {}, by = {};
   rows.forEach(function(r){
@@ -10715,9 +10719,24 @@ function psBad_(rows){
   Object.keys(by).forEach(function(w){
     var day = by[w].filter(function(r){ return r.slot; });
     var full = day.filter(function(r){ return r.slot === '全天'; });
-    if(!full.length || day.length < 2) return;
-    var why = w + ' 那天有「全天」的行程，又排了另外 ' + (day.length - 1) + ' 件';
-    day.forEach(function(r){ bad[r.id] = { why: why, tag: '全天卡到' }; });
+    if(full.length && day.length > 1){
+      var why = w + ' 那天有「全天」的行程，又排了另外 ' + (day.length - 1) + ' 件';
+      day.forEach(function(r){ bad[r.id] = { why: why, tag: '全天卡到' }; });
+      return;
+    }
+    /* ⛔ 只有**兩件都填了時間**才比得出撞不撞。
+       沒填時間的那一件本來就有彈性（他的原話），不可以算成衝突。
+       ⚠ 差不到 PS_GAP_ 分鐘就算撞——一趟工廠加上開車本來就不只一小時。 */
+    var timed = by[w].filter(function(r){ return psTimeOf_(r) !== null; })
+      .sort(function(a, b){ return psTimeOf_(a) - psTimeOf_(b); });
+    for(var i = 1; i < timed.length; i++){
+      var d = psTimeOf_(timed[i]) - psTimeOf_(timed[i-1]);
+      if(d >= PS_GAP_) continue;
+      var w2 = w + ' 那天 ' + timed[i-1].slot + ' 跟 ' + timed[i].slot +
+        ' 只差 ' + d + ' 分鐘';
+      bad[timed[i-1].id] = { why: w2, tag: '時間撞到' };
+      bad[timed[i].id] = { why: w2, tag: '時間撞到' };
+    }
   });
   return bad;
 }
@@ -10808,7 +10827,19 @@ function psAddrShort_(client){
 /* 那天跑的順序：上午 → 下午／全天 → 不壓時間，各區內照存起來的 ord。
    ⛔ 編號 1234 一直接續，不管上下午（他 2026-10-04 指定）。 */
 var PS_ZONES_ = ['上午', '下午', ''];
+/* 時段那一格可以是「上午／下午／全天」，也可以是真的時間 09:30（選填）。
+   ⛔ 回傳的是**分鐘數**，不是字串——要拿來比大小。沒填時間就回 null。
+   ⚠ 後端存進試算表會變成時間格式，讀回來 schedSlot_ 已經格式化成 HH:mm。 */
+function psTimeOf_(r){
+  var m = /^(\d{1,2}):(\d{2})$/.exec(String((r && r.slot) || '').trim());
+  if(!m) return null;
+  var hh = +m[1], mm = +m[2];
+  if(hh > 23 || mm > 59) return null;
+  return hh * 60 + mm;
+}
 function psZoneOf_(r){
+  var t = psTimeOf_(r);
+  if(t !== null) return t < 12 * 60 ? '上午' : '下午';   // 填了時間就自己歸區
   if(r.slot === '上午') return '上午';
   if(r.slot) return '下午';          // 下午與全天都歸下午那一區
   return '';
@@ -10818,6 +10849,10 @@ function psOrdered_(rows){
   PS_ZONES_.forEach(function(z){
     rows.filter(function(r){ return psZoneOf_(r) === z; })
       .sort(function(a, b){
+        /* ⚠ 兩件都填了時間就照時間走——9:00 排在 10:00 前面是常識，
+           不應該要她再手動拖一次。只有一邊有時間就照原本的順序。 */
+        var ta = psTimeOf_(a), tb = psTimeOf_(b);
+        if(ta !== null && tb !== null && ta !== tb) return ta - tb;
         return (a.ord || 9999) - (b.ord || 9999) ||
                String(a.id).localeCompare(String(b.id));
       })
@@ -11122,6 +11157,9 @@ function psDragBind(){
 
       var want = zone.dataset.z;
       var moved = (psZoneOf_(r) !== want);
+      /* ⚠ 原本填了幾點、又被拖到另一個半天 → 那個時間一定要講一聲再清掉。
+         安靜地把 09:30 吃掉，她會以為時間還在。 */
+      var hadTime = (moved && psTimeOf_(r) !== null) ? r.slot : '';
       if(moved) r.slot = want;
 
       /* 畫面上現在的先後就是新的順序——照 DOM 重新編號。
@@ -11143,7 +11181,8 @@ function psDragBind(){
           .withSuccessHandler(function(){ psSaveOrder_(mine); })
           .withFailureHandler(function(e){ toast(e.message, true); loadPS('ps1'); })
           .updateSchedule(CODE, id, { slot: want });
-        toast(r.client + '　→　' + (want || '不壓時間'));
+        toast(r.client + '　→　' + (want || '不壓時間') +
+          (hadTime ? '（原本的 ' + hadTime + ' 取消了）' : ''));
       } else {
         psSaveOrder_(mine);
       }
@@ -11251,10 +11290,14 @@ document.addEventListener('click', function(e){
   }
   if(a === 'time'){
     var now = r.slot || '';
-    var pick = prompt('改成哪個時段？\n\n' +
-      '留白＝不壓時間（最常用）\n可以填：上午、下午、全天', now);
+    var pick = prompt('這一件幾點？\n\n' +
+      '留白＝不壓時間（最常用，翻譯自己跟工廠約）\n' +
+      '可以填：上午、下午、全天\n' +
+      '也可以直接填時間：9:30、0930、14:00', now);
     if(pick === null) return;
-    pick = String(pick).trim();
+    pick = psSlotIn_(String(pick).trim());
+    if(pick === null){ toast('時間看不懂。可以填 9:30、0930，或上午／下午／全天', true);
+      return; }
     psRun_(function(ok, bad){
       google.script.run.withSuccessHandler(ok).withFailureHandler(bad)
         .updateSchedule(CODE, id, { slot: pick });
@@ -11293,6 +11336,19 @@ document.addEventListener('click', function(e){
 }, true);
 
 /* 做完一定要重抓——畫面上的是快取，不重抓她會以為沒生效。 */
+/* 她打進來的時段。⚠ 手機上打字很煩，所以「930」「9:30」「09：30」（全形冒號）
+   都要認得，認不得就回 null 讓外面擋下來——**不要安靜地存一個怪字串進去**。 */
+function psSlotIn_(v){
+  v = String(v || '').trim().replace(/：/g, ':').replace(/\s+/g, '');
+  if(!v) return '';
+  if(v === '上午' || v === '下午' || v === '全天') return v;
+  var m = /^(\d{1,2}):?(\d{2})$/.exec(v);
+  if(!m) return null;
+  var hh = +m[1], mm = +m[2];
+  if(hh > 23 || mm > 59) return null;
+  return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+}
+
 function psRun_(go, msg){
   go(function(){ psAfter_(msg); },
      function(e){ toast(e.message, true); });
