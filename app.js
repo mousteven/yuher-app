@@ -3040,6 +3040,10 @@ function admNewTrip(){
   document.querySelector('.tabs button[data-t=new]').click();
   window.scrollTo(0, 0);
   if($('admTodo')) $('admTodo').innerHTML = '';
+  /* ⛔ 現場地址一定要清。不清的話下一筆會沿用上一家的地址。 */
+  if($('admSite')) $('admSite').value = '';
+  if($('admGo')) $('admGo').checked = false;
+  admSiteSrc();
   var h = document.querySelector('#p-new .card h3');
   if(h) h.textContent = '排一筆新的行程';
   if($('admSave')) $('admSave').textContent = '排進行事曆';
@@ -7129,6 +7133,8 @@ function fillTripForm(r){
      用別人的資料重填表單，就表示不再是在編輯原本那一筆——修在這裡，
      「從行程開表」與「從案件開表」兩條路一起受惠。 */
   if(typeof EDIT_CODE !== 'undefined' && EDIT_CODE) endEdit();
+  /* ⚠ 現場地址一定要回填，不然改單按存檔會把它洗掉。 */
+  if($('admSite')) $('admSite').value = r.site || '';
   if(r.date) $('date').value = r.date;
   /* ⚠ 不要相信傳進來的「服務對象」。
      2026-09-19 實機：張寶華是家庭雇主，但案件那一列記成工廠，
@@ -10150,6 +10156,48 @@ function admFillBits(){
       '<button type="button" class="dpsm" id="admTodoAdd">＋ 再加一項</button></div>');
     $('admTodoAdd').onclick = function(){ admTodoAdd(''); };
   }
+  admSiteBits();
+}
+
+/* 「這一次去哪裡？」＋「排完直接確認」。
+   ⛔ 底下那顆 ＋ 走的是這張表（admNewTrip），不是 #planModal。
+      兩個入口都要接——只接一邊的話，她最常用的那一個反而沒有。 */
+function admSiteBits(){
+  var save = $('admSave');
+  if(!save) return;
+  var row = save.closest('.btns') || save;
+  if(!$('admSite')){
+    row.insertAdjacentHTML('beforebegin',
+      '<div class="f" id="admSiteBox">' +
+      '<label>這一次去哪裡？（不填就用名冊上的地址）</label>' +
+      '<div class="psrc" id="admSiteSrc">名冊上的地址：—</div>' +
+      '<input type="text" id="admSite" placeholder="工廠搬了、約在二廠、要去醫院…">' +
+      '</div>');
+  }
+  if(!$('admGoWrap') && canDispatch_()){
+    row.insertAdjacentHTML('beforebegin',
+      '<label class="plango" id="admGoWrap">' +
+      '<input type="checkbox" id="admGo"><span>排完直接確認</span>' +
+      '<s>不用再去排班頁按一次</s></label>');
+  }
+  admSiteSrc();
+  admGoSync();
+}
+/* 名冊上的地址要跟著選到的客戶換 */
+function admSiteSrc(){
+  var el = $('admSiteSrc');
+  if(!el) return;
+  var a = psAddrRaw_(clientVal());
+  el.textContent = a ? ('名冊上的地址：' + a) : '名冊上沒有這一家的地址';
+}
+/* 沒挑人就不能確認（後端會丟「沒有建議人選」），那時候整列變灰 */
+function admGoSync(){
+  var wrap = $('admGoWrap'), go = $('admGo'), cs = $('crew');
+  if(!wrap || !go) return;
+  var ok = !!(cs && cs.value);
+  wrap.classList.toggle('off', !ok);
+  go.disabled = !ok;
+  if(!ok) go.checked = false;
 }
 
 function admTodoAdd(v){
@@ -10169,6 +10217,16 @@ function admTodoRows(){
 }
 
 /* 存檔變更：走 updateSchedule，**不會開服務紀錄、不會給編號**。 */
+/* ⚠ 換了客戶或換了建議的人，上面那兩塊要跟著更新。
+   掛在整張表上用委派，不管欄位是哪一次注入的都抓得到。 */
+document.addEventListener('change', function(e){
+  if(!$('admSite')) return;
+  var t = e.target;
+  if(!t || !t.id) return;
+  if(t.id === 'crew') admGoSync();
+  if(t.id === 'client' || t.id === 'clientOther' || t.id === 'target') admSiteSrc();
+}, true);
+
 function admSaveTrip(){
   /* ⛔ 這裡原本是「沒有 SCHED_ID 就擋下來」——那在只有「改既有行程」
      的時候是對的。2026-10-04 加了「排一筆新的」之後，新增**本來就沒有**
@@ -10211,14 +10269,25 @@ function admSaveTrip(){
   b.disabled = true; b.textContent = '存檔中…';
 
   if(isNew){
+    var goNow = !!($('admGo') && $('admGo').checked && $('crew').value && canDispatch_());
     google.script.run
-      .withSuccessHandler(function(){
+      .withSuccessHandler(function(res){
         b.disabled = false; b.textContent = '排進行事曆';
+        var back = function(){ calBust();
+          document.querySelector('.tabs button[data-t=cal]').click();
+          loadCal(null, true); };
+        if(goNow && res && res.id){
+          google.script.run
+            .withSuccessHandler(function(){
+              toast('排好了，而且已經確認給 ' + $('crew').value); back(); })
+            .withFailureHandler(function(e){
+              toast('排好了，但確認沒過：' + e.message, true); back(); })
+            .confirmSchedule(CODE, res.id, $('crew').value, '');
+          return;
+        }
         toast('開好了' + ($('crew').value
           ? ('　建議 '+$('crew').value+'，等特助確認') : '　等特助配人'));
-        calBust();
-        document.querySelector('.tabs button[data-t=cal]').click();
-        loadCal(null, true);
+        back();
       })
       .withFailureHandler(function(e){
         b.disabled = false; b.textContent = '排進行事曆'; toast(e.message, true); })
@@ -10233,6 +10302,7 @@ function admSaveTrip(){
         topic: (big && sub) ? (big + ' ／ ' + sub) : big,
         workers: names.join('、'),
         wkItems: wkItems,
+        site: $('admSite') ? $('admSite').value.trim() : '',
         todo: admTodoRows().map(function(t){ return {t:t, d:0}; })
       });
     return;
@@ -10258,6 +10328,8 @@ function admSaveTrip(){
       big: big, sub: sub,
       topic: (big && sub) ? (big + ' ／ ' + sub) : big,
       wkItems: wkItems,
+      /* 清空＝改回用名冊地址，所以一律送，不要「有值才送」。 */
+      site: $('admSite') ? $('admSite').value.trim() : '',
       todo: admTodoRows().map(function(t){ return {t:t, d:0}; })
     });
 }
