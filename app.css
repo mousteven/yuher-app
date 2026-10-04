@@ -3732,7 +3732,11 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
    不然縮放的時候圖會被拉扁，而且兩指的焦點會跑掉。 */
 .rtmap{position:relative;border:1px solid var(--line);border-radius:var(--r2);
   background:var(--bg);padding:6px;margin-bottom:10px;overflow:hidden;
-  touch-action:none;-webkit-user-select:none;user-select:none}
+  -webkit-user-select:none;user-select:none;
+  /* ⛔ 沒放大的時候留著 pan-y，手指放在圖上還是捲得動頁面；
+     放大之後（.z）才整個接管，那時候他要的是移動地圖。 */
+  touch-action:pan-y}
+.rtmap.z{touch-action:none}
 .rtmap .rtsvg{display:block;width:100%;aspect-ratio:100/108;
   background:var(--card);border-radius:calc(var(--r2) - 4px)}
 /* 輪廓：放大之後線不可以跟著變粗 */

@@ -11409,6 +11409,7 @@ function rtOverlap_(sel){
    ⛔ 輪廓用 vector-effect="non-scaling-stroke"，放大之後線才不會變粗。 */
 var RT_AR_ = 108 / 100;        // 高 ÷ 寬，跟 CSS 的 aspect-ratio 要一致
 var RT_VB = null;              // 現在看到的範圍 {x,y,w,h}，單位公里
+var RT_FITW = 0;               // 「看全部」時的寬度——用來判斷現在是不是放大狀態
 var RT_NOW = [];               // 現在選到的人，縮放時重畫要用
 
 function rtFit_(sel){
@@ -11542,6 +11543,15 @@ function rtNoPos_(sel){
   return bad;
 }
 
+/* ⛔ 一根手指在沒放大的時候要**讓頁面照常上下捲**，不然圖佔掉大半個畫面、
+   手指放上去就捲不動（touch-action:none 會把捲動整個吃掉）。
+   放大之後才改成一根手指平移——那時候他要的是移動地圖，不是捲頁面。 */
+function rtZoomed_(){ return !!(RT_VB && RT_FITW && RT_VB.w < RT_FITW * 0.98); }
+function rtMark_(){
+  var box = document.querySelector('#p-ps3 .rtmap');
+  if(box) box.classList.toggle('z', rtZoomed_());
+}
+
 function rtPaintOver_(){
   var g = document.querySelector('#p-ps3 .rtsvg .ov');
   if(g) g.innerHTML = rtOver_(RT_NOW);
@@ -11551,6 +11561,7 @@ function rtApplyVB_(){
   if(!svg || !RT_VB) return;
   svg.setAttribute('viewBox', RT_VB.x.toFixed(2) + ' ' + RT_VB.y.toFixed(2) + ' ' +
     RT_VB.w.toFixed(2) + ' ' + RT_VB.h.toFixed(2));
+  rtMark_();
   rtPaintOver_();
 }
 /* 縮放。f 是倍率，(cx,cy) 是螢幕上的焦點（公里座標），焦點要固定不動。 */
@@ -11584,8 +11595,11 @@ function rtBind_(){
   box.addEventListener('touchstart', function(e){
     if(!RT_VB) return;
     if(e.touches.length === 1){
-      st = { m: 1, x: e.touches[0].clientX, y: e.touches[0].clientY,
-             vb: { x: RT_VB.x, y: RT_VB.y, w: RT_VB.w, h: RT_VB.h } };
+      /* 沒放大就不接管——讓頁面自己捲 */
+      st = rtZoomed_()
+        ? { m: 1, x: e.touches[0].clientX, y: e.touches[0].clientY,
+            vb: { x: RT_VB.x, y: RT_VB.y, w: RT_VB.w, h: RT_VB.h } }
+        : null;
     } else if(e.touches.length === 2){
       var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
       var my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
@@ -11644,7 +11658,7 @@ function rtBind_(){
   box.addEventListener('click', function(e){
     var b = e.target.closest('[data-rz]'); if(!b || !RT_VB) return;
     var z = b.dataset.rz;
-    if(z === 'fit'){ RT_VB = rtFit_(RT_NOW); rtApplyVB_(); return; }
+    if(z === 'fit'){ RT_VB = rtFit_(RT_NOW); RT_FITW = RT_VB.w; rtApplyVB_(); return; }
     var c = { x: RT_VB.x + RT_VB.w / 2, y: RT_VB.y + RT_VB.h / 2 };
     rtZoom_(z === 'in' ? 1.6 : 1 / 1.6, c.x, c.y);
   });
@@ -11672,6 +11686,7 @@ function rtPaint_(sel){
   }
   if(veil) veil.parentNode.removeChild(veil);
   RT_VB = rtFit_(sel);
+  RT_FITW = RT_VB.w;
   svg.querySelector('.bs').innerHTML = rtBase_(sel);
   rtApplyVB_();
   rtBind_();
