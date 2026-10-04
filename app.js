@@ -11465,8 +11465,13 @@ function rtOver_(sel){
   });
 
   /* ── 二、互相推開 ── */
-  var MIN = dotR * 2.15;               // 兩點中心至少要隔這麼遠才不會蓋住
-  for(var pass = 0; pass < 60; pass++){
+  /* 兩點中心至少要隔一個直徑，才看得到各自的號碼。
+     ⛔ 分兩段跑：前段「推開＋橡皮筋拉回中心」找一個靠近真實位置的擺法，
+        後段**只推不拉**。只有一段的話兩個力互相抵銷，
+        點只分開到一半，號碼還是被旁邊那顆咬掉一角。 */
+  var MIN = dotR * 2.05;
+  for(var pass = 0; pass < 75; pass++){
+    var hold = (pass < 45);            // 前 45 回合才拉回中心
     var moved = 0;
     for(var i = 0; i < all.length; i++){
       for(var j = i + 1; j < all.length; j++){
@@ -11474,7 +11479,7 @@ function rtOver_(sel){
         var dx = B2.x - A2.x, dy = B2.y - A2.y;
         var d = Math.sqrt(dx * dx + dy * dy) || 0.0001;
         if(d >= MIN) continue;
-        var push = (MIN - d) / 2 * 0.5;
+        var push = (MIN - d) / 2 * (hold ? 0.5 : 0.85);
         var ux = dx / d, uy = dy / d;
         A2.x -= ux * push; A2.y -= uy * push;
         B2.x += ux * push; B2.y += uy * push;
@@ -11482,11 +11487,11 @@ function rtOver_(sel){
       }
     }
     /* 橡皮筋：拉回自己鄉鎮的中心。⛔ 沒有這條，一群點會整團飄走。 */
-    all.forEach(function(q){
+    if(hold) all.forEach(function(q){
       q.x += (q.hx - q.x) * 0.10;
       q.y += (q.hy - q.y) * 0.10;
     });
-    if(!moved) break;
+    if(!moved && !hold) break;
   }
 
   var h = '';
@@ -11579,13 +11584,16 @@ function rtPaintOver_(){
   var g = document.querySelector('#p-ps3 .rtsvg .ov');
   if(g) g.innerHTML = rtOver_(RT_NOW);
 }
-function rtApplyVB_(){
+/* skip＝手指還在螢幕上，只換 viewBox 不重算點的位置。
+   ⛔ 67 個點要互相推開，一次 14 毫秒；每一幀都算，手機上會頓。
+      縮放當下整張圖本來就跟著縮放，看起來是連續的；手指放開再算一次就好。 */
+function rtApplyVB_(skip){
   var svg = document.querySelector('#p-ps3 .rtsvg');
   if(!svg || !RT_VB) return;
   svg.setAttribute('viewBox', RT_VB.x.toFixed(2) + ' ' + RT_VB.y.toFixed(2) + ' ' +
     RT_VB.w.toFixed(2) + ' ' + RT_VB.h.toFixed(2));
   rtMark_();
-  rtPaintOver_();
+  if(!skip) rtPaintOver_();
 }
 /* 縮放。f 是倍率，(cx,cy) 是螢幕上的焦點（公里座標），焦點要固定不動。 */
 var RT_MINW_ = 3;
@@ -11631,7 +11639,8 @@ function rtBind_(){
     return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
   var st = null, raf = 0;
   function paint(){ if(raf) return; raf = requestAnimationFrame(function(){
-    raf = 0; rtApplyVB_(); }); }
+    raf = 0; rtApplyVB_(true); }); }
+  function done(){ st = null; rtApplyVB_(); }
 
   box.addEventListener('touchstart', function(e){
     if(!RT_VB) return;
@@ -11670,8 +11679,8 @@ function rtBind_(){
     }
   }, { passive: false });
 
-  box.addEventListener('touchend', function(){ st = null; });
-  box.addEventListener('touchcancel', function(){ st = null; });
+  box.addEventListener('touchend', done);
+  box.addEventListener('touchcancel', done);
 
   /* 桌機：滾輪縮放、拖曳平移（驗證用，手機不會走到這裡） */
   box.addEventListener('wheel', function(e){
@@ -11690,7 +11699,8 @@ function rtBind_(){
                 y: vb.y - (ev.clientY - sy) / r.height * vb.h, w: vb.w, h: vb.h };
       paint();
     }
-    function mu(){ document.removeEventListener('mousemove', mm);
+    function mu(){ done();
+      document.removeEventListener('mousemove', mm);
       document.removeEventListener('mouseup', mu); }
     document.addEventListener('mousemove', mm);
     document.addEventListener('mouseup', mu);
