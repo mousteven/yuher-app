@@ -3309,3 +3309,11 @@ body.filladm .btns{margin-top:14px}
 body.filladm #admSave,
 body.filladm #admCancel{display:block}
 body.filladm #admTodoBox{display:block}
+
+/* 「工廠宣導（一對多）」的卡片標。
+   ⛔ 客戶名旁邊那個服務對象標的條件是「開頭不是工廠」，而一對多開頭剛好是
+      「工廠」，所以它永遠被藏起來——行事曆上完全看不出這一趟是一對多
+      （牟佑彬 2026-10-04）。用資訊色，跟狀態色（好／壞）分開。 */
+.c4many{flex:none;font-size:var(--t6);font-weight:800;white-space:nowrap;
+  color:var(--info-ink);background:var(--info-bg);
+  border-radius:var(--r2);padding:1px 6px}

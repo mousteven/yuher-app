@@ -1750,8 +1750,11 @@ function drawDay(){
        ⛔ 2026-09-19 他在行事曆看到一筆「拆線」完全不知道哪來的——
        系統做了事卻只寫在試算表的備註欄，畫面上看不到。 */
     if(r.auto) tk += '<span class="c4auto">自動排的</span>';
+    /* ⛔ 下面客戶名旁邊那個服務對象標，條件是「開頭不是工廠」，
+       而「工廠宣導（一對多）」開頭剛好就是工廠，所以它一直被藏起來。
+       一對多另外給一個標，不要跟家庭雇主擠同一個位置。 */
+    if(isManyRow_(r)) tk += '<span class="c4many">一對多</span>';
 
-    var wcount = r.workers ? String(r.workers).split('、').filter(Boolean).length : 0;
 
     return wrapA + '<div class="ev '+cls+'">'+
       '<span class="bar lg-'+esc(l)+'"></span>'+
@@ -1767,11 +1770,8 @@ function drawDay(){
             (r.target&&r.target.indexOf('工廠')!==0?'　'+esc(r.target):'')+'</span>'+
           (r.recCode?'<span class="c4code">'+esc(r.recCode)+'</span>':'')+
         '</span>'+
-        // 移工名（自然截斷）＋ 人數標（永遠不縮）
-        (r.workers
-          ? '<span class="c4wk"><span class="c4ws">'+esc(r.workers)+'</span>'+
-            (wcount>1?'<span class="c4cnt">'+wcount+' 人</span>':'')+'</span>'
-          : '')+
+        // 移工名（自然截斷）＋ 人數標（永遠不縮）。一對多改成「全廠宣導」
+        cardWkLine_(r)+
         // 時段與翻譯降到最後一行的小字。排一天的行程時還是要看得到。
         '<span class="c4who">'+esc(r.slot||'未定時段')+'　'+esc(r.crew)+'</span>'+
         /* 行政交代的清單：卡片上**只顯示進度**，不把項目攤開。
@@ -1819,9 +1819,10 @@ function todoBadge(r){
               他按了追蹤、畫面上什麼都沒變，只能回試算表才看得到。 */
         (r.caseId ? '<span class="c4tk">◷ '+esc(SHORT_[r.caseKind] || r.caseKind || '追蹤')+
           (r.caseN ? ' '+r.caseN+'/'+r.caseTotal : '')+'</span>' : '')+
+        (isManyRow_(r) ? '<span class="c4many">一對多</span>' : '')+
         '<span class="c4pre">預排・還沒確認</span></span>'+
         '<span class="c4nm"><span class="n">'+esc(r.client)+'</span></span>'+
-        (r.workers?'<span class="c4wk"><span class="c4ws">'+esc(r.workers)+'</span></span>':'')+
+        cardWkLine_(r)+
         /* ⛔ 這裡原本還接一句「XXX 排的，等特助確認」。
            但上面那條分組標題已經寫了「行政排好了，等特助確認——先不要去」，
            每張卡再寫一次是重複的，而且把真正要看的（時段、配了誰）擠到左邊
@@ -2073,6 +2074,24 @@ function cardMenuDo(a){
 }
 
 /* 選單要的欄位跟右滑那個面板一樣，湊成同一個形狀就好，不要兩套 */
+/* 這一趟是不是「工廠宣導（一對多）」。
+   ⛔ isBrief() 看的是表單上的 #target，行事曆的卡片沒有表單可看。
+      卡片以前完全不管服務對象，所以改成一對多之後**畫面上一點變化都沒有**，
+      還是印著一個移工的名字（牟佑彬 2026-10-04：「為什麼這邊還是一個人的名字？」）。 */
+function isManyRow_(r){ return String(r.target || '').indexOf('宣導') !== -1; }
+
+/* 卡片上那一行移工。一對多要講「這是整廠的場次」，不要只印一個人名。 */
+function cardWkLine_(r){
+  var n = r.workers ? String(r.workers).split('、').filter(Boolean).length : 0;
+  if(isManyRow_(r)){
+    return '<span class="c4wk"><span class="c4ws">全廠宣導</span>'+
+      (n ? '<span class="c4cnt">'+n+' 人應到</span>' : '')+'</span>';
+  }
+  if(!n) return '';
+  return '<span class="c4wk"><span class="c4ws">'+esc(r.workers)+'</span>'+
+    (n>1?'<span class="c4cnt">'+n+' 人</span>':'')+'</span>';
+}
+
 function cardData(r){
   /* ⚠ date 一定要帶。不帶的話後端用「今天」當開案日——
      他 2026-10-04 在 10/7 的行程上按追蹤，開案日變成 10/4
