@@ -1773,31 +1773,53 @@ function drawDay(){
         // 移工名（自然截斷）＋ 人數標（永遠不縮）。一對多改成「全廠宣導」
         cardWkLine_(r)+
         // 時段與翻譯降到最後一行的小字。排一天的行程時還是要看得到。
-        '<span class="c4who">'+esc(r.slot||'未定時段')+'　'+esc(r.crew)+'</span>'+
-        /* 行政交代的清單：卡片上**只顯示進度**，不把項目攤開。
-           ⛔ 攤開的話一天五筆、每筆三四條，行事曆會變成一長串清單，
-              要捲很久才看得到下一筆（2026-09-30 比過五種放法才定的）。 */
-        todoBadge(r)+
+        /* 時段與翻譯那一列的右邊掛交代，收著的時候卡片一行都不多。
+           ⛔ 項目預設**不攤開**——一天五筆、每筆三四條，攤開要捲很久
+              才看得到下一筆（2026-09-30 比過五種放法才定的）。 */
+        todoRow_('<span class="c4who">'+esc(r.slot||'未定時段')+'　'+
+          esc(r.crew)+'</span>', r)+
       '</span>'+
       '</div></div>';
   }
 
   /* 卡片上的交代進度。沒有交代事項就整個不顯示——
    不要留一個「0 / 0」在那裡。 */
-function todoBadge(r){
+/* 交代清單的圖示。
+   ⛔ 不用繪文字（📌）：顏色、粗細、圓角全都不歸我們管，每支手機還長得不一樣，
+      而且它本身是尖的，跟整張卡的圓角打架（牟佑彬 2026-10-04）。
+   ⚠ 24 格、線寬 1.75、圓頭圓角——跟底下那排分頁圖示同一套畫法。
+      外框圓角 4.6/24 ≈ 卡片 12px 圓角縮到 13px 的比例。 */
+var TODO_IC_ = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+  ' stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<rect x="3.7" y="3.7" width="16.6" height="16.6" rx="4.6"/>' +
+  '<path d="M8.1 9.4h7.8M8.1 14.6h5"/></svg>';
+
+/* 右下角那顆。只有圖示與「做完幾件／共幾件」（牟佑彬 2026-10-04 選的「丁」）。 */
+function todoPill_(r){
   var t = r.todo || [];
   if(!t.length) return '';
   var done = t.filter(function(x){ return x.d; }).length;
-  var all = done === t.length;
-  /* 點一下攤開（牟佑彬 2026-10-04）。
-     ⛔ 預設還是收起來的——2026-09-30 比過五種放法才定的：
-        一天五筆、每筆三四條，全部攤開要捲很久才看得到下一筆。
-        「收起來、點得開」兩邊都顧得到。 */
-  return '<span class="c4todo'+(all?' ok':'')+'" data-tdg="1">'+(all?'✓':'📌')+
-    ' 交代 '+done+' / '+t.length+'<i>⌄</i></span>'+
-    '<span class="c4tdl">'+t.map(function(x){
-      return '<b'+(x.d?' class="ok"':'')+'>'+(x.d?'✓':'□')+' '+esc(x.t||x||'')+'</b>';
-    }).join('')+'</span>';
+  return '<span class="c4todo'+(done === t.length ? ' ok' : '')+'" data-tdg="1"'+
+    ' aria-label="交代事項 '+done+' / '+t.length+'">'+
+    TODO_IC_+'<span class="nm">'+done+' / '+t.length+'</span><i class="ar">⌄</i></span>';
+}
+function todoList_(r){
+  var t = r.todo || [];
+  if(!t.length) return '';
+  return '<span class="c4tdl"><span class="c4tdin"><span>'+t.map(function(x){
+    return '<b'+(x.d?' class="done"':'')+'><u>'+(x.d?'✓':'□')+'</u>'+
+      esc(x.t||x||'')+'</b>';
+  }).join('')+'</span></span></span>';
+}
+/* 卡片的最後一列：左邊原本就有的東西，右邊掛交代。
+   ⛔ 以前交代是卡片最底下一條**整寬**的把手，每張卡都因此長高一截，
+      一天五筆就多出一百多 px（牟佑彬 2026-10-04：「為了不讓區塊變太長」）。
+      現在收著的時候**一行都不多**——它佔的是那一列本來就空著的右邊。
+   ⚠ 沒有交代事項的話一個字都不動，維持原樣。 */
+function todoRow_(inner, r){
+  var p = todoPill_(r);
+  if(!p) return inner;
+  return '<span class="c4row">'+inner+p+'</span>'+todoList_(r);
 }
 
 /* ⚠ 一定要走捕獲階段。卡片外層 .swwrap 自己有一個 click（點了會開表單），
@@ -1806,9 +1828,13 @@ document.addEventListener('click', function(e){
   var g = e.target.closest && e.target.closest('[data-tdg]');
   if(!g) return;
   e.stopPropagation(); e.preventDefault();
-  g.classList.toggle('open');
-  var l = g.nextElementSibling;
-  if(l && l.classList.contains('c4tdl')) l.classList.toggle('on');
+  var open = !g.classList.contains('open');
+  g.classList.toggle('open', open);
+  /* ⛔ 清單是 .c4row 的**下一個**兄弟，不是那顆膠囊的——
+     膠囊在 .c4row 裡面。寫成 g.nextElementSibling 會抓到 null。 */
+  var box = g.closest('.b');
+  var l = box && box.querySelector('.c4tdl');
+  if(l) l.classList.toggle('on', open);
 }, true);
 
 /* 灰色預排的卡片**刻意另外寫一個**，不重用上面那支。
@@ -1822,6 +1848,20 @@ document.addEventListener('click', function(e){
        （牟佑彬 2026-10-03 指出）。包進 .swwrap 之後就跟其他卡同一套。
        ⛔ 但**不可以讓它拖曳改期**：下面 bindDrag 用的是 `.ev:not(.pre)`，
           那一條要留著。還沒確認的行程被拖來拖去，特助會對不上。 */
+    /* ⚠ 「我那天不行」是**翻譯**的動作——那是請假資料最準的來源
+       （當事人自己講，而且是看到預排之後才講）。
+       行政按它沒有意義，所以行政不顯示（牟佑彬 2026-10-03）。 */
+    var tail = r.decline
+      ? '<span class="c4no">你說了：'+esc(String(r.decline).split('：').slice(1).join('：')
+          || r.decline)+'</span>'
+      : (STAFF_ROLE === '行政' ? ''
+         : '<button type="button" class="c4nogo" data-nogo="'+esc(r.id||'')+'">'+
+           '我那天不行</button>');
+    var whoTx = '<span class="c4who">'+esc(r.slot||'未定時段')+'　'+
+      (r.sug ? ('建議 '+esc(r.sug)) : '<b class="non">還沒配人</b>')+'</span>';
+    /* 行政沒有「我那天不行」，那一顆就落在時段那一列的右邊——一樣是右下角。 */
+    var who = tail ? whoTx : todoRow_(whoTx, r);
+
     return '<div class="swwrap" data-sid="'+esc(r.id||'')+'"'+
       (r.id ? ' data-go="'+esc(r.id)+'"' : '')+
       ' data-plan="1" data-client="'+esc(r.client||'')+'"'+
@@ -1844,20 +1884,12 @@ document.addEventListener('click', function(e){
            但上面那條分組標題已經寫了「行政排好了，等特助確認——先不要去」，
            每張卡再寫一次是重複的，而且把真正要看的（時段、配了誰）擠到左邊
            （牟佑彬 2026-10-03 指出）。 */
-        '<span class="c4who">'+esc(r.slot||'未定時段')+'　'+
-          (r.sug ? ('建議 '+esc(r.sug)) : '<b class="non">還沒配人</b>')+'</span>'+
-        /* ⚠ 「我那天不行」是**翻譯**的動作——那是請假資料最準的來源
-           （當事人自己講，而且是看到預排之後才講）。
-           行政按它沒有意義，所以行政不顯示（牟佑彬 2026-10-03）。 */
-        (r.decline
-          ? '<span class="c4no">你說了：'+esc(String(r.decline).split('：').slice(1).join('：')
-              || r.decline)+'</span>'
-          : (STAFF_ROLE === '行政' ? ''
-             : '<button type="button" class="c4nogo" data-nogo="'+esc(r.id||'')+'">'+
-               '我那天不行</button>'))+
+        who+
         /* 行政交代的事，預排的卡以前整個沒有——而**預排正是行政剛交代完的時候**
-           （牟佑彬 2026-10-04：「預排的交代事項在行程區塊要顯示」）。 */
-        todoBadge(r)+
+           （牟佑彬 2026-10-04：「預排的交代事項在行程區塊要顯示」）。
+           ⚠ 掛在**最後一列的右邊**，所以收著的時候卡片一行都不多。
+             有「我那天不行」就跟它同一排，沒有就跟時段那一排。 */
+        (tail ? todoRow_(tail, r) : '')+
       '</span></div></div>';
   }
 

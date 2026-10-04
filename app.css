@@ -3103,23 +3103,67 @@ body.tabsbottom .tabs.few button{min-width:120px}
 .todoit .tx{font-size:var(--t4);line-height:1.42;color:var(--ink)}
 .todoit.on .tx{color:var(--ink3);text-decoration:line-through}
 /* 行事曆卡片上的進度徽章 */
-.c4todo{display:inline-flex;align-items:center;gap:.3rem;background:var(--warn-bg);
-  border:1px solid var(--warn-line);border-radius:99px;padding:.1rem .5rem;
-  font-size:var(--t6);font-weight:700;color:var(--warn-ink);margin-top:.25rem;
-  align-self:flex-start;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.c4todo.ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
-/* 點一下攤開交代的內容（牟佑彬 2026-10-04）。
-   ⛔ 預設收起來——一天五筆、每筆三四條，全部攤開要捲很久才看得到下一筆。 */
-.c4todo i{font-style:normal;font-size:.9em;line-height:1;
-  transition:transform .18s cubic-bezier(.32,.72,0,1)}
-.c4todo.open i{transform:rotate(180deg)}
-.c4tdl{display:none;align-self:stretch;margin-top:.3rem;
-  border-left:2px solid var(--warn-line);padding:.1rem 0 .1rem .5rem}
-.c4tdl.on{display:flex;flex-direction:column;gap:.2rem}
-.c4tdl b{font-size:var(--t5);font-weight:600;color:var(--ink2);
-  display:flex;gap:.3rem;align-items:baseline}
-.c4tdl b.ok{color:var(--ink3);text-decoration:line-through}
-@media (prefers-reduced-motion:reduce){ .c4todo i{transition:none} }
+/* ── 交代事項：收在卡片右下角，點開才往下滑（牟佑彬 2026-10-04 選的「丁」）──
+   ⛔ 以前是卡片最底下一條**整寬**的把手，每張卡都因此長高一截，
+      一天五筆就多出一百多 px（他的原話：「為了不讓區塊變太長」）。
+      現在它跟「我那天不行」／時段那一列擠同一排，**收著的時候一行都不多**。
+   ⛔ 一定要寫 `.ev .b > span.xxx`：app.css 本來就有
+      `.ev .b>span{display:block}`（權重 0,0,2,1），
+      只寫 `.c4row{display:flex}` 會被它蓋掉，圖示就被擠成第二行
+      ——他 2026-10-04 的截圖就是這樣。 */
+.ev .b > span.c4row{display:flex;align-items:center;gap:8px;
+  justify-content:space-between;margin-top:8px}
+.c4row > .c4who{flex:1;min-width:0;margin-top:0}
+.c4row > .c4no{flex:1;min-width:0;margin-top:0}
+.c4row .c4nogo{margin-top:0;flex:none}
+
+/* 只有圖示與「做完幾件／共幾件」。
+   ⚠ 圖示的顏色繼承文字，所以全部做完變綠的時候它會一起變。 */
+.ev .b > span.c4todo{display:inline-flex;align-items:center;gap:5px;flex:none;
+  box-sizing:border-box;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  padding:4px 8px;border-radius:999px;margin:0;
+  font-size:11.5px;font-weight:800;line-height:1.35;white-space:nowrap;
+  color:var(--ink2);background:color-mix(in srgb,var(--ink3) 12%,var(--card));
+  border:0;transition:background-color .16s ease,color .16s ease}
+.c4todo:active{background:color-mix(in srgb,var(--ink3) 22%,var(--card))}
+.c4todo.ok{color:var(--ok-ink);background:var(--ok-bg)}
+.c4todo .ic{width:13px;height:13px;flex:none;display:block}
+.c4todo .ar{font-style:normal;font-size:1.15em;line-height:1;margin-left:-1px;
+  transform-origin:50% 55%;transition:transform .3s cubic-bezier(.32,.72,0,1)}
+.c4todo.open .ar{transform:rotate(180deg)}
+
+/* 展開：0fr → 1fr，收著的時候高度真的是 0，不用寫死高度、幾條都順。
+   ⚠ 整條貼齊卡片左右兩緣，下緣的圓角交給 .swwrap（它有 overflow:hidden），
+     所以不會出現「圓角裡包一個直角」。 */
+.ev .b > span.c4tdl{display:grid;grid-template-rows:0fr;margin:0 -12px;
+  transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1)}
+.c4tdl.on{grid-template-rows:1fr;margin-bottom:-11px}
+.c4tdin{overflow:hidden;display:block;
+  background:color-mix(in srgb,var(--ink3) 4%,var(--card))}
+.c4tdl.on .c4tdin{border-top:1px solid var(--line2)}
+.c4tdin > span{display:block;padding:8px 14px 11px}
+/* 一條一條依序滑進來（他選的「丁」）。上限 12 條跟後端一致，
+   第九條之後不再加延遲，不然最後一條要等快一秒。 */
+.c4tdin b{display:flex;gap:7px;align-items:baseline;padding:2.5px 0;
+  font-size:12.5px;font-weight:600;color:var(--ink2);
+  opacity:0;transform:translateY(-5px);
+  transition:opacity .2s ease,transform .24s cubic-bezier(.32,.72,0,1)}
+.c4tdl.on .c4tdin b{opacity:1;transform:none;transition-delay:.48s}
+.c4tdl.on .c4tdin b:nth-child(1){transition-delay:.06s}
+.c4tdl.on .c4tdin b:nth-child(2){transition-delay:.12s}
+.c4tdl.on .c4tdin b:nth-child(3){transition-delay:.18s}
+.c4tdl.on .c4tdin b:nth-child(4){transition-delay:.24s}
+.c4tdl.on .c4tdin b:nth-child(5){transition-delay:.3s}
+.c4tdl.on .c4tdin b:nth-child(6){transition-delay:.36s}
+.c4tdl.on .c4tdin b:nth-child(7){transition-delay:.42s}
+.c4tdin b.done{color:var(--ink3);text-decoration:line-through}
+.c4tdin b u{text-decoration:none;flex:none;font-weight:800;
+  color:var(--ink3);font-size:.95em}
+.c4tdin b.done u{color:var(--ok-ink)}
+@media (prefers-reduced-motion:reduce){
+  .c4todo .ar,.ev .b > span.c4tdl,.c4tdin b{transition:none}
+  .c4tdl.on .c4tdin b{opacity:1;transform:none}
+}
 /* 行政端：一行一條、可刪 */
 .tdrow{display:flex;gap:.4rem;align-items:center;margin-bottom:.35rem}
 .tdrow input{flex:1;min-width:0}
