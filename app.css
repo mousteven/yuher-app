@@ -3606,7 +3606,10 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .pstr .ad{font-size:var(--t5);color:var(--ink2);margin-top:4px;display:flex;
   gap:5px;align-items:baseline}
 .pstr .ad i{font-style:normal;flex:none;opacity:.55}
-.pstr .ad .far{color:var(--bad-ink);font-weight:800;margin-right:2px}
+/* 跨縣市：看得到就好，不要用警示紅（他 2026-10-04 說不要紅色）。 */
+.pstr .ad .far{color:var(--ink);font-weight:800;margin-right:4px;
+  background:color-mix(in srgb,var(--ink) 9%,transparent);
+  border-radius:5px;padding:0 4px}
 .pstr .ad .non{opacity:.6;font-style:normal}
 /* 灰字註記：請假／說那天不行／語言對不上。**只寫事實，不做判斷** */
 .pstr .nt{display:block;font-size:var(--t6);color:var(--ink3);margin-top:5px}
@@ -3691,7 +3694,9 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .rtov{padding:8px 2px;border-top:1px solid var(--line2)}
 .rtov:first-of-type{border-top:0}
 .rtov .t{display:flex;align-items:baseline;gap:7px;font-size:var(--t4);font-weight:800}
-.rtov .t .far{color:var(--bad-ink);font-size:var(--t6)}
+.rtov .t .far{color:var(--ink2);font-size:var(--t6);
+  background:color-mix(in srgb,var(--ink) 9%,transparent);
+  border-radius:5px;padding:0 4px;margin-left:4px}
 .rtov .t s{text-decoration:none;margin-left:auto;font-size:var(--t6);font-weight:800;
   color:var(--bad-ink);background:var(--bad-bg);border:1px solid var(--bad-line);
   border-radius:999px;padding:1px 8px}
@@ -3760,12 +3765,14 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .rtst .bd{flex:1;min-width:0}
 .rtst .c{display:block;font-size:var(--t4);font-weight:800}
 .rtst .a{display:block;font-size:var(--t5);color:var(--ink2);margin-top:1px}
-.rtst .a .far{color:var(--bad-ink);font-weight:800;margin-right:5px}
+.rtst .a .far{color:var(--ink);font-weight:800;margin-right:5px;
+  background:color-mix(in srgb,var(--ink) 9%,transparent);
+  border-radius:5px;padding:0 4px}
 .rtst .a .non{opacity:.6;font-style:normal}
 .rtst .sl{flex:none;font-size:var(--t6);font-weight:800;color:var(--ink3);align-self:center}
 .rthop{display:flex;align-items:center;gap:6px;padding:2px 0 2px 30px;
   font-size:var(--t6);color:var(--ink3)}
-.rthop.far{color:var(--bad-ink);font-weight:700}
+.rthop.far{color:var(--ink2);font-weight:800}
 
 .rtsum{margin:9px 0 0;padding:9px 10px;border-radius:var(--r1);background:var(--bg);
   border:1px solid var(--line2);font-size:var(--t5);color:var(--ink2)}

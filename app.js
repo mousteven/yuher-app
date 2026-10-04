@@ -11475,9 +11475,10 @@ function rtOver_(sel){
     }
     pts.forEach(function(p, i){
       var fill = one
-        ? (p.st.far ? 'var(--bad-ink)'
-             : ({ '上午':'var(--warn-fill)', '下午':'var(--info-ink)' }[psZoneOf_(p.st.r)]
-                || 'var(--fill)'))
+        /* ⛔ 跨縣市的點以前是紅的，他 2026-10-04 說不要紅色。
+           改用深色＋上下午原本的顏色，跨不跨縣市看清單上的小膠囊就知道。 */
+        ? ({ '上午':'var(--warn-fill)', '下午':'var(--info-ink)' }[psZoneOf_(p.st.r)]
+            || 'var(--fill)')
         : col;
       /* ⛔ 多選的時候也要印 1234（牟佑彬 2026-10-04 特別交代）。
          所以點不能縮小——縮小了數字就擠不進去。 */
