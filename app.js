@@ -11576,6 +11576,24 @@ function rtZoom_(f, cx, cy){
   rtApplyVB_();
 }
 
+/* ＋ 要往**有行程的地方**放大，不是往畫面正中央。
+   ⛔ 中部一天的行程常常擠在北邊，正中央可能是山區——往那裡放大等於什麼都看不到。
+   取停靠點的中位數（不是平均），這樣一個很遠的點不會把焦點拉走。 */
+function rtFocus_(){
+  var xs = [], ys = [];
+  RT_NOW.forEach(function(g){ rtStops_(g).forEach(function(st){
+    var p = rtPos_(st.key); if(p){ xs.push(p[0]); ys.push(p[1]); } }); });
+  if(!xs.length || !RT_VB) return { x: RT_VB ? RT_VB.x + RT_VB.w / 2 : 0,
+                                    y: RT_VB ? RT_VB.y + RT_VB.h / 2 : 0 };
+  xs.sort(function(a, b){ return a - b; });
+  ys.sort(function(a, b){ return a - b; });
+  var mx = xs[xs.length >> 1], my = ys[ys.length >> 1];
+  /* 焦點不在畫面裡的話（他已經拖到別的地方）就照畫面中央，不要硬把他拉回去 */
+  if(mx < RT_VB.x || mx > RT_VB.x + RT_VB.w || my < RT_VB.y || my > RT_VB.y + RT_VB.h)
+    return { x: RT_VB.x + RT_VB.w / 2, y: RT_VB.y + RT_VB.h / 2 };
+  return { x: mx, y: my };
+}
+
 function rtBind_(){
   var box = document.querySelector('#p-ps3 .rtmap');
   if(!box || box._rtb) return;
@@ -11659,8 +11677,7 @@ function rtBind_(){
     var b = e.target.closest('[data-rz]'); if(!b || !RT_VB) return;
     var z = b.dataset.rz;
     if(z === 'fit'){ RT_VB = rtFit_(RT_NOW); RT_FITW = RT_VB.w; rtApplyVB_(); return; }
-    var c = { x: RT_VB.x + RT_VB.w / 2, y: RT_VB.y + RT_VB.h / 2 };
-    rtZoom_(z === 'in' ? 1.6 : 1 / 1.6, c.x, c.y);
+    rtZoom_(z === 'in' ? 1.6 : 1 / 1.6, rtFocus_().x, rtFocus_().y);
   });
 }
 
