@@ -3495,9 +3495,6 @@ body.filladm #admTodoBox{display:block}
 .scw.none{color:var(--bad-ink)}
 .scw.sug{color:var(--warn-ink)}
 .stag{grid-column:2/4;display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-.sdoc{font-size:var(--t6);font-weight:700;padding:2px 8px;border-radius:7px;
-  background:var(--warn-bg);color:var(--warn-ink);border:1px solid var(--warn-line)}
-.sdoc.back{background:var(--ok-bg);color:var(--ok-ink);border-color:var(--ok-line)}
 
 /* 「有沒有忘記排」 */
 .summiss{margin:24px 0 8px;background:var(--card);border:1px solid var(--line);

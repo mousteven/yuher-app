@@ -10519,7 +10519,7 @@ function drawSum(){
         esc(SUM_S === 'date' ? sumDayLabel_(r.date) : (key || '\u2014')) +
         (SUM_S === 'date' && r.date === today ? '<u>\u4eca\u5929</u>' : '') + '</div>';
     }
-    var cw = sumCrew_(r), st = sumSt_(r), dc = sumDoc_(r);
+    var cw = sumCrew_(r), st = sumSt_(r);
     var p = String(r.date).split('-');
     h += '<div class="sumrow' +
       (cw[0] === 'none' && r.status === '\u9810\u6392' ? ' gap' : '') +
@@ -10535,13 +10535,11 @@ function drawSum(){
          （牟佑彬 2026-10-04：「也要做下拉式」）。
          ⚠ 跟行事曆卡片用的是**同一支** todoPill_／todoList_，
            改一邊兩邊一起變，不會又長出第二種樣子。 */
-      (dc || (r.todo || []).length
-        ? '<span class="stag">' +
-          (dc ? '<span class="sdoc' + (dc.back ? ' back' : '') + '">' +
-            (dc.back ? '\u6587\u4ef6\u8981\u9084' : '\u6587\u4ef6') + '\u3000' +
-            esc(dc.tx) + '</span>' : '') +
-          todoPill_(r) + '</span>'
-        : '') +
+      /* \u26d4 \u300c\u6587\u4ef6\u3000\u8ddf\u9ec3\u5c0f\u59d0\u62ff\u6263\u7e73\u300d\u90a3\u500b\u6a19\u62ff\u6389\u4e86\uff08\u725f\u4f51\u5f6c 2026-10-04\uff09\u3002
+         \u5b83\u5370\u7684\u662f**\u4ea4\u4ee3\u7684\u7b2c\u4e00\u4ef6\u4e8b**\u2014\u2014\u65e2\u7136\u9ede\u4e00\u4e0b\u5c31\u6574\u4e32\u6524\u5f97\u958b\uff0c
+         \u5728\u5217\u4e0a\u5148\u9810\u89bd\u4e00\u689d\u53ea\u662f\u628a\u6bcf\u4e00\u5217\u6490\u9ad8\uff0c\u800c\u4e14\u7b2c\u4e8c\u689d\u4e4b\u5f8c\u770b\u4e0d\u5230\u53cd\u800c\u66f4\u60f3\u9ede\u3002
+         \u26a0 \u300c\u6709\u6587\u4ef6\u300d\u90a3\u500b\u7be9\u9078**\u7559\u8457**\uff1a\u5b83\u53ea\u7528\u4f86\u7be9\uff0c\u4e0d\u5370\u5167\u5bb9\u3002 */
+      ((r.todo || []).length ? '<span class="stag">' + todoPill_(r) + '</span>' : '') +
       todoList_(r) +
       '</div>';
   });
