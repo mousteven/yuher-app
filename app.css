@@ -2125,7 +2125,12 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .c4cnt{flex:none;font-size:var(--t6);font-weight:800;color:var(--ink2);
   background:var(--line2);border-radius:var(--r2);padding:1px 6px;white-space:nowrap}
-.ev .b>span.c4who{display:block;margin-top:3px;font-size:var(--t5);color:var(--ink3)}
+/* ⛔ 字級與顏色要寫在**不挑父層**的這一條上。
+   寫在 `.ev .b > span.c4who` 裡的話，一旦被 `.c4row` 包起來（有交代事項時），
+   它就不再是 .b 的直接子層 → 整條規則失效 → 字變大、顏色變深。
+   他 2026-10-05 的截圖就是這樣（「未定時段　建議 光蘭」那一行）。 */
+.c4who{font-size:var(--t5);color:var(--ink3)}
+.ev .b>span.c4who{display:block;margin-top:3px}
 
 /* 追蹤標 K1：眉標右邊寫「◷ 就醫 3/4」 */
 .c4tk{flex:none;display:inline-flex;align-items:center;gap:3px;font-size:var(--t6);
