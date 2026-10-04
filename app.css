@@ -3027,6 +3027,8 @@ body.finding .tabs{display:none}
 .dpt.ok{background:var(--ok-bg);color:var(--ok-ink)}
 .dpt.pre{background:var(--line2);color:var(--ink3);border:1px dashed var(--line)}
 .dpt.wait{background:var(--warn-bg);color:var(--warn-ink)}
+/* 派工台的「一對多」標，用跟行事曆卡片（.c4many）同一個資訊色 */
+.dpt.many{background:var(--info-bg);color:var(--info-ink)}
 .dpt.dpu1{background:var(--bad-bg);color:var(--bad-ink)}
 .dpt.dpu2{background:var(--warn-bg);color:var(--warn-ink)}
 .dpt.dpu3{background:var(--line2);color:var(--ink3)}

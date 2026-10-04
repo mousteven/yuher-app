@@ -1742,10 +1742,7 @@ function drawDay(){
       swRail(r);
 
     // 眉標右邊的追蹤標籤。有序號就寫「就醫 3/4」，沒有就只寫類型。
-    var tk = r.caseId
-      ? '<span class="c4tk">◷ '+esc(SHORT_[r.caseKind] || r.caseKind || '追蹤')+
-        (r.caseN ? ' '+r.caseN+'/'+r.caseTotal : '')+'</span>'
-      : '';
+    var tk = r.caseId ? '<span class="c4tk">'+esc(caseTag_(r))+'</span>' : '';
     /* 追蹤案件自己排的行程要標出來。
        ⛔ 2026-09-19 他在行事曆看到一筆「拆線」完全不知道哪來的——
        系統做了事卻只寫在試算表的備註欄，畫面上看不到。 */
@@ -1817,8 +1814,7 @@ function todoBadge(r){
         /* 掛了追蹤就要標出來（牟佑彬 2026-10-04）。
            ⛔ 預排的卡是另外畫的一張，所以 card() 裡那個標籤它沒有，
               他按了追蹤、畫面上什麼都沒變，只能回試算表才看得到。 */
-        (r.caseId ? '<span class="c4tk">◷ '+esc(SHORT_[r.caseKind] || r.caseKind || '追蹤')+
-          (r.caseN ? ' '+r.caseN+'/'+r.caseTotal : '')+'</span>' : '')+
+        (r.caseId ? '<span class="c4tk">'+esc(caseTag_(r))+'</span>' : '')+
         (isManyRow_(r) ? '<span class="c4many">一對多</span>' : '')+
         '<span class="c4pre">預排・還沒確認</span></span>'+
         '<span class="c4nm"><span class="n">'+esc(r.client)+'</span></span>'+
@@ -2080,9 +2076,21 @@ function cardMenuDo(a){
       還是印著一個移工的名字（牟佑彬 2026-10-04：「為什麼這邊還是一個人的名字？」）。 */
 function isManyRow_(r){ return String(r.target || '').indexOf('宣導') !== -1; }
 
+function wkCount_(r){
+  return r.workers ? String(r.workers).split('、').filter(Boolean).length : 0;
+}
+
+/* 追蹤標的字。行事曆、派工台共用，不要各寫一份（牟佑彬 2026-10-04：
+   「行程區塊的顯示要與翻譯那邊和特助那邊都要一致」）。 */
+function caseTag_(r){
+  if(!r.caseId) return '';
+  return '◷ ' + (SHORT_[r.caseKind] || r.caseKind || '追蹤') +
+    (r.caseN ? ' ' + r.caseN + '/' + r.caseTotal : '');
+}
+
 /* 卡片上那一行移工。一對多要講「這是整廠的場次」，不要只印一個人名。 */
 function cardWkLine_(r){
-  var n = r.workers ? String(r.workers).split('、').filter(Boolean).length : 0;
+  var n = wkCount_(r);
   if(isManyRow_(r)){
     return '<span class="c4wk"><span class="c4ws">全廠宣導</span>'+
       (n ? '<span class="c4cnt">'+n+' 人應到</span>' : '')+'</span>';
@@ -10105,7 +10113,11 @@ function dpCard(r, acts){
               而真正需要它的是行政與副理，不是翻譯（牟佑彬 2026-10-03）。 */
         (r.recCode?'<span class="dpcode">'+esc(r.recCode)+'</span>':'')+'</div>'+
       '<div class="dpc">'+esc(r.client)+'</div>'+
-      (r.workers?'<div class="dpw">'+esc(r.workers)+'</div>':'')+
+      /* 一對多要講「整廠的場次」，不要只印一個人名——
+         這三張卡（翻譯的行事曆、預排、特助的派工台）要長得一樣。 */
+      (isManyRow_(r)
+        ? '<div class="dpw">全廠宣導'+(wkCount_(r)?'　'+wkCount_(r)+' 人應到':'')+'</div>'
+        : (r.workers?'<div class="dpw">'+esc(r.workers)+'</div>':''))+
       (r.memo?'<div class="dpw">'+esc(r.memo)+'</div>':'')+
       '<div class="dpm">'+dpLabel(r.date)+'　'+esc(r.slot||'未定時段')+'　'+
         (w?'<b>'+esc(w)+'</b>':'<b class="non">還沒有人</b>')+
@@ -10128,6 +10140,10 @@ function dpCard(r, acts){
         ? '<span class="dpt '+(r.rv==='已歸檔' ? 'ok'
             : r.rv==='退回補正' ? 'dpu1' : 'wait')+'">'+esc(r.rv)+'</span>'
         : '')+
+      /* 一對多與追蹤：行事曆上有，派工台以前沒有。特助看不到就會把
+         整廠宣導當成一個人的行程去配人（牟佑彬 2026-10-04 要求三邊一致）。 */
+      (isManyRow_(r)?'<span class="dpt many">一對多</span>':'')+
+      (r.caseId?'<span class="dpt">'+esc(caseTag_(r))+'</span>':'')+
       '<span class="dpt '+u[0]+'">'+esc(u[1])+'</span>'+
       (r.lang?'<span class="dpt">'+esc(r.lang)+'文</span>':'<span class="dpt">不用翻譯</span>')+
       (acts||'')+
