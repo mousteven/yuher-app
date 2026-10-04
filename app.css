@@ -1209,8 +1209,11 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .cell .cnum{font-size:var(--t2);font-weight:800;line-height:1.05;color:var(--ink);
   font-variant-numeric:tabular-nums}
 .cell .cnum.z{color:var(--line);font-weight:700}
-.cell.sel .cnum{color:var(--fill-ink)}
+/* ⛔ 順序很重要：選到的那一格底是深色，數字一定要是白的。
+   .today 寫在後面的話，「今天又剛好選到」那一格會變成深底深字——
+   2026-10-05 實測：10/5 有 70 筆，數字整個看不見。 */
 .cell.today .cnum{color:var(--brand)}
+.cell.sel .cnum{color:var(--fill-ink)}
 
 /* 行程卡上的地址：自己一行、◎ 開頭（牟佑彬 2026-10-05 選的方案甲）。
    ⛔ 樣子要跟排班頁 .pstr .ad 與路線頁 .rtst .a 一致——同一件事不要三種長相。
