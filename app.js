@@ -10934,7 +10934,6 @@ function drawPS1(){
   if(gs.length) h += '<button type="button" class="psall" data-ps="okgood">' +
     '全部確認（' + psRows_().length + ' 筆）</button>';
   box.innerHTML = h;
-  psSheet_(box);
 }
 
 /* 戊：一人一頁，左右翻。 */
@@ -10969,7 +10968,6 @@ function drawPS2(){
         '" data-ps="dot" data-i="' + i + '"></i>';
     }).join('') + '</div>';
   box.innerHTML = h;
-  psSheet_(box);
 }
 
 /* 換人面板。⚠ 兩頁共用同一支，改一次兩邊都變。 */
@@ -11016,10 +11014,17 @@ function psDaySheet_(box, job){
     '</div></div>');
 }
 
-function psSheet_(box){
+/* ⛔ 面板掛在 body，而且每次先把舊的拿掉。
+   psDraw() 會同時重畫甲與戊兩個分頁，以前兩邊各自掛一個，
+   DOM 裡就有兩個一模一樣的面板疊在一起——畫面上看不出來，
+   但 getElementById 永遠拿到底下那一個，**使用者選的時間會被丟掉**。 */
+function psSheet_(){
+  [].forEach.call(document.querySelectorAll('.pssheet'), function(x){
+    x.parentNode.removeChild(x); });
   if(!PS_SHEET) return;
   var job = CAL_ROWS.filter(function(r){ return r.id === PS_SHEET; })[0];
   if(!job) { PS_SHEET = null; return; }
+  var box = document.body;
   if(PS_SHEET_K === 'time'){ psTimeSheet_(box, job); return; }
   if(PS_SHEET_K === 'day'){ psDaySheet_(box, job); return; }
   var list = psRank_(job);
@@ -11215,7 +11220,7 @@ function psDragBind(){
   });
 }
 
-function psDraw(){ drawPS1(); drawPS2(); psDragBind();
+function psDraw(){ drawPS1(); drawPS2(); psDragBind(); psSheet_();
   /* 順序一改，路線就該跟著變——不然她拖完去看路線還是舊的。 */
   if($('p-ps3') && $('p-ps3').innerHTML) drawRT(); }
 
@@ -11243,7 +11248,9 @@ document.addEventListener('click', function(e){
   var t = e.target;
   if(!t || !t.closest) return;
   var b = t.closest('[data-ps]');
-  if(!b || !b.closest('#p-ps1, #p-ps2')) return;
+  /* ⚠ 面板現在掛在 body 上，所以 .pssheet 也要算進來——
+     少了它，面板裡的每一顆按鈕都按不動。 */
+  if(!b || !b.closest('#p-ps1, #p-ps2, .pssheet')) return;
   e.stopPropagation(); e.preventDefault();
   var a = b.dataset.ps, id = b.dataset.id;
   var r = id ? (CAL_ROWS.filter(function(x){ return x.id === id; })[0] || {}) : {};
