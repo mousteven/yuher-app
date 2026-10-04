@@ -3597,10 +3597,16 @@ body.filladm #admTodoBox{display:block}
   background:color-mix(in srgb,var(--fill) 8%,transparent)}
 /* 拖的時候整頁不要選字、不要跟著捲 */
 body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contain}
-.pstr .no{flex:none;width:21px;height:21px;border-radius:7px;background:var(--fill);
+/* 編號下面標時段。⚠ 區塊標題雖然也寫了，但她看的是「這一塊」，
+   而且全天會落在下午那一區，不標就看不出來（牟佑彬 2026-10-04）。 */
+.pstr .nz{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;
+  margin-top:1px;width:34px}
+.pstr .no{width:21px;height:21px;border-radius:7px;background:var(--fill);
   color:var(--fill-ink);font-size:var(--t6);font-weight:800;
-  display:flex;align-items:center;justify-content:center;margin-top:1px}
+  display:flex;align-items:center;justify-content:center}
+.pstr .nz .sl{font-size:9px;font-weight:800;color:var(--ink3);white-space:nowrap}
 .pstr.b .no{background:var(--bad-ink)}
+.pstr.b .nz .sl{color:var(--bad-ink)}
 .pstr .bd{flex:1;min-width:0}
 .pstr .c{font-size:var(--t4);font-weight:800;display:block}
 .pstr .t{font-size:var(--t5);color:var(--ink3);margin-top:1px;display:block}
@@ -3617,8 +3623,10 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
   background:var(--card);color:var(--ink2);-webkit-tap-highlight-color:transparent}
 .pstr .gp{flex:none;width:20px;align-self:center;text-align:center;color:var(--ink3);
   font-size:1rem;line-height:1;letter-spacing:-1px}
-.pstr .f{flex:none;font-size:var(--t6);font-weight:800;color:var(--bad-ink);
-  align-self:center}
+/* 卡住的那一塊直接寫原因，不要只寫「卡住」——原因有五種，
+   她看著整片紅問過「卡住的原因是什麼」（2026-10-04）。 */
+.pstr .f{flex:none;max-width:72px;text-align:right;font-size:var(--t6);font-weight:800;
+  color:var(--bad-ink);align-self:center;line-height:1.3}
 
 /* 卡住的那一塊＋四個動作 */
 .pswarn{background:var(--bad-bg);border:1px solid var(--bad-line);

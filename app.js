@@ -10684,16 +10684,23 @@ function psShift_(day, n){
 }
 
 /* 這一天為什麼卡住。只認他確認過的那幾種，不自己加。 */
+/* 卡住的原因。回 { why: 給那一塊看的長句, tag: 標在那一塊上的短標 }。
+   ⛔ 只寫「卡住」兩個字她看不出為什麼——原因有五種
+      （撞時段、語言不對、請假、本人說不行、沒有人），
+      牟佑彬 2026-10-04 看著整片紅問「卡住的原因是什麼」。 */
 function psBad_(rows){
   var bad = {}, by = {};
   rows.forEach(function(r){
-    if(!dpWho(r)){ bad[r.id] = '還沒有人'; return; }
-    if(r.decline){ bad[r.id] = dpWho(r) + ' 說那天不行'; return; }
+    if(!dpWho(r)){
+      bad[r.id] = { why: '還沒有人', tag: '沒有人' }; return; }
+    if(r.decline){
+      bad[r.id] = { why: dpWho(r) + ' 說那天不行', tag: '他說不行' }; return; }
     var lg = dpCrewLang(dpWho(r));
     if(r.lang && lg && lg !== r.lang){
-      bad[r.id] = dpWho(r) + ' 是' + lg + '文，這一場是' + r.lang + '文'; return; }
+      bad[r.id] = { why: dpWho(r) + ' 是' + lg + '文，這一場是' + r.lang + '文',
+                    tag: lg + '文 ≠ ' + r.lang + '文' }; return; }
     if((LEAVE_[dpWho(r)] || []).indexOf(r.date) !== -1){
-      bad[r.id] = dpWho(r) + ' 那天請假'; return; }
+      bad[r.id] = { why: dpWho(r) + ' 那天請假', tag: '請假' }; return; }
     (by[dpWho(r)] = by[dpWho(r)] || []).push(r);
   });
   /* ⛔ 只有「兩邊都壓了時間而且同一個時段」才算撞。未定時段是有彈性的。
@@ -10707,7 +10714,8 @@ function psBad_(rows){
     Object.keys(byS).forEach(function(sl){
       if(byS[sl].length < 2) return;
       var why = w + ' 那天' + sl + '有 ' + byS[sl].length + ' 件';
-      byS[sl].forEach(function(r){ bad[r.id] = why; });
+      var tag = sl + '撞 ' + byS[sl].length + ' 件';
+      byS[sl].forEach(function(r){ bad[r.id] = { why: why, tag: tag }; });
     });
   });
   return bad;
@@ -10732,7 +10740,7 @@ function psGroups_(){
        上午五件撞在一起是**一件事**，標成 5 只會讓整片變紅
        （牟佑彬 2026-10-04 指出）。 */
     var why = {};
-    by[w].forEach(function(r){ if(bad[r.id]) why[bad[r.id]] = 1; });
+    by[w].forEach(function(r){ if(bad[r.id]) why[bad[r.id].why] = 1; });
     return { who: w, rows: by[w], bad: Object.keys(why).length,
              hit: by[w].filter(function(r){ return bad[r.id]; }).length };
   }).sort(function(a, b){
@@ -10834,8 +10842,11 @@ function psSaveOrder_(rows){
 
 function psTrip_(r, why){
   var ad = psAddrShort_(r.client);
+  /* ⚠ 時段標在編號下面。區塊標題雖然也寫了，但她看的是「這一塊」，
+     而且全天會落在下午那一區，不標就看不出來（牟佑彬 2026-10-04）。 */
   return '<div class="pstr' + (why ? ' b' : '') + '" data-id="' + esc(r.id) + '">' +
-    '<span class="no">' + (r._no || '?') + '</span>' +
+    '<span class="nz"><span class="no">' + (r._no || '?') + '</span>' +
+      '<span class="sl">' + esc(r.slot || '不壓') + '</span></span>' +
     '<span class="bd">' +
       '<span class="c">' + esc(r.client) + '</span>' +
       '<span class="t">' + esc(r.topic || r.sub || '—') +
@@ -10847,7 +10858,8 @@ function psTrip_(r, why){
         '<button type="button" data-ps="zone" data-z="下午" data-id="' + esc(r.id) + '">↓ 下午</button>' +
         '<button type="button" data-ps="zone" data-z="" data-id="' + esc(r.id) + '">不壓時間</button>' +
       '</span></span>' +
-    (why ? '<span class="f">卡住</span>' : '<span class="gp">⠿</span>') +
+    (why ? '<span class="f">' + esc(why.tag || '卡住') + '</span>'
+         : '<span class="gp">⠿</span>') +
     '</div>';
 }
 
@@ -10884,10 +10896,10 @@ function psWarn_(g, bad){
   var h = '';
   var seen = {};
   bs.forEach(function(r){
-    var w = bad[r.id];
+    var w = bad[r.id].why;
     if(!seen[w]){ seen[w] = 1; h += '<div class="pswh">⚠ ' + esc(w) + '</div>'; }
-    h += '<div class="pswl">' + esc(r.client) + '　' + esc(r.slot || '未定時段') + '</div>' +
-      psActs_(r);
+    h += '<div class="pswl">' + (r._no ? (r._no + '. ') : '') + esc(r.client) +
+      '　' + esc(r.slot || '不壓時間') + '</div>' + psActs_(r);
   });
   return '<div class="pswarn">' + h + '</div>';
 }
