@@ -11627,13 +11627,22 @@ function rtPaint_(sel){
   RT_NOW = sel;
   var svg = document.querySelector('#p-ps3 .rtsvg');
   if(!svg) return;
+  /* ⛔ 地圖資料還沒到的時候**不可以**把 .rtmap 的內容換掉——
+     svg 一旦被刪，資料到了也沒有東西可以畫（2026-10-04 實測踩到）。
+     改成蓋一張紙在上面，載到了再把紙拿掉。 */
+  var box = document.querySelector('#p-ps3 .rtmap');
+  var veil = box && box.querySelector('.rtfail');
   if(!TWM_){
-    var box = document.querySelector('#p-ps3 .rtmap');
-    if(box) box.innerHTML = '<div class="rtfail">' +
-      (TWM_ERR_ ? '地圖資料載不到（可能是沒有網路），下面的清單還是可以用'
-                : '地圖載入中…') + '</div>';
+    if(box && !veil){
+      veil = document.createElement('div');
+      veil.className = 'rtfail';
+      box.appendChild(veil);
+    }
+    if(veil) veil.textContent = TWM_ERR_
+      ? '地圖載不到（可能是沒有網路），下面的清單還是可以用' : '地圖載入中…';
     return;
   }
+  if(veil) veil.parentNode.removeChild(veil);
   RT_VB = rtFit_(sel);
   svg.querySelector('.bs').innerHTML = rtBase_(sel);
   rtApplyVB_();
@@ -11774,7 +11783,7 @@ function drawRT(){
 
 function loadRT(){
   /* 地圖資料跟行程資料同時開始抓，誰先到都不影響另一邊。 */
-  twLoad_(function(){ if($('p-ps3') && $('p-ps3').innerHTML) rtPaint_(rtSelected_()); });
+  twLoad_(function(){ if($('p-ps3') && $('p-ps3').innerHTML) drawRT(); });
   if(!PS_DAY) PS_DAY = psTomorrow_();
   var m = PS_DAY.slice(0, 7);
   if(CAL_CACHE[m] && (Date.now() - (CAL_CACHE_AT[m] || 0)) <= CAL_TTL){

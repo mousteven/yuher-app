@@ -3749,7 +3749,10 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 /* 兩層各自的 currentColor：輪廓那層要淡，點與字那層要清楚 */
 .rtmap .bs{color:var(--ink3)}
 .rtmap .ov{color:var(--ink)}
-.rtfail{padding:26px 12px;text-align:center;font-size:var(--t5);color:var(--ink3)}
+/* 蓋在圖上面的一張紙，不是取代圖——底下的 svg 要留著 */
+.rtfail{position:absolute;inset:6px;display:flex;align-items:center;justify-content:center;
+  text-align:center;font-size:var(--t5);color:var(--ink3);padding:12px;
+  background:var(--card);border-radius:calc(var(--r2) - 4px)}
 .rtnote{font-size:var(--t6);color:var(--ink3);text-align:center;padding:4px 2px 1px}
 
 .rtlist{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
