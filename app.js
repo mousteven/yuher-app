@@ -10038,22 +10038,16 @@ function hideLoneTabs(){
 
 function applyRoleTabs(){
   applyRoleSkin();
-  var want = ROLE_TABS_[STAFF_ROLE];
+  /* ⛔ 這支以前分成兩條路：有角色的一條、翻譯的一條（直接 return）。
+     每加一樣「某個角色才設的狀態」，就要記得在**另一條路**也重設一次，
+     而我已經漏掉兩次了：
+       2026-10-03　hideLoneTabs() 的 display:none 與 body.notabs
+       2026-10-04　.tabs.few（每顆 min-width:120px × 五顆 = 600px，
+                   在 420px 的手機上塞不下，翻譯的底欄只剩三顆）
+     所以把兩條路合成一條：翻譯用預設的五個，後面的程式只寫一次。
+     ⚠ 以後要再加「某個角色才有的狀態」，就加在這條唯一的路上。 */
+  var want = ROLE_TABS_[STAFF_ROLE] || ['cal', 'new', 'track', 'follow', 'stat'];
   var btns = document.querySelectorAll('.tabs button');
-  if(!want){
-    /* 翻譯（以及沒有角色的）維持原本五個，新的三個藏起來。
-       ⚠ 不可以反過來寫成「把不要的藏起來」——那樣新加角色時會漏。 */
-    [].forEach.call(btns, function(b){
-      b.hidden = (['order','mine','conf'].indexOf(b.dataset.t) !== -1); });
-    /* ⛔ 這裡以前直接 return，而 hideLoneTabs() 在下面——
-       從行政切回翻譯的時候，行政那邊設的 style.display='none' 與
-       body.notabs **沒有人清掉**，翻譯的底欄就整條不見了
-       （2026-10-03 他實測踩到）。
-       ⚠ 教訓：**凡是「某個角色才設的狀態」，一定要在每個角色都跑一次重設**，
-         不可以只在設的那一邊處理。 */
-    hideLoneTabs();
-    return;
-  }
   [].forEach.call(btns, function(b){ b.hidden = (want.indexOf(b.dataset.t) === -1); });
   /* 只剩兩三顆的時候不要每顆撐到半個畫面——那看起來像壞掉。
      ⚠ 用 class 標記而不是改 .tabs button 的通則，
