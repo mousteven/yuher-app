@@ -548,6 +548,7 @@ body.tabsbottom .tabs #admAdd{order:3;flex:1}
 /* 特助：行事曆 ｜ 排班甲 ｜ ＋ ｜ 排班戊 ｜ 總表 */
 body.tabsbottom .tabs button[data-t=ps1]{order:2}
 body.tabsbottom .tabs button[data-t=ps2]{order:4}
+body.tabsbottom .tabs button[data-t=ps3]{order:5}
 /* ⛔ **只有行政看得到**。注入出來的東西一旦生出來就不會自己消失，
    而切身分只重設「有 data-t 的分頁」——2026-10-04 佑彬的底欄因此出現
    **兩顆加號**（他自己那顆 ＋ 行政留下來的那顆）。
@@ -3672,3 +3673,65 @@ body.filladm #admTodoBox{display:block}
   padding:12px;border-radius:var(--r1);border:1px solid var(--line);
   background:var(--card);color:var(--ink2);cursor:pointer}
 @media (prefers-reduced-motion:reduce){ .psbx{animation:none} }
+
+
+/* ══ 路線頁（牟佑彬 2026-10-04）══════════════════════════════════
+   ⛔ 示意圖，不是真的地圖。位置是相對的，只保證北上南下、海左山右。
+      真的地圖＋車程要 Google 的 API（要錢）。他自己想到更好的做法：
+      **導去 Google 地圖就好，那是免費的**，而且不給起點它就從現在位置開始導。 */
+.rtwho{display:flex;gap:6px;overflow-x:auto;padding:1px 0 8px;margin:0 0 9px;
+  scrollbar-width:none}
+.rtwho::-webkit-scrollbar{display:none}
+.rtwho button{flex:none;font:inherit;font-size:var(--t5);font-weight:800;cursor:pointer;
+  padding:6px 12px;border-radius:999px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink2);-webkit-tap-highlight-color:transparent}
+.rtwho button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
+.rtwho button.b{border-color:var(--bad-line);color:var(--bad-ink)}
+.rtwho button s{text-decoration:none;opacity:.6;margin-left:5px;font-weight:700}
+
+.rtmap{border:1px solid var(--line);border-radius:var(--r2);background:var(--bg);
+  padding:6px;margin-bottom:10px}
+.rtmap svg{display:block;width:100%;height:auto}
+.rtnote{font-size:var(--t6);color:var(--ink3);text-align:center;padding:4px 2px 1px}
+
+.rtlist{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
+  padding:9px 11px}
+.rth{display:flex;align-items:baseline;gap:7px;font-size:var(--t5);font-weight:800;
+  color:var(--ink3);padding:1px 2px 7px}
+.rth s{text-decoration:none;margin-left:auto;font-weight:700}
+.rtst{display:flex;gap:9px;padding:7px 2px;border-top:1px solid var(--line2);
+  align-items:flex-start}
+.rtst:first-of-type{border-top:0}
+/* ⛔ 編號是白字，底一定要夠暗。夜間的 --ink3 只有 3.49:1，檢查器擋下來了。
+   不壓時間那一組改用 --fill（深）＋ --fill-ink，日夜都過。 */
+.rtst .no{flex:none;width:21px;height:21px;border-radius:7px;
+  font-size:var(--t6);font-weight:800;display:flex;align-items:center;
+  justify-content:center;margin-top:1px;
+  background:var(--fill);color:var(--fill-ink)}
+.rtst.zam .no{background:var(--warn-fill);color:var(--fill-ink)}
+/* ⛔ 夜間的 --info-ink 是淺藍（#9CBDEC），白字只有 1.93:1。
+   沒有 --info-fill 可用，所以下午那一組跟不壓時間一樣用 --fill，
+   改用**框線**而不是底色來區分。 */
+.rtst.zpm .no{background:var(--fill);color:var(--fill-ink);
+  box-shadow:inset 0 0 0 2px var(--info-bar)}
+.rtst.zfx .no{background:var(--fill);color:var(--fill-ink)}
+.rtst .bd{flex:1;min-width:0}
+.rtst .c{display:block;font-size:var(--t4);font-weight:800}
+.rtst .a{display:block;font-size:var(--t5);color:var(--ink2);margin-top:1px}
+.rtst .a .far{color:var(--bad-ink);font-weight:800;margin-right:5px}
+.rtst .a .non{opacity:.6;font-style:normal}
+.rtst .sl{flex:none;font-size:var(--t6);font-weight:800;color:var(--ink3);align-self:center}
+.rthop{display:flex;align-items:center;gap:6px;padding:2px 0 2px 30px;
+  font-size:var(--t6);color:var(--ink3)}
+.rthop.far{color:var(--bad-ink);font-weight:700}
+
+.rtsum{margin:9px 0 0;padding:9px 10px;border-radius:var(--r1);background:var(--bg);
+  border:1px solid var(--line2);font-size:var(--t5);color:var(--ink2)}
+.rtsum b{color:var(--ink)}
+.rtsum .w{color:var(--bad-ink);font-weight:800}
+
+/* 免費的那一條：跳出去給 Google 地圖自己導 */
+.rtgo{display:block;margin-top:10px;text-align:center;text-decoration:none;
+  font-size:var(--t3);font-weight:800;padding:13px;border-radius:var(--r1);
+  background:var(--fill);color:var(--fill-ink)}
+.rtfoot{margin-top:6px;font-size:var(--t5);color:var(--ink3);text-align:center}

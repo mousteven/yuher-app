@@ -1148,6 +1148,7 @@ document.querySelector('.tabs').addEventListener('click', function(ev){
     if(b.dataset.t==='sum')   loadSum();
     if(b.dataset.t==='ps1')   loadPS('ps1');
     if(b.dataset.t==='ps2')   loadPS('ps2');
+    if(b.dataset.t==='ps3')   loadRT();
     /* 離開填寫頁＝手上的事告一段落，這時候更新不會弄丟東西。 */
     tryUpdate();
   }
@@ -9902,7 +9903,7 @@ var ROLE_TABS_ = {
      ⛔ 「待確認」（conf）先收起來——牟佑彬 2026-10-04 說拿掉，
         排班那兩頁就是它的替代。後端一行都沒動，要回來把 'conf' 加回這一行就好。
      ⚠ 甲與戊是**讓他試用的兩種做法**，選完之後砍掉沒選的那一個。 */
-  '特助':   ['cal', 'ps1', 'ps2', 'sum'],
+  '特助':   ['cal', 'ps1', 'ps2', 'ps3', 'sum'],
   '副理':   ['cal', 'new', 'track', 'follow', 'stat', 'conf'],
   '總經理': ['cal', 'new', 'track', 'follow', 'stat', 'conf']
 };
@@ -9931,17 +9932,25 @@ var PS2_IC_ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
 
 /* 特助的兩個排班分頁。
    ⚠ 一樣用注入的，不寫進 Service.html——那是後端檔，改它要重新部署。 */
+/* 路線頁的圖示：幾個點用一條線串起來。 */
+var PS3_IC_ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+  ' stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<circle cx="6" cy="17.6" r="2.4"/><circle cx="18" cy="6.4" r="2.4"/>' +
+  '<path d="M8.4 17.6h5.2a3.2 3.2 0 0 0 0-6.4h-3.2a3.2 3.2 0 0 1 0-6.4h5.2"/></svg>';
+
 function assBits(){
   if($('p-ps1')) return;
   var cal = $('p-cal');
   if(!cal) return;
   cal.insertAdjacentHTML('afterend',
-    '<div class="pane" id="p-ps1"></div><div class="pane" id="p-ps2"></div>');
+    '<div class="pane" id="p-ps1"></div><div class="pane" id="p-ps2"></div>' +
+    '<div class="pane" id="p-ps3"></div>');
   var cb = document.querySelector('.tabs button[data-t=cal]');
   if(!cb) return;
   cb.insertAdjacentHTML('afterend',
     '<button data-t="ps1">' + PS1_IC_ + '<span>排班甲</span></button>' +
-    '<button data-t="ps2">' + PS2_IC_ + '<span>排班戊</span></button>');
+    '<button data-t="ps2">' + PS2_IC_ + '<span>排班戊</span></button>' +
+    '<button data-t="ps3">' + PS3_IC_ + '<span>路線</span></button>');
 }
 
 function sumBits(){
@@ -11097,7 +11106,9 @@ function psDragBind(){
   });
 }
 
-function psDraw(){ drawPS1(); drawPS2(); psDragBind(); }
+function psDraw(){ drawPS1(); drawPS2(); psDragBind();
+  /* 順序一改，路線就該跟著變——不然她拖完去看路線還是舊的。 */
+  if($('p-ps3') && $('p-ps3').innerHTML) drawRT(); }
 
 function loadPS(which){
   var box = $('p-' + which); if(!box) return;
@@ -11225,6 +11236,206 @@ function psAfter_(msg){
   calBust(PS_DAY.slice(0, 7));
   loadPS('ps1');
 }
+
+/* ══ 路線頁（牟佑彬 2026-10-04）══════════════════════════════════
+   照排班頁拖出來的 1→2→3，把一個翻譯那天要跑的點連起來。
+
+   ⛔ 這是**示意圖，不是真的地圖**。位置是相對的，只保證
+      「北的在上、南的在下、海線在左、山線在右」。
+      真的地圖＋真的車程要 Google 的 API，那個要錢——
+      他 2026-10-04 自己想到更好的做法：**導去 Google 地圖就好，那是免費的**。
+
+   ⛔ Google 連結**不給 origin**，Google 就會從她**現在的位置**開始導
+      （他 2026-10-04 特別交代的）。
+   ⚠ 那種連結最多 10 個點（終點＋中間 9 個 waypoints），超過要拆兩段。
+   ⚠ 導航要**完整地址**（門牌），畫面上只顯示到路名——兩個都留著。 */
+
+/* 鄉鎮的相對位置。⛔ 示意，不是座標。
+   涵蓋名冊地址裡真的出現過的鄉鎮；沒收錄的落在中間，並標「位置不確定」。 */
+var RT_POS_ = {
+  /* 台中：海線在左、山線在右、北在上 */
+  '大甲區':[.13,.08], '大安區':[.09,.14], '外埔區':[.20,.13], '清水區':[.17,.21],
+  '梧棲區':[.11,.26], '后里區':[.31,.13], '神岡區':[.36,.23], '豐原區':[.44,.20],
+  '沙鹿區':[.18,.31], '大雅區':[.33,.32], '潭子區':[.45,.29], '新社區':[.62,.28],
+  '東勢區':[.72,.23], '龍井區':[.16,.40], '西屯區':[.33,.42], '北屯區':[.46,.39],
+  '北區':[.40,.45], '西區':[.37,.48], '東區':[.44,.49], '南區':[.39,.53],
+  '太平區':[.57,.47], '大肚區':[.22,.52], '南屯區':[.32,.52], '烏日區':[.38,.60],
+  '大里區':[.49,.56], '霧峰區':[.53,.67],
+  /* 彰化：台中西南 */
+  '伸港鄉':[.12,.56], '鹿港鎮':[.08,.64], '福興鄉':[.09,.70], '彰化市':[.23,.63],
+  '大村鄉':[.22,.73], '芬園鄉':[.40,.70], '溪州鄉':[.16,.86],
+  /* 南投：台中東南 */
+  '草屯鎮':[.56,.72], '南投市':[.60,.80], '名間鄉':[.57,.88], '集集鎮':[.66,.86],
+  '竹山鎮':[.62,.93], '埔里鎮':[.76,.63],
+  /* 遠的 */
+  '造橋鄉':[.30,.02], '頭份市':[.34,.01], '龜山區':[.76,.02], '文山區':[.86,.06],
+  '太保市':[.26,.95]
+};
+/* 不是台中的要標出來——跨縣市＝要留半天 */
+var RT_FAR_ = {
+  '伸港鄉':'彰化','鹿港鎮':'彰化','福興鄉':'彰化','彰化市':'彰化',
+  '大村鄉':'彰化','芬園鄉':'彰化','溪州鄉':'彰化',
+  '草屯鎮':'南投','南投市':'南投','名間鄉':'南投','集集鎮':'南投',
+  '竹山鎮':'南投','埔里鎮':'南投',
+  '造橋鄉':'苗栗','頭份市':'苗栗','龜山區':'桃園','文山區':'台北','太保市':'嘉義'
+};
+
+function rtTown_(client){
+  var a = psAddrRaw_(client);
+  var m = /^.{2,3}[市縣](.{1,4}[區鄉鎮市])/.exec(a);
+  return m ? m[1] : '';
+}
+function rtDist_(a, b){
+  var p = RT_POS_[a], q = RT_POS_[b];
+  if(!p || !q) return 0;
+  return Math.sqrt(Math.pow(p[0]-q[0], 2) + Math.pow(p[1]-q[1], 2));
+}
+
+var RT_CUR = 0;
+
+function rtGroups_(){
+  var gs = psGroups_().filter(function(g){ return g.who !== '（還沒有人）'; });
+  return gs.sort(function(a, b){
+    return String(a.who).localeCompare(String(b.who), 'zh-Hant'); });
+}
+
+function rtMap_(stops){
+  var W = 100, H = 108;
+  var pts = stops.map(function(s){
+    var p = RT_POS_[s.town] || [.5, .5];
+    return { x: 8 + p[0] * (W-16), y: 6 + p[1] * (H-12), s: s, ok: !!RT_POS_[s.town] };
+  });
+  var line = pts.map(function(p, i){
+    return (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join(' ');
+  var col = { '上午':'var(--warn-bar)', '下午':'var(--info-bar)', '':'var(--ink3)' };
+  var h = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
+    '那天的停靠順序示意圖">' +
+    '<defs><marker id="rtmk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" ' +
+      'markerHeight="4" orient="auto-start-reverse">' +
+      '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+    '<rect x="2" y="2" width="' + (W-4) + '" height="' + (H-4) + '" rx="4" fill="none" ' +
+      'stroke="currentColor" stroke-opacity=".12"/>' +
+    '<text x="' + (W/2) + '" y="7" text-anchor="middle" font-size="3.4" ' +
+      'fill="currentColor" opacity=".3">北</text>' +
+    '<text x="5" y="' + (H/2) + '" font-size="3.4" fill="currentColor" opacity=".3">海</text>' +
+    '<text x="' + (W-7) + '" y="' + (H/2) + '" font-size="3.4" fill="currentColor" ' +
+      'opacity=".3">山</text>' +
+    (pts.length > 1
+      ? '<path d="' + line + '" fill="none" stroke="currentColor" stroke-opacity=".42" ' +
+        'stroke-width="1" stroke-dasharray="2.4 1.8" marker-end="url(#rtmk)"/>' : '');
+  pts.forEach(function(p, i){
+    var far = RT_FAR_[p.s.town];
+    h += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="4.2" fill="' +
+      (far ? 'var(--bad-ink)' : (col[psZoneOf_(p.s.r)] || 'var(--ink3)')) + '"' +
+      (p.ok ? '' : ' stroke="currentColor" stroke-dasharray="1 1" stroke-width=".5"') + '/>' +
+      '<text x="' + p.x.toFixed(1) + '" y="' + (p.y+1.6).toFixed(1) + '" ' +
+      'text-anchor="middle" font-size="4.4" font-weight="800" fill="#fff">' + (i+1) + '</text>' +
+      '<text x="' + p.x.toFixed(1) + '" y="' + (p.y-5.6).toFixed(1) + '" ' +
+      'text-anchor="middle" font-size="3.6" font-weight="700" fill="currentColor" ' +
+      'opacity=".8">' + esc(p.s.town || '？') + '</text>';
+  });
+  return h + '</svg>';
+}
+
+/* ⛔ 不給 origin → Google 從**現在的位置**開始導（他 2026-10-04 交代的）。 */
+function rtGmap_(stops){
+  var full = stops.map(function(s){ return s.addr || s.c; })
+    .filter(function(x){ return x; });
+  if(!full.length) return '';
+  var use = full.slice(0, 10);            // 終點 ＋ 最多 9 個中途點
+  var dest = use[use.length - 1];
+  var way = use.slice(0, -1);
+  return 'https://www.google.com/maps/dir/?api=1' +
+    '&destination=' + encodeURIComponent(dest) +
+    (way.length ? '&waypoints=' + way.map(encodeURIComponent).join('%7C') : '') +
+    '&travelmode=driving';
+}
+
+function drawRT(){
+  var box = $('p-ps3'); if(!box) return;
+  var gs = rtGroups_();
+  var h = psHead_();
+  if(!gs.length){
+    box.innerHTML = h + '<div class="mid" style="padding:30px">' +
+      '這一天還沒有配好人的行程</div>';
+    return;
+  }
+  if(RT_CUR >= gs.length) RT_CUR = 0;
+  var g = gs[RT_CUR];
+  var stops = psOrdered_(g.rows).map(function(r){
+    return { r: r, c: r.client, town: rtTown_(r.client),
+             addr: psAddrRaw_(r.client), short: psAddrShort_(r.client) };
+  });
+
+  h += '<div class="rtwho">' + gs.map(function(x, i){
+    return '<button type="button" data-rt="who" data-i="' + i + '"' +
+      (i === RT_CUR ? ' class="on"' : (x.bad ? ' class="b"' : '')) + '>' +
+      esc(x.who) + '<s>' + x.rows.length + '</s></button>'; }).join('') + '</div>';
+
+  h += '<div class="rtmap">' + rtMap_(stops) +
+    '<div class="rtnote">位置是相對的示意，不是座標</div></div>';
+
+  h += '<div class="rtlist"><div class="rth">停靠順序<s>' + stops.length + ' 站</s></div>';
+  var far = 0, back = 0;
+  stops.forEach(function(s, i){
+    if(i){
+      var prev = stops[i-1];
+      var cross = (RT_FAR_[prev.town] || '台中') !== (RT_FAR_[s.town] || '台中');
+      if(cross) far++;
+      h += '<div class="rthop' + (cross ? ' far' : '') + '">↓　' +
+        esc(prev.town || '？') + ' → ' + esc(s.town || '？') +
+        (cross ? '　跨縣市' : '') + '</div>';
+    }
+    var z = psZoneOf_(s.r);
+    /* ⛔ 不要用字串拼類別名——檢查器只看得到 'z'，會誤報「沒有樣式」。
+       今天這是第二次了（上一次是總表的 's-'）。 */
+    var zc = (z === '上午') ? 'zam' : (z === '下午') ? 'zpm' : 'zfx';
+    h += '<div class="rtst ' + zc + '">' +
+      '<span class="no">' + (i+1) + '</span>' +
+      '<span class="bd"><span class="c">' + esc(s.c) + '</span>' +
+      '<span class="a">' + (RT_FAR_[s.town]
+        ? ('<b class="far">' + esc(RT_FAR_[s.town]) + '</b>') : '') +
+        (s.short || '<i class="non">名冊上沒有地址</i>') + '</span></span>' +
+      '<span class="sl">' + (z || '不壓') + '</span></div>';
+  });
+  for(var i = 2; i < stops.length; i++){
+    var d0 = rtDist_(stops[i-2].town, stops[i].town);
+    var d1 = rtDist_(stops[i-2].town, stops[i-1].town);
+    if(d1 > 0 && d0 < d1 * 0.6) back++;
+  }
+  h += '</div>';
+
+  /* ⛔ 不講「幾公里」「幾分鐘」——示意圖算不出真的距離，講了就是騙人。 */
+  h += '<div class="rtsum"><b>' + esc(g.who) + '</b> 這一天 ' + stops.length + ' 站' +
+    (far ? '　·　<span class="w">跨縣市 ' + far + ' 次</span>' : '　·　都在同一個縣市') +
+    (back ? '　·　<span class="w">看起來有 ' + back + ' 段折回頭</span>'
+          : '　·　路線沒有明顯折返') + '</div>';
+
+  var u = rtGmap_(stops);
+  if(u) h += '<a class="rtgo" href="' + esc(u) + '" target="_blank" rel="noopener">' +
+    (stops.length > 10 ? '用 Google 地圖導前 10 站' : '用 Google 地圖導這條路線') +
+    '　›</a><div class="rtfoot">從你現在的位置開始導，' +
+    (stops.length > 10 ? '超過 10 站要分兩段' : '照上面的順序走') + '</div>';
+
+  box.innerHTML = h;
+}
+
+function loadRT(){
+  if(!PS_DAY) PS_DAY = psTomorrow_();
+  var m = PS_DAY.slice(0, 7);
+  if(CAL_CACHE[m] && (Date.now() - (CAL_CACHE_AT[m] || 0)) <= CAL_TTL){
+    calMerge([m]); drawRT(); return;
+  }
+  loadPS('ps1');
+  setTimeout(drawRT, 1200);
+}
+
+document.addEventListener('click', function(e){
+  var b = e.target.closest && e.target.closest('[data-rt]');
+  if(!b || !b.closest('#p-ps3')) return;
+  RT_CUR = +b.dataset.i;
+  drawRT();
+}, false);
 
 function loadOrder(){
   var box = $('p-order'), keep = dpSnap();
