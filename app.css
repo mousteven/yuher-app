@@ -3705,6 +3705,28 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .rtwho button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 .rtwho button.b{border-color:var(--bad-line);color:var(--bad-ink)}
 .rtwho button s{text-decoration:none;opacity:.6;margin-left:5px;font-weight:700}
+.rtwho button.on{color:#fff}
+.rtwho button.cl{border-style:dashed;color:var(--ink3)}
+/* 複選：一次看幾個人的路線疊在一起，才看得出「兩個人同一天都往烏日跑」 */
+.rthint{margin:0 0 10px;font-size:var(--t5);color:var(--ink3);text-align:center}
+.rtnone{padding:14px 4px;font-size:var(--t4);color:var(--ink3);text-align:center}
+.rtnone s{display:block;text-decoration:none;font-size:var(--t5);margin-top:4px;opacity:.8}
+.rtov{padding:8px 2px;border-top:1px solid var(--line2)}
+.rtov:first-of-type{border-top:0}
+.rtov .t{display:flex;align-items:baseline;gap:7px;font-size:var(--t4);font-weight:800}
+.rtov .t .far{color:var(--bad-ink);font-size:var(--t6)}
+.rtov .t s{text-decoration:none;margin-left:auto;font-size:var(--t6);font-weight:800;
+  color:var(--bad-ink);background:var(--bad-bg);border:1px solid var(--bad-line);
+  border-radius:999px;padding:1px 8px}
+.rtov .r{display:flex;align-items:baseline;gap:7px;padding:4px 0 0;font-size:var(--t5)}
+.rtov .r i{flex:none;width:9px;height:9px;border-radius:50%;align-self:center}
+.rtov .r b{flex:none;font-weight:800}
+.rtov .r span{flex:1;min-width:0;color:var(--ink2);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.rtov .r u{flex:none;text-decoration:none;font-size:var(--t6);font-weight:800;
+  color:var(--ink3)}
+.rtsum .pp{display:inline-flex;align-items:center;gap:5px;margin-right:10px;font-weight:700}
+.rtsum .pp i{width:9px;height:9px;border-radius:50%;display:inline-block}
 
 .rtmap{border:1px solid var(--line);border-radius:var(--r2);background:var(--bg);
   padding:6px;margin-bottom:10px}

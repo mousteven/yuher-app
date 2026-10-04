@@ -11354,25 +11354,54 @@ function rtDist_(a, b){
   return Math.sqrt(Math.pow(p[0]-q[0], 2) + Math.pow(p[1]-q[1], 2));
 }
 
-var RT_CUR = 0;
+/* 複選。⚠ 一次看幾個人的路線疊在一起，才看得出「兩個人同一天都往烏日跑」。 */
+var RT_SEL = {};
 
-function rtGroups_(){
-  var gs = psGroups_().filter(function(g){ return g.who !== '（還沒有人）'; });
-  return gs.sort(function(a, b){
-    return String(a.who).localeCompare(String(b.who), 'zh-Hant'); });
+/* 疊圖用的顏色。⚠ 要在日間與夜間都看得見，所以用中間調，不要太淺或太深。
+   ⛔ 多人模式下**不在點上印號碼**——點變小、字擠不下，而且重點是「誰跟誰重疊」。 */
+var RT_COL_ = ['#3F8F6F', '#C05A6C', '#4A7FD0', '#D08040', '#8E73C4', '#3F96A3'];
+
+function rtSelected_(){
+  var gs = rtGroups_();
+  var on = gs.filter(function(g){ return RT_SEL[g.who]; });
+  if(!on.length && gs.length) on = [gs[0]];
+  return on;
+}
+function rtStops_(g){
+  return psOrdered_(g.rows).map(function(r){
+    return { r: r, c: r.client, town: rtTown_(r.client),
+             addr: psAddrRaw_(r.client), short: psAddrShort_(r.client) };
+  });
+}
+/* 哪些鄉鎮有兩個以上的人要去。這就是他要的「重疊或在附近」。
+   ⚠ 只能用鄉鎮當代理——我們沒有真的距離。 */
+function rtOverlap_(sel){
+  var byTown = {};
+  sel.forEach(function(g){
+    rtStops_(g).forEach(function(s){
+      if(!s.town) return;
+      (byTown[s.town] = byTown[s.town] || []).push({ who: g.who, s: s });
+    });
+  });
+  return Object.keys(byTown).map(function(t){
+    var who = {};
+    byTown[t].forEach(function(x){ who[x.who] = (who[x.who] || 0) + 1; });
+    return { town: t, who: who, n: Object.keys(who).length,
+             stops: byTown[t] };
+  }).filter(function(x){ return x.n >= 2; })
+    .sort(function(a, b){ return b.stops.length - a.stops.length; });
 }
 
-function rtMap_(stops){
-  var W = 100, H = 108;
-  var pts = stops.map(function(s){
-    var p = RT_POS_[s.town] || [.5, .5];
-    return { x: 8 + p[0] * (W-16), y: 6 + p[1] * (H-12), s: s, ok: !!RT_POS_[s.town] };
-  });
-  var line = pts.map(function(p, i){
-    return (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join(' ');
-  var col = { '上午':'var(--warn-bar)', '下午':'var(--info-bar)', '':'var(--ink3)' };
+/* 疊圖。sel 是選到的那幾個人，一人一條線一個顏色。
+   ⛔ 一個人的時候點上印 1234；多人的時候不印——點變小、字擠不下，
+      而且多人模式要看的是「誰跟誰重疊」，不是誰的第幾站。 */
+function rtMap_(sel){
+  var W = 100, H = 108, one = (sel.length === 1);
+  var hits = {};
+  rtOverlap_(sel).forEach(function(o){ hits[o.town] = o.n; });
+
   var h = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
-    '那天的停靠順序示意圖">' +
+    esc(sel.map(function(g){ return g.who; }).join('、')) + ' 那天的停靠順序示意圖">' +
     '<defs><marker id="rtmk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" ' +
       'markerHeight="4" orient="auto-start-reverse">' +
       '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
@@ -11382,27 +11411,67 @@ function rtMap_(stops){
       'fill="currentColor" opacity=".3">北</text>' +
     '<text x="5" y="' + (H/2) + '" font-size="3.4" fill="currentColor" opacity=".3">海</text>' +
     '<text x="' + (W-7) + '" y="' + (H/2) + '" font-size="3.4" fill="currentColor" ' +
-      'opacity=".3">山</text>' +
-    (pts.length > 1
-      ? '<path d="' + line + '" fill="none" stroke="currentColor" stroke-opacity=".42" ' +
-        'stroke-width="1" stroke-dasharray="2.4 1.8" marker-end="url(#rtmk)"/>' : '');
-  pts.forEach(function(p, i){
-    var far = RT_FAR_[p.s.town];
-    h += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="4.2" fill="' +
-      (far ? 'var(--bad-ink)' : (col[psZoneOf_(p.s.r)] || 'var(--ink3)')) + '"' +
-      (p.ok ? '' : ' stroke="currentColor" stroke-dasharray="1 1" stroke-width=".5"') + '/>' +
-      '<text x="' + p.x.toFixed(1) + '" y="' + (p.y+1.6).toFixed(1) + '" ' +
-      'text-anchor="middle" font-size="4.4" font-weight="800" fill="#fff">' + (i+1) + '</text>' +
-      '<text x="' + p.x.toFixed(1) + '" y="' + (p.y-5.6).toFixed(1) + '" ' +
-      'text-anchor="middle" font-size="3.6" font-weight="700" fill="currentColor" ' +
-      'opacity=".8">' + esc(p.s.town || '？') + '</text>';
+      'opacity=".3">山</text>';
+
+  /* 重疊的鄉鎮先畫一圈光暈，線蓋上去才看得到底下有東西 */
+  Object.keys(hits).forEach(function(t){
+    var p = RT_POS_[t]; if(!p) return;
+    h += '<circle cx="' + (8 + p[0]*(W-16)).toFixed(1) + '" cy="' +
+      (6 + p[1]*(H-12)).toFixed(1) + '" r="8" fill="currentColor" fill-opacity=".1"/>';
+  });
+
+  sel.forEach(function(g, gi){
+    var col = one ? null : RT_COL_[gi % RT_COL_.length];
+    var pts = rtStops_(g).map(function(st){
+      var p = RT_POS_[st.town] || [.5, .5];
+      return { x: 8 + p[0]*(W-16), y: 6 + p[1]*(H-12), st: st, ok: !!RT_POS_[st.town] };
+    });
+    if(pts.length > 1){
+      h += '<path d="' + pts.map(function(p, i){
+          return (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join(' ') +
+        '" fill="none" stroke="' + (col || 'currentColor') + '" stroke-opacity="' +
+        (one ? '.42' : '.75') + '" stroke-width="' + (one ? 1 : 1.2) +
+        '" stroke-dasharray="2.4 1.8" marker-end="url(#rtmk)"/>';
+    }
+    pts.forEach(function(p, i){
+      var far = RT_FAR_[p.st.town];
+      var fill = one
+        ? (far ? 'var(--bad-ink)'
+               : ({ '上午':'var(--warn-fill)', '下午':'var(--info-ink)' }[psZoneOf_(p.st.r)]
+                  || 'var(--fill)'))
+        : col;
+      h += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' +
+        (one ? 4.2 : 2.8) + '" fill="' + fill + '"' +
+        (p.ok ? '' : ' stroke="currentColor" stroke-dasharray="1 1" stroke-width=".5"') +
+        '/>';
+      if(one){
+        h += '<text x="' + p.x.toFixed(1) + '" y="' + (p.y+1.6).toFixed(1) + '" ' +
+          'text-anchor="middle" font-size="4.4" font-weight="800" fill="#fff">' +
+          (i+1) + '</text>';
+      }
+    });
+  });
+
+  /* 鄉鎮名只寫一次，不然多人疊起來會糊成一團 */
+  var named = {};
+  sel.forEach(function(g){
+    rtStops_(g).forEach(function(st){
+      if(!st.town || named[st.town]) return;
+      named[st.town] = 1;
+      var p = RT_POS_[st.town] || [.5, .5];
+      h += '<text x="' + (8 + p[0]*(W-16)).toFixed(1) + '" y="' +
+        (6 + p[1]*(H-12) - (one ? 5.6 : 4.4)).toFixed(1) + '" text-anchor="middle" ' +
+        'font-size="3.6" font-weight="' + (hits[st.town] ? '800' : '700') +
+        '" fill="currentColor" opacity="' + (hits[st.town] ? '1' : '.72') + '">' +
+        esc(st.town) + '</text>';
+    });
   });
   return h + '</svg>';
 }
 
 /* ⛔ 不給 origin → Google 從**現在的位置**開始導（他 2026-10-04 交代的）。 */
 function rtGmap_(stops){
-  var full = stops.map(function(s){ return s.addr || s.c; })
+  var full = stops.map(function(x){ return x.addr || x.c; })
     .filter(function(x){ return x; });
   if(!full.length) return '';
   var use = full.slice(0, 10);            // 終點 ＋ 最多 9 個中途點
@@ -11423,64 +11492,94 @@ function drawRT(){
       '這一天還沒有配好人的行程</div>';
     return;
   }
-  if(RT_CUR >= gs.length) RT_CUR = 0;
-  var g = gs[RT_CUR];
-  var stops = psOrdered_(g.rows).map(function(r){
-    return { r: r, c: r.client, town: rtTown_(r.client),
-             addr: psAddrRaw_(r.client), short: psAddrShort_(r.client) };
-  });
+  var sel = rtSelected_();
+  var onName = {};
+  sel.forEach(function(g, i){ onName[g.who] = RT_COL_[i % RT_COL_.length]; });
 
-  h += '<div class="rtwho">' + gs.map(function(x, i){
-    return '<button type="button" data-rt="who" data-i="' + i + '"' +
-      (i === RT_CUR ? ' class="on"' : (x.bad ? ' class="b"' : '')) + '>' +
-      esc(x.who) + '<s>' + x.rows.length + '</s></button>'; }).join('') + '</div>';
+  h += '<div class="rtwho">' + gs.map(function(x){
+    var on = !!onName[x.who];
+    return '<button type="button" data-rt="who" data-who="' + esc(x.who) + '"' +
+      (on ? ' class="on"' : (x.bad ? ' class="b"' : '')) +
+      (on && sel.length > 1 ? ' style="background:' + onName[x.who] +
+        ';border-color:' + onName[x.who] + '"' : '') + '>' +
+      esc(x.who) + '<s>' + x.rows.length + '</s></button>'; }).join('') +
+    (sel.length > 1
+      ? '<button type="button" data-rt="clear" class="cl">只看一個</button>' : '') +
+    '</div>';
+  h += '<p class="rthint">' + (sel.length > 1
+    ? '點名字可以多選，路線會疊在一起看'
+    : '點第二個名字，就能看兩個人的路線有沒有重疊') + '</p>';
 
-  h += '<div class="rtmap">' + rtMap_(stops) +
+  h += '<div class="rtmap">' + rtMap_(sel) +
     '<div class="rtnote">位置是相對的示意，不是座標</div></div>';
 
-  h += '<div class="rtlist"><div class="rth">停靠順序<s>' + stops.length + ' 站</s></div>';
-  var far = 0, back = 0;
-  stops.forEach(function(s, i){
-    if(i){
-      var prev = stops[i-1];
-      var cross = (RT_FAR_[prev.town] || '台中') !== (RT_FAR_[s.town] || '台中');
-      if(cross) far++;
-      h += '<div class="rthop' + (cross ? ' far' : '') + '">↓　' +
-        esc(prev.town || '？') + ' → ' + esc(s.town || '？') +
-        (cross ? '　跨縣市' : '') + '</div>';
+  if(sel.length === 1){
+    /* ── 一個人：照 1234 的停靠清單 ── */
+    var g = sel[0], stops = rtStops_(g);
+    h += '<div class="rtlist"><div class="rth">停靠順序<s>' + stops.length + ' 站</s></div>';
+    var far = 0, back = 0;
+    stops.forEach(function(st, i){
+      if(i){
+        var prev = stops[i-1];
+        var cross = (RT_FAR_[prev.town] || '台中') !== (RT_FAR_[st.town] || '台中');
+        if(cross) far++;
+        h += '<div class="rthop' + (cross ? ' far' : '') + '">↓　' +
+          esc(prev.town || '？') + ' → ' + esc(st.town || '？') +
+          (cross ? '　跨縣市' : '') + '</div>';
+      }
+      var z = psZoneOf_(st.r);
+      var zc = (z === '上午') ? 'zam' : (z === '下午') ? 'zpm' : 'zfx';
+      h += '<div class="rtst ' + zc + '">' +
+        '<span class="no">' + (i+1) + '</span>' +
+        '<span class="bd"><span class="c">' + esc(st.c) + '</span>' +
+        '<span class="a">' + (st.short || '<i class="non">名冊上沒有地址</i>') +
+        '</span></span>' +
+        '<span class="sl">' + esc(st.r.slot || '不壓') + '</span></div>';
+    });
+    for(var k = 2; k < stops.length; k++){
+      var d0 = rtDist_(stops[k-2].town, stops[k].town);
+      var d1 = rtDist_(stops[k-2].town, stops[k-1].town);
+      if(d1 > 0 && d0 < d1 * 0.6) back++;
     }
-    var z = psZoneOf_(s.r);
-    /* ⛔ 不要用字串拼類別名——檢查器只看得到 'z'，會誤報「沒有樣式」。
-       今天這是第二次了（上一次是總表的 's-'）。 */
-    var zc = (z === '上午') ? 'zam' : (z === '下午') ? 'zpm' : 'zfx';
-    h += '<div class="rtst ' + zc + '">' +
-      '<span class="no">' + (i+1) + '</span>' +
-      '<span class="bd"><span class="c">' + esc(s.c) + '</span>' +
-      /* ⛔ 不要再加縣市——psAddrShort_ 自己就會把非台中的縣市標紅了。
-         2026-10-04 實測印出「彰化彰化縣芬園鄉」，縣市出現兩次。 */
-      '<span class="a">' +
-        (s.short || '<i class="non">名冊上沒有地址</i>') + '</span></span>' +
-      '<span class="sl">' + (z || '不壓') + '</span></div>';
-  });
-  for(var i = 2; i < stops.length; i++){
-    var d0 = rtDist_(stops[i-2].town, stops[i].town);
-    var d1 = rtDist_(stops[i-2].town, stops[i-1].town);
-    if(d1 > 0 && d0 < d1 * 0.6) back++;
+    h += '</div><div class="rtsum"><b>' + esc(g.who) + '</b> 這一天 ' +
+      stops.length + ' 站' +
+      (far ? '　·　<span class="w">跨縣市 ' + far + ' 次</span>' : '　·　都在同一個縣市') +
+      (back ? '　·　<span class="w">看起來有 ' + back + ' 段折回頭</span>'
+            : '　·　路線沒有明顯折返') + '</div>';
+    var u = rtGmap_(stops);
+    if(u) h += '<a class="rtgo" href="' + esc(u) + '" target="_blank" rel="noopener">' +
+      (stops.length > 10 ? '用 Google 地圖導前 10 站' : '用 Google 地圖導這條路線') +
+      '　›</a><div class="rtfoot">從你現在的位置開始導，' +
+      (stops.length > 10 ? '超過 10 站要分兩段' : '照上面的順序走') + '</div>';
+  } else {
+    /* ── 多人：重點是哪幾個鄉鎮兩個人都要去 ── */
+    var ov = rtOverlap_(sel);
+    h += '<div class="rtlist"><div class="rth">同一天都要去的地方<s>' +
+      ov.length + ' 個鄉鎮</s></div>';
+    if(!ov.length){
+      h += '<div class="rtnone">這幾位的路線沒有重疊的鄉鎮。' +
+        '<s>（「在附近」目前只能比到鄉鎮，系統沒有真的距離）</s></div>';
+    }
+    ov.forEach(function(o){
+      h += '<div class="rtov"><div class="t">' + esc(o.town) +
+        (RT_FAR_[o.town] ? '<b class="far">' + esc(RT_FAR_[o.town]) + '</b>' : '') +
+        '<s>' + o.n + ' 個人</s></div>' +
+        o.stops.map(function(x){
+          return '<div class="r"><i style="background:' +
+            (onName[x.who] || 'var(--ink3)') + '"></i>' +
+            '<b>' + esc(x.who) + '</b>' +
+            '<span>' + esc(x.s.c) + '</span>' +
+            '<u>' + esc(x.s.r.slot || '不壓') + '</u></div>'; }).join('') +
+        '</div>';
+    });
+    h += '</div>';
+    h += '<div class="rtsum">' + sel.map(function(g, i){
+      return '<span class="pp"><i style="background:' +
+        RT_COL_[i % RT_COL_.length] + '"></i>' + esc(g.who) +
+        ' ' + g.rows.length + ' 站</span>'; }).join('') +
+      (ov.length ? '　·　<span class="w">' + ov.length +
+        ' 個鄉鎮兩個人都要去——看看能不能併給同一個人</span>' : '') + '</div>';
   }
-  h += '</div>';
-
-  /* ⛔ 不講「幾公里」「幾分鐘」——示意圖算不出真的距離，講了就是騙人。 */
-  h += '<div class="rtsum"><b>' + esc(g.who) + '</b> 這一天 ' + stops.length + ' 站' +
-    (far ? '　·　<span class="w">跨縣市 ' + far + ' 次</span>' : '　·　都在同一個縣市') +
-    (back ? '　·　<span class="w">看起來有 ' + back + ' 段折回頭</span>'
-          : '　·　路線沒有明顯折返') + '</div>';
-
-  var u = rtGmap_(stops);
-  if(u) h += '<a class="rtgo" href="' + esc(u) + '" target="_blank" rel="noopener">' +
-    (stops.length > 10 ? '用 Google 地圖導前 10 站' : '用 Google 地圖導這條路線') +
-    '　›</a><div class="rtfoot">從你現在的位置開始導，' +
-    (stops.length > 10 ? '超過 10 站要分兩段' : '照上面的順序走') + '</div>';
-
   box.innerHTML = h;
 }
 
@@ -11497,7 +11596,11 @@ function loadRT(){
 document.addEventListener('click', function(e){
   var b = e.target.closest && e.target.closest('[data-rt]');
   if(!b || !b.closest('#p-ps3')) return;
-  RT_CUR = +b.dataset.i;
+  if(b.dataset.rt === 'clear'){ RT_SEL = {}; drawRT(); return; }
+  var w = b.dataset.who;
+  /* 點一下加進來、再點一下拿掉。⚠ 全部取消的話回到只看第一個，
+     不要讓畫面變空白（那看起來像壞掉）。 */
+  if(RT_SEL[w]) delete RT_SEL[w]; else RT_SEL[w] = 1;
   drawRT();
 }, false);
 
