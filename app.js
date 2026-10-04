@@ -10212,12 +10212,22 @@ function dpConflicts(d){
              }).join('、') || '沒有人') });
     }
   });
-  var cnt = {};
-  rows.forEach(function(r){ var w=dpWho(r); cnt[w]=(cnt[w]||0)+1; });
+  var cnt = {}, seenC = {}, hs = {};
+  rows.forEach(function(r){
+    var w = dpWho(r); cnt[w] = (cnt[w]||0) + 1;
+    var k = w + '｜' + r.client;
+    if(!seenC[k]){ seenC[k] = 1; hs[w] = (hs[w]||0) + 1; }
+  });
   Object.keys(cnt).forEach(function(w){
-    if(cnt[w] >= 5) out.push({ hard:0, ty:'可能太滿', id:'',
-      title: w+' '+dpLabel(d)+' 排了 '+cnt[w]+' 件',
-      why: '件數不等於多累——一件離境結算可能比三件收證件久。看一下地點順不順路。' });
+    /* ⛔ 這裡原本是「排了 5 件以上 → 可能太滿」。
+       牟佑彬 2026-10-04 直接否掉這個門檻：「不一定。相近的當然能多跑一點。」
+       ⚠ 所以改成**純陳述**：只講那天幾件、幾家，不替她下「太滿」的判斷。
+         件數多不多要看地點散不散，而**地點系統現在還不知道**
+         （鄉鎮在「專責翻譯_草稿」，正式客戶名單那一欄是空的）。
+         等鄉鎮併進來，這裡才改成「N 件散在 K 個鄉鎮」。 */
+    if(cnt[w] >= 4) out.push({ hard:0, ty:'那天的量', id:'',
+      title: w+' '+dpLabel(d)+' 排了 '+cnt[w]+' 件，'+(hs[w]||0)+' 家',
+      why: '不一定跑不完——地點相近就跑得多。散開的話看一下順不順路。' });
   });
   return out.filter(function(c){
     var k = c.id ? (c.ty+c.id) : ('s'+c.title);
