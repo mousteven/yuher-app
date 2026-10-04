@@ -545,6 +545,13 @@ body.tabsbottom .tabs button[data-t=stat]{order:5}
 body.tabsbottom .tabs button[data-t=sum]{order:6}
 /* 加號要在行事曆與總表的正中間 */
 body.tabsbottom .tabs #admAdd{order:3;flex:1}
+/* ⛔ **只有行政看得到**。注入出來的東西一旦生出來就不會自己消失，
+   而切身分只重設「有 data-t 的分頁」——2026-10-04 佑彬的底欄因此出現
+   **兩顆加號**（他自己那顆 ＋ 行政留下來的那顆）。
+   同一類事故第四次，所以這次用 class 擋死：
+   body.adm 每次 applyRoleSkin 都會重算，漏不掉。 */
+#admAdd{display:none}
+body.adm #admAdd{display:flex}
 
 /* 內容要留出分頁列的高度，不然最後一筆會被蓋住 */
 body.tabsbottom{padding-bottom:calc(58px + var(--sab, env(safe-area-inset-bottom, 0px)))}
@@ -3331,7 +3338,6 @@ body.filladm [data-adm="hide"]{display:none !important}
 body.filladm #p-new .card:has(.sig[data-sig="employer"]){display:none}
 body.filladm #preview,
 body.filladm #save{display:none}
-body.filladm #admNote{margin:-4px 0 12px}
 
 
 /* ③ 每位移工各自選服務項目——跟翻譯那邊一樣（牟佑彬 2026-10-03）。
@@ -3363,6 +3369,13 @@ body.rotrip #wipe,
 body.rotrip #addWk,
 body.rotrip #p-new .sig [data-clear],
 body.rotrip #p-new .wkh button{display:none}
+/* ⛔ 預排還沒確認的時候，**交代事項與簽名也不能動**（牟佑彬 2026-10-04）。
+   上面那串只擋了 input／select／textarea／chips，
+   但交代的勾選框是 div、簽名板是 canvas，兩個都擋不到——
+   翻譯因此可以在「還不是他的行程」上面勾交代、甚至讓移工簽名。
+   ⚠ 勾交代會真的寫回試算表（setScheduleTodo），不是只有畫面動而已。 */
+body.rotrip #todoList,
+body.rotrip #p-new .sig .pad{pointer-events:none;opacity:.72}
 /* ② 行政改單頁底部：交代事項自己一整塊，底下只有兩顆按鈕。
    ⛔ 「清空」在「改既有的那一筆」底下沒有意義，而且很容易誤按。 */
 body.filladm #reset{display:none}

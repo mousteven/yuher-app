@@ -1853,15 +1853,13 @@ function drawDay(){
        （牟佑彬 2026-10-03 指出）。包進 .swwrap 之後就跟其他卡同一套。
        ⛔ 但**不可以讓它拖曳改期**：下面 bindDrag 用的是 `.ev:not(.pre)`，
           那一條要留著。還沒確認的行程被拖來拖去，特助會對不上。 */
-    /* ⚠ 「我那天不行」是**翻譯**的動作——那是請假資料最準的來源
-       （當事人自己講，而且是看到預排之後才講）。
-       行政按它沒有意義，所以行政不顯示（牟佑彬 2026-10-03）。 */
+    /* ⛔ 「我那天不行」那顆按鈕拿掉了（牟佑彬 2026-10-04）。
+       ⚠ 代價：翻譯在 App 裡**沒有地方可以說自己那天不行**了，請假要走別的管道。
+         已經說過不行的那一筆還是會顯示（下面這一行），只是沒有入口可以按。 */
     var tail = r.decline
       ? '<span class="c4no">你說了：'+esc(String(r.decline).split('：').slice(1).join('：')
           || r.decline)+'</span>'
-      : (STAFF_ROLE === '行政' ? ''
-         : '<button type="button" class="c4nogo" data-nogo="'+esc(r.id||'')+'">'+
-           '我那天不行</button>');
+      : '';
     var whoTx = '<span class="c4who">'+esc(r.slot||'未定時段')+'　'+
       (r.sug ? ('建議 '+esc(r.sug)) : '<b class="non">還沒配人</b>')+'</span>';
     /* 行政沒有「我那天不行」，那一顆就落在時段那一列的右邊——一樣是右下角。 */
@@ -2732,6 +2730,10 @@ function drawTodo(t){
 $('todoList') && $('todoList').addEventListener('click', function(e){
   var it = e.target.closest ? e.target.closest('.todoit') : null;
   if(!it) return;
+  /* ⛔ 預排還沒確認＝這還不是他的行程，勾不得（牟佑彬 2026-10-04）。
+     CSS 的 pointer-events 已經擋住了，這裡是第二道——
+     勾一下會真的寫回試算表，不是只有畫面動。 */
+  if(document.body.classList.contains('rotrip')) return;
   var id = $('todoBox').dataset.id;
   if(!id) return;
   it.classList.toggle('on');                       // 先動畫面，不要等後端
@@ -9942,6 +9944,13 @@ function applyRoleSkin(){
   var adm = (STAFF_ROLE === '行政');
   document.body.classList.toggle('adm', adm);
   if(adm) sumBits();            // 要在 applyRoleTabs 挑分頁之前就生出來
+  /* 填寫頁的標題依角色決定。
+     ⛔ 以前是行政注入的時候改一次，切回翻譯沒有人改回來，
+        於是佑彬看到「改這一筆行程」「排一筆新的行程」（2026-10-04 他的截圖）。
+     ⚠ 這支每次切身分都會跑，寫在這裡就不可能漏。
+       行政按「＋」開新的那一次，admNewTrip() 會再改成「排一筆新的行程」。 */
+  var h3 = document.querySelector('#p-new .card h3');
+  if(h3) h3.textContent = (adm || STAFF_ROLE === '特助') ? '改這一筆行程' : '這一趟';
   /* ⚠ 紅色只給行政；但「那一頁是改行程、不是填紀錄」**行政與特助都要**。
      特助一樣不跑外勤、不填服務紀錄，點進去落到填寫頁同樣會誤存
      （牟佑彬 2026-10-03）。所以兩個 class 的範圍故意不一樣。 */
@@ -9972,15 +9981,11 @@ function admFillBits(){
   $('admCancel').onclick = function(){
     document.querySelector('.tabs button[data-t=cal]').click();
   };
-  /* 標題也要換掉，不然他還是以為自己在填服務紀錄 */
-  var h = document.querySelector('#p-new .card h3');
-  if(h && h.textContent.indexOf('這一趟') === 0) h.textContent = '改這一筆行程';
-  var note = document.createElement('p');
-  note.className = 'hint';
-  note.id = 'admNote';
-  note.textContent = '行政在這裡只改行程內容：日期、翻譯、移工、服務項目。' +
-    '處理經過與簽名是翻譯當天到現場才填的，所以這裡看不到。';
-  if(h && h.parentNode) h.insertAdjacentElement('afterend', note);
+  /* ⛔ 這裡原本還注入一段說明「行政在這裡只改行程內容…」。
+     牟佑彬 2026-10-04 劃掉——而且它還跟著漏到翻譯那一頁去了。
+     標題也不在這裡改了，改在 applyRoleSkin()：那支**每次切身分都會跑**，
+     所以切回翻譯的時候會自己變回「這一趟」。
+     ⚠ 在這裡改＝只在注入那一次改，之後沒有人會把它改回來。 */
 
   /* ② 交代事項搬到最下面，而且可以改字、可以加、可以刪。
      ⛔ 上面那個釘住的打勾清單是**翻譯在現場勾的**，行政改不了字也加不了條。 */
