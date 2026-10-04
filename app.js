@@ -10669,7 +10669,11 @@ document.addEventListener('click', function(e){
 var PS_DAY = '';          // 看哪一天，預設明天
 var PS_OPEN = '';         // 甲：展開的是誰
 var PS_CUR = 0;           // 戊：翻到第幾個人
-var PS_SHEET = null;      // 開著換人面板的那一筆
+var PS_SHEET = null;      // 開著面板的那一筆
+var PS_SHEET_K = 'pick'; // 面板是哪一種：pick 換人／time 幾點／day 改天
+/* 只看某一個人。null＝全部看。
+   ⛔ 這是**過濾**，不是摺疊——他 2026-10-05 要的是日期下面一排名字橫著滑。 */
+var PS_PICK = null;
 
 function psTomorrow_(){
   var d = new Date(); d.setDate(d.getDate() + 1);
@@ -10835,8 +10839,11 @@ function psTrip_(r){
   /* ⚠ 時段標在編號下面。區塊標題雖然也寫了，但她看的是「這一塊」，
      而且全天會落在下午那一區，不標就看不出來（牟佑彬 2026-10-04）。 */
   return '<div class="pstr" data-id="' + esc(r.id) + '">' +
+    /* ⚠ 時間的字要夠大——他 2026-10-05 說「現在字太小」。
+       壓了真的時間的再加粗加深，一眼就分得出哪幾件是有約好時間的。 */
     '<span class="nz"><span class="no">' + (r._no || '?') + '</span>' +
-      '<span class="sl">' + esc(r.slot || '不壓') + '</span></span>' +
+      '<span class="sl' + (psTimeOf_(r) !== null ? ' t' : '') + '">' +
+      esc(r.slot || '不壓') + '</span></span>' +
     '<span class="bd">' +
       '<span class="c">' + esc(r.client) + '</span>' +
       '<span class="t">' + esc(r.topic || r.sub || '—') +
@@ -10844,15 +10851,12 @@ function psTrip_(r){
       '<span class="ad"><i>◎</i>' +
         (ad || '<i class="non">名冊上沒有地址</i>') + '</span>' +
       (note ? '<span class="nt">' + esc(note) + '</span>' : '') +
-      /* ⛔ 「改時間／換人／改天」原本只長在警告面板裡。面板拿掉了，
-         就得搬到每一塊自己身上——不然她只能動被標到的那幾件。 */
+      /* ⛔ 只留三顆（他 2026-10-05 圖上把上午／下午劃掉了）。
+         上下午靠長按拖曳換區，不需要按鈕。
+         第一顆是切換：已經壓了時間就是「不壓時間」，還沒壓就是「幾點」。 */
       '<span class="mv">' +
-        '<button type="button" data-ps="zone" data-z="上午" data-id="' + esc(r.id) + '">↑ 上午</button>' +
-        '<button type="button" data-ps="zone" data-z="下午" data-id="' + esc(r.id) + '">↓ 下午</button>' +
-        '<button type="button" data-ps="zone" data-z="" data-id="' + esc(r.id) + '">不壓時間</button>' +
-      '</span>' +
-      '<span class="mv">' +
-        '<button type="button" data-ps="time" data-id="' + esc(r.id) + '">幾點</button>' +
+        '<button type="button" data-ps="time" data-id="' + esc(r.id) + '">' +
+          (psTimeOf_(r) !== null ? '不壓時間' : '幾點') + '</button>' +
         '<button type="button" data-ps="pick" data-id="' + esc(r.id) + '">換人</button>' +
         '<button type="button" data-ps="day" data-id="' + esc(r.id) + '">改天</button>' +
       '</span></span>' +
@@ -10877,7 +10881,9 @@ function psZones_(g){
   });
   return h;
 }
-function psHead_(){
+/* bar=false：路線頁用的。那一頁自己已經有一排名字（.rtwho），
+   再多一排會變成兩排一模一樣的東西。 */
+function psHead_(bar){
   var gs = psGroups_();
   return '<div class="pshd">' +
     '<button type="button" class="psnav" data-ps="prev">‹</button>' +
@@ -10886,7 +10892,26 @@ function psHead_(){
     '<button type="button" class="psnav" data-ps="next">›</button>' +
     '</div>' +
     (PS_DAY !== psTomorrow_()
-      ? '<button type="button" class="pstm" data-ps="tmr">回到明天</button>' : '');
+      ? '<button type="button" class="pstm" data-ps="tmr">回到明天</button>' : '') +
+    (bar === false ? '' : psWhoBar_(gs));
+}
+
+/* 日期下面那一排名字（翻譯與外務），橫著滑，點了只看那一個人。
+   ⚠ 只列**那天真的有行程的人**——列全部的話一半是空的，滑半天找不到人。 */
+function psWhoBar_(gs){
+  if(!gs.length) return '';
+  return '<div class="pswho">' + gs.map(function(g){
+    return '<button type="button" data-ps="only" data-who="' + esc(g.who) + '"' +
+      (PS_PICK === g.who ? ' class="on"' : '') + '>' +
+      esc(g.who) + '<s>' + g.rows.length + '</s></button>'; }).join('') +
+    (PS_PICK ? '<button type="button" class="cl" data-ps="only" data-who="">看全部</button>'
+             : '') + '</div>';
+}
+/* 過濾之後要看的那幾個人 */
+function psShown_(gs){
+  if(!PS_PICK) return gs;
+  var on = gs.filter(function(g){ return g.who === PS_PICK; });
+  return on.length ? on : gs;
 }
 
 /* 甲：摺疊條。卡住的排前面，點開才看細節。 */
@@ -10895,7 +10920,7 @@ function drawPS1(){
   var gs = psGroups_();
   var h = psHead_();
   if(!gs.length) h += '<div class="mid" style="padding:30px">這一天還沒有預排的行程</div>';
-  gs.forEach(function(g){
+  psShown_(gs).forEach(function(g){
     h += '<div class="pspc' + (PS_OPEN === g.who ? ' open' : '') + '">' +
       '<div class="pshdr" data-ps="open" data-who="' + esc(g.who) + '">' +
         '<b>' + esc(g.who) + '</b>' +
@@ -10921,6 +10946,11 @@ function drawPS2(){
     box.innerHTML = h + '<div class="mid" style="padding:30px">這一天還沒有預排的行程</div>';
     return;
   }
+  /* 過濾選了誰就翻到誰那一頁 */
+  if(PS_PICK){
+    var pi = gs.map(function(x){ return x.who; }).indexOf(PS_PICK);
+    if(pi >= 0) PS_CUR = pi;
+  }
   if(PS_CUR >= gs.length) PS_CUR = 0;
   var g = gs[PS_CUR];
   h += '<div class="pssw">' +
@@ -10943,10 +10973,55 @@ function drawPS2(){
 }
 
 /* 換人面板。⚠ 兩頁共用同一支，改一次兩邊都變。 */
+/* 幾點：用瀏覽器原生的時間選擇器。
+   ⛔ 不要自己做滾輪——iPhone 的 <input type="time"> 本來就是滑動選時與分，
+      而且是他每天在用的那一個，不用學。 */
+function psTimeSheet_(box, job){
+  var now = psTimeOf_(job) !== null ? job.slot : '09:00';
+  box.insertAdjacentHTML('beforeend',
+    '<div class="pssheet"><div class="psbx">' +
+    '<h4>幾點到？</h4><p class="mt">' + esc(job.client) + '　' +
+      esc(job.topic || job.sub || '') + '</p>' +
+    '<input type="time" id="psTimeIn" class="psbig" step="300" value="' + esc(now) + '">' +
+    '<div class="psquick">' +
+      ['上午', '下午', '全天'].map(function(z){
+        return '<button type="button" data-ps="slot" data-z="' + z +
+          '" data-id="' + esc(job.id) + '"' + (job.slot === z ? ' class="on"' : '') +
+          '>' + z + '</button>'; }).join('') +
+      '<button type="button" data-ps="slot" data-z="" data-id="' + esc(job.id) + '"' +
+        (job.slot ? '' : ' class="on"') + '>不壓時間</button>' +
+    '</div>' +
+    '<button type="button" class="psgo" data-ps="timeok" data-id="' + esc(job.id) + '">' +
+      '就這個時間</button>' +
+    '<button type="button" class="pscls" data-ps="close">算了</button>' +
+    '</div></div>');
+}
+
+/* 改天：用原生月曆。⚠ min 設成今天，不要讓她排到過去。 */
+function psDaySheet_(box, job){
+  box.insertAdjacentHTML('beforeend',
+    '<div class="pssheet"><div class="psbx">' +
+    '<h4>改到哪一天？</h4><p class="mt">' + esc(job.client) + '　' +
+      esc(job.topic || job.sub || '') + '　·　現在是 ' + esc(job.date) + '</p>' +
+    '<input type="date" id="psDayIn" class="psbig" min="' + esc(todayStr()) +
+      '" value="' + esc(job.date) + '">' +
+    '<div class="psquick">' +
+      [['明天', 1], ['後天', 2], ['下週一', 0]].map(function(x){
+        return '<button type="button" data-ps="dayq" data-n="' + x[1] +
+          '">' + x[0] + '</button>'; }).join('') +
+    '</div>' +
+    '<button type="button" class="psgo" data-ps="dayok" data-id="' + esc(job.id) + '">' +
+      '改到這一天</button>' +
+    '<button type="button" class="pscls" data-ps="close">算了</button>' +
+    '</div></div>');
+}
+
 function psSheet_(box){
   if(!PS_SHEET) return;
   var job = CAL_ROWS.filter(function(r){ return r.id === PS_SHEET; })[0];
   if(!job) { PS_SHEET = null; return; }
+  if(PS_SHEET_K === 'time'){ psTimeSheet_(box, job); return; }
+  if(PS_SHEET_K === 'day'){ psDaySheet_(box, job); return; }
   var list = psRank_(job);
   var ok = list.filter(function(x){ return !x.stop && !x.langNo; });
   var wn = list.filter(function(x){ return !x.stop && x.langNo; });
@@ -11183,19 +11258,10 @@ document.addEventListener('click', function(e){
   if(a === 'pnext'){ var n2 = psGroups_().length;
     PS_CUR = (PS_CUR + 1) % n2; psDraw(); return; }
   if(a === 'dot'){ PS_CUR = +b.dataset.i; psDraw(); return; }
-  if(a === 'pick'){ PS_SHEET = id; psDraw(); return; }
-  if(a === 'zone'){
-    /* 搬到別的區塊＝改時段，**直接改不要再問**（他 2026-10-04 指定）。
-       ⚠ 畫面先動，不要等後端——她一天要搬好幾次。 */
-    var z = b.dataset.z;
-    if(r.slot === z){ return; }
-    r.slot = z;
+  if(a === 'pick'){ PS_SHEET = id; PS_SHEET_K = 'pick'; psDraw(); return; }
+  if(a === 'only'){
+    PS_PICK = b.dataset.who || null;
     psDraw();
-    google.script.run
-      .withSuccessHandler(function(){ psSaveOrder_(psMine_(r)); })
-      .withFailureHandler(function(e){ toast(e.message, true); loadPS('ps1'); })
-      .updateSchedule(CODE, id, { slot: z });
-    toast(r.client + '　→　' + (z || '不壓時間'));
     return;
   }
   if(a === 'close'){ PS_SHEET = null; psDraw(); return; }
@@ -11217,34 +11283,40 @@ document.addEventListener('click', function(e){
     }, '改成未定時段，讓它有彈性');
     return;
   }
+  /* 第一顆是切換：壓了時間就清掉，沒壓就開選時間的面板（他 2026-10-05 指定）。 */
   if(a === 'time'){
-    var now = r.slot || '';
-    var pick = prompt('這一件幾點？\n\n' +
-      '留白＝不壓時間（最常用，翻譯自己跟工廠約）\n' +
-      '可以填：上午、下午、全天\n' +
-      '也可以直接填時間：9:30、0930、14:00', now);
-    if(pick === null) return;
-    pick = psSlotIn_(String(pick).trim());
-    if(pick === null){ toast('時間看不懂。可以填 9:30、0930，或上午／下午／全天', true);
-      return; }
-    psRun_(function(ok, bad){
-      google.script.run.withSuccessHandler(ok).withFailureHandler(bad)
-        .updateSchedule(CODE, id, { slot: pick });
-    }, pick ? ('改成 ' + pick) : '時間清掉了，變成有彈性');
+    if(psTimeOf_(r) !== null){ psSetSlot_(r, ''); return; }
+    PS_SHEET = id; PS_SHEET_K = 'time'; psDraw();
     return;
   }
-  if(a === 'day'){
-    var d = prompt('改到哪一天？（yyyy-MM-dd）\n\n' +
-      r.client + '　' + (r.topic || ''), psShift_(PS_DAY, 1));
-    if(d === null) return;
-    d = String(d).trim();
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ toast('日期格式要像 2026-10-08', true); return; }
+  if(a === 'slot'){ PS_SHEET = null; psSetSlot_(r, b.dataset.z); return; }
+  if(a === 'timeok'){
+    var el = $('psTimeIn');
+    var v = psSlotIn_(el ? el.value : '');
+    if(v === null){ toast('時間看不懂', true); return; }
+    PS_SHEET = null;
+    psSetSlot_(r, v);
+    return;
+  }
+  if(a === 'dayq'){
+    var el2 = $('psDayIn');
+    if(!el2) return;
+    var n = +b.dataset.n;
+    el2.value = n ? psShift_(todayStr(), n) : psNextMon_();
+    return;
+  }
+  if(a === 'dayok'){
+    var el3 = $('psDayIn');
+    var d = el3 ? String(el3.value).trim() : '';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ toast('請先選一個日期', true); return; }
+    PS_SHEET = null;
     psRun_(function(ok, bad){
       google.script.run.withSuccessHandler(ok).withFailureHandler(bad)
         .updateSchedule(CODE, id, { date: d });
     }, '已改到 ' + d);
     return;
   }
+  if(a === 'day'){ PS_SHEET = id; PS_SHEET_K = 'day'; psDraw(); return; }
   if(a === 'okall' || a === 'okgood'){
     var gs = psGroups_();
     var list = (a === 'okall')
@@ -11262,6 +11334,24 @@ document.addEventListener('click', function(e){
     return;
   }
 }, true);
+
+/* 改時段／時間。畫面先動，不要等後端——她一天要改好幾次。 */
+function psSetSlot_(r, v){
+  if(r.slot === v){ psDraw(); return; }
+  r.slot = v;
+  psDraw();
+  google.script.run
+    .withSuccessHandler(function(){ psSaveOrder_(psMine_(r)); })
+    .withFailureHandler(function(e){ toast(e.message, true); loadPS('ps1'); })
+    .updateSchedule(CODE, r.id, { slot: v });
+  toast(r.client + '　→　' + (v || '不壓時間'));
+}
+/* 下週一。⚠ 今天就是週一的話要跳到下一個週一，不是今天。 */
+function psNextMon_(){
+  var d = new Date(todayStr() + 'T00:00:00');
+  var add = (8 - d.getDay()) % 7 || 7;
+  return psShift_(todayStr(), add);
+}
 
 /* 做完一定要重抓——畫面上的是快取，不重抓她會以為沒生效。 */
 /* 她打進來的時段。⚠ 手機上打字很煩，所以「930」「9:30」「09：30」（全形冒號）
@@ -11779,7 +11869,7 @@ function rtGmap_(stops){
 function drawRT(){
   var box = $('p-ps3'); if(!box) return;
   var gs = rtGroups_();
-  var h = psHead_();
+  var h = psHead_(false);
   if(!gs.length){
     box.innerHTML = h + '<div class="mid" style="padding:30px">' +
       '這一天還沒有配好人的行程</div>';

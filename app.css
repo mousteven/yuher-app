@@ -3592,12 +3592,17 @@ body.filladm #admTodoBox{display:block}
 body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contain}
 /* 編號下面標時段。⚠ 區塊標題雖然也寫了，但她看的是「這一塊」，
    而且全天會落在下午那一區，不標就看不出來（牟佑彬 2026-10-04）。 */
-.pstr .nz{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;
-  margin-top:1px;width:34px}
+.pstr .nz{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;
+  margin-top:1px;width:46px}
 .pstr .no{width:21px;height:21px;border-radius:7px;background:var(--fill);
   color:var(--fill-ink);font-size:var(--t6);font-weight:800;
   display:flex;align-items:center;justify-content:center}
-.pstr .nz .sl{font-size:9px;font-weight:800;color:var(--ink3);white-space:nowrap}
+/* ⚠ 時間的字本來只有 9px，他 2026-10-05 說太小。放大，
+   而且壓了真的時間（09:30）的再加深一階，一眼分得出哪幾件約好了。 */
+.pstr .nz .sl{font-size:var(--t4);font-weight:800;color:var(--ink3);white-space:nowrap;
+  letter-spacing:-.02em}
+.pstr .nz .sl.t{font-size:var(--t3);color:var(--ink);
+  font-variant-numeric:tabular-nums}
 .pstr .bd{flex:1;min-width:0}
 .pstr .c{font-size:var(--t4);font-weight:800;display:block}
 .pstr .t{font-size:var(--t5);color:var(--ink3);margin-top:1px;display:block}
@@ -3666,6 +3671,20 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .psit .rs{font-size:var(--t5);color:var(--ink2);margin-top:2px}
 .psit .rs .stop{color:var(--bad-ink);font-weight:700}
 .psit .go{flex:none;font-size:var(--t5);font-weight:800;color:var(--fill)}
+/* 原生的時間／日期選擇器。⚠ 一定要夠大——她在工廠用手機點的。 */
+.psbig{width:100%;font:inherit;font-size:1.5rem;font-weight:800;text-align:center;
+  padding:14px 10px;border-radius:var(--r1);border:1px solid var(--line);
+  background:var(--card);color:var(--ink);margin-bottom:10px;
+  font-variant-numeric:tabular-nums}
+.psquick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.psquick button{flex:1;min-width:76px;font:inherit;font-size:var(--t4);font-weight:800;
+  cursor:pointer;padding:9px 6px;border-radius:9px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink2);-webkit-tap-highlight-color:transparent}
+.psquick button.on{background:var(--fill);border-color:var(--fill);color:#fff}
+.psgo{width:100%;font:inherit;font-size:var(--t3);font-weight:800;cursor:pointer;
+  padding:13px;border-radius:var(--r1);border:1px solid var(--fill);
+  background:var(--fill);color:#fff;margin-bottom:8px}
+
 .pscls{width:100%;margin-top:11px;font:inherit;font-weight:800;font-size:var(--t3);
   padding:12px;border-radius:var(--r1);border:1px solid var(--line);
   background:var(--card);color:var(--ink2);cursor:pointer}
@@ -3688,6 +3707,18 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .rtwho button.on{color:#fff}
 .rtwho button.cl{border-style:dashed;color:var(--ink3)}
 /* 複選：一次看幾個人的路線疊在一起，才看得出「兩個人同一天都往烏日跑」 */
+/* 日期下面那一排名字。⚠ 跟路線頁 .rtwho 同一個樣子——
+   同一件事不要兩種長相（他 2026-10-05 要的就是路線頁那種）。 */
+.pswho{display:flex;gap:6px;overflow-x:auto;padding:1px 0 9px;margin:-2px 0 8px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.pswho::-webkit-scrollbar{display:none}
+.pswho button{flex:none;font:inherit;font-size:var(--t5);font-weight:800;cursor:pointer;
+  padding:7px 12px;border-radius:999px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink2);-webkit-tap-highlight-color:transparent}
+.pswho button.on{background:var(--fill);border-color:var(--fill);color:#fff}
+.pswho button s{text-decoration:none;opacity:.6;margin-left:5px;font-weight:700}
+.pswho button.cl{border-style:dashed;color:var(--ink3)}
+
 .rthint{margin:0 0 10px;font-size:var(--t5);color:var(--ink3);text-align:center}
 .rtnone{padding:14px 4px;font-size:var(--t4);color:var(--ink3);text-align:center}
 .rtnone s{display:block;text-decoration:none;font-size:var(--t5);margin-top:4px;opacity:.8}
