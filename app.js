@@ -7153,6 +7153,10 @@ function bpHtml(c){
 function setClientValue(name){
   name = name || '';
   $('client').value = name;
+  /* ⛔ #client 是 <input type="hidden">，**程式設值不會發 change 事件**，
+     所以那個委派的監聽器抓不到——地址那一格會一直停在上一家。
+     他要的是「每當選取工廠就自動帶入地址」，所以在這裡直接叫一次。 */
+  if(typeof admSiteSrc === 'function') admSiteSrc();
   $('svcPkVal').textContent = name || '請選擇…';
   $('svcPkVal').classList.toggle('has', !!name);
   $('svcPkVal').classList.remove('open');
