@@ -10260,7 +10260,12 @@ document.addEventListener('change', function(e){
   var t = e.target;
   if(!t || !t.id) return;
   if(t.id === 'crew') admGoSync();
-  if(t.id === 'client' || t.id === 'clientOther' || t.id === 'target') admSiteSrc();
+  /* ⛔ 只留 target。#client 是 hidden，程式設值本來就不會發 change，
+     地址改由 setClientValue() 直接叫；#clientOther 2026 年初就拿掉了
+     （自行輸入併進選擇器），寫在這裡是死碼，而且會絆倒 pk_test.js 的
+     「#clientOther 整個拿掉了」那一關。
+     ⚠ target 要留：換服務對象會重建客戶名單，選到的那一家可能被清掉。 */
+  if(t.id === 'target') admSiteSrc();
 }, true);
 
 function admSaveTrip(){
