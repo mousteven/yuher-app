@@ -1942,9 +1942,17 @@ function drawDay(){
            不會知道「有人動過」。他選擇這樣。
          換人那一張留著——那一筆是真的從他手上拿走了，不講他不會知道。 */
       if(/改單/.test(String(r.moved||''))) return '';
+      /* ⛔ 只在**被換掉那一天**出現（牟佑彬 2026-10-05 選的丙）。
+         以前只要那一天還沒過去就一直掛著，佔掉半個螢幕。
+         ⚠ 整個拿掉的話翻譯端再也沒有地方會提到行程被改派——所以留一天，
+           而且縮小。異動那一欄長這樣：「佑彬 → 小茜 · 2026/10/05 01:41 · 特助」 */
+      var md = /(\d{4})\/(\d{2})\/(\d{2})/.exec(r.moved || '');
+      if(!md || (md[1]+'-'+md[2]+'-'+md[3]) !== todayStr()) return '';
+      var who = String(r.moved).split('·')[0].trim();
       return '<div class="c4moved">🔔'+
-        ' <b>'+esc(r.client)+' '+esc(r.topic||'')+' 不用你去了</b>'+
-        '<span>'+esc(r.moved)+'</span></div>';
+        ' <b>'+esc(r.client)+' 不用你去了</b>'+
+        '<span>'+esc(who)+'　'+esc(md[2]+'/'+md[3]+' '+
+          (/(\d{2}:\d{2})/.exec(r.moved)||['',''])[1])+'</span></div>';
     }).join('');
   }
   if(plan.length){
@@ -2863,29 +2871,57 @@ var PLAN_EDIT = '';
      4. 存成「預排」，不是直接指派
    ⚠ 這幾塊用注入的，不寫進 Service.html——那是後端檔，改它要重新部署，
      而版本額度只剩 3 個。 */
-/* 「這一次去哪裡？」——填了就蓋過客戶名單上的地址（牟佑彬 2026-10-05）。
-   ⚠ 上面那一行灰字是名單上的地址，要跟著選到的客戶換，
-     不然他對照的是上一家的。 */
+/* 地址那一塊的樣子。兩張表單共用，不要各寫一份。
+   ⛔ 上面是**唯讀**的名冊地址（他指定不能編輯），點一下可以整段複製；
+      下面才是手打的欄位。空白＝就用上面那個。 */
+function siteBlock_(k){
+  return '<div class="f sitef" id="' + k + 'SiteBox">' +
+    '<label>名冊上的地址</label>' +
+    '<div class="siro" id="' + k + 'SiteSrc" data-cp="' + k + '">' +
+      '<i>◎</i><span class="tx">—</span><span class="cp">複製</span></div>' +
+    '<label style="margin-top:9px">地址不對？在這裡打正確的</label>' +
+    '<input type="text" id="' + k + 'Site" ' +
+      'placeholder="工廠搬了、約在二廠、要去醫院…">' +
+    '<div class="hint" id="' + k + 'SiteHint">空白＝就用上面那個地址。</div>' +
+    '</div>';
+}
+/* 把名冊地址寫進唯讀那一格。⚠ 挑不出地址的要明講，不要留一個破折號。 */
+function siteSrc_(k, client){
+  var box = $(k + 'SiteSrc');
+  if(!box) return;
+  var a = psPickAddr_((presetOf(client) || {}).p);
+  box.querySelector('.tx').textContent = a || '名冊上沒有填這一家的地址';
+  box.classList.toggle('none', !a);
+  box.dataset.addr = a;
+  var h = $(k + 'SiteHint');
+  if(h) h.innerHTML = a ? '空白＝就用上面那個地址。'
+                        : '<b>這一家名冊上沒有地址，建議在這裡打。</b>';
+}
+/* 點一下整段複製（他 2026-10-05 要的：想貼到下面再改一兩個字）。 */
+document.addEventListener('click', function(e){
+  var b = e.target.closest && e.target.closest('[data-cp]');
+  if(!b) return;
+  var a = b.dataset.addr || '';
+  if(!a){ toast('這一家名冊上沒有地址', true); return; }
+  var done = function(){
+    var inp = $(b.dataset.cp + 'Site');
+    if(inp && !inp.value) inp.value = a;      // 順手帶進去，她通常只改一兩個字
+    toast('地址複製好了，可以直接改');
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(a).then(done, done);
+  } else { done(); }
+}, false);
+
 function planSiteBits(){
-  var t = $('planTopic');
-  if(!t) return;
+  var pk = $('planPk');
+  if(!pk) return;
   if(!$('planSite')){
-    t.parentNode.insertAdjacentHTML('beforebegin',
-      '<div class="f" id="planSiteF" style="margin-top:10px">' +
-      '<label>這一次去哪裡？（不填就用名冊上的地址）</label>' +
-      '<div class="psrc" id="planSiteSrc">名冊上的地址：—</div>' +
-      '<input type="text" id="planSite" placeholder="工廠搬了、約在二廠、要去醫院…">' +
-      '</div>');
+    (pk.closest('.f') || pk).insertAdjacentHTML('afterend', siteBlock_('plan'));
   }
   planSiteSrc();
 }
-/* 把名單上的地址寫到那一行灰字 */
-function planSiteSrc(){
-  var el = $('planSiteSrc');
-  if(!el) return;
-  var a = psAddrRaw_($('planClient') ? $('planClient').value : '');
-  el.textContent = a ? ('名冊上的地址：' + a) : '名冊上沒有這一家的地址';
-}
+function planSiteSrc(){ siteSrc_('plan', $('planClient') ? $('planClient').value : ''); }
 
 /* 誰可以「排完直接確認」。
    ⛔ 跟後端 staffCanDispatch_ 一模一樣的名單——兩邊不一致的話，
@@ -10166,13 +10202,14 @@ function admSiteBits(){
   var save = $('admSave');
   if(!save) return;
   var row = save.closest('.btns') || save;
-  if(!$('admSite')){
-    row.insertAdjacentHTML('beforebegin',
-      '<div class="f" id="admSiteBox">' +
-      '<label>這一次去哪裡？（不填就用名冊上的地址）</label>' +
-      '<div class="psrc" id="admSiteSrc">名冊上的地址：—</div>' +
-      '<input type="text" id="admSite" placeholder="工廠搬了、約在二廠、要去醫院…">' +
-      '</div>');
+  /* ⛔ 地址要長在**工廠／雇主名稱正下方**，不是整張表的最後面
+     （牟佑彬 2026-10-05：「不要在底下這樣呈現」）。
+     選了工廠就看得到地址，不對再往下打——順序跟她腦袋裡的一樣。 */
+  var anchor = $('client') ? $('client').closest('.g2') : null;
+  if(!$('admSite') && anchor){
+    anchor.insertAdjacentHTML('afterend', siteBlock_('adm'));
+  } else if(!$('admSite')){
+    row.insertAdjacentHTML('beforebegin', siteBlock_('adm'));
   }
   if(!$('admGoWrap') && canDispatch_()){
     row.insertAdjacentHTML('beforebegin',
@@ -10184,12 +10221,7 @@ function admSiteBits(){
   admGoSync();
 }
 /* 名冊上的地址要跟著選到的客戶換 */
-function admSiteSrc(){
-  var el = $('admSiteSrc');
-  if(!el) return;
-  var a = psAddrRaw_(clientVal());
-  el.textContent = a ? ('名冊上的地址：' + a) : '名冊上沒有這一家的地址';
-}
+function admSiteSrc(){ siteSrc_('adm', clientVal()); }
 /* 沒挑人就不能確認（後端會丟「沒有建議人選」），那時候整列變灰 */
 function admGoSync(){
   var wrap = $('admGoWrap'), go = $('admGo'), cs = $('crew');
@@ -10922,7 +10954,22 @@ function psAddrRaw_(x){
     x = x.client;
   }
   var pz = presetOf(x);
-  return (pz && pz.p) ? String(pz.p).split('　')[0] : '';
+  return psPickAddr_(pz && pz.p);
+}
+/* 名冊那一欄是「工作地址　聯絡人　電話」用全形空白串起來的，
+   **沒填的那一段不會出現**。
+   ⛔ 所以不可以盲取第一段——銘光工業沒填工作地址，第一段就是
+      聯絡人「鄭小姐」，卡片上就印出一個人的名字當地址
+      （牟佑彬 2026-10-05 的截圖）。
+   ⚠ 挑不出地址就回空字串：**寧可整行不顯示，也不要印錯的東西**。 */
+function psPickAddr_(p){
+  var segs = String(p || '').split('　');
+  for(var i = 0; i < segs.length; i++){
+    var t = segs[i].trim();
+    if(!t) continue;
+    if(/[市縣].{1,4}[區鄉鎮市]/.test(t) || /[路街巷弄號段]/.test(t)) return t;
+  }
+  return '';
 }
 /* 這一筆用的是現場地址嗎（畫面上要標「現場」，不然看起來像名單寫錯了）。 */
 function psIsSite_(x){

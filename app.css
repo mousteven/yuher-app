@@ -1226,8 +1226,19 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .c4ad .far{margin-right:2px}
 .c4ad .st{margin-left:6px}
 
-/* 名冊上的地址（唯讀，給她對照用）。⚠ 這一行不是輸入框，不要做得像可以改。 */
-.psrc{font-size:var(--t5);color:var(--ink3);margin:-2px 0 6px;line-height:1.5}
+/* 名冊上的地址：唯讀，但點一下會整段複製（牟佑彬 2026-10-05）。
+   ⚠ 做成灰底才看得出「這一格不能打字」；右邊的「複製」是它唯一的動作。 */
+.siro{display:flex;gap:7px;align-items:flex-start;line-height:1.5;cursor:pointer;
+  background:var(--bg);border:1px solid var(--line);border-radius:var(--r1);
+  padding:11px 12px;font-size:var(--t3);color:var(--ink);
+  -webkit-tap-highlight-color:transparent}
+.siro i{font-style:normal;opacity:.45;flex:none}
+.siro .tx{flex:1;min-width:0}
+.siro.none .tx{color:var(--ink3)}
+.siro .cp{flex:none;font-size:var(--t6);font-weight:800;color:var(--ink3);
+  background:var(--line2);border-radius:5px;padding:2px 7px}
+.siro:active{background:var(--line2)}
+.sitef .hint{display:block;font-size:var(--t5);color:var(--ink3);margin-top:5px;line-height:1.6}
 
 /* 排完直接確認。⚠ 沒挑人的時候整列變灰，而且勾不動。 */
 .plango{display:flex;align-items:center;gap:8px;margin:12px 0 0;padding:11px 12px;
@@ -3045,12 +3056,15 @@ body.finding .tabs{display:none}
   margin-top:7px; font-size:12px; font-weight:700; color:var(--bad-ink);
 }
 /* 被換掉的通知。⚠ 他可能已經排好路線、甚至跟工廠約好了。 */
+/* 被換掉的通知。**只在被換掉當天出現**（牟佑彬 2026-10-05 選的丙）。
+   ⚠ 以前整塊佔掉半個螢幕而且那一天過完之前一直在，他說太吵。 */
 .c4moved{
-  display:flex; flex-direction:column; gap:2px;
-  background: color-mix(in srgb, var(--bad-ink) 8%, var(--card));
-  border:1px solid color-mix(in srgb, var(--bad-ink) 32%, transparent);
-  border-radius:12px; padding:10px 13px; margin-bottom:10px; font-size:13px;
+  display:flex; flex-direction:column; gap:1px;
+  background: color-mix(in srgb, var(--bad-ink) 6%, var(--card));
+  border:1px solid color-mix(in srgb, var(--bad-ink) 26%, transparent);
+  border-radius:10px; padding:7px 11px; margin-bottom:9px; font-size:var(--t4);
 }
+.c4moved span{font-size:var(--t5);color:var(--ink3)}
 .c4moved b{ color:var(--bad-ink) }
 .c4moved span{ color:var(--ink3); font-size:12px }
 
