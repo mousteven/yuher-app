@@ -25,46 +25,52 @@
    否則同事的瀏覽器會繼續吃舊快取。 */
 /* 翻譯人員站在工廠裡用手機填，所以：目標鍵大、固定白底好讀、少打字。 */
 :root{
-  --brand:#163B63; --brand-d:#0B223D; --brand-soft:#E4ECF5; --brand2:var(--info-ink);
-  --rose:#982F42; --rose-soft:var(--bad-bg);
-  --ink:#142033; --ink2:#41506B; --ink3:#616F88;
-  --bg:#F5F7FA; --card:#fff; --line:#D8E0EA; --line2:#E7ECF3;
-  --warn:#a8641a; --warn-soft:#f9efe1; --danger:#982F42; --ok:#2E6A54;
+  /* ══ 01 瑞士精簡（牟佑彬 2026-10-07 定案）══════════════════
+     黑白＋一個紅，紅只給「出事」用，所以警示永遠搶得到注意力。
+     ⛔ 不要再加第二個強調色——加了就不是這個風格了。 */
+  --brand:#111111; --brand-d:#000000; --brand-soft:#F0F0F0; --brand2:#111111;
+  --rose:#C8102E; --rose-soft:#FBEAEC;
+  --ink:#111111; --ink2:#3C3C3C; --ink3:#6E6E6E;
+  --bg:#ffffff; --card:#ffffff; --line:#111111; --line2:#E4E4E4;
+  --warn:#8A6318; --warn-soft:#F8F1E4; --danger:#C8102E; --ok:#1F6B4A;
   /* 狀態色。四組各有文字、底、框線、長條四個值，
      夜間模式只要換這一組，不用一處一處找。 */
-  --ok-ink:#2E6A54;   --ok-bg:#E7F1EC;   --ok-line:#B7D5C6;   --ok-bar:#3FAE86;
-  --warn-ink:#8A6318; --warn-bg:#FBF1E4; --warn-line:#E7D2AE; --warn-bar:#C99A3E;
-  --info-ink:#2A5599; --info-bg:#E9EEF8; --info-line:#C7D5EA; --info-bar:#4A6FA5;
-  --bad-ink:#982F42;  --bad-bg:#F7EAEC;  --bad-line:#E0C4CA;  --bad-bar:#982F42;
+  --ok-ink:#1F6B4A;   --ok-bg:#EDF4F0;   --ok-line:#B9D4C8;   --ok-bar:#1F6B4A;
+  --warn-ink:#8A6318; --warn-bg:#F8F1E4; --warn-line:#E3D3B4; --warn-bar:#8A6318;
+  --info-ink:#1F4E8C; --info-bg:#EBF0F7; --info-line:#C3D2E6; --info-bar:#1F4E8C;
+  --bad-ink:#C8102E;  --bad-bg:#FBEAEC;  --bad-line:#EFC6CC;  --bad-bar:#C8102E;
   /* 頂欄。⚠ --chrome-bg 是備胎（舊瀏覽器或清單檔要一個純色），
      畫面上實際上的是 --chrome-grad。 */
-  --chrome-bg:#163B63; --chrome-ink:#fff;
+  --chrome-bg:#111111; --chrome-ink:#ffffff;
   /* 135° 三段（牟佑彬 2026-09-24 指定）。
      ⛔ 漸層**只給頂欄**。頁籤、卡片、按鈕、badge 一律純色——
         「Gradient is an atmosphere, not a decoration」。
      ⚠ badge 只有 16px 寬，漸層頭尾只差 13 階 RGB（量過），
        低於肉眼能分辨的 20 階——加了看不見，只多一份維護成本。 */
-  --chrome-grad:linear-gradient(135deg,#0B223D 0%,#163B63 50%,#234E70 100%);
+  /* ⛔ 瑞士風沒有漸層。這裡留著變數名是為了不用改任何一條規則，
+     值換成純黑就好。 */
+  --chrome-grad:#111111;
   /* 填滿式按鈕的底。⛔ 不可以直接用 --brand——夜間的 --brand 是
      **淺**藍（給深底上的文字用），白字壓上去只有 2.5:1。
      兩個工作不一樣：--brand 是字的顏色，--fill 是底的顏色。 */
-  --fill:#163B63; --fill-ink:#fff;
+  --fill:#111111; --fill-ink:#ffffff;
   /* 同樣的道理，四組狀態色各補一個「填滿色」。
      ⛔ 規則只有一條：**要填滿就用 --*-fill，要畫條子就用 --*-bar。**
         條子沒有字，所以可以亮；按鈕上面有白字，所以必須暗。
      2026-09-22 掃出十一處把條子色或文字色拿去當按鈕底，
      最糟的是「開成案件」那顆：白字在 #3FAE86 上只有 2.76:1。 */
-  --ok-fill:#2E6A54; --warn-fill:#8A6318; --bad-fill:#982F42;
-  --shadow:0 8px 28px -12px rgba(10,16,28,.3);
+  --ok-fill:#1F6B4A; --warn-fill:#8A6318; --bad-fill:#C8102E;
+  /* ⛔ 瑞士風不用陰影做層次，用線與留白。 */
+  --shadow:none;
   /* ── 追蹤頁籤的看板（2026-09-22）──────────────────
      ⛔ 之前是釘死的深色（--fids），跟 App 其他頁不同調，
         而且展開之後深色卡裡塞淺色卡＝同一畫面兩套語言。
         改成跟著主題走，深淺各一組。
      ⚠ 航廈的味道不靠底色，靠**結構**：等寬字的機場代碼、
        › 的航線箭頭、看板式的標頭。那些在淺色下一樣成立。 */
-  --board:var(--card); --board2:#F5F7F9; --board-line:var(--line);
-  --sunk:#F5F7F9; --accent:#14304F; --accent-soft:#E9EEF5;
-  --grid:rgba(20,30,50,.07);
+  --board:var(--card); --board2:#FAFAFA; --board-line:var(--line2);
+  --sunk:#FAFAFA; --accent:#111111; --accent-soft:#F0F0F0;
+  --grid:rgba(0,0,0,.08);
   /* ── 兩把尺（2026-09-22 設計檢視第 8 項）─────────────────
 
      他的原話：「不要像一台拼裝車，風格都不一致，格式有大有小，
@@ -85,7 +91,9 @@
   /* 字型。--sys 是中文（不動），--lat 是拉丁與數字。
      ⛔ --lat 的後備就是 --sys，所以中文會自動落回 PingFang。 */
   --sys:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
-  --lat:"Archivo",var(--sys);
+  /* ⛔ 瑞士風的主角是字體。Helvetica 是這個風格的原生字，
+     後備照舊落回 --sys（中文）。 */
+  --lat:"Helvetica Neue",Helvetica,Arial,var(--sys);
 
   /* 字級。--td 以上是「一頁只有一個」的大東西。 */
   --td2:2rem;   /* 32  導覽頁的大標 */
@@ -104,7 +112,9 @@
        --r2 容器**本身**：卡片、面板、浮層、看板
      外圈一定比內圈大，層次才看得出來。
      ⚠ 膠囊 99px 與圓 50% 不是圓角，是形狀，維持寫死。 */
-  --r0:3px; --r1:8px; --r2:12px;
+  /* ⛔ 瑞士風＝直角。三級都歸零，231 處用到 token 的地方自動跟著變。
+     ⚠ 圓點（50%）留著——那是形狀不是圓角。 */
+  --r0:0px; --r1:0px; --r2:0px;
 }
 
 /* ═══ 追蹤頁籤的共用元件 ═══════════════════════════════
@@ -378,28 +388,36 @@
    深藍底、亮一階的主色（深色底上原本的海軍藍會看不見）。
    簽名板與服務表預覽不跟著變，見下面。 */
 body.dark{
-  --brand:#7FA8DC; --brand-d:#6690C6; --brand-soft:#16253A; --brand2:#9CBDEC;
-  --rose:#E0929C; --rose-soft:#2A1A1F;
-  --ink:#E9EEF6; --ink2:#AEBBD0; --ink3:#7C8AA3;
-  --bg:#0B1119; --card:#151C27; --line:#27303E; --line2:#1B2331;
-  --warn:#E0A960; --warn-soft:#2E2414; --danger:#E0929C; --ok:#6FC7A6;
-  --ok-ink:#6FC7A6;   --ok-bg:#12291F;   --ok-line:#25523F;   --ok-bar:#6FDCAE;
-  --warn-ink:#E6B771; --warn-bg:#2E2414; --warn-line:#5B4726; --warn-bar:#D2A053;
-  --info-ink:#9CBDEC; --info-bg:#182338; --info-line:#33486D; --info-bar:#5E87C4;
-  --bad-ink:#E0929C;  --bad-bg:#2A1A1F;  --bad-line:#5A333D;  --bad-bar:#B85469;
-  --chrome-bg:#0B1624; --chrome-ink:#EAF0F8;
-  /* ⛔ 深色模式的頂欄要**更深**。照拄淺色那一組的話，
-     頂欄會比周圍的背景還亮，整個層次翻過來。 */
-  --chrome-grad:linear-gradient(135deg,#070F1A 0%,#0B1624 50%,#12293F 100%);
-  /* 夜間把同一個藍提亮才按得到。墨藍 #14304F 在深底上幾乎看不見。 */
-  --fill:#2E5E97; --fill-ink:#fff;
-  --ok-fill:#1E7A5C; --warn-fill:#96701F; --bad-fill:#B85469;
-  --shadow:0 8px 28px -12px rgba(0,0,0,.6);
+  /* ══ 01 瑞士精簡的深色：純黑＋白線 ══════════════════════
+     ⛔ 不要為了「柔和」把底改成深灰。純黑是這個風格的深色該有的樣子，
+        OLED 螢幕也最省電。 */
+  --brand:#F2F2F2; --brand-d:#ffffff; --brand-soft:#1C1C1C; --brand2:#F2F2F2;
+  --rose:#FF6B5A; --rose-soft:#2A1210;
+  --ink:#F2F2F2; --ink2:#C2C2C2; --ink3:#949494;
+  /* ⚠ 夜間的框線不要用接近白的。整頁每個卡片、按鈕都鑲一條白邊，
+     看起來像線框圖而且很刺眼（2026-10-07 實機看過才調的）。
+     用中灰：在純黑上一樣清楚，但不會搶走文字。 */
+  --bg:#000000; --card:#000000; --line:#8A8A8A; --line2:#2A2A2A;
+  --warn:#E3BE70; --warn-soft:#2A2212; --danger:#FF6B5A; --ok:#6FD39D;
+  --ok-ink:#6FD39D;   --ok-bg:#0F2218;   --ok-line:#2A4F3C;   --ok-bar:#6FD39D;
+  --warn-ink:#E3BE70; --warn-bg:#2A2212; --warn-line:#5A4A22; --warn-bar:#E3BE70;
+  --info-ink:#8FB6E8; --info-bg:#111C2C; --info-line:#2C3E5C; --info-bar:#8FB6E8;
+  --bad-ink:#FF8A7A;  --bad-bg:#2A1210;  --bad-line:#5A2A24;  --bad-bar:#FF6B5A;
+  --chrome-bg:#000000; --chrome-ink:#F2F2F2;
+  --chrome-grad:#000000;
+  /* ⛔ 深色的主按鈕是**白底黑字**。瑞士風用的是反相，不是「把藍色提亮」。
+     ⚠ 所以任何寫死 color:#fff 又壓在 var(--fill) 上的地方都會變白對白——
+       check.py 的白字對比那一關就是在抓這個。 */
+  --fill:#F2F2F2; --fill-ink:#000000;
+  /* ⛔ 瑞士風深色的 --fill-ink 是黑的，所以這三個「填滿色」在夜間必須是**亮底**，
+     黑字壓上去才看得見。沿用日間那組深色的話只有 3.2:1。 */
+  --ok-fill:#6FD39D; --warn-fill:#E3BE70; --bad-fill:#FF8A7A;
+  --shadow:none;
   color-scheme:dark;
-  --board:#0A0F16; --board2:#141A24; --board-line:#222A38; --sunk:#111722;
+  --board:#000000; --board2:#0E0E0E; --board-line:#2A2A2A; --sunk:#0E0E0E;
   /* 夜間才有琥珀——那是航廈看板的顏色，白天用它會糊在白底上。 */
   --accent:#F0B429; --accent-soft:rgba(240,180,41,.12);
-  --grid:rgba(255,255,255,.05);
+  --grid:rgba(255,255,255,.07);
 }
 /* 紙就是紙。簽名的墨色與服務表預覽一律留白底，
    不然翻譯在工廠裡簽完根本看不到自己簽了什麼。 */
@@ -1180,9 +1198,9 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   font-family:inherit;display:inline-flex;align-items:center;gap:6px}
 .filters button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink);font-weight:700}
 .filters .dot{width:8px;height:8px;border-radius:50%;display:block}
-.dow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:4px 0}
+.dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin:4px 0}
 .dow span{text-align:center;font-size:var(--t5);color:var(--ink3);font-weight:700}
-.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
 .cell{aspect-ratio:1;border-radius:var(--r1);padding:4px 3px 3px;display:flex;
   flex-direction:column;align-items:center;gap:3px;border:1px solid transparent;
   cursor:pointer;background:var(--card)}
@@ -1204,7 +1222,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 /* 月曆格子：一條語別色帶 ＋ 總筆數（牟佑彬 2026-10-05 選的方案丙）。
    ⛔ 以前是點點，一格最多六顆——28 筆只看得到 5 顆。
    ⚠ 數字要用等寬數字，不然 1 跟 28 的格子看起來會歪。 */
-.cell .cbd{display:flex;width:78%;height:3.5px;border-radius:999px;overflow:hidden}
+.cell .cbd{display:flex;width:78%;height:3.5px;border-radius:0;overflow:hidden}
 .cell .cbd i{display:block;height:100%}
 .cell .cnum{font-size:var(--t2);font-weight:800;line-height:1.05;color:var(--ink);
   font-variant-numeric:tabular-nums}
@@ -2964,7 +2982,7 @@ body.finding .tabs{display:none}
 .prow.tap .vl b{color:var(--brand)}
 /* 「服務過他的人」裡把自己標出來。翻譯掃過去第一件事是找自己在不在。 */
 .prow .pme{font-style:normal;font-size:var(--t6);font-weight:800;
-  padding:1px 6px;border-radius:99px;background:var(--accent-soft);
+  padding:1px 6px;border-radius:0;background:var(--accent-soft);
   color:var(--brand);letter-spacing:.06em}
 .prow .go{flex:none;font-size:var(--t4);font-weight:700;color:var(--brand)}
 .prow .ar{flex:none;color:var(--ink3);font-size:var(--t2)}
@@ -3039,7 +3057,7 @@ body.finding .tabs{display:none}
 .c4pre{
   font-size:11px; font-weight:700; color:var(--ink3);
   background:var(--line2); border:1px dashed var(--line);
-  padding:1px 8px; border-radius:99px; margin-left:6px; white-space:nowrap;
+  padding:1px 8px; border-radius:0; margin-left:6px; white-space:nowrap;
 }
 .grp.pre{ color:var(--ink3) }
 .grp .gn{ font-weight:400; font-size:12px; color:var(--ink3); margin-left:8px }
@@ -3101,7 +3119,7 @@ body.finding .tabs{display:none}
 .dpm b{color:var(--ink);font-weight:700}
 .dpm b.non{color:var(--bad-ink)}
 .dpg{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.dpt{font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:99px;
+.dpt{font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:0;
   background:var(--line2);color:var(--ink3);white-space:nowrap}
 .dpt.ok{background:var(--ok-bg);color:var(--ok-ink)}
 .dpt.pre{background:var(--line2);color:var(--ink3);border:1px dashed var(--line)}
@@ -3134,7 +3152,7 @@ body.finding .tabs{display:none}
   padding:11px 13px;margin-bottom:8px;display:flex;flex-direction:column;gap:7px}
 .dpcf.soft{background:var(--warn-bg);border-color:var(--warn-ink)}
 .dpty{align-self:flex-start;font-size:.72rem;font-weight:700;padding:3px 10px;
-  border-radius:99px;background:var(--bad-fill);color:var(--fill-ink)}
+  border-radius:0;background:var(--bad-fill);color:var(--fill-ink)}
 .dpcf.soft .dpty{background:var(--warn-fill)}
 .dpcf b{font-size:.92rem;display:block}
 .dpcf s{display:block;text-decoration:none;font-size:.8rem;color:var(--ink3);margin-top:3px}
@@ -3185,9 +3203,12 @@ body.tabsbottom .tabs.few button{min-width:120px}
 /* 勾選框用中性灰，勾起來才上色——沒勾的東西不應該先有顏色 */
 .todoit .bx{width:20px;height:20px;border-radius:6px;border:2px solid var(--line);
   flex:none;margin-top:1px;display:flex;align-items:center;justify-content:center;
-  font-size:var(--t5);color:#fff;background:var(--card);
-  transition:background .14s,border-color .14s}
-.todoit.on .bx{background:var(--ok-fill);border-color:var(--ok-fill)}
+  /* ⛔ 沒勾的時候用 transparent，不要用白色「假裝看不見」——
+     那在深色模式會變成白字壓在黑底上，勾還沒勾就先看到一個勾。
+     （而且白對白會被對比檢查當成真的違規，分不出是不是故意的。） */
+  font-size:var(--t5);color:transparent;background:var(--card);
+  transition:background .14s,border-color .14s,color .14s}
+.todoit.on .bx{background:var(--ok-fill);border-color:var(--ok-fill);color:var(--fill-ink)}
 .todoit .tx{font-size:var(--t3);line-height:1.45;color:var(--ink)}
 .todoit.on .tx{color:var(--ink3);text-decoration:line-through}
 /* 行事曆卡片上的進度徽章 */
@@ -3209,7 +3230,7 @@ body.tabsbottom .tabs.few button{min-width:120px}
    ⚠ 圖示的顏色繼承文字，所以全部做完變綠的時候它會一起變。 */
 .c4row > span.c4todo{display:inline-flex;align-items:center;gap:5px;flex:none;
   box-sizing:border-box;cursor:pointer;-webkit-tap-highlight-color:transparent;
-  padding:4px 8px;border-radius:999px;margin:0;
+  padding:4px 8px;border-radius:0;margin:0;
   font-size:11.5px;font-weight:800;line-height:1.35;white-space:nowrap;
   color:var(--ink2);background:color-mix(in srgb,var(--ink3) 12%,var(--card));
   border:0;transition:background-color .16s ease,color .16s ease}
@@ -3352,19 +3373,20 @@ body.tabsbottom .tabs.few button{min-width:120px}
       主色變紅之後，退回補正／取消／過期沒結案如果還是同一種紅，
       兩者就分不出來了——紅色在這個 App 裡本來是有意義的。 */
 body.adm{
-  --brand:#8E2434; --brand-d:#5E1522; --brand-soft:#F6E7EA;
-  --chrome-bg:#8E2434;
-  --chrome-grad:linear-gradient(135deg,#5E1522 0%,#8E2434 50%,#A94457 100%);
-  --fill:#8E2434; --fill-ink:#fff;
-  --accent:#7A1E2C; --accent-soft:#F6E7EA;
+  /* 瑞士風的紅：正紅不是酒紅。⛔ 漸層拿掉，純色。 */
+  --brand:#C8102E; --brand-d:#9B0C23; --brand-soft:#FBEAEC;
+  --chrome-bg:#C8102E;
+  --chrome-grad:#C8102E;
+  --fill:#C8102E; --fill-ink:#ffffff;
+  --accent:#C8102E; --accent-soft:#FBEAEC;
   --bad-ink:#B4461A; --bad-bg:#FBEDE5; --bad-line:#EDCFBB;
   --bad-fill:#B4461A; --bad-bar:#B4461A; --danger:#B4461A; --rose:#B4461A;
 }
 body.adm.dark{
-  --brand:#E09AA6; --brand-soft:#2E1A1E;
-  --chrome-grad:linear-gradient(135deg,#2A0C13 0%,#4A121D 50%,#6B2130 100%);
-  --fill:#A33A4A; --fill-ink:#fff;
-  --accent:#C77C88; --accent-soft:#2E1A1E;
+  --brand:#FF5C4A; --brand-soft:#2A1210;
+  --chrome-grad:#000000;
+  --fill:#FF5C4A; --fill-ink:#000000;
+  --accent:#FF5C4A; --accent-soft:#2A1210;
   --bad-ink:#E0A179; --bad-bg:#2C1D13; --bad-line:#4A3422;
   --bad-fill:#B4461A; --bad-bar:#C96A33; --danger:#E0A179; --rose:#E0A179;
 }
@@ -3375,25 +3397,28 @@ body.adm.dark{
      這裡用帶一點藍的石墨色 #1C1F26，比純黑「有東西」，印出來也不會糊成一塊。
    ⚠ 「出事」的紅維持原本的酒紅：主色是黑的，不會跟狀態色打架，
      所以不像行政那樣要把它推成橘紅。 */
+/* ⚠ 瑞士風之下特助與翻譯的頂欄都是黑的，長得一樣。
+   角色靠右上角的名字分辨（畫面上本來就寫著「特助 ⌄」）。
+   要再分開的話可以給特助做反白頂欄——等他決定，先不自作主張。 */
 body.ass{
-  --brand:#23262E; --brand-d:#101216; --brand-soft:#E8EAEE;
-  --chrome-bg:#1C1F26;
-  --chrome-grad:linear-gradient(135deg,#0E1014 0%,#23262E 52%,#3A3F4A 100%);
-  --fill:#23262E; --fill-ink:#fff;
-  --accent:#3A3F4A; --accent-soft:#E8EAEE;
+  --brand:#111111; --brand-d:#000000; --brand-soft:#F0F0F0;
+  --chrome-bg:#111111;
+  --chrome-grad:#111111;
+  --fill:#111111; --fill-ink:#ffffff;
+  --accent:#111111; --accent-soft:#F0F0F0;
 }
 body.ass.dark{
-  --brand:#C3C8D2; --brand-soft:#23262E;
-  --chrome-grad:linear-gradient(135deg,#07080A 0%,#14161B 52%,#2A2E37 100%);
-  --fill:#2E323C; --fill-ink:#fff;
-  --accent:#9BA3B2; --accent-soft:#23262E;
+  --brand:#F2F2F2; --brand-soft:#1C1C1C;
+  --chrome-grad:#000000;
+  --fill:#F2F2F2; --fill-ink:#000000;
+  --accent:#F2F2F2; --accent-soft:#1C1C1C;
 }
 
 /* 廠商篩選列。只列**這個範圍內真的有排的**，而且帶數量——
    不是 309 家全部列出來（牟佑彬 2026-10-03）。 */
 .calcli{display:flex;gap:6px;overflow-x:auto;padding:0 0 8px;-webkit-overflow-scrolling:touch}
 .calcli button{flex:none;border:1px solid var(--line);background:var(--card);
-  border-radius:999px;padding:7px 12px;font:600 var(--t4)/1 inherit;color:var(--ink2);
+  border-radius:0;padding:7px 12px;font:600 var(--t4)/1 inherit;color:var(--ink2);
   min-height:34px;white-space:nowrap}
 .calcli button.on{background:var(--fill);color:var(--fill-ink);border-color:var(--fill)}
 .calcli s{text-decoration:none;opacity:.6;margin-left:5px;font-variant-numeric:tabular-nums}
@@ -3536,13 +3561,13 @@ body.filladm #admTodoBox{display:block}
 .sumsort button{font:inherit;font-size:var(--t5);font-weight:700;cursor:pointer;
   padding:6px 11px;border:0;background:transparent;color:var(--ink3);
   -webkit-tap-highlight-color:transparent}
-.sumsort button.on{background:var(--fill);color:#fff}
+.sumsort button.on{background:var(--fill);color:var(--fill-ink)}
 
 .sumday{margin:16px 2px 8px;font-size:var(--t4);font-weight:800;color:var(--ink3);
   display:flex;align-items:baseline;gap:8px}
 .sumday.now{color:var(--fill)}
 .sumday u{text-decoration:none;font-weight:700;font-size:var(--t5);
-  background:var(--fill);color:#fff;border-radius:999px;padding:1px 8px}
+  background:var(--fill);color:var(--fill-ink);border-radius:0;padding:1px 8px}
 
 /* 一列一筆。日期固定寬、客戶一行、事由一行、右邊狀態與誰去 */
 .sumrow{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
@@ -3565,7 +3590,7 @@ body.filladm #admTodoBox{display:block}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .srt{grid-row:1/3;grid-column:3;display:flex;flex-direction:column;
   align-items:flex-end;gap:4px}
-.spill{font-size:var(--t6);font-weight:800;padding:2px 8px;border-radius:999px;
+.spill{font-size:var(--t6);font-weight:800;padding:2px 8px;border-radius:0;
   white-space:nowrap;border:1px solid transparent}
 .s-pre{background:var(--line2);color:var(--ink3);border-color:var(--line);
   border-style:dashed}
@@ -3602,7 +3627,7 @@ body.filladm #admTodoBox{display:block}
   width:36px;height:36px;border-radius:10px;border:1px solid var(--line);
   background:var(--card);color:var(--ink);-webkit-tap-highlight-color:transparent}
 .pstm{display:block;margin:0 auto 12px;font:inherit;font-size:var(--t5);font-weight:700;
-  cursor:pointer;padding:5px 13px;border-radius:999px;border:1px solid var(--line);
+  cursor:pointer;padding:5px 13px;border-radius:0;border:1px solid var(--line);
   background:var(--card);color:var(--ink3)}
 
 /* 一個翻譯一條 */
@@ -3612,7 +3637,7 @@ body.filladm #admTodoBox{display:block}
   -webkit-tap-highlight-color:transparent}
 .pshdr b{font-size:.95rem;font-weight:800}
 .pshdr .lg{font-size:var(--t6);font-weight:800;color:var(--ink3);
-  background:var(--line2);border-radius:999px;padding:1px 7px}
+  background:var(--line2);border-radius:0;padding:1px 7px}
 .pshdr s{text-decoration:none;font-size:var(--t5);color:var(--ink3);font-weight:700}
 .psin{display:none;border-top:1px solid var(--line2);padding:4px 12px 12px}
 .pspc.open .psin{display:block}
@@ -3695,12 +3720,12 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .pssw .m{flex:1;min-width:0;text-align:center}
 .pssw .m b{font-size:1rem;font-weight:800}
 .pssw .m .lg{font-size:var(--t6);font-weight:800;color:var(--ink3);
-  background:var(--line2);border-radius:999px;padding:1px 7px;margin-left:6px}
+  background:var(--line2);border-radius:0;padding:1px 7px;margin-left:6px}
 .pssw .m s{display:block;text-decoration:none;font-size:var(--t5);color:var(--ink3);
   font-weight:700;margin-top:1px}
 .psdots{display:flex;gap:5px;justify-content:center;margin:12px 0 0}
 .psdots i{width:7px;height:7px;border-radius:50%;background:var(--line);cursor:pointer}
-.psdots i.on{background:var(--fill);width:18px;border-radius:99px}
+.psdots i.on{background:var(--fill);width:18px;border-radius:0}
 .psdots i.b{background:var(--bad-ink)}
 
 /* 換人面板 */
@@ -3725,7 +3750,7 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .psit .bd{flex:1;min-width:0}
 .psit .nm{font-size:.92rem;font-weight:800;display:flex;align-items:baseline;gap:6px}
 .psit .nm .bk{font-size:var(--t6);font-weight:800;color:var(--ok-ink);
-  background:var(--ok-bg);border:1px solid var(--ok-line);border-radius:999px;padding:1px 7px}
+  background:var(--ok-bg);border:1px solid var(--ok-line);border-radius:0;padding:1px 7px}
 .psit .rs{font-size:var(--t5);color:var(--ink2);margin-top:2px}
 .psit .rs .stop{color:var(--bad-ink);font-weight:700}
 .psit .go{flex:none;font-size:var(--t5);font-weight:800;color:var(--fill)}
@@ -3738,10 +3763,10 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .psquick button{flex:1;min-width:76px;font:inherit;font-size:var(--t4);font-weight:800;
   cursor:pointer;padding:9px 6px;border-radius:9px;border:1px solid var(--line);
   background:var(--card);color:var(--ink2);-webkit-tap-highlight-color:transparent}
-.psquick button.on{background:var(--fill);border-color:var(--fill);color:#fff}
+.psquick button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 .psgo{width:100%;font:inherit;font-size:var(--t3);font-weight:800;cursor:pointer;
   padding:13px;border-radius:var(--r1);border:1px solid var(--fill);
-  background:var(--fill);color:#fff;margin-bottom:8px}
+  background:var(--fill);color:var(--fill-ink);margin-bottom:8px}
 
 .pscls{width:100%;margin-top:11px;font:inherit;font-weight:800;font-size:var(--t3);
   padding:12px;border-radius:var(--r1);border:1px solid var(--line);
@@ -3757,7 +3782,7 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
   scrollbar-width:none}
 .rtwho::-webkit-scrollbar{display:none}
 .rtwho button{flex:none;font:inherit;font-size:var(--t5);font-weight:800;cursor:pointer;
-  padding:6px 12px;border-radius:999px;border:1px solid var(--line);
+  padding:6px 12px;border-radius:0;border:1px solid var(--line);
   background:var(--card);color:var(--ink2);-webkit-tap-highlight-color:transparent}
 .rtwho button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 .rtwho button.b{border-color:var(--bad-line);color:var(--bad-ink)}
@@ -3771,9 +3796,9 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
   scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .pswho::-webkit-scrollbar{display:none}
 .pswho button{flex:none;font:inherit;font-size:var(--t5);font-weight:800;cursor:pointer;
-  padding:7px 12px;border-radius:999px;border:1px solid var(--line);
+  padding:7px 12px;border-radius:0;border:1px solid var(--line);
   background:var(--card);color:var(--ink2);-webkit-tap-highlight-color:transparent}
-.pswho button.on{background:var(--fill);border-color:var(--fill);color:#fff}
+.pswho button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 .pswho button s{text-decoration:none;opacity:.6;margin-left:5px;font-weight:700}
 .pswho button.cl{border-style:dashed;color:var(--ink3)}
 
@@ -3788,7 +3813,7 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
   border-radius:5px;padding:0 4px;margin-left:4px}
 .rtov .t s{text-decoration:none;margin-left:auto;font-size:var(--t6);font-weight:800;
   color:var(--bad-ink);background:var(--bad-bg);border:1px solid var(--bad-line);
-  border-radius:999px;padding:1px 8px}
+  border-radius:0;padding:1px 8px}
 .rtov .r{display:flex;align-items:baseline;gap:7px;padding:4px 0 0;font-size:var(--t5)}
 .rtov .r i{flex:none;width:9px;height:9px;border-radius:50%;align-self:center}
 .rtov .r b{flex:none;font-weight:800}
