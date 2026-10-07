@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<!-- LINE 行程卡「填服務紀錄表」（他 2026-10-07 選方案丙）。後端 migrant-worker-platform/src/LineSvc.gs，走 doPost 的 svclLoad／svclSave。
+     放 GitHub Pages 不放 Apps Script：那邊頂端的藍色「由 Google Apps Script 的使用者建立」拿不掉，兩層 iframe 也讓整頁會晃。
+     存進去的跟 App 同一張「服務紀錄」表，行事曆那筆自動標完成。 -->
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>服務紀錄表</title>
+<style>
+/* 瑞士風：白底黑字、單一紅色、左對齊、細線分隔。刻意只有淺色一套（跟就醫回報、LINE 卡片一致） */
+:root{--bg:#FFFFFF;--ink:#111111;--mute:#6B6B6B;--soft:#F2F2F2;--hair:#DDDDDD;--red:#E63946;
+  --sans:"Helvetica Neue",Helvetica,Arial,"PingFang TC","Noto Sans TC",sans-serif;color-scheme:light}
+/* ⛔ 防晃：不給左右捲、不給回彈、不給縮放（輸入框字小於 16px 時 iPhone 會自動放大，整頁就晃了） */
+html,body{margin:0;overflow-x:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans);touch-action:pan-y}
+*{box-sizing:border-box}
+.wrap{max-width:560px;margin:0 auto;padding:20px 16px 120px}
+header{display:flex;gap:12px;margin-bottom:12px}
+header .bar{width:6px;background:var(--red);flex:none}
+h1{font-size:34px;line-height:1.05;font-weight:900;margin:0;letter-spacing:-.02em}
+.sub{color:var(--mute);font-size:13px;margin:6px 0 0}
+section{border-top:2px solid var(--ink);padding:14px 0 16px;display:grid;gap:10px}
+.lab{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--red)}
+.note{font-size:12px;color:var(--mute);margin:0}
+input[type=text],input[type=search],select{font:inherit;font-size:16px;width:100%;border:0;border-bottom:1px solid var(--ink);
+  padding:10px 2px;background:transparent;color:var(--ink);border-radius:0;-webkit-appearance:none;appearance:none}
+select{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23111' stroke-width='1.6'/%3E%3C/svg%3E") right 4px center no-repeat}
+input:focus,select:focus{outline:none;border-bottom:2px solid var(--red)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:inherit;font-size:15px;border:1.5px solid var(--ink);background:var(--bg);color:var(--ink);padding:8px 12px;border-radius:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+/* 移工：已選的一行一位，名單用搜尋挑 */
+.who{display:flex;align-items:center;border-bottom:1px solid var(--hair);padding:10px 0}
+.who b{flex:1;font-size:17px}.who small{color:var(--mute);margin-left:8px;font-weight:400}
+.x{border:0;background:none;font-size:22px;line-height:1;color:var(--mute);padding:4px 8px;cursor:pointer}
+.pick{display:grid;gap:0;border:1.5px solid var(--ink);border-top:0;max-height:240px;overflow-y:auto;overscroll-behavior:contain}
+.pick button{font:inherit;font-size:15px;text-align:left;background:var(--bg);border:0;border-top:1px solid var(--hair);padding:11px 12px;cursor:pointer;color:var(--ink)}
+.pick button small{color:var(--mute);margin-left:6px}
+.pick:empty{display:none}
+/* 簽名：頁面上只放「按一下去簽」的格子，捲動時不可能畫到；按了才開全螢幕簽名板 */
+.sig{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--hair);padding:10px 0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sig .nm{flex:1;font-weight:700;font-size:15px}
+.sig .st{font-size:13px;color:var(--red);font-weight:700}
+.sig img{height:40px;width:110px;object-fit:contain;background:var(--soft)}
+.sig.ok .st{color:var(--ink)}
+.board{position:fixed;inset:0;background:var(--bg);z-index:9;display:none;flex-direction:column;touch-action:none;overscroll-behavior:none}
+.board.on{display:flex}
+.board .hd{display:flex;align-items:baseline;justify-content:space-between;padding:16px 16px 8px;border-bottom:2px solid var(--ink)}
+.board .hd b{font-size:20px}.board .hd span{font-size:12px;color:var(--mute)}
+.board canvas{flex:1;width:100%;display:block;background:var(--bg)
+  ;background-image:linear-gradient(var(--ink),var(--ink));background-size:calc(100% - 48px) 1px;background-position:24px 70%;background-repeat:no-repeat}
+.board .ft{display:grid;grid-template-columns:1fr 1fr 2fr;border-top:2px solid var(--ink);padding-bottom:env(safe-area-inset-bottom,0px)}
+.board .ft button{font:inherit;font-weight:700;font-size:16px;border:0;padding:18px 10px;background:var(--bg);color:var(--ink);cursor:pointer}
+.board .ft button+button{border-left:1px solid var(--hair)}
+.board .ft .go{background:var(--ink);color:var(--bg)}
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:2px solid var(--ink);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
+.dock button{display:flex;justify-content:space-between;width:100%;max-width:560px;margin:0 auto;font:inherit;font-weight:700;font-size:17px;padding:15px 16px;border:0;background:var(--ink);color:var(--bg);cursor:pointer;border-radius:0}
+.dock button span{color:var(--red)}
+.dock button:disabled{opacity:.5}
+#msg{padding:40px 0;font-size:16px}
+.big{font-size:30px;font-weight:900;margin:4px 0}
+</style>
+</head><body>
+<div class="wrap" id="app"><p id="msg">載入中…</p></div>
+<div class="dock" id="dock" hidden><button id="save">存進 App<span>→</span></button></div>
+<div class="board" id="board">
+  <div class="hd"><b id="bwho"></b><span>用手指在線上簽名</span></div>
+  <canvas id="cv"></canvas>
+  <div class="ft"><button id="bcancel">取消</button><button id="bclr">清除</button><button class="go" id="bok">簽好了</button></div>
+</div>
+
+<script>
+var API = 'https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec';
+var TK = new URLSearchParams(location.search).get('tk') || '';
+var CID = 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+var D = null, WK = [], SIG = {}, DIRTY = false;   // WK：[{n,o,l}]；SIG：簽名 key → dataURL
+var $ = function (id) { return document.getElementById(id); };
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function api(body) {   // text/plain：application/json 會觸發預檢，Apps Script 接不住（見 Code.gs doPost）
+  body.tk = TK;
+  return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
+    .then(function (r) { return r.json(); })
+    .then(function (j) { if (!j || j.ok === false) throw new Error(j && j.err ? String(j.err).replace(/^Error:\s*/, '') : '伺服器沒有回應'); return j; });
+}
+function fail(e) { $('app').innerHTML = '<p id="msg">' + esc(e && e.message || e) + '</p>'; $('dock').hidden = true; }
+
+api({ api: 'svclLoad' }).then(function (d) { D = d; init(); }).catch(fail);
+
+/* 名冊裡同名的拿來補原文名與語別；行程上寫的名字對不到名冊也照樣留著 */
+function init() {
+  WK = D.workers.map(function (n) { return D.roster.filter(function (r) { return r.n === n; })[0] || { n: n, o: '', l: D.lang }; });
+  var c0 = D.tax.cats.filter(function (c) { return c.b === D.big; })[0];
+  if (!c0 || !c0.s.some(function (x) { return x.n === D.sub; })) { D.big = D.tax.cats[0].b; D.sub = D.tax.cats[0].s[0].n; }
+  $('app').innerHTML =
+    '<header><div class="bar"></div><div><h1>服務紀錄表</h1><p class="sub">' + esc(D.client) + '・' + esc(D.date.replace(/-/g, '/')) + ' ' + esc(D.slot) + '・' + esc(D.crew) + '</p></div></header>' +
+    (D.todo.length ? '<p class="note">交辦：' + D.todo.map(esc).join('、') + '</p>' : '') +
+    '<section><div class="lab">移工</div><div id="wks"></div>' +
+    '<div><input type="search" id="q" placeholder="' + (D.roster.length ? '搜尋 ' + esc(D.client.replace(/(股份)?有限公司/, '')) + ' 的 ' + D.roster.length + ' 位工人' : '打名字新增') + '" autocomplete="off"><div class="pick" id="pick"></div></div>' +
+    '<p class="note">下面的內容套用到每一位，每一位各自簽名。</p></section>' +
+    '<section><div class="lab">服務項目</div><select id="big">' + D.tax.cats.map(function (c) {
+      return '<option' + (c.b === D.big ? ' selected' : '') + '>' + esc(c.b) + '</option>'; }).join('') + '</select><select id="sub"></select></section>' +
+    '<section><div class="lab">處理經過</div><div id="dbox"></div><input type="text" id="dnote" placeholder="補充（可不填）"></section>' +
+    '<section><div class="lab">結果</div><div id="rbox"></div><input type="text" id="rnote" placeholder="補充（可不填）"></section>' +
+    '<section><div class="lab">費用・後續</div><input type="text" id="fee" placeholder="費用（例：車資 500 已收）">' +
+    chips('follow', D.tax.follow) + '<input type="text" id="memo" placeholder="備註（可不填）"></section>' +
+    '<section><div class="lab">簽名</div><div id="sigs"></div></section>';
+  $('big').onchange = function () { D.big = this.value; D.sub = ''; fillSub(); };
+  $('q').oninput = drawPick;
+  $('q').onfocus = drawPick;
+  document.body.addEventListener('click', function (e) {
+    var c = e.target.closest('.chip'); if (c) { c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') !== 'true'); DIRTY = true; }
+  });
+  fillSub(); drawWorkers();
+  $('dock').hidden = false;
+}
+function chips(k, list) {
+  return '<div class="chips" data-k="' + k + '">' + list.map(function (t) { return '<button type="button" class="chip" aria-pressed="false">' + esc(t) + '</button>'; }).join('') + '</div>';
+}
+function picked(k) { return [].map.call(document.querySelectorAll('[data-k="' + k + '"] [aria-pressed=true]'), function (b) { return b.textContent; }); }
+function fillSub() {
+  var c = D.tax.cats.filter(function (x) { return x.b === D.big; })[0];
+  if (!c.s.some(function (x) { return x.n === D.sub; })) D.sub = c.s[0].n;
+  $('sub').innerHTML = c.s.map(function (x) { return '<option' + (x.n === D.sub ? ' selected' : '') + '>' + esc(x.n) + '</option>'; }).join('');
+  $('sub').onchange = function () { D.sub = this.value; fillOpts(); };
+  fillOpts();
+}
+function fillOpts() {
+  var s = D.tax.cats.filter(function (x) { return x.b === D.big; })[0].s.filter(function (x) { return x.n === D.sub; })[0];
+  $('dbox').innerHTML = chips('did', s.d);
+  $('rbox').innerHTML = chips('res', s.r.concat(D.tax.resultCommon));
+}
+
+/* ── 移工 ── */
+function drawPick() {
+  var q = $('q').value.trim().toUpperCase(), have = WK.map(function (w) { return w.n; });
+  var hit = D.roster.filter(function (r) { return have.indexOf(r.n) === -1 && (!q || (r.n + ' ' + r.o).toUpperCase().indexOf(q) !== -1); }).slice(0, 30);
+  $('pick').innerHTML = hit.map(function (r) { return '<button type="button" data-n="' + esc(r.n) + '">' + esc(r.n) + (r.o ? '<small>' + esc(r.o) + '</small>' : '') + '</button>'; }).join('') +
+    (q && !hit.some(function (r) { return r.n.toUpperCase() === q; }) ? '<button type="button" data-new="1">＋ 新增「' + esc($('q').value.trim()) + '」（名冊上沒有）</button>' : '');
+  [].forEach.call($('pick').querySelectorAll('button'), function (b) {
+    b.onclick = function () {
+      WK.push(b.dataset.new ? { n: $('q').value.trim(), o: '', l: D.lang } : D.roster.filter(function (r) { return r.n === b.dataset.n; })[0]);
+      $('q').value = ''; $('pick').innerHTML = ''; DIRTY = true; drawWorkers();
+    };
+  });
+}
+function drawWorkers() {
+  $('wks').innerHTML = WK.map(function (w, i) {
+    return '<div class="who"><b>' + esc(w.n) + (w.o ? '<small>' + esc(w.o) + '</small>' : '') + '</b><button type="button" class="x" data-i="' + i + '" aria-label="移除">×</button></div>';
+  }).join('') || '<p class="note">還沒選移工。</p>';
+  [].forEach.call($('wks').querySelectorAll('.x'), function (b) {
+    b.onclick = function () { var w = WK.splice(+b.dataset.i, 1)[0]; delete SIG['w:' + w.n]; drawWorkers(); };
+  });
+  drawSigs();
+}
+
+/* ── 簽名：key 用名字不用順序，移除一位不會讓別人的簽名錯位 ── */
+function pads() { return [['emp', '雇主／工廠主管']].concat(WK.map(function (w) { return ['w:' + w.n, '移工　' + w.n]; }), [['staff', '翻譯　' + D.crew]]); }
+function drawSigs() {
+  $('sigs').innerHTML = pads().map(function (p) {
+    return '<div class="sig' + (SIG[p[0]] ? ' ok' : '') + '" data-k="' + esc(p[0]) + '" data-t="' + esc(p[1]) + '"><span class="nm">' + esc(p[1]) + '</span>' +
+      (SIG[p[0]] ? '<img alt="已簽" src="' + SIG[p[0]] + '"><span class="st">重簽</span>' : '<span class="st">點這裡簽名　→</span>') + '</div>';
+  }).join('');
+  [].forEach.call($('sigs').querySelectorAll('.sig'), function (el) { el.onclick = function () { openBoard(el.dataset.k, el.dataset.t); }; });
+}
+var BK = '', cv = $('cv'), cx = cv.getContext('2d'), inked = false, down = false;
+function openBoard(k, t) {
+  BK = k; $('bwho').textContent = t; $('board').classList.add('on'); document.body.style.overflow = 'hidden';
+  var r = window.devicePixelRatio || 1;
+  cv.width = cv.clientWidth * r; cv.height = cv.clientHeight * r;
+  cx.setTransform(r, 0, 0, r, 0, 0); cx.lineWidth = 3; cx.lineCap = cx.lineJoin = 'round'; cx.strokeStyle = '#111';
+  inked = false;
+}
+function closeBoard() { $('board').classList.remove('on'); document.body.style.overflow = ''; }
+function pt(e) { var b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; }
+cv.onpointerdown = function (e) { e.preventDefault(); down = true; cv.setPointerCapture(e.pointerId); var p = pt(e); cx.beginPath(); cx.moveTo(p[0], p[1]); };
+cv.onpointermove = function (e) { if (!down) return; e.preventDefault(); var p = pt(e); cx.lineTo(p[0], p[1]); cx.stroke(); inked = true; };
+cv.onpointerup = cv.onpointercancel = function () { down = false; };
+$('bclr').onclick = function () { cx.clearRect(0, 0, cv.width, cv.height); inked = false; };
+$('bcancel').onclick = closeBoard;
+$('bok').onclick = function () {
+  if (!inked) { alert('還沒簽'); return; }
+  /* 縮成寬 600 的小圖再存（全螢幕原尺寸在高解析手機上太大，上傳慢） */
+  var o = document.createElement('canvas'); o.width = 600; o.height = Math.round(600 * cv.height / cv.width);
+  o.getContext('2d').drawImage(cv, 0, 0, o.width, o.height);
+  SIG[BK] = o.toDataURL('image/png'); DIRTY = true;
+  closeBoard(); drawSigs();
+};
+
+/* 填到一半不小心滑掉／按到關閉：先擋一下 */
+window.addEventListener('beforeunload', function (e) { if (DIRTY) { e.preventDefault(); e.returnValue = ''; } });
+
+$('save').onclick = function () {
+  if (!WK.length) { alert('還沒選移工'); return; }
+  if (!picked('did').length && !picked('res').length) { alert('處理經過或結果至少點一個'); return; }
+  if (!SIG.emp && !confirm('雇主還沒簽名，要先存嗎？（之後可以到 App 補簽）')) return;
+  var base = { big: D.big, sub: D.sub, did: picked('did'), dnote: $('dnote').value.trim(), res: picked('res'),
+               rnote: $('rnote').value.trim(), fee: $('fee').value.trim(), follow: picked('follow').join('、'), memo: $('memo').value.trim() };
+  var workers = WK.map(function (w) { return Object.assign({ name: w.n, lang: w.l || D.lang, sig: SIG['w:' + w.n] || '' }, base); });
+  var btn = this; btn.disabled = true; btn.firstChild.textContent = '存檔中…';
+  api({ api: 'svclSave', trip: { cid: CID, sigEmployer: SIG.emp || '', sigStaff: SIG.staff || '' }, workers: workers }).then(function (r) {
+    DIRTY = false; $('dock').hidden = true; scrollTo(0, 0);
+    $('app').innerHTML = '<header><div class="bar"></div><div><h1>已存進 App</h1></div></header>' +
+      '<section><div class="lab">紀錄代碼</div><div class="big">' + esc(r.code) + '</div>' +
+      '<p class="note">行事曆這筆已標成完成，App 的「查詢」看得到。要修改或補簽名，到 App 打開這一筆。</p>' +
+      '<p class="note">按右上角 ✕ 回到 LINE。</p></section>';
+  }).catch(function (e) { btn.disabled = false; btn.firstChild.textContent = '存進 App'; alert('沒存成功：' + (e && e.message || e)); });
+};
+</script>
+</body></html>
