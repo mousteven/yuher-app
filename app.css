@@ -25,35 +25,50 @@
    否則同事的瀏覽器會繼續吃舊快取。 */
 /* 翻譯人員站在工廠裡用手機填，所以：目標鍵大、固定白底好讀、少打字。 */
 :root{
-  /* ══ 01 瑞士精簡（牟佑彬 2026-10-07 定案）══════════════════
-     黑白＋一個紅，紅只給「出事」用，所以警示永遠搶得到注意力。
-     ⛔ 不要再加第二個強調色——加了就不是這個風格了。 */
-  --brand:#111111; --brand-d:#000000; --brand-soft:#F0F0F0; --brand2:#111111;
+  /* ══ 瑞士精簡 ／ 藍＋紅（牟佑彬 2026-10-07 第二版）══════════
+     經典瑞士風的紀律是「每個色各有一份工作」，不是「兩個色輪流出現」：
+
+       藍 #163B63  結構與動作 —— 頂欄、主按鈕、框線、選中的字、連結
+       紅 #C8102E  焦點與出事 —— 頂欄下那條線、選中的頁籤、今天、退回逾期
+       黑 #111111  字
+       白 #ffffff  底
+
+     ⛔ 不要讓紅去做藍的工作（紅的按鈕、紅的框線），也不要讓藍去標「出事」。
+        混在一起就只是「有兩個顏色」，不是這個風格。
+     ⚠ 紅沒有用原本行政的酒紅 #8E2434：那個彩度在小面積上看起來像咖啡色，
+       壓不住藍。同色相提純成 #C8102E，白字對比 5.9:1。 */
+  --brand:#163B63; --brand-d:#0B223D; --brand-soft:#E8EEF6; --brand2:#163B63;
   --rose:#C8102E; --rose-soft:#FBEAEC;
-  --ink:#111111; --ink2:#3C3C3C; --ink3:#6E6E6E;
-  --bg:#ffffff; --card:#ffffff; --line:#111111; --line2:#E4E4E4;
+  /* 次要字帶一點藍灰，跟主色同一家族——純灰擺在藍旁邊會顯得髒。 */
+  --ink:#111111; --ink2:#3C4654; --ink3:#6B7684;
+  --bg:#ffffff; --card:#ffffff; --line:#163B63; --line2:#D7DEE8;
   --warn:#8A6318; --warn-soft:#F8F1E4; --danger:#C8102E; --ok:#1F6B4A;
   /* 狀態色。四組各有文字、底、框線、長條四個值，
      夜間模式只要換這一組，不用一處一處找。 */
   --ok-ink:#1F6B4A;   --ok-bg:#EDF4F0;   --ok-line:#B9D4C8;   --ok-bar:#1F6B4A;
   --warn-ink:#8A6318; --warn-bg:#F8F1E4; --warn-line:#E3D3B4; --warn-bar:#8A6318;
-  --info-ink:#1F4E8C; --info-bg:#EBF0F7; --info-line:#C3D2E6; --info-bar:#1F4E8C;
+  /* info 歸到主藍，不要再有第二種藍。 */
+  --info-ink:#163B63; --info-bg:#E8EEF6; --info-line:#C3D1E2; --info-bar:#163B63;
   --bad-ink:#C8102E;  --bad-bg:#FBEAEC;  --bad-line:#EFC6CC;  --bad-bar:#C8102E;
   /* 頂欄。⚠ --chrome-bg 是備胎（舊瀏覽器或清單檔要一個純色），
      畫面上實際上的是 --chrome-grad。 */
-  --chrome-bg:#111111; --chrome-ink:#ffffff;
+  --chrome-bg:#163B63; --chrome-ink:#ffffff;
+  /* ★ 頂欄下緣那條對比色的線。瑞士風（以及瑞士國鐵、Swissair 那一代的海報）
+     的招牌就是「一塊純色 ＋ 一條對比色的線」——藍與紅在最顯眼的地方同時出現。
+     ⚠ 行政端頂欄本身是紅的，那條線要換成亮藍才看得見（見 body.adm）。 */
+  --chrome-rule:#C8102E;
   /* 135° 三段（牟佑彬 2026-09-24 指定）。
      ⛔ 漸層**只給頂欄**。頁籤、卡片、按鈕、badge 一律純色——
         「Gradient is an atmosphere, not a decoration」。
      ⚠ badge 只有 16px 寬，漸層頭尾只差 13 階 RGB（量過），
        低於肉眼能分辨的 20 階——加了看不見，只多一份維護成本。 */
   /* ⛔ 瑞士風沒有漸層。這裡留著變數名是為了不用改任何一條規則，
-     值換成純黑就好。 */
-  --chrome-grad:#111111;
+     值換成純色就好。 */
+  --chrome-grad:#163B63;
   /* 填滿式按鈕的底。⛔ 不可以直接用 --brand——夜間的 --brand 是
      **淺**藍（給深底上的文字用），白字壓上去只有 2.5:1。
      兩個工作不一樣：--brand 是字的顏色，--fill 是底的顏色。 */
-  --fill:#111111; --fill-ink:#ffffff;
+  --fill:#163B63; --fill-ink:#ffffff;
   /* 同樣的道理，四組狀態色各補一個「填滿色」。
      ⛔ 規則只有一條：**要填滿就用 --*-fill，要畫條子就用 --*-bar。**
         條子沒有字，所以可以亮；按鈕上面有白字，所以必須暗。
@@ -68,9 +83,9 @@
         改成跟著主題走，深淺各一組。
      ⚠ 航廈的味道不靠底色，靠**結構**：等寬字的機場代碼、
        › 的航線箭頭、看板式的標頭。那些在淺色下一樣成立。 */
-  --board:var(--card); --board2:#FAFAFA; --board-line:var(--line2);
-  --sunk:#FAFAFA; --accent:#111111; --accent-soft:#F0F0F0;
-  --grid:rgba(0,0,0,.08);
+  --board:var(--card); --board2:#F4F6FA; --board-line:var(--line2);
+  --sunk:#F4F6FA; --accent:#163B63; --accent-soft:#E8EEF6;
+  --grid:rgba(22,59,99,.10);
   /* ── 兩把尺（2026-09-22 設計檢視第 8 項）─────────────────
 
      他的原話：「不要像一台拼裝車，風格都不一致，格式有大有小，
@@ -220,7 +235,7 @@
 .vrow .bnd,.hrow .pg i{position:absolute;top:0;bottom:0;border-radius:var(--r0)}
 .vrow .bnd.none{left:0;right:0;background:var(--line2)}
 .bnd-ok{background:var(--ok-bar)} .bnd-warn{background:var(--warn-bar)}
-.bnd-bad{background:var(--bad-bar)} .bnd-dim{background:var(--line)}
+.bnd-bad{background:var(--bad-bar)} .bnd-dim{background:var(--line2)}
 .bnd-info{background:var(--info-bar)}
 /* 被時間窗切掉的那一端不做圓角＝「還沒完」。
    ⛔ 不要為了好看補圓——補了就看不出有東西被切掉。 */
@@ -388,36 +403,39 @@
    深藍底、亮一階的主色（深色底上原本的海軍藍會看不見）。
    簽名板與服務表預覽不跟著變，見下面。 */
 body.dark{
-  /* ══ 01 瑞士精簡的深色：純黑＋白線 ══════════════════════
+  /* ══ 瑞士精簡的深色：純黑底，藍與紅各自提亮 ══════════════
      ⛔ 不要為了「柔和」把底改成深灰。純黑是這個風格的深色該有的樣子，
-        OLED 螢幕也最省電。 */
-  --brand:#F2F2F2; --brand-d:#ffffff; --brand-soft:#1C1C1C; --brand2:#F2F2F2;
-  --rose:#FF6B5A; --rose-soft:#2A1210;
-  --ink:#F2F2F2; --ink2:#C2C2C2; --ink3:#949494;
+        OLED 螢幕也最省電。
+     ⚠ 深色的藍分兩個用途：--brand 是**字**（要很亮才讀得到），
+       --fill 是**底**（要夠暗，上面壓白字）。不可以共用一個值。 */
+  --brand:#8FB6E8; --brand-d:#B9D2F0; --brand-soft:#132234; --brand2:#8FB6E8;
+  --rose:#FF5C50; --rose-soft:#2A1210;
+  --ink:#EAEFF6; --ink2:#B6C1D0; --ink3:#8793A3;
   /* ⚠ 夜間的框線不要用接近白的。整頁每個卡片、按鈕都鑲一條白邊，
      看起來像線框圖而且很刺眼（2026-10-07 實機看過才調的）。
      用中灰：在純黑上一樣清楚，但不會搶走文字。 */
-  --bg:#000000; --card:#000000; --line:#8A8A8A; --line2:#2A2A2A;
+  --bg:#000000; --card:#000000; --line:#5F6F84; --line2:#2A3340;
   --warn:#E3BE70; --warn-soft:#2A2212; --danger:#FF6B5A; --ok:#6FD39D;
   --ok-ink:#6FD39D;   --ok-bg:#0F2218;   --ok-line:#2A4F3C;   --ok-bar:#6FD39D;
   --warn-ink:#E3BE70; --warn-bg:#2A2212; --warn-line:#5A4A22; --warn-bar:#E3BE70;
-  --info-ink:#8FB6E8; --info-bg:#111C2C; --info-line:#2C3E5C; --info-bar:#8FB6E8;
+  --info-ink:#8FB6E8; --info-bg:#132234; --info-line:#2C3E5C; --info-bar:#8FB6E8;
   --bad-ink:#FF8A7A;  --bad-bg:#2A1210;  --bad-line:#5A2A24;  --bad-bar:#FF6B5A;
-  --chrome-bg:#000000; --chrome-ink:#F2F2F2;
+  --chrome-bg:#000000; --chrome-ink:#EAEFF6;
   --chrome-grad:#000000;
-  /* ⛔ 深色的主按鈕是**白底黑字**。瑞士風用的是反相，不是「把藍色提亮」。
-     ⚠ 所以任何寫死 color:#fff 又壓在 var(--fill) 上的地方都會變白對白——
-       check.py 的白字對比那一關就是在抓這個。 */
-  --fill:#F2F2F2; --fill-ink:#000000;
-  /* ⛔ 瑞士風深色的 --fill-ink 是黑的，所以這三個「填滿色」在夜間必須是**亮底**，
-     黑字壓上去才看得見。沿用日間那組深色的話只有 3.2:1。 */
-  --ok-fill:#6FD39D; --warn-fill:#E3BE70; --bad-fill:#FF8A7A;
+  /* 黑頂欄配紅線——深色模式裡藍看不出來，紅是這一條唯一的顏色。 */
+  --chrome-rule:#FF5C50;
+  /* 深色的主按鈕回到**藍底白字**（上一版是白底黑字，整頁最亮的東西變成按鈕，
+     在黑底上刺眼而且搶走標題）。 */
+  --fill:#2E5E97; --fill-ink:#ffffff;
+  /* ⛔ --fill-ink 是白的，所以這三個「填滿色」必須是**暗底**，白字壓上去才讀得到。
+     亮底配白字只有 2 點多。 */
+  --ok-fill:#1E7A5C; --warn-fill:#8A6318; --bad-fill:#A32A32;
   --shadow:none;
   color-scheme:dark;
-  --board:#000000; --board2:#0E0E0E; --board-line:#2A2A2A; --sunk:#0E0E0E;
+  --board:#000000; --board2:#0C1219; --board-line:#2A3340; --sunk:#0C1219;
   /* 夜間才有琥珀——那是航廈看板的顏色，白天用它會糊在白底上。 */
   --accent:#F0B429; --accent-soft:rgba(240,180,41,.12);
-  --grid:rgba(255,255,255,.07);
+  --grid:rgba(143,182,232,.12);
 }
 /* 紙就是紙。簽名的墨色與服務表預覽一律留白底，
    不然翻譯在工廠裡簽完根本看不到自己簽了什麼。 */
@@ -465,8 +483,12 @@ body.hidechrome #chrome{transform:translateY(-101%)}
 body.hidechrome{--stick:0px}
 .calsticky,.evsticky{transition:top .22s cubic-bezier(.32,.72,0,1)}
 
+/* ★ 瑞士風的招牌：一塊純色 ＋ 一條對比色的線（瑞士國鐵、Swissair 那一代的海報）。
+   這一條是整個 App 裡藍與紅唯一並置的地方，所以它承擔「這是什麼風格」的交代。
+   ⚠ 粗細不要再往上加。3px 是「一條線」，5px 就變成「第二塊色塊」了。 */
 .top{background:var(--chrome-bg);background-image:var(--chrome-grad);color:var(--chrome-ink);
-  padding:11px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  padding:11px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;
+  border-bottom:3px solid var(--chrome-rule)}
 /* 有新版時的提示條。擺在最上面、整條可以點，
    在工廠裡單手操作也按得到。 */
 /* 程式更新中的進度列。不定速——我們不知道真實進度，
@@ -482,7 +504,9 @@ body.hidechrome{--stick:0px}
 #newver{position:sticky;top:0;z-index:30;background:var(--fill);color:var(--fill-ink);
   padding:10px 14px;font-size:var(--t2);font-weight:700;text-align:center;cursor:pointer;
   letter-spacing:.02em}
-.top b{font-size:var(--t2);letter-spacing:.01em;white-space:nowrap;overflow:hidden;
+/* ⛔ 字距收緊，不是放鬆。瑞士風的標題是**擠在一起**的（Helvetica 原本的樣子），
+   放鬆字距是 1980 年代之後的做法，整個味道會跑掉。 */
+.top b{font-size:var(--t2);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;min-width:0}
 .top small{opacity:.85;font-size:var(--t4)}
 .tabs{display:flex;background:var(--card);border-bottom:1px solid var(--line)}
@@ -520,6 +544,15 @@ body.tabsbottom .tabs button{flex-direction:column;align-items:center;gap:3px;
   transition:color .16s ease}
 body.tabsbottom .tabs button.on{color:var(--ink);font-weight:700;
   border-bottom-color:transparent}
+/* 選中的那一項，**上緣**一條紅線——跟頂欄下緣那條是同一件事，
+   一上一下把內容夾在中間。這是瑞士風海報的版式搬到手機上。
+   ⚠ 用 ::before 不用 border-top：border 會把圖示往下推 2px。 */
+body.tabsbottom .tabs button.on::before{content:"";position:absolute;
+  top:0;left:50%;transform:translateX(-50%);width:28px;height:3px;
+  background:var(--rose)}
+/* ⛔ 中間那顆加號不要——它不是分頁，沒有「我在這一頁」這回事。 */
+body.tabsbottom .tabs button[data-t=new]::before,
+body.tabsbottom .tabs #admAdd::before{display:none}
 body.tabsbottom .tabs svg{display:block;width:1.45rem;height:1.45rem}
 /* 沒選到看線稿、選到看實心 */
 body.tabsbottom .tabs svg .f{display:none}
@@ -590,12 +623,20 @@ body.tabsbottom #toTop{bottom:calc(var(--sab, env(safe-area-inset-bottom, 0px)) 
 }
 .tabs button{flex:1;border:0;background:transparent;padding:12px 4px;font-size:var(--t2);
   font-weight:700;color:var(--ink3);cursor:pointer;border-bottom:2.5px solid transparent}
-.tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
-.pane{display:none;padding:14px}
+/* 選中的頁籤：字是結構色（藍）、底下那條指示線是焦點色（紅）。
+   ⛔ 兩個都用藍的話，這一排就只剩「深一點／淺一點」的差別——
+      紅的那一條才是讓人一眼找到自己在哪的東西。 */
+.tabs button.on{color:var(--brand);border-bottom-color:var(--rose)}
+/* 留白是這個風格的材料，不是空隙。14 → 18 是刻意的。 */
+.pane{display:none;padding:18px 16px}
 .pane.on{display:block}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);padding:15px;margin-bottom:12px}
-h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
+/* ★ 瑞士網格排版的 rule：標題**上方**一條線，把版面切成一段一段。
+   這是這個風格最便宜也最有效的一招——不用加任何顏色或陰影就有層次。
+   ⚠ 線用 --ink（黑）不用 --brand（藍）：線是結構，顏色留給有意義的東西。 */
+h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand);
+  border-top:2px solid var(--ink);padding-top:8px;letter-spacing:-.005em}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:560px){.g2{grid-template-columns:1fr}}
 .f{margin-bottom:11px}
@@ -639,9 +680,9 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   font-weight:700;padding:2px 9px;border-radius:var(--r2);margin-top:4px}
 
 .stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:1px;
-  background:var(--line);border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;margin-bottom:12px}
+  background:var(--line2);border:1px solid var(--line2);border-radius:var(--r2);overflow:hidden;margin-bottom:12px}
 .stat div{background:var(--card);padding:12px 13px}
-.stat b{display:block;font-size:var(--t0);font-weight:900;color:var(--brand);line-height:1.2}
+.stat b{display:block;font-size:var(--t0);font-weight:700;color:var(--brand);line-height:1.2}
 .stat span{font-size:var(--t4);color:var(--ink3)}
 .bars{margin-bottom:16px}
 .bars .r{margin-bottom:7px}
@@ -1211,11 +1252,14 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   flex-direction:column;align-items:center;gap:3px;border:0;
   cursor:pointer;background:var(--card)}
 /* 今天：用內框標，不要用外框——外框會把格線推歪一格。 */
-.cell.today{box-shadow:inset 0 0 0 2px var(--brand)}
+/* 今天＝焦點，用紅；選中的那一天＝動作，用藍（.cell.sel 吃 --fill）。
+   ⛔ 兩個都用藍的時候，「今天」跟「我點的那天」看起來是同一件事。
+   ⚠ 用內框不要用外框——外框會把格線推歪一格。 */
+.cell.today{box-shadow:inset 0 0 0 2px var(--rose)}
 .cell.dim{opacity:.3}
 .cell .d{font-size:var(--t3);color:var(--ink2);font-variant-numeric:tabular-nums}
 
-.cell.today .d{color:var(--brand);font-weight:700}
+.cell.today .d{color:var(--rose);font-weight:700}
 .cell.sel{background:var(--fill);border-color:var(--fill)}
 .cell.sel .d{color:var(--fill-ink);font-weight:700}
 .cell .dots{display:flex;gap:2px;flex-wrap:wrap;justify-content:center}
@@ -1234,11 +1278,13 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .cell .cbd i{display:block;height:100%}
 .cell .cnum{font-size:var(--t2);font-weight:700;line-height:1.05;color:var(--ink);
   font-variant-numeric:tabular-nums}
-.cell .cnum.z{color:var(--line);font-weight:700}
+/* 0 筆的那一天要**退到背景裡**。⛔ 不可以用 --line：那是結構線的顏色，
+   瑞士風之下它是深藍，0 反而變成整頁最醒目的數字（2026-10-07 修）。 */
+.cell .cnum.z{color:var(--line2);font-weight:700}
 /* ⛔ 順序很重要：選到的那一格底是深色，數字一定要是白的。
    .today 寫在後面的話，「今天又剛好選到」那一格會變成深底深字——
    2026-10-05 實測：10/5 有 70 筆，數字整個看不見。 */
-.cell.today .cnum{color:var(--brand)}
+.cell.today .cnum{color:var(--rose)}
 .cell.sel .cnum{color:var(--fill-ink)}
 
 /* 行程卡上的地址：自己一行、◎ 開頭（牟佑彬 2026-10-05 選的方案甲）。
@@ -1299,7 +1345,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   font-weight:700;letter-spacing:.1em;color:var(--ink3);
   transition:top .22s cubic-bezier(.32,.72,0,1)}
 .grp:first-child{margin-top:0}
-.grp::after{content:"";flex:1;height:1px;background:var(--line)}
+.grp::after{content:"";flex:1;height:1px;background:var(--line2)}
 .grp b{background:var(--fill);color:var(--fill-ink);border-radius:var(--r2);padding:1px 9px;
   font-size:var(--t4);letter-spacing:0}
 .grp.done b{background:var(--ink3)}
@@ -1318,7 +1364,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .ev .b>span.prog,.rv .b>span.prog,.recprog>span.prog{display:flex;gap:4px;margin-top:9px}
 .recprog{margin-top:2px}
 .ev .prog .s,.rv .prog .s,.recprog .s{flex:1;min-width:0}
-.ev .prog i,.rv .prog i,.recprog .prog i{display:block;height:4px;border-radius:var(--r2);background:var(--line)}
+.ev .prog i,.rv .prog i,.recprog .prog i{display:block;height:4px;border-radius:var(--r2);background:var(--line2)}
 .ev .prog em,.rv .prog em,.recprog .prog em{display:block;font-style:normal;font-size:var(--t5);line-height:1.3;margin-top:4px;
   color:var(--ink3);white-space:nowrap;letter-spacing:.02em}
 .ev .prog .s.done i,.rv .prog .s.done i,.recprog .s.done i{background:var(--brand)}
@@ -1529,7 +1575,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
    評鑑委員核對的就是「這個人、這幾個月、有沒有表」。
    所以畫面直接做成移工 × 月份的核對表，一格一個月。 */
 .evsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));
-  gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r2);
+  gap:1px;background:var(--line2);border:1px solid var(--line2);border-radius:var(--r2);
   overflow:hidden;margin-bottom:11px}
 .evsum div{background:var(--card);padding:10px 11px}
 .evsum b{display:block;font-size:var(--t0);font-weight:700;line-height:1.2;
@@ -1670,7 +1716,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   font-weight:700;letter-spacing:.1em;color:var(--ink3);
   transition:top .22s cubic-bezier(.32,.72,0,1)}
 .rvgrp:first-child{margin-top:0}
-.rvgrp::after{content:"";flex:1;height:1px;background:var(--line)}
+.rvgrp::after{content:"";flex:1;height:1px;background:var(--line2)}
 /* 審的人要看的是那張表本身，小視窗根本看不清楚——直接給整個螢幕 */
 .rvfull{position:fixed;inset:0;z-index:75;background:var(--bg);
   display:flex;flex-direction:column}
@@ -2031,7 +2077,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
    翻譯在這裡就該看到「有一筆還沒送審」，不用切到送審頁對。 */
 .ctl{position:relative;padding-left:20px}
 .ctl::before{content:"";position:absolute;left:5px;top:5px;bottom:14px;width:1px;
-  background:var(--line)}
+  background:var(--line2)}
 .ctl .it{position:relative;padding-bottom:15px}
 .ctl .it:last-child{padding-bottom:0}
 .ctl .it::before{content:"";position:absolute;left:-19px;top:5px;width:11px;height:11px;
@@ -2126,7 +2172,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
   background:var(--bg);border-bottom:1px solid var(--line);
   font-size:var(--t5);font-weight:700;letter-spacing:.1em;color:var(--ink2)}
 .tkband:first-child{margin-top:2px}
-.tkband i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--line)}
+.tkband i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--line2)}
 .tkband span{margin-left:auto;font-weight:700;letter-spacing:0;color:var(--ink3)}
 .tkband.warn{color:var(--warn-ink)} .tkband.warn i{background:var(--warn-bar)}
 .tkband.info{color:var(--info-ink)} .tkband.info i{background:var(--info-bar)}
@@ -2221,7 +2267,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 
 /* 進度 P2：四段細條。取代四格長條＋四個字，省掉一整行。 */
 .c4pg{flex:none;display:inline-flex;gap:2px;align-items:center}
-.c4pg i{width:10px;height:3px;border-radius:var(--r2);background:var(--line);display:block}
+.c4pg i{width:10px;height:3px;border-radius:var(--r2);background:var(--line2);display:block}
 .c4pg i.on{background:var(--brand)}
 .c4pg i.now{background:var(--warn-bar)}
 .c4pg i.bad{background:var(--bad-bar)}
@@ -2371,12 +2417,12 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 .c5rail{display:flex;align-items:flex-start;gap:0}
 .c5stp{flex:1;min-width:0;position:relative;padding-top:15px;text-align:center}
 .c5stp::before{content:'';position:absolute;top:5px;left:0;right:0;height:2px;
-  background:var(--line)}
+  background:var(--line2)}
 .c5stp:first-child::before{left:50%}
 .c5stp:last-child::before{right:50%}
 .c5stp.done::before,.c5stp.now::before{background:var(--brand)}
 .c5stp i{position:absolute;top:0;left:50%;transform:translateX(-50%);
-  width:12px;height:12px;border-radius:var(--r2);background:var(--line);
+  width:12px;height:12px;border-radius:var(--r2);background:var(--line2);
   border:2px solid var(--card);box-shadow:0 0 0 1px var(--line)}
 .c5stp.done i{background:var(--brand);box-shadow:0 0 0 1px var(--brand)}
 .c5stp.now i{background:var(--brand);box-shadow:0 0 0 1px var(--brand),
@@ -2422,11 +2468,11 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
   padding:11px 13px}
 .c6i{display:flex;gap:10px;padding:9px 0;position:relative}
 .c6i:not(:last-child)::after{content:'';position:absolute;left:6px;top:28px;
-  bottom:-4px;width:2px;background:var(--line)}
+  bottom:-4px;width:2px;background:var(--line2)}
 .c6i .d{width:14px;height:14px;border-radius:var(--r2);flex:none;margin-top:4px;
   display:grid;place-items:center;font-size:var(--t6);font-weight:700;
   /* ⚠ 還沒到的那一顆是灰底，白字在上面只有 1.3:1。灰底配深字。 */
-  color:var(--ink2);background:var(--line)}
+  color:var(--ink2);background:var(--line2)}
 .c6i.ok .d{background:var(--ok-fill);color:var(--fill-ink)}
 .c6i.now .d{background:var(--fill);color:var(--fill-ink)}
 .c6i.next .d{background:var(--warn-fill);color:var(--fill-ink)}
@@ -2463,7 +2509,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 .lpgrp{display:flex;align-items:baseline;gap:8px;margin:14px 0 6px}
 .lpgrp b{font-size:var(--t4);font-weight:700;color:var(--brand)}
 .lpgrp span{font-size:var(--t5);color:var(--ink3)}
-.lpgrp::after{content:'';flex:1;height:1px;background:var(--line)}
+.lpgrp::after{content:'';flex:1;height:1px;background:var(--line2)}
 .lprw{display:flex;gap:10px;border:1px solid var(--line);border-radius:var(--r2);
   padding:10px 12px;background:var(--card);margin-bottom:8px;cursor:pointer}
 .lprw.on{border-color:var(--brand);background:var(--brand-soft)}
@@ -2975,7 +3021,7 @@ body.finding .tabs{display:none}
 .psec{display:flex;align-items:center;gap:7px;padding:7px 12px;margin:14px 0 0;
   background:var(--bg);border-bottom:1px solid var(--line);
   font-size:var(--t5);font-weight:700;letter-spacing:.1em;color:var(--ink2)}
-.psec i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--line)}
+.psec i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--line2)}
 .psec.warn{color:var(--warn-ink)} .psec.warn i{background:var(--warn-bar)}
 .psec span{margin-left:auto;font-weight:700;letter-spacing:0;color:var(--ink3)}
 
@@ -3387,20 +3433,25 @@ body.tabsbottom .tabs.few button{min-width:120px}
       主色變紅之後，退回補正／取消／過期沒結案如果還是同一種紅，
       兩者就分不出來了——紅色在這個 App 裡本來是有意義的。 */
 body.adm{
-  /* 瑞士風的紅：正紅不是酒紅。⛔ 漸層拿掉，純色。 */
+  /* 行政端把兩個色的工作**對調**：紅做結構、藍做焦點。
+     ⚠ 所以頂欄下那條線要換成亮藍——深藍 #163B63 壓在紅上面看不見。 */
   --brand:#C8102E; --brand-d:#9B0C23; --brand-soft:#FBEAEC;
   --chrome-bg:#C8102E;
   --chrome-grad:#C8102E;
+  --chrome-rule:#7FA8DC;
+  --line:#A81226;
   --fill:#C8102E; --fill-ink:#ffffff;
   --accent:#C8102E; --accent-soft:#FBEAEC;
   --bad-ink:#B4461A; --bad-bg:#FBEDE5; --bad-line:#EDCFBB;
   --bad-fill:#B4461A; --bad-bar:#B4461A; --danger:#B4461A; --rose:#B4461A;
 }
 body.adm.dark{
-  --brand:#FF5C4A; --brand-soft:#2A1210;
+  --brand:#FF8A7A; --brand-soft:#2A1210;
   --chrome-grad:#000000;
-  --fill:#FF5C4A; --fill-ink:#000000;
-  --accent:#FF5C4A; --accent-soft:#2A1210;
+  --chrome-rule:#FF5C50;
+  --line:#6F5A58;
+  --fill:#A32A32; --fill-ink:#ffffff;
+  --accent:#FF8A7A; --accent-soft:#2A1210;
   --bad-ink:#E0A179; --bad-bg:#2C1D13; --bad-line:#4A3422;
   --bad-fill:#B4461A; --bad-bar:#C96A33; --danger:#E0A179; --rose:#E0A179;
 }
@@ -3411,21 +3462,24 @@ body.adm.dark{
      這裡用帶一點藍的石墨色 #1C1F26，比純黑「有東西」，印出來也不會糊成一塊。
    ⚠ 「出事」的紅維持原本的酒紅：主色是黑的，不會跟狀態色打架，
      所以不像行政那樣要把它推成橘紅。 */
-/* ⚠ 瑞士風之下特助與翻譯的頂欄都是黑的，長得一樣。
-   角色靠右上角的名字分辨（畫面上本來就寫著「特助 ⌄」）。
-   要再分開的話可以給特助做反白頂欄——等他決定，先不自作主張。 */
+/* 特助用**更深一階的藍**（翻譯是 #163B63，特助是 #0B223D）。
+   同一個色相往下壓，不是換一個色——他調度的是翻譯的行程，
+   兩邊本來就該看起來是同一家。 */
 body.ass{
-  --brand:#111111; --brand-d:#000000; --brand-soft:#F0F0F0;
-  --chrome-bg:#111111;
-  --chrome-grad:#111111;
-  --fill:#111111; --fill-ink:#ffffff;
-  --accent:#111111; --accent-soft:#F0F0F0;
+  --brand:#0B223D; --brand-d:#06162A; --brand-soft:#E6ECF4;
+  --chrome-bg:#0B223D;
+  --chrome-grad:#0B223D;
+  --chrome-rule:#C8102E;
+  --line:#0B223D;
+  --fill:#0B223D; --fill-ink:#ffffff;
+  --accent:#0B223D; --accent-soft:#E6ECF4;
 }
 body.ass.dark{
-  --brand:#F2F2F2; --brand-soft:#1C1C1C;
+  --brand:#9CC0EC; --brand-soft:#0E1C2E;
   --chrome-grad:#000000;
-  --fill:#F2F2F2; --fill-ink:#000000;
-  --accent:#F2F2F2; --accent-soft:#1C1C1C;
+  --chrome-rule:#FF5C50;
+  --fill:#214B7C; --fill-ink:#ffffff;
+  --accent:#9CC0EC; --accent-soft:#0E1C2E;
 }
 
 /* 廠商篩選列。只列**這個範圍內真的有排的**，而且帶數量——
@@ -3738,7 +3792,7 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .pssw .m s{display:block;text-decoration:none;font-size:var(--t5);color:var(--ink3);
   font-weight:700;margin-top:1px}
 .psdots{display:flex;gap:5px;justify-content:center;margin:12px 0 0}
-.psdots i{width:7px;height:7px;border-radius:50%;background:var(--line);cursor:pointer}
+.psdots i{width:7px;height:7px;border-radius:50%;background:var(--line2);cursor:pointer}
 .psdots i.on{background:var(--fill);width:18px;border-radius:0}
 .psdots i.b{background:var(--bad-ink)}
 
