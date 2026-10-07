@@ -28,35 +28,43 @@
   /* ══ 瑞士精簡 ／ 藍＋紅（牟佑彬 2026-10-07 第二版）══════════
      經典瑞士風的紀律是「每個色各有一份工作」，不是「兩個色輪流出現」：
 
-       藍 #163B63  結構與動作 —— 頂欄、主按鈕、框線、選中的字、連結
-       紅 #C8102E  焦點與出事 —— 頂欄下那條線、選中的頁籤、今天、退回逾期
+       藍 #0057B8  結構與動作 —— 頂欄、主按鈕、框線、選中的字、連結
+       紅 #E30613  焦點與出事 —— 頂欄下那條線、選中的頁籤、今天、退回逾期
        黑 #111111  字
        白 #ffffff  底
 
      ⛔ 不要讓紅去做藍的工作（紅的按鈕、紅的框線），也不要讓藍去標「出事」。
         混在一起就只是「有兩個顏色」，不是這個風格。
-     ⚠ 紅沒有用原本行政的酒紅 #8E2434：那個彩度在小面積上看起來像咖啡色，
-       壓不住藍。同色相提純成 #C8102E，白字對比 5.9:1。 */
-  --brand:#163B63; --brand-d:#0B223D; --brand-soft:#E8EEF6; --brand2:#163B63;
-  --rose:#C8102E; --rose-soft:#FBEAEC;
+
+     ⛔ **這兩個色不可以再往深、往灰的方向調。** 2026-10-07 試過
+        深海軍藍 #163B63 ＋ 暗紅 #C8102E，他的回應是「還差那麼一點點感覺」——
+        低彩度的深藍是美式企業／銀行的顏色。國際主義風格（Müller-Brockmann、
+        Armin Hofmann 那一代）的色是**純、飽和、接近原色**的，因為它們
+        要在大色塊上成立，不是拿來當背景的。
+          #0057B8  近 Pantone 2935C，國際主義風格的標準藍
+          #E30613  瑞士國旗紅那一族
+     ⚠ 白字對比量過：藍 6.9:1、紅 4.9:1，兩個都過 AA（4.5）。
+       紅只剩 0.4 的餘裕，**再往亮調就會不及格**。 */
+  --brand:#0057B8; --brand-d:#00408A; --brand-soft:#E4EDF9; --brand2:#0057B8;
+  --rose:#E30613; --rose-soft:#FDE8E9;
   /* 次要字帶一點藍灰，跟主色同一家族——純灰擺在藍旁邊會顯得髒。 */
-  --ink:#111111; --ink2:#3C4654; --ink3:#6B7684;
-  --bg:#ffffff; --card:#ffffff; --line:#163B63; --line2:#D7DEE8;
-  --warn:#8A6318; --warn-soft:#F8F1E4; --danger:#C8102E; --ok:#1F6B4A;
+  --ink:#111111; --ink2:#39445A; --ink3:#69748A;
+  --bg:#ffffff; --card:#ffffff; --line:#0057B8; --line2:#D3DEEE;
+  --warn:#8A6318; --warn-soft:#F8F1E4; --danger:#E30613; --ok:#1F6B4A;
   /* 狀態色。四組各有文字、底、框線、長條四個值，
      夜間模式只要換這一組，不用一處一處找。 */
   --ok-ink:#1F6B4A;   --ok-bg:#EDF4F0;   --ok-line:#B9D4C8;   --ok-bar:#1F6B4A;
   --warn-ink:#8A6318; --warn-bg:#F8F1E4; --warn-line:#E3D3B4; --warn-bar:#8A6318;
   /* info 歸到主藍，不要再有第二種藍。 */
-  --info-ink:#163B63; --info-bg:#E8EEF6; --info-line:#C3D1E2; --info-bar:#163B63;
-  --bad-ink:#C8102E;  --bad-bg:#FBEAEC;  --bad-line:#EFC6CC;  --bad-bar:#C8102E;
+  --info-ink:#0057B8; --info-bg:#E4EDF9; --info-line:#BFD3EC; --info-bar:#0057B8;
+  --bad-ink:#E30613;  --bad-bg:#FDE8E9;  --bad-line:#F7C3C6;  --bad-bar:#E30613;
   /* 頂欄。⚠ --chrome-bg 是備胎（舊瀏覽器或清單檔要一個純色），
      畫面上實際上的是 --chrome-grad。 */
-  --chrome-bg:#163B63; --chrome-ink:#ffffff;
+  --chrome-bg:#0057B8; --chrome-ink:#ffffff;
   /* ★ 頂欄下緣那條對比色的線。瑞士風（以及瑞士國鐵、Swissair 那一代的海報）
      的招牌就是「一塊純色 ＋ 一條對比色的線」——藍與紅在最顯眼的地方同時出現。
      ⚠ 行政端頂欄本身是紅的，那條線要換成亮藍才看得見（見 body.adm）。 */
-  --chrome-rule:#C8102E;
+  --chrome-rule:#E30613;
   /* 135° 三段（牟佑彬 2026-09-24 指定）。
      ⛔ 漸層**只給頂欄**。頁籤、卡片、按鈕、badge 一律純色——
         「Gradient is an atmosphere, not a decoration」。
@@ -64,17 +72,17 @@
        低於肉眼能分辨的 20 階——加了看不見，只多一份維護成本。 */
   /* ⛔ 瑞士風沒有漸層。這裡留著變數名是為了不用改任何一條規則，
      值換成純色就好。 */
-  --chrome-grad:#163B63;
+  --chrome-grad:#0057B8;
   /* 填滿式按鈕的底。⛔ 不可以直接用 --brand——夜間的 --brand 是
      **淺**藍（給深底上的文字用），白字壓上去只有 2.5:1。
      兩個工作不一樣：--brand 是字的顏色，--fill 是底的顏色。 */
-  --fill:#163B63; --fill-ink:#ffffff;
+  --fill:#0057B8; --fill-ink:#ffffff;
   /* 同樣的道理，四組狀態色各補一個「填滿色」。
      ⛔ 規則只有一條：**要填滿就用 --*-fill，要畫條子就用 --*-bar。**
         條子沒有字，所以可以亮；按鈕上面有白字，所以必須暗。
      2026-09-22 掃出十一處把條子色或文字色拿去當按鈕底，
      最糟的是「開成案件」那顆：白字在 #3FAE86 上只有 2.76:1。 */
-  --ok-fill:#1F6B4A; --warn-fill:#8A6318; --bad-fill:#C8102E;
+  --ok-fill:#1F6B4A; --warn-fill:#8A6318; --bad-fill:#E30613;
   /* ⛔ 瑞士風不用陰影做層次，用線與留白。 */
   --shadow:none;
   /* ── 追蹤頁籤的看板（2026-09-22）──────────────────
@@ -83,9 +91,9 @@
         改成跟著主題走，深淺各一組。
      ⚠ 航廈的味道不靠底色，靠**結構**：等寬字的機場代碼、
        › 的航線箭頭、看板式的標頭。那些在淺色下一樣成立。 */
-  --board:var(--card); --board2:#F4F6FA; --board-line:var(--line2);
-  --sunk:#F4F6FA; --accent:#163B63; --accent-soft:#E8EEF6;
-  --grid:rgba(22,59,99,.10);
+  --board:var(--card); --board2:#F2F6FC; --board-line:var(--line2);
+  --sunk:#F2F6FC; --accent:#0057B8; --accent-soft:#E4EDF9;
+  --grid:rgba(0,87,184,.10);
   /* ── 兩把尺（2026-09-22 設計檢視第 8 項）─────────────────
 
      他的原話：「不要像一台拼裝車，風格都不一致，格式有大有小，
@@ -408,34 +416,34 @@ body.dark{
         OLED 螢幕也最省電。
      ⚠ 深色的藍分兩個用途：--brand 是**字**（要很亮才讀得到），
        --fill 是**底**（要夠暗，上面壓白字）。不可以共用一個值。 */
-  --brand:#8FB6E8; --brand-d:#B9D2F0; --brand-soft:#132234; --brand2:#8FB6E8;
-  --rose:#FF5C50; --rose-soft:#2A1210;
-  --ink:#EAEFF6; --ink2:#B6C1D0; --ink3:#8793A3;
+  --brand:#7FB2F5; --brand-d:#A8CBFA; --brand-soft:#0C1F38; --brand2:#7FB2F5;
+  --rose:#FF4A52; --rose-soft:#2A1210;
+  --ink:#E9EFF8; --ink2:#B4C0D2; --ink3:#8692A6;
   /* ⚠ 夜間的框線不要用接近白的。整頁每個卡片、按鈕都鑲一條白邊，
      看起來像線框圖而且很刺眼（2026-10-07 實機看過才調的）。
      用中灰：在純黑上一樣清楚，但不會搶走文字。 */
-  --bg:#000000; --card:#000000; --line:#5F6F84; --line2:#2A3340;
+  --bg:#000000; --card:#000000; --line:#5A7193; --line2:#28303D;
   --warn:#E3BE70; --warn-soft:#2A2212; --danger:#FF6B5A; --ok:#6FD39D;
   --ok-ink:#6FD39D;   --ok-bg:#0F2218;   --ok-line:#2A4F3C;   --ok-bar:#6FD39D;
   --warn-ink:#E3BE70; --warn-bg:#2A2212; --warn-line:#5A4A22; --warn-bar:#E3BE70;
-  --info-ink:#8FB6E8; --info-bg:#132234; --info-line:#2C3E5C; --info-bar:#8FB6E8;
-  --bad-ink:#FF8A7A;  --bad-bg:#2A1210;  --bad-line:#5A2A24;  --bad-bar:#FF6B5A;
-  --chrome-bg:#000000; --chrome-ink:#EAEFF6;
+  --info-ink:#7FB2F5; --info-bg:#0C1F38; --info-line:#2C3E5C; --info-bar:#7FB2F5;
+  --bad-ink:#FF8A86;  --bad-bg:#2A1210;  --bad-line:#5A2A24;  --bad-bar:#FF6B5A;
+  --chrome-bg:#000000; --chrome-ink:#E9EFF8;
   --chrome-grad:#000000;
   /* 黑頂欄配紅線——深色模式裡藍看不出來，紅是這一條唯一的顏色。 */
-  --chrome-rule:#FF5C50;
+  --chrome-rule:#FF4A52;
   /* 深色的主按鈕回到**藍底白字**（上一版是白底黑字，整頁最亮的東西變成按鈕，
      在黑底上刺眼而且搶走標題）。 */
-  --fill:#2E5E97; --fill-ink:#ffffff;
+  --fill:#0A5CC0; --fill-ink:#ffffff;
   /* ⛔ --fill-ink 是白的，所以這三個「填滿色」必須是**暗底**，白字壓上去才讀得到。
      亮底配白字只有 2 點多。 */
-  --ok-fill:#1E7A5C; --warn-fill:#8A6318; --bad-fill:#A32A32;
+  --ok-fill:#1E7A5C; --warn-fill:#8A6318; --bad-fill:#B3040F;
   --shadow:none;
   color-scheme:dark;
-  --board:#000000; --board2:#0C1219; --board-line:#2A3340; --sunk:#0C1219;
+  --board:#000000; --board2:#0B1119; --board-line:#28303D; --sunk:#0B1119;
   /* 夜間才有琥珀——那是航廈看板的顏色，白天用它會糊在白底上。 */
   --accent:#F0B429; --accent-soft:rgba(240,180,41,.12);
-  --grid:rgba(143,182,232,.12);
+  --grid:rgba(127,178,245,.12);
 }
 /* 紙就是紙。簽名的墨色與服務表預覽一律留白底，
    不然翻譯在工廠裡簽完根本看不到自己簽了什麼。 */
@@ -3190,7 +3198,7 @@ body.finding .tabs{display:none}
 .dpt.dpu2{background:var(--warn-bg);color:var(--warn-ink)}
 .dpt.dpu3{background:var(--line2);color:var(--ink3)}
 
-/* ⛔ 填滿要用 --fill 不是 --brand。夜間 --brand 會變成淺藍 #7FA8DC，
+/* ⛔ 填滿要用 --fill 不是 --brand。夜間 --brand 會變成淺藍 #7FB2F5，
    白字只有 2.46:1，等於看不見。檢查器 2026-09-28 當場擋下來。 */
 .dpgo{background:var(--fill);color:var(--fill-ink);border:0;border-radius:10px;padding:8px 14px;
   font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap}
@@ -3434,24 +3442,24 @@ body.tabsbottom .tabs.few button{min-width:120px}
       兩者就分不出來了——紅色在這個 App 裡本來是有意義的。 */
 body.adm{
   /* 行政端把兩個色的工作**對調**：紅做結構、藍做焦點。
-     ⚠ 所以頂欄下那條線要換成亮藍——深藍 #163B63 壓在紅上面看不見。 */
-  --brand:#C8102E; --brand-d:#9B0C23; --brand-soft:#FBEAEC;
-  --chrome-bg:#C8102E;
-  --chrome-grad:#C8102E;
-  --chrome-rule:#7FA8DC;
-  --line:#A81226;
-  --fill:#C8102E; --fill-ink:#ffffff;
-  --accent:#C8102E; --accent-soft:#FBEAEC;
+     ⚠ 所以頂欄下那條線要換成亮藍——深藍 #0057B8 壓在紅上面看不見。 */
+  --brand:#E30613; --brand-d:#B3040F; --brand-soft:#FDE8E9;
+  --chrome-bg:#E30613;
+  --chrome-grad:#E30613;
+  --chrome-rule:#7FB2F5;
+  --line:#C0050F;
+  --fill:#E30613; --fill-ink:#ffffff;
+  --accent:#E30613; --accent-soft:#FDE8E9;
   --bad-ink:#B4461A; --bad-bg:#FBEDE5; --bad-line:#EDCFBB;
   --bad-fill:#B4461A; --bad-bar:#B4461A; --danger:#B4461A; --rose:#B4461A;
 }
 body.adm.dark{
-  --brand:#FF8A7A; --brand-soft:#2A1210;
+  --brand:#FF8A86; --brand-soft:#2A1210;
   --chrome-grad:#000000;
-  --chrome-rule:#FF5C50;
+  --chrome-rule:#FF4A52;
   --line:#6F5A58;
-  --fill:#A32A32; --fill-ink:#ffffff;
-  --accent:#FF8A7A; --accent-soft:#2A1210;
+  --fill:#B3040F; --fill-ink:#ffffff;
+  --accent:#FF8A86; --accent-soft:#2A1210;
   --bad-ink:#E0A179; --bad-bg:#2C1D13; --bad-line:#4A3422;
   --bad-fill:#B4461A; --bad-bar:#C96A33; --danger:#E0A179; --rose:#E0A179;
 }
@@ -3462,24 +3470,24 @@ body.adm.dark{
      這裡用帶一點藍的石墨色 #1C1F26，比純黑「有東西」，印出來也不會糊成一塊。
    ⚠ 「出事」的紅維持原本的酒紅：主色是黑的，不會跟狀態色打架，
      所以不像行政那樣要把它推成橘紅。 */
-/* 特助用**更深一階的藍**（翻譯是 #163B63，特助是 #0B223D）。
+/* 特助用**更深一階的藍**（翻譯是 #0057B8，特助是 #003D80）。
    同一個色相往下壓，不是換一個色——他調度的是翻譯的行程，
    兩邊本來就該看起來是同一家。 */
 body.ass{
-  --brand:#0B223D; --brand-d:#06162A; --brand-soft:#E6ECF4;
-  --chrome-bg:#0B223D;
-  --chrome-grad:#0B223D;
-  --chrome-rule:#C8102E;
-  --line:#0B223D;
-  --fill:#0B223D; --fill-ink:#ffffff;
-  --accent:#0B223D; --accent-soft:#E6ECF4;
+  --brand:#003D80; --brand-d:#002B5C; --brand-soft:#E2EAF5;
+  --chrome-bg:#003D80;
+  --chrome-grad:#003D80;
+  --chrome-rule:#E30613;
+  --line:#003D80;
+  --fill:#003D80; --fill-ink:#ffffff;
+  --accent:#003D80; --accent-soft:#E2EAF5;
 }
 body.ass.dark{
-  --brand:#9CC0EC; --brand-soft:#0E1C2E;
+  --brand:#8FBAF2; --brand-soft:#0E1C2E;
   --chrome-grad:#000000;
-  --chrome-rule:#FF5C50;
-  --fill:#214B7C; --fill-ink:#ffffff;
-  --accent:#9CC0EC; --accent-soft:#0E1C2E;
+  --chrome-rule:#FF4A52;
+  --fill:#0B4487; --fill-ink:#ffffff;
+  --accent:#8FBAF2; --accent-soft:#0E1C2E;
 }
 
 /* 廠商篩選列。只列**這個範圍內真的有排的**，而且帶數量——
