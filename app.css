@@ -742,7 +742,10 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 
    紅色壓在下面，卡片本身往左滑才露出來。破壞性的動作藏在手勢後面，
    比擺一顆隨時按得到的「取消」安全——這一排卡片是用拇指在捲的。 */
-.swwrap{position:relative;border-radius:var(--r2);overflow:hidden;margin-bottom:8px}
+/* ⛔ 卡片之間不留縫——連續清單才是瑞士風。間隔靠每張卡自己的底線。
+   ⚠ 側滑軌道要 overflow:hidden，所以底線畫在 .ev 上不是畫在這裡。 */
+.swwrap{position:relative;border-radius:var(--r2);overflow:hidden;margin-bottom:0}
+.swwrap:last-of-type>.ev{border-bottom:0}
 /* 卡片要明確壓在按鈕上面。不寫 z-index 的話，
    絕對定位的按鈕會畫在非定位的卡片上面（CSS 的繪製順序），
    2026-09-18 實機上就是這樣——「追蹤」兩個字蓋在客戶名稱上。 */
@@ -759,7 +762,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   justify-content:center;gap:2px;background:var(--line2);color:var(--ink2);
   border-left:1px solid var(--line);transition:background .13s,color .13s}
 .swst i{font-style:normal;font-size:var(--t2);line-height:1}
-.swst b{font-size:var(--t6);font-weight:800;letter-spacing:.02em}
+.swst b{font-size:var(--t6);font-weight:700;letter-spacing:.02em}
 .swst.hot{background:var(--fill);color:var(--fill-ink)}
 .swst.bad{color:var(--danger)}
 .swst.bad.hot{background:var(--bad-fill);color:var(--fill-ink)}
@@ -810,7 +813,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
    刻意不做成卡片——它是狀態，不是可以按的東西。 */
 .savedln{display:flex;gap:7px;align-items:baseline;margin:0 0 10px;
   font-size:var(--t3);color:var(--ink2);line-height:1.5}
-.savedln .tick{color:var(--ok-ink);font-weight:800;flex:none}
+.savedln .tick{color:var(--ok-ink);font-weight:700;flex:none}
 .savedln b{color:var(--ink)}
 .savedln .wh{color:var(--ink3)}
 
@@ -1062,7 +1065,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
    細節（誰簽了、誰還沒）收在可展開的名單裡，不要一開始就洗版。 */
 .prog{display:flex;align-items:center;gap:12px;margin-top:14px}
 .prog .pn{display:flex;align-items:baseline;gap:3px;white-space:nowrap}
-.prog .pn b{font-size:var(--td);color:var(--brand);font-weight:800;line-height:1}
+.prog .pn b{font-size:var(--td);color:var(--brand);font-weight:700;line-height:1}
 .prog .pn span{font-size:var(--t2);color:var(--ink3)}
 .prog .pb{flex:1;height:8px;background:var(--line2);border-radius:var(--r2);overflow:hidden}
 .prog .pb i{display:block;height:100%;background:var(--brand);border-radius:var(--r2);
@@ -1084,7 +1087,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .roster .it:first-child{border-top:none}
 /* 有簽：實心勾＋深色粗體；沒簽：空心圈＋淺灰。不用讀文字就分得出來 */
 .roster .mk{width:22px;height:22px;border-radius:50%;flex:none;display:grid;
-  place-items:center;font-size:var(--t4);font-weight:800;
+  place-items:center;font-size:var(--t4);font-weight:700;
   border:1.5px solid var(--line);color:transparent;background:var(--card)}
 .roster .it.on .mk{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 .roster .nm{flex:1;font-size:var(--t2);color:var(--ink3)}
@@ -1101,7 +1104,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .qrurl{font-size:var(--t4);color:var(--ink3);word-break:break-all;text-align:center;
   font-family:ui-monospace,monospace}
 .prog{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:var(--t2);color:var(--ink2)}
-.prog b{font-size:var(--td);color:var(--brand);font-weight:800}
+.prog b{font-size:var(--td);color:var(--brand);font-weight:700}
 .prog button{margin-left:auto;border:1px solid var(--line);background:var(--card);
   border-radius:var(--r1);padding:6px 12px;font-size:var(--t4);font-weight:700;color:var(--ink2);
   cursor:pointer}
@@ -1200,16 +1203,21 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .filters .dot{width:8px;height:8px;border-radius:50%;display:block}
 .dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin:4px 0}
 .dow span{text-align:center;font-size:var(--t5);color:var(--ink3);font-weight:700}
-.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+/* ⛔ 瑞士風的月曆是一張**表**：格子之間用 1px 的線分隔，不是浮在底色上的方塊。
+   做法是整塊鋪線色、格子之間留 1px 的縫，縫就是線。 */
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;
+  background:var(--line2);border:1px solid var(--line2)}
 .cell{aspect-ratio:1;border-radius:var(--r1);padding:4px 3px 3px;display:flex;
-  flex-direction:column;align-items:center;gap:3px;border:1px solid transparent;
+  flex-direction:column;align-items:center;gap:3px;border:0;
   cursor:pointer;background:var(--card)}
+/* 今天：用內框標，不要用外框——外框會把格線推歪一格。 */
+.cell.today{box-shadow:inset 0 0 0 2px var(--brand)}
 .cell.dim{opacity:.3}
 .cell .d{font-size:var(--t3);color:var(--ink2);font-variant-numeric:tabular-nums}
-.cell.today{border-color:var(--brand)}
-.cell.today .d{color:var(--brand);font-weight:800}
+
+.cell.today .d{color:var(--brand);font-weight:700}
 .cell.sel{background:var(--fill);border-color:var(--fill)}
-.cell.sel .d{color:var(--fill-ink);font-weight:800}
+.cell.sel .d{color:var(--fill-ink);font-weight:700}
 .cell .dots{display:flex;gap:2px;flex-wrap:wrap;justify-content:center}
 .cell .dots i{width:5px;height:5px;border-radius:50%;display:block}
 .cell .dots i.hollow{background:transparent!important;box-shadow:inset 0 0 0 1.5px currentColor}
@@ -1224,7 +1232,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
    ⚠ 數字要用等寬數字，不然 1 跟 28 的格子看起來會歪。 */
 .cell .cbd{display:flex;width:78%;height:3.5px;border-radius:0;overflow:hidden}
 .cell .cbd i{display:block;height:100%}
-.cell .cnum{font-size:var(--t2);font-weight:800;line-height:1.05;color:var(--ink);
+.cell .cnum{font-size:var(--t2);font-weight:700;line-height:1.05;color:var(--ink);
   font-variant-numeric:tabular-nums}
 .cell .cnum.z{color:var(--line);font-weight:700}
 /* ⛔ 順序很重要：選到的那一格底是深色，數字一定要是白的。
@@ -1239,7 +1247,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .ev .b>span.c4ad{display:flex;gap:5px;align-items:baseline;margin-top:4px;
   font-size:var(--t5);color:var(--ink2)}
 .c4ad i{font-style:normal;flex:none;opacity:.5}
-.c4ad .far,.c4ad .st{color:var(--ink);font-weight:800;border-radius:5px;padding:0 4px;
+.c4ad .far,.c4ad .st{color:var(--ink);font-weight:700;border-radius:5px;padding:0 4px;
   background:color-mix(in srgb,var(--ink) 9%,transparent)}
 .c4ad .far{margin-right:2px}
 .c4ad .st{margin-left:6px}
@@ -1253,7 +1261,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .siro i{font-style:normal;opacity:.45;flex:none}
 .siro .tx{flex:1;min-width:0}
 .siro.none .tx{color:var(--ink3)}
-.siro .cp{flex:none;font-size:var(--t6);font-weight:800;color:var(--ink3);
+.siro .cp{flex:none;font-size:var(--t6);font-weight:700;color:var(--ink3);
   background:var(--line2);border-radius:5px;padding:2px 7px}
 .siro:active{background:var(--line2)}
 .sitef .hint{display:block;font-size:var(--t5);color:var(--ink3);margin-top:5px;line-height:1.6}
@@ -1261,7 +1269,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 /* 排完直接確認。⚠ 沒挑人的時候整列變灰，而且勾不動。 */
 .plango{display:flex;align-items:center;gap:8px;margin:12px 0 0;padding:11px 12px;
   border:1px solid var(--line);border-radius:var(--r1);background:var(--card);
-  font-size:var(--t3);font-weight:800;cursor:pointer}
+  font-size:var(--t3);font-weight:700;cursor:pointer}
 .plango input{width:19px;height:19px;flex:none;accent-color:var(--fill);margin:0}
 .plango s{text-decoration:none;margin-left:auto;font-size:var(--t5);font-weight:700;
   color:var(--ink3)}
@@ -1295,7 +1303,13 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
 .grp b{background:var(--fill);color:var(--fill-ink);border-radius:var(--r2);padding:1px 9px;
   font-size:var(--t4);letter-spacing:0}
 .grp.done b{background:var(--ink3)}
-.ev{display:flex;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:var(--r2);
+/* ⛔ 瑞士風的清單是「一條底線」，不是「一張一張的框」。
+   --line 變黑之後，原本的 border:1px solid var(--line) 會讓每一筆行程
+   都變成一個黑色方框，整頁像報表格線——那不是這個風格
+   （牟佑彬 2026-10-07：「跟你設計的有一點不一樣」）。
+   ⚠ 左邊那條語別色塊留著，它是這張卡唯一的顏色。 */
+.ev{display:flex;gap:10px;padding:13px 12px;border:0;border-bottom:1px solid var(--line2);
+  border-radius:var(--r2);
   margin-bottom:8px;background:var(--card);align-items:stretch}
 .ev .bar{width:3px;border-radius:var(--r2);flex:none}
 .ev .b{flex:1;min-width:0}
@@ -1518,7 +1532,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r2);
   overflow:hidden;margin-bottom:11px}
 .evsum div{background:var(--card);padding:10px 11px}
-.evsum b{display:block;font-size:var(--t0);font-weight:800;line-height:1.2;
+.evsum b{display:block;font-size:var(--t0);font-weight:700;line-height:1.2;
   font-variant-numeric:tabular-nums}
 .evsum span{display:block;font-size:var(--t5);color:var(--ink3);font-weight:700;
   letter-spacing:.06em;margin-top:2px}
@@ -1597,7 +1611,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
    這跟 --brand／--fill 是同一個道理：字的顏色與底的顏色是兩件事。 */
 .badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;
   height:18px;padding:0 5px;margin-left:5px;border-radius:var(--r2);background:var(--bad-fill);
-  color:var(--fill-ink);font-size:var(--t5);font-weight:800;font-style:normal;vertical-align:1px}
+  color:var(--fill-ink);font-size:var(--t5);font-weight:700;font-style:normal;vertical-align:1px}
 /* ── 送審頁的頁首 ──────────────────────────────────
    原本是「待我審閱　5」——一個分類名加一個數字，
    使用者還要自己想「所以我要先處理哪一筆」。
@@ -1685,7 +1699,7 @@ h3{font-size:var(--t2);margin:0 0 11px;color:var(--brand)}
   padding:12px 13px 11px;margin-bottom:10px}
 .rvw .hd{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
   padding-bottom:9px;border-bottom:1px solid var(--line);margin-bottom:10px}
-.rvw .hd i{font-style:normal;font-size:var(--t5);font-weight:800;background:var(--ink);color:var(--card);
+.rvw .hd i{font-style:normal;font-size:var(--t5);font-weight:700;background:var(--ink);color:var(--card);
   border-radius:var(--r0);padding:2px 6px}
 .rvw .hd b{font-size:var(--t1);letter-spacing:.03em}
 .rvw .hd .or{font-size:var(--t4);color:var(--ink3)}
@@ -1995,7 +2009,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 /* 案件詳情。沿用 revModal 那個整頁浮層，裡面的區塊用同一種盒子 */
 .cbox{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
   padding:13px;margin-bottom:11px}
-.cbox h4{margin:0 0 9px;font-size:var(--t5);font-weight:800;letter-spacing:.14em;
+.cbox h4{margin:0 0 9px;font-size:var(--t5);font-weight:700;letter-spacing:.14em;
   color:var(--ink3)}
 .ckv{display:grid;grid-template-columns:5.6em 1fr;gap:6px 10px;margin:0;
   font-size:var(--t3);line-height:1.55}
@@ -2009,9 +2023,9 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 .clink{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:var(--r2);
   border:1px solid var(--info-line);background:var(--info-bg);margin-bottom:11px;
   cursor:pointer}
-.clink .k{font-size:var(--t6);letter-spacing:.12em;color:var(--info-ink);font-weight:800}
+.clink .k{font-size:var(--t6);letter-spacing:.12em;color:var(--info-ink);font-weight:700}
 .clink b{display:block;font-size:var(--t3);color:var(--ink);margin-top:2px}
-.clink .go{margin-left:auto;color:var(--info-ink);font-weight:800}
+.clink .go{margin-left:auto;color:var(--info-ink);font-weight:700}
 
 /* 案件的時間軸。每一筆都掛著自己的審核狀態，
    翻譯在這裡就該看到「有一筆還沒送審」，不用切到送審頁對。 */
@@ -2041,7 +2055,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 .bp .hd b{margin-left:auto;letter-spacing:.04em;opacity:1;font-size:var(--t4)}
 .bp .leg{display:flex;align-items:center;gap:10px;padding:8px 14px 14px}
 .bp .ap{text-align:center}
-.bp .ap b{display:block;font-size:var(--td);font-weight:800;letter-spacing:.04em;
+.bp .ap b{display:block;font-size:var(--td);font-weight:700;letter-spacing:.04em;
   line-height:1.1;font-variant-numeric:tabular-nums}
 .bp .ap span{display:block;font-size:var(--t5);opacity:.7;margin-top:1px}
 .bp .arw{flex:1;position:relative;height:16px}
@@ -2110,7 +2124,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
   display:flex;align-items:center;gap:7px;
   margin:14px -12px 0;padding:6px 12px;
   background:var(--bg);border-bottom:1px solid var(--line);
-  font-size:var(--t5);font-weight:800;letter-spacing:.1em;color:var(--ink2)}
+  font-size:var(--t5);font-weight:700;letter-spacing:.1em;color:var(--ink2)}
 .tkband:first-child{margin-top:2px}
 .tkband i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--line)}
 .tkband span{margin-left:auto;font-weight:700;letter-spacing:0;color:var(--ink3)}
@@ -2138,14 +2152,14 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 /* 評鑑：已經有追蹤案件排了行程的那一格。
    不是綠的（還沒去），也不是紅的（不算缺件）——是「已經安排了」。 */
 .evgrid span.plan{background:var(--brand-soft);color:var(--brand);
-  border:1px dashed var(--info-line);font-weight:800}
+  border:1px dashed var(--info-line);font-weight:700}
 .evw .sub.planned em{color:var(--brand);font-weight:700}
 
 
 /* 行事曆卡片上的追蹤標記。已經在追蹤的那一趟要看得出來，
    不然人會以為沒開過，又開一件。 */
 .evtk{display:inline-flex;align-items:center;gap:3px;font-size:var(--t6);
-  font-weight:800;color:var(--brand);background:var(--brand-soft);
+  font-weight:700;color:var(--brand);background:var(--brand-soft);
   border-radius:var(--r2);padding:1px 7px}
 
 /* 階段條。一格一格往前走的東西，用狀態欄的三個值表達不了。
@@ -2155,7 +2169,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
   background:var(--card);font-family:inherit;font-size:var(--t4);color:var(--ink3);
   cursor:pointer;white-space:nowrap}
 .stp.done{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
-.stp.now{background:var(--fill);border-color:var(--fill);color:var(--fill-ink);font-weight:800}
+.stp.now{background:var(--fill);border-color:var(--fill);color:var(--fill-ink);font-weight:700}
 .stp:active{transform:scale(.97)}
 @media (prefers-reduced-motion:reduce){ .stp:active{transform:none} }
 
@@ -2191,7 +2205,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
    兩個中文譯名卻很短。這是寬度的事，交給 CSS。 */
 .c4ws{flex:1;min-width:0;font-size:var(--t4);color:var(--ink2);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.c4cnt{flex:none;font-size:var(--t6);font-weight:800;color:var(--ink2);
+.c4cnt{flex:none;font-size:var(--t6);font-weight:700;color:var(--ink2);
   background:var(--line2);border-radius:var(--r2);padding:1px 6px;white-space:nowrap}
 /* ⛔ 字級與顏色要寫在**不挑父層**的這一條上。
    寫在 `.ev .b > span.c4who` 裡的話，一旦被 `.c4row` 包起來（有交代事項時），
@@ -2202,7 +2216,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 
 /* 追蹤標 K1：眉標右邊寫「◷ 就醫 3/4」 */
 .c4tk{flex:none;display:inline-flex;align-items:center;gap:3px;font-size:var(--t6);
-  font-weight:800;color:var(--brand);background:var(--brand-soft);
+  font-weight:700;color:var(--brand);background:var(--brand-soft);
   border-radius:var(--r2);padding:1px 7px;white-space:nowrap}
 
 /* 進度 P2：四段細條。取代四格長條＋四個字，省掉一整行。 */
@@ -2242,7 +2256,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
   overflow-y:auto;overscroll-behavior:contain;
   box-shadow:0 -10px 34px -14px rgba(10,16,28,.45)}
 .btmsheet .shd{padding:10px 12px 9px;border-bottom:1px solid var(--line2)}
-.btmsheet .shd .k{display:block;font-size:var(--t6);letter-spacing:.12em;font-weight:800;
+.btmsheet .shd .k{display:block;font-size:var(--t6);letter-spacing:.12em;font-weight:700;
   color:var(--brand)}
 .btmsheet .shd b{display:block;font-size:var(--t2);color:var(--ink);margin-top:2px;
   letter-spacing:-.01em}
@@ -2262,7 +2276,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 /* 上鎖要講原因與怎麼辦。只把按鈕拿掉，人會以為系統壞了。 */
 .swhy{margin:4px 12px 6px;font-size:var(--t5);color:var(--ink3);line-height:1.6}
 .scancel{width:100%;margin-top:7px;background:var(--card);border:0;border-radius:var(--r2);
-  padding:14px;font-family:inherit;font-weight:800;font-size:var(--t2);color:var(--ink2);
+  padding:14px;font-family:inherit;font-weight:700;font-size:var(--t2);color:var(--ink2);
   cursor:pointer;box-shadow:0 -6px 20px -14px rgba(10,16,28,.4)}
 
 /* ── 追蹤的整串服務（他挑的 L1 時間軸清單）── */
@@ -2277,14 +2291,14 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 .chl .ci:last-of-type::before{height:15px}
 .ci .no{position:absolute;left:6px;top:11px;width:16px;height:16px;border-radius:50%;
   background:var(--card);border:1.5px solid var(--brand);color:var(--brand);
-  font-size:var(--t6);font-weight:800;display:flex;align-items:center;
+  font-size:var(--t6);font-weight:700;display:flex;align-items:center;
   justify-content:center;font-variant-numeric:tabular-nums;z-index:1}
 /* 目前這一筆要標出來。不然點進去看完第一筆，回來就不知道自己原本在哪。 */
 .ci.cur{background:var(--brand-soft)}
 .ci.cur .no{background:var(--fill);color:var(--fill-ink)}
 .ci .top{display:flex;align-items:baseline;gap:6px;min-width:0}
 .ci .d{font-size:var(--t3);font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
-.ci .me{font-size:var(--t6);font-weight:800;color:var(--brand);background:var(--card);
+.ci .me{font-size:var(--t6);font-weight:700;color:var(--brand);background:var(--card);
   border:1px solid var(--info-line);border-radius:var(--r2);padding:0 6px;flex:none}
 .ci .cd{font-size:var(--t6);color:var(--ink3);font-family:ui-monospace,Menlo,monospace;
   margin-left:auto;flex:none}
@@ -2299,7 +2313,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 .cadd:active{background:var(--brand-soft)}
 
 /* ── 加入追蹤：挑一件 ── */
-.mgsec{font-size:var(--t6);letter-spacing:.14em;font-weight:800;color:var(--ink3);
+.mgsec{font-size:var(--t6);letter-spacing:.14em;font-weight:700;color:var(--ink3);
   padding:10px 12px 5px}
 .mgi{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;
   background:transparent;font-family:inherit;padding:10px 12px;border-radius:var(--r2);
@@ -2311,7 +2325,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 .mgi b{display:block;font-size:var(--t3);color:var(--ink)}
 .mgi span{display:block;font-size:var(--t5);color:var(--ink3);margin-top:1px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mgi .hit{display:inline-block;font-size:var(--t6);font-weight:800;color:var(--ok-ink);
+.mgi .hit{display:inline-block;font-size:var(--t6);font-weight:700;color:var(--ok-ink);
   background:var(--ok-bg);border-radius:var(--r2);padding:0 6px;margin-left:6px}
 .mgnone{margin:14px 12px;font-size:var(--t3);color:var(--ink3)}
 
@@ -2328,7 +2342,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 .mgmini .r:last-child{border-bottom:0}
 .mgmini .r.new{background:var(--ok-bg);color:var(--ok-ink);font-weight:700}
 .mgmini .no{flex:none;width:17px;height:17px;border-radius:50%;background:var(--line2);
-  color:var(--ink2);font-size:var(--t6);font-weight:800;display:flex;align-items:center;
+  color:var(--ink2);font-size:var(--t6);font-weight:700;display:flex;align-items:center;
   justify-content:center;font-variant-numeric:tabular-nums}
 .mgmini .r.new .no{background:var(--ok-fill);color:var(--fill-ink)}
 .mgmini .d{flex:none;font-variant-numeric:tabular-nums;font-weight:700;font-size:var(--t5)}
@@ -2336,7 +2350,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 .mgmini .was{flex:none;font-size:var(--t6);color:var(--ink3)}
 .mggo{display:flex;gap:8px;margin:12px 12px 6px}
 .mggo button{flex:1;padding:13px;border-radius:var(--r2);font-family:inherit;font-size:var(--t2);
-  font-weight:800;cursor:pointer;border:1px solid var(--line);background:var(--card);
+  font-weight:700;cursor:pointer;border:1px solid var(--line);background:var(--card);
   color:var(--ink2)}
 .mggo button.p{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
 
@@ -2350,7 +2364,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 .c5:active{background:var(--line2)}
 .c5line{margin:0 0 11px;font-size:var(--t2);letter-spacing:-.005em}
 .c5line b{color:var(--brand)}
-.c5k{display:inline-block;font-weight:800;color:var(--brand);
+.c5k{display:inline-block;font-weight:700;color:var(--brand);
   background:var(--brand-soft);border-radius:var(--r2);padding:1px 8px;
   font-size:var(--t4);margin-right:6px}
 /* 進度：一格一次服務，最後補一格「下一次」 */
@@ -2383,7 +2397,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
    動作掛在對應的那一格旁邊，底下只留一顆主要按鈕。 */
 .c6sum{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
   border-top:3px solid var(--brand);padding:13px;margin-bottom:10px}
-.c6who{font-size:var(--t1);font-weight:800;letter-spacing:-.01em;line-height:1.3}
+.c6who{font-size:var(--t1);font-weight:700;letter-spacing:-.01em;line-height:1.3}
 .c6at{font-size:var(--t3);color:var(--ink2);margin-top:1px}
 /* 現在走到哪一步。系統自己算的，不是人手動切的——
    原本那三顆手動按鈕 2026-09-19 拿掉了，理由寫在 app.js 的 caseSummary 裡。 */
@@ -2398,7 +2412,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 .c6link .go{margin-left:auto;color:var(--ink3)}
 .c6det{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
   padding:11px 13px;margin-bottom:10px}
-.c6dh{margin:0 0 7px;font-size:var(--t4);font-weight:800;color:var(--ink3);
+.c6dh{margin:0 0 7px;font-size:var(--t4);font-weight:700;color:var(--ink3);
   display:flex;align-items:center}
 .c6edit{margin-left:auto;border:1px solid var(--line);background:none;
   border-radius:var(--r1);padding:2px 10px;font-family:inherit;font-size:var(--t5);
@@ -2434,7 +2448,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 .c6sug .c{flex:1;min-width:0}
 .c6sug .c b{display:block;font-size:var(--t3);color:var(--warn-ink)}
 .c6sug .c span{display:block;font-size:var(--t4);color:var(--ink2)}
-.c6sug .go{font-size:var(--t4);font-weight:800;color:var(--warn-ink);flex:none}
+.c6sug .go{font-size:var(--t4);font-weight:700;color:var(--warn-ink);flex:none}
 
 /* ── 挑選還沒歸案的服務 lp（2026-09-19）───────────────────── */
 .lptally{display:flex;flex-wrap:wrap;gap:3px 12px;margin:0 0 10px;
@@ -2447,7 +2461,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
   padding:9px 12px;font-family:inherit;font-size:var(--t2);background:var(--card);
   color:var(--ink)}
 .lpgrp{display:flex;align-items:baseline;gap:8px;margin:14px 0 6px}
-.lpgrp b{font-size:var(--t4);font-weight:800;color:var(--brand)}
+.lpgrp b{font-size:var(--t4);font-weight:700;color:var(--brand)}
 .lpgrp span{font-size:var(--t5);color:var(--ink3)}
 .lpgrp::after{content:'';flex:1;height:1px;background:var(--line)}
 .lprw{display:flex;gap:10px;border:1px solid var(--line);border-radius:var(--r2);
@@ -2493,11 +2507,11 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 .lppv .pvi .c b{display:block;font-weight:600}
 .lppv .pvi .c span{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size:var(--t6);color:var(--ink3)}
-.lppv .t{font-size:var(--t6);font-weight:800;border-radius:var(--r2);padding:1px 8px;
+.lppv .t{font-size:var(--t6);font-weight:700;border-radius:var(--r2);padding:1px 8px;
   flex:none;background:var(--brand-soft);color:var(--brand)}
 
 /* 追蹤案件自己排的行程，在行事曆卡片上要標出來 */
-.c4auto{flex:none;font-size:var(--t6);font-weight:800;color:var(--ink2);
+.c4auto{flex:none;font-size:var(--t6);font-weight:700;color:var(--ink2);
   background:var(--line2);border-radius:var(--r2);padding:1px 6px;white-space:nowrap}
 @media (max-width:380px){ .c4auto{display:none} }
 
@@ -2619,7 +2633,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
   transform:rotate(-3deg)}
 .stp.on b{color:var(--ok-ink)}
 .stp.on::before{content:"\2713";display:block;font-size:var(--t1);color:var(--ok-bar);
-  font-weight:800;line-height:1}
+  font-weight:700;line-height:1}
 .stp.miss{border-color:var(--bad-bar)}
 .stp.miss b{color:var(--bad-ink)}
 @media (prefers-reduced-motion:reduce){ .stp.on{transform:none} }
@@ -2629,7 +2643,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
   border:1px solid var(--line);border-radius:var(--r1);padding:8px 11px;
   border-left:5px solid var(--warn-bar)}
 .tag2 .n{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--t1);
-  font-weight:800;color:var(--warn-ink);font-variant-numeric:tabular-nums}
+  font-weight:700;color:var(--warn-ink);font-variant-numeric:tabular-nums}
 .tag2 .t{font-size:var(--t5);color:var(--ink2);line-height:1.4}
 .tag2 .t b{display:block;color:var(--ink);font-size:var(--t4)}
 
@@ -2796,7 +2810,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 /* 已經打過了。跟著那一列走，縮排對齊名字。 */
 .hcdone{font-size:var(--t5);color:var(--ink3);padding:0 0 8px 1px;
   margin-top:-4px}
-.hcrow .st{font-size:var(--t6);font-weight:800;border-radius:var(--r2);padding:1px 8px;
+.hcrow .st{font-size:var(--t6);font-weight:700;border-radius:var(--r2);padding:1px 8px;
   flex:none}
 .hcrow .st.g{background:var(--ok-bg);color:var(--ok-ink)}
 .hcrow .st.b{background:var(--info-bg);color:var(--info-ink)}
@@ -2808,7 +2822,7 @@ body.dark .login{background:radial-gradient(120% 78% at 78% -4%,
 
 /* 報到來源。強弱要分得出來——翻譯點名與收據是證據，
    工人自己按只是訊號，不可以拿來當缺席扣款的依據。 */
-.src{font-size:var(--t6);font-weight:800;border-radius:var(--r0);padding:0 5px;
+.src{font-size:var(--t6);font-weight:700;border-radius:var(--r0);padding:0 5px;
   margin-right:5px}
 .src.a{background:var(--ok-bg);color:var(--ok-ink)}
 .src.b{background:var(--info-bg);color:var(--info-ink)}
@@ -2931,7 +2945,7 @@ body.finding .tabs{display:none}
   cursor:pointer;min-height:2.75rem}
 .fdrow:first-child{border-top:0}
 .fdrow:active{background:var(--sunk)}
-.fdrow .k{flex:none;width:26px;font-size:var(--t6);font-weight:800;
+.fdrow .k{flex:none;width:26px;font-size:var(--t6);font-weight:700;
   letter-spacing:.06em;color:var(--ink3)}
 .fdrow .m{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fdrow .m u{text-decoration:none;color:var(--ink3);font-size:var(--t4);margin-left:6px}
@@ -2943,7 +2957,7 @@ body.finding .tabs{display:none}
 .pcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
   margin:9px 12px 0;overflow:hidden}
 .phd{padding:13px 14px}
-.phd .nm{font-size:var(--td);font-weight:800;letter-spacing:-.01em;line-height:1.2}
+.phd .nm{font-size:var(--td);font-weight:700;letter-spacing:-.01em;line-height:1.2}
 .phd .nm.sm{font-size:var(--t0)}
 .phd .og{font-size:var(--t3);color:var(--ink3);margin-top:1px;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
@@ -2960,7 +2974,7 @@ body.finding .tabs{display:none}
 
 .psec{display:flex;align-items:center;gap:7px;padding:7px 12px;margin:14px 0 0;
   background:var(--bg);border-bottom:1px solid var(--line);
-  font-size:var(--t5);font-weight:800;letter-spacing:.1em;color:var(--ink2)}
+  font-size:var(--t5);font-weight:700;letter-spacing:.1em;color:var(--ink2)}
 .psec i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--line)}
 .psec.warn{color:var(--warn-ink)} .psec.warn i{background:var(--warn-bar)}
 .psec span{margin-left:auto;font-weight:700;letter-spacing:0;color:var(--ink3)}
@@ -2981,7 +2995,7 @@ body.finding .tabs{display:none}
   text-overflow:ellipsis;white-space:nowrap}
 .prow.tap .vl b{color:var(--brand)}
 /* 「服務過他的人」裡把自己標出來。翻譯掃過去第一件事是找自己在不在。 */
-.prow .pme{font-style:normal;font-size:var(--t6);font-weight:800;
+.prow .pme{font-style:normal;font-size:var(--t6);font-weight:700;
   padding:1px 6px;border-radius:0;background:var(--accent-soft);
   color:var(--brand);letter-spacing:.06em}
 .prow .go{flex:none;font-size:var(--t4);font-weight:700;color:var(--brand)}
@@ -2997,14 +3011,14 @@ body.finding .tabs{display:none}
   text-overflow:ellipsis;white-space:nowrap}
 .ptl .bd s{display:block;text-decoration:none;font-size:var(--t5);
   color:var(--ink3);margin-top:1px}
-.ptl .kk{flex:none;font-size:var(--t6);font-weight:800;letter-spacing:.06em;
+.ptl .kk{flex:none;font-size:var(--t6);font-weight:700;letter-spacing:.06em;
   color:var(--ink3);padding-top:2px}
 
 /* 續聘那一塊。⚠ 用警示色不是錯誤色——這不是壞掉，是要你知道。 */
 .pwarn{margin:9px 12px 0;padding:10px 12px;border-radius:var(--r2);
   background:var(--warn-bg);border:1px solid var(--warn-line);
   font-size:var(--t4);color:var(--warn-ink);line-height:1.6}
-.pwarn b{display:block;font-weight:800;margin-bottom:2px}
+.pwarn b{display:block;font-weight:700;margin-bottom:2px}
 
 /* 可以改的兩格。虛線框＝「這裡跟上面那些唯讀的不一樣」。 */
 .pedit{margin:9px 12px 0;padding:11px 12px;border-radius:var(--r2);
@@ -3025,7 +3039,7 @@ body.finding .tabs{display:none}
       不標的話他會以為按了才生效，但其實畫面上已經在用管理系統那個了。 */
 .pconf{margin:9px 12px 0;padding:11px 12px;border-radius:var(--r2);
   background:var(--bad-bg);border:1px solid var(--bad-line)}
-.pconf b{display:block;font-size:var(--t4);font-weight:800;color:var(--bad-ink)}
+.pconf b{display:block;font-size:var(--t4);font-weight:700;color:var(--bad-ink)}
 .pconf .two{display:flex;gap:9px;margin-top:8px}
 .pconf .two > div{flex:1;min-width:0;padding:8px 10px;border-radius:var(--r1);
   background:var(--card);border:1px solid var(--line);
@@ -3231,7 +3245,7 @@ body.tabsbottom .tabs.few button{min-width:120px}
 .c4row > span.c4todo{display:inline-flex;align-items:center;gap:5px;flex:none;
   box-sizing:border-box;cursor:pointer;-webkit-tap-highlight-color:transparent;
   padding:4px 8px;border-radius:0;margin:0;
-  font-size:11.5px;font-weight:800;line-height:1.35;white-space:nowrap;
+  font-size:11.5px;font-weight:700;line-height:1.35;white-space:nowrap;
   color:var(--ink2);background:color-mix(in srgb,var(--ink3) 12%,var(--card));
   border:0;transition:background-color .16s ease,color .16s ease}
 .c4todo:active{background:color-mix(in srgb,var(--ink3) 22%,var(--card))}
@@ -3276,7 +3290,7 @@ body.tabsbottom .tabs.few button{min-width:120px}
 .c4tdl.on .c4tdin b:nth-child(6){transition-delay:.36s}
 .c4tdl.on .c4tdin b:nth-child(7){transition-delay:.42s}
 .c4tdin b.done{color:var(--ink3);text-decoration:line-through}
-.c4tdin b u{text-decoration:none;flex:none;font-weight:800;
+.c4tdin b u{text-decoration:none;flex:none;font-weight:700;
   color:var(--ink3);font-size:.95em}
 .c4tdin b.done u{color:var(--ok-ink)}
 @media (prefers-reduced-motion:reduce){
@@ -3361,8 +3375,8 @@ body.tabsbottom .tabs.few button{min-width:120px}
 .aunm s{text-decoration:none;color:var(--ink3);font-size:var(--t5)}
 .aurow.bad .aunm s{color:var(--bad-ink);opacity:.8}
 .aun{font-variant-numeric:tabular-nums;color:var(--ink3);font-size:var(--t5)}
-.aurow.bad .aun{color:var(--bad-ink);font-weight:800}
-.auno{width:16px;text-align:center;font-weight:800;flex:none}
+.aurow.bad .aun{color:var(--bad-ink);font-weight:700}
+.auno{width:16px;text-align:center;font-weight:700;flex:none}
 #auBox textarea{width:100%}
 
 
@@ -3515,7 +3529,7 @@ body.filladm #admTodoBox{display:block}
    ⛔ 客戶名旁邊那個服務對象標的條件是「開頭不是工廠」，而一對多開頭剛好是
       「工廠」，所以它永遠被藏起來——行事曆上完全看不出這一趟是一對多
       （牟佑彬 2026-10-04）。用資訊色，跟狀態色（好／壞）分開。 */
-.c4many{flex:none;font-size:var(--t6);font-weight:800;white-space:nowrap;
+.c4many{flex:none;font-size:var(--t6);font-weight:700;white-space:nowrap;
   color:var(--info-ink);background:var(--info-bg);
   border-radius:var(--r2);padding:1px 6px}
 
@@ -3526,7 +3540,7 @@ body.filladm #admTodoBox{display:block}
      不用為行政再寫一份。
    ⚠ 間距一律落在 8 的倍數上。 */
 .sumhd{margin:0 0 12px}
-.sumhd h3{margin:0;font-size:1.15rem;font-weight:800;letter-spacing:-.01em}
+.sumhd h3{margin:0;font-size:1.15rem;font-weight:700;letter-spacing:-.01em}
 .sumhd h3 s{text-decoration:none;display:block;margin-top:2px;
   font-size:var(--t4);font-weight:600;color:var(--ink3);letter-spacing:0}
 
@@ -3547,14 +3561,14 @@ body.filladm #admTodoBox{display:block}
   -webkit-tap-highlight-color:transparent;
   transition:border-color .16s ease,box-shadow .16s ease,transform .1s ease}
 .sumf button:active{transform:scale(.97)}
-.sumf button em{font-style:normal;font-weight:800;font-size:.95rem;
+.sumf button em{font-style:normal;font-weight:700;font-size:.95rem;
   font-variant-numeric:tabular-nums;color:var(--ink2)}
 .sumf button.on{border-color:var(--fill);color:var(--fill);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--fill) 13%,transparent)}
 .sumf button.on em{color:var(--fill)}
 
 .sumbar{display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap}
-.sumbar > b{font-size:var(--t4);font-weight:800;color:var(--ink2)}
+.sumbar > b{font-size:var(--t4);font-weight:700;color:var(--ink2)}
 .sumbar .sp{flex:1}
 .sumsort{display:inline-flex;border:1px solid var(--line);border-radius:9px;
   overflow:hidden;background:var(--card)}
@@ -3563,7 +3577,7 @@ body.filladm #admTodoBox{display:block}
   -webkit-tap-highlight-color:transparent}
 .sumsort button.on{background:var(--fill);color:var(--fill-ink)}
 
-.sumday{margin:16px 2px 8px;font-size:var(--t4);font-weight:800;color:var(--ink3);
+.sumday{margin:16px 2px 8px;font-size:var(--t4);font-weight:700;color:var(--ink3);
   display:flex;align-items:baseline;gap:8px}
 .sumday.now{color:var(--fill)}
 .sumday u{text-decoration:none;font-weight:700;font-size:var(--t5);
@@ -3580,7 +3594,7 @@ body.filladm #admTodoBox{display:block}
 .sumrow.gap{border-style:dashed;
   border-color:color-mix(in srgb,var(--bad-ink) 50%,var(--line));
   background:color-mix(in srgb,var(--bad-ink) 5%,var(--card))}
-.sdt{grid-row:1/3;font-size:.95rem;font-weight:800;line-height:1.15;
+.sdt{grid-row:1/3;font-size:.95rem;font-weight:700;line-height:1.15;
   font-variant-numeric:tabular-nums;color:var(--ink)}
 .sdt u{display:block;text-decoration:none;font-size:var(--t6);font-weight:700;
   color:var(--ink3);letter-spacing:.04em}
@@ -3590,7 +3604,7 @@ body.filladm #admTodoBox{display:block}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .srt{grid-row:1/3;grid-column:3;display:flex;flex-direction:column;
   align-items:flex-end;gap:4px}
-.spill{font-size:var(--t6);font-weight:800;padding:2px 8px;border-radius:0;
+.spill{font-size:var(--t6);font-weight:700;padding:2px 8px;border-radius:0;
   white-space:nowrap;border:1px solid transparent}
 .s-pre{background:var(--line2);color:var(--ink3);border-color:var(--line);
   border-style:dashed}
@@ -3607,7 +3621,7 @@ body.filladm #admTodoBox{display:block}
 /* 「有沒有忘記排」 */
 .summiss{margin:24px 0 8px;background:var(--card);border:1px solid var(--line);
   border-left:3px solid var(--bad-ink);border-radius:var(--r2);padding:12px 14px}
-.summiss h4{margin:0 0 8px;font-size:var(--t4);font-weight:800}
+.summiss h4{margin:0 0 8px;font-size:var(--t4);font-weight:700}
 .summiss .cs{display:flex;gap:6px;flex-wrap:wrap}
 .summiss .cs span{font-size:var(--t5);font-weight:700;padding:4px 9px;
   border-radius:8px;background:var(--bg);border:1px solid var(--line2)}
@@ -3620,10 +3634,10 @@ body.filladm #admTodoBox{display:block}
    ⚠ 間距一律落在 8 的倍數上。 */
 .pshd{display:flex;align-items:center;gap:8px;margin:0 0 12px}
 .pshd .d{flex:1;min-width:0;text-align:center}
-.pshd .d b{display:block;font-size:1.05rem;font-weight:800}
+.pshd .d b{display:block;font-size:1.05rem;font-weight:700}
 .pshd .d s{display:block;text-decoration:none;font-size:var(--t5);color:var(--ink3);
   font-weight:700;margin-top:1px}
-.psnav{flex:none;font:inherit;font-size:1.1rem;font-weight:800;cursor:pointer;
+.psnav{flex:none;font:inherit;font-size:1.1rem;font-weight:700;cursor:pointer;
   width:36px;height:36px;border-radius:10px;border:1px solid var(--line);
   background:var(--card);color:var(--ink);-webkit-tap-highlight-color:transparent}
 .pstm{display:block;margin:0 auto 12px;font:inherit;font-size:var(--t5);font-weight:700;
@@ -3635,8 +3649,8 @@ body.filladm #admTodoBox{display:block}
   margin-bottom:8px;overflow:hidden}
 .pshdr{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;
   -webkit-tap-highlight-color:transparent}
-.pshdr b{font-size:.95rem;font-weight:800}
-.pshdr .lg{font-size:var(--t6);font-weight:800;color:var(--ink3);
+.pshdr b{font-size:.95rem;font-weight:700}
+.pshdr .lg{font-size:var(--t6);font-weight:700;color:var(--ink3);
   background:var(--line2);border-radius:0;padding:1px 7px}
 .pshdr s{text-decoration:none;font-size:var(--t5);color:var(--ink3);font-weight:700}
 .psin{display:none;border-top:1px solid var(--line2);padding:4px 12px 12px}
@@ -3651,7 +3665,7 @@ body.filladm #admTodoBox{display:block}
 .pszone.hit{border-color:var(--fill);border-style:solid;
   background:color-mix(in srgb,var(--fill) 7%,var(--card))}
 .pszh{display:flex;align-items:baseline;gap:7px;padding:1px 4px 6px;
-  font-size:var(--t5);font-weight:800;color:var(--ink3)}
+  font-size:var(--t5);font-weight:700;color:var(--ink3)}
 .pszh s{text-decoration:none;margin-left:auto;font-weight:700;font-size:var(--t6)}
 /* 同一個壓了時間的時段有兩件以上＝撞在一起，標題直接講，比每一塊都標「卡住」清楚 */
 .pszh.b{color:var(--bad-ink)}
@@ -3678,16 +3692,16 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .pstr .nz{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;
   margin-top:1px;width:46px}
 .pstr .no{width:21px;height:21px;border-radius:7px;background:var(--fill);
-  color:var(--fill-ink);font-size:var(--t6);font-weight:800;
+  color:var(--fill-ink);font-size:var(--t6);font-weight:700;
   display:flex;align-items:center;justify-content:center}
 /* ⚠ 時間的字本來只有 9px，他 2026-10-05 說太小。放大，
    而且壓了真的時間（09:30）的再加深一階，一眼分得出哪幾件約好了。 */
-.pstr .nz .sl{font-size:var(--t4);font-weight:800;color:var(--ink3);white-space:nowrap;
+.pstr .nz .sl{font-size:var(--t4);font-weight:700;color:var(--ink3);white-space:nowrap;
   letter-spacing:-.02em}
 .pstr .nz .sl.t{font-size:var(--t3);color:var(--ink);
   font-variant-numeric:tabular-nums}
 .pstr .bd{flex:1;min-width:0}
-.pstr .c{font-size:var(--t4);font-weight:800;display:block}
+.pstr .c{font-size:var(--t4);font-weight:700;display:block}
 .pstr .t{font-size:var(--t5);color:var(--ink3);margin-top:1px;display:block}
 /* 每一塊最後一行是工廠地址（只留到路名）。台中以外的縣市標紅——
    跨縣市就是「要留半天」的訊號。 */
@@ -3695,31 +3709,31 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
   gap:5px;align-items:baseline}
 .pstr .ad i{font-style:normal;flex:none;opacity:.55}
 /* 跨縣市：看得到就好，不要用警示紅（他 2026-10-04 說不要紅色）。 */
-.pstr .ad .far{color:var(--ink);font-weight:800;margin-right:4px;
+.pstr .ad .far{color:var(--ink);font-weight:700;margin-right:4px;
   background:color-mix(in srgb,var(--ink) 9%,transparent);
   border-radius:5px;padding:0 4px}
 .pstr .ad .non{opacity:.6;font-style:normal}
 /* 灰字註記：請假／說那天不行／語言對不上。**只寫事實，不做判斷** */
 .pstr .nt{display:block;font-size:var(--t6);color:var(--ink3);margin-top:5px}
 .pstr .mv{display:flex;gap:5px;margin-top:6px}
-.pstr .mv button{flex:1;font:inherit;font-size:var(--t6);font-weight:800;cursor:pointer;
+.pstr .mv button{flex:1;font:inherit;font-size:var(--t6);font-weight:700;cursor:pointer;
   padding:6px 3px;border-radius:7px;border:1px solid var(--line);
   background:var(--card);color:var(--ink2);-webkit-tap-highlight-color:transparent}
 .pstr .gp{flex:none;width:20px;align-self:center;text-align:center;color:var(--ink3);
   font-size:1rem;line-height:1;letter-spacing:-1px}
 
-.psok{width:100%;margin-top:10px;font:inherit;font-size:var(--t4);font-weight:800;
+.psok{width:100%;margin-top:10px;font:inherit;font-size:var(--t4);font-weight:700;
   cursor:pointer;padding:10px;border-radius:var(--r1);border:1px solid var(--line);
   background:var(--card);color:var(--ink2)}
-.psall{width:100%;margin-top:8px;font:inherit;font-size:var(--t3);font-weight:800;
+.psall{width:100%;margin-top:8px;font:inherit;font-size:var(--t3);font-weight:700;
   cursor:pointer;padding:13px;border-radius:var(--r1);border:0;
   background:var(--fill);color:var(--fill-ink)}
 
 /* 戊：一人一頁 */
 .pssw{display:flex;align-items:center;gap:8px;margin:0 0 10px}
 .pssw .m{flex:1;min-width:0;text-align:center}
-.pssw .m b{font-size:1rem;font-weight:800}
-.pssw .m .lg{font-size:var(--t6);font-weight:800;color:var(--ink3);
+.pssw .m b{font-size:1rem;font-weight:700}
+.pssw .m .lg{font-size:var(--t6);font-weight:700;color:var(--ink3);
   background:var(--line2);border-radius:0;padding:1px 7px;margin-left:6px}
 .pssw .m s{display:block;text-decoration:none;font-size:var(--t5);color:var(--ink3);
   font-weight:700;margin-top:1px}
@@ -3735,10 +3749,10 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
   padding:14px 14px 22px;max-height:84vh;overflow-y:auto;
   animation:psup .26s cubic-bezier(.32,.72,0,1)}
 @keyframes psup{from{transform:translateY(14px);opacity:.5}to{transform:none;opacity:1}}
-.psbx h4{margin:0 0 2px;font-size:1rem;font-weight:800}
+.psbx h4{margin:0 0 2px;font-size:1rem;font-weight:700}
 .psbx .mt{margin:0 0 12px;font-size:var(--t5);color:var(--ink3)}
 .pspk{border:1px solid var(--line);border-radius:var(--r1);overflow:hidden}
-.pspk .sec{padding:6px 11px;font-size:var(--t6);font-weight:800;letter-spacing:.05em;
+.pspk .sec{padding:6px 11px;font-size:var(--t6);font-weight:700;letter-spacing:.05em;
   color:var(--ink3);background:var(--bg);border-top:1px solid var(--line2)}
 .pspk .sec:first-child{border-top:0}
 .psit{display:flex;gap:9px;align-items:center;padding:11px;cursor:pointer;
@@ -3748,27 +3762,27 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .psit.no{background:var(--bg);cursor:not-allowed}
 .psit.no .nm,.psit.no .rs{color:var(--ink3)}
 .psit .bd{flex:1;min-width:0}
-.psit .nm{font-size:.92rem;font-weight:800;display:flex;align-items:baseline;gap:6px}
-.psit .nm .bk{font-size:var(--t6);font-weight:800;color:var(--ok-ink);
+.psit .nm{font-size:.92rem;font-weight:700;display:flex;align-items:baseline;gap:6px}
+.psit .nm .bk{font-size:var(--t6);font-weight:700;color:var(--ok-ink);
   background:var(--ok-bg);border:1px solid var(--ok-line);border-radius:0;padding:1px 7px}
 .psit .rs{font-size:var(--t5);color:var(--ink2);margin-top:2px}
 .psit .rs .stop{color:var(--bad-ink);font-weight:700}
-.psit .go{flex:none;font-size:var(--t5);font-weight:800;color:var(--fill)}
+.psit .go{flex:none;font-size:var(--t5);font-weight:700;color:var(--fill)}
 /* 原生的時間／日期選擇器。⚠ 一定要夠大——她在工廠用手機點的。 */
-.psbig{width:100%;font:inherit;font-size:1.5rem;font-weight:800;text-align:center;
+.psbig{width:100%;font:inherit;font-size:1.5rem;font-weight:700;text-align:center;
   padding:14px 10px;border-radius:var(--r1);border:1px solid var(--line);
   background:var(--card);color:var(--ink);margin-bottom:10px;
   font-variant-numeric:tabular-nums}
 .psquick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-.psquick button{flex:1;min-width:76px;font:inherit;font-size:var(--t4);font-weight:800;
+.psquick button{flex:1;min-width:76px;font:inherit;font-size:var(--t4);font-weight:700;
   cursor:pointer;padding:9px 6px;border-radius:9px;border:1px solid var(--line);
   background:var(--card);color:var(--ink2);-webkit-tap-highlight-color:transparent}
 .psquick button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
-.psgo{width:100%;font:inherit;font-size:var(--t3);font-weight:800;cursor:pointer;
+.psgo{width:100%;font:inherit;font-size:var(--t3);font-weight:700;cursor:pointer;
   padding:13px;border-radius:var(--r1);border:1px solid var(--fill);
   background:var(--fill);color:var(--fill-ink);margin-bottom:8px}
 
-.pscls{width:100%;margin-top:11px;font:inherit;font-weight:800;font-size:var(--t3);
+.pscls{width:100%;margin-top:11px;font:inherit;font-weight:700;font-size:var(--t3);
   padding:12px;border-radius:var(--r1);border:1px solid var(--line);
   background:var(--card);color:var(--ink2);cursor:pointer}
 @media (prefers-reduced-motion:reduce){ .psbx{animation:none} }
@@ -3781,7 +3795,7 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .rtwho{display:flex;gap:6px;overflow-x:auto;padding:1px 0 8px;margin:0 0 9px;
   scrollbar-width:none}
 .rtwho::-webkit-scrollbar{display:none}
-.rtwho button{flex:none;font:inherit;font-size:var(--t5);font-weight:800;cursor:pointer;
+.rtwho button{flex:none;font:inherit;font-size:var(--t5);font-weight:700;cursor:pointer;
   padding:6px 12px;border-radius:0;border:1px solid var(--line);
   background:var(--card);color:var(--ink2);-webkit-tap-highlight-color:transparent}
 .rtwho button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
@@ -3795,7 +3809,7 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .pswho{display:flex;gap:6px;overflow-x:auto;padding:1px 0 9px;margin:-2px 0 8px;
   scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .pswho::-webkit-scrollbar{display:none}
-.pswho button{flex:none;font:inherit;font-size:var(--t5);font-weight:800;cursor:pointer;
+.pswho button{flex:none;font:inherit;font-size:var(--t5);font-weight:700;cursor:pointer;
   padding:7px 12px;border-radius:0;border:1px solid var(--line);
   background:var(--card);color:var(--ink2);-webkit-tap-highlight-color:transparent}
 .pswho button.on{background:var(--fill);border-color:var(--fill);color:var(--fill-ink)}
@@ -3807,19 +3821,19 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .rtnone s{display:block;text-decoration:none;font-size:var(--t5);margin-top:4px;opacity:.8}
 .rtov{padding:8px 2px;border-top:1px solid var(--line2)}
 .rtov:first-of-type{border-top:0}
-.rtov .t{display:flex;align-items:baseline;gap:7px;font-size:var(--t4);font-weight:800}
+.rtov .t{display:flex;align-items:baseline;gap:7px;font-size:var(--t4);font-weight:700}
 .rtov .t .far{color:var(--ink2);font-size:var(--t6);
   background:color-mix(in srgb,var(--ink) 9%,transparent);
   border-radius:5px;padding:0 4px;margin-left:4px}
-.rtov .t s{text-decoration:none;margin-left:auto;font-size:var(--t6);font-weight:800;
+.rtov .t s{text-decoration:none;margin-left:auto;font-size:var(--t6);font-weight:700;
   color:var(--bad-ink);background:var(--bad-bg);border:1px solid var(--bad-line);
   border-radius:0;padding:1px 8px}
 .rtov .r{display:flex;align-items:baseline;gap:7px;padding:4px 0 0;font-size:var(--t5)}
 .rtov .r i{flex:none;width:9px;height:9px;border-radius:50%;align-self:center}
-.rtov .r b{flex:none;font-weight:800}
+.rtov .r b{flex:none;font-weight:700}
 .rtov .r span{flex:1;min-width:0;color:var(--ink2);overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
-.rtov .r u{flex:none;text-decoration:none;font-size:var(--t6);font-weight:800;
+.rtov .r u{flex:none;text-decoration:none;font-size:var(--t6);font-weight:700;
   color:var(--ink3)}
 .rtsum .pp{display:inline-flex;align-items:center;gap:5px;margin-right:10px;font-weight:700}
 .rtsum .pp i{width:9px;height:9px;border-radius:50%;display:inline-block}
@@ -3841,7 +3855,7 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .rtmap .tw{fill:currentColor;fill-opacity:.035;stroke:currentColor;stroke-opacity:.16;
   stroke-width:.8;vector-effect:non-scaling-stroke}
 .rtz{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:5px}
-.rtz button{font:inherit;font-size:var(--t4);font-weight:800;cursor:pointer;
+.rtz button{font:inherit;font-size:var(--t4);font-weight:700;cursor:pointer;
   width:32px;height:32px;border-radius:10px;border:1px solid var(--line);
   background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12);
   display:flex;align-items:center;justify-content:center;padding:0}
@@ -3857,7 +3871,7 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 
 .rtlist{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);
   padding:9px 11px}
-.rth{display:flex;align-items:baseline;gap:7px;font-size:var(--t5);font-weight:800;
+.rth{display:flex;align-items:baseline;gap:7px;font-size:var(--t5);font-weight:700;
   color:var(--ink3);padding:1px 2px 7px}
 .rth s{text-decoration:none;margin-left:auto;font-weight:700}
 .rtst{display:flex;gap:9px;padding:7px 2px;border-top:1px solid var(--line2);
@@ -3866,7 +3880,7 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 /* ⛔ 編號是白字，底一定要夠暗。夜間的 --ink3 只有 3.49:1，檢查器擋下來了。
    不壓時間那一組改用 --fill（深）＋ --fill-ink，日夜都過。 */
 .rtst .no{flex:none;width:21px;height:21px;border-radius:7px;
-  font-size:var(--t6);font-weight:800;display:flex;align-items:center;
+  font-size:var(--t6);font-weight:700;display:flex;align-items:center;
   justify-content:center;margin-top:1px;
   background:var(--fill);color:var(--fill-ink)}
 .rtst.zam .no{background:var(--warn-fill);color:var(--fill-ink)}
@@ -3877,24 +3891,24 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
   box-shadow:inset 0 0 0 2px var(--info-bar)}
 .rtst.zfx .no{background:var(--fill);color:var(--fill-ink)}
 .rtst .bd{flex:1;min-width:0}
-.rtst .c{display:block;font-size:var(--t4);font-weight:800}
+.rtst .c{display:block;font-size:var(--t4);font-weight:700}
 .rtst .a{display:block;font-size:var(--t5);color:var(--ink2);margin-top:1px}
-.rtst .a .far{color:var(--ink);font-weight:800;margin-right:5px;
+.rtst .a .far{color:var(--ink);font-weight:700;margin-right:5px;
   background:color-mix(in srgb,var(--ink) 9%,transparent);
   border-radius:5px;padding:0 4px}
 .rtst .a .non{opacity:.6;font-style:normal}
-.rtst .sl{flex:none;font-size:var(--t6);font-weight:800;color:var(--ink3);align-self:center}
+.rtst .sl{flex:none;font-size:var(--t6);font-weight:700;color:var(--ink3);align-self:center}
 .rthop{display:flex;align-items:center;gap:6px;padding:2px 0 2px 30px;
   font-size:var(--t6);color:var(--ink3)}
-.rthop.far{color:var(--ink2);font-weight:800}
+.rthop.far{color:var(--ink2);font-weight:700}
 
 .rtsum{margin:9px 0 0;padding:9px 10px;border-radius:var(--r1);background:var(--bg);
   border:1px solid var(--line2);font-size:var(--t5);color:var(--ink2)}
 .rtsum b{color:var(--ink)}
-.rtsum .w{color:var(--bad-ink);font-weight:800}
+.rtsum .w{color:var(--bad-ink);font-weight:700}
 
 /* 免費的那一條：跳出去給 Google 地圖自己導 */
 .rtgo{display:block;margin-top:10px;text-align:center;text-decoration:none;
-  font-size:var(--t3);font-weight:800;padding:13px;border-radius:var(--r1);
+  font-size:var(--t3);font-weight:700;padding:13px;border-radius:var(--r1);
   background:var(--fill);color:var(--fill-ink)}
 .rtfoot{margin-top:6px;font-size:var(--t5);color:var(--ink3);text-align:center}
