@@ -531,22 +531,33 @@ body.hidechrome{--stick:0px}
    2. 沒選到用線稿、選到才變實心。這比單純換顏色明顯得多：
       線稿跟實心的重量差，眼睛不用讀字就知道自己在哪一頁。
    3. 圖示 24px、文字 10px、中間留 3px。再小的字就不必放了。 */
-body.tabsbottom .tabs{position:fixed;left:0;right:0;bottom:0;z-index:25;
-  border-bottom:0;border-top:.5px solid var(--line);padding:6px 2px 4px;
-  padding-bottom:calc(4px + var(--sab, env(safe-area-inset-bottom, 0px)));
-  background:color-mix(in oklab,var(--card) 84%,transparent);
-  backdrop-filter:blur(24px) saturate(180%);
-  -webkit-backdrop-filter:blur(24px) saturate(180%);
+/* ★ 浮起來的一條（2026-10-09 照他給的參考圖改版型）。
+   ⛔ 「浮起來」是用**留白**做的，不是陰影：左右各 14px、離底 10px。
+      瑞士風的層次靠留白與線，加了陰影就變成另一種風格了。
+   ⛔ 毛玻璃也拿掉。半透明＋模糊是 iOS 的語言，這個風格要的是實底與明確的邊。 */
+body.tabsbottom .tabs{position:fixed;left:14px;right:14px;z-index:25;
+  bottom:calc(10px + var(--sab, env(safe-area-inset-bottom, 0px)));
+  border:1px solid var(--line);border-radius:var(--r2);
+  padding:7px 2px 5px;
+  background:var(--card);
   transition:transform .22s cubic-bezier(.32,.72,0,1)}
 
 /* 往下滑的時候連下面這條也收走，整個畫面讓給內容；往上撥一下就回來。
    內容的下方留白不收——收了畫面會跳一下，反而更難看。
    回頂端那顆按鈕跟著補到原本選單的位置，不要留一塊空的。 */
-body.tabsbottom.hidechrome .tabs{transform:translateY(110%)}
+body.tabsbottom.hidechrome .tabs{transform:translateY(calc(100% + 22px))}
 body.tabsbottom.hidechrome #toTop{
   bottom:calc(var(--sab, env(safe-area-inset-bottom, 0px)) + 18px)}
 
-body.tabsbottom .tabs button{flex-direction:column;align-items:center;gap:3px;
+/* ⛔ min-width:0 不可以拿掉。flex:1 的基準雖然是 0，但 min-width 預設是 auto，
+   所以「行事曆」那一格會被文字撐得比「追蹤」寬——五格不等寬，
+   中間那顆圓鈕就不在畫面正中間（量出來偏左 16px）。 */
+/* ⚠ 這幾顆按鈕其實是 block（沒有人在這裡設 display:flex），
+   所以 flex-direction 與 align-items 兩條**從來沒有生效過**，留著是歷史。
+   ⛔ 不要為了讓它們生效而補 display:flex——那會蓋掉「不該出現的分頁」
+     身上的 display:none，把隱藏的按鈕整排放出來（2026-10-09 實測踩到）。
+     圖示置中改用下面 svg 的 margin:0 auto，一行就夠。 */
+body.tabsbottom .tabs button{flex-direction:column;align-items:center;gap:3px;min-width:0;
   height:auto;padding:4px 0 2px;border-bottom:0;border-radius:0;position:relative;
   font-size:var(--t5);font-weight:500;letter-spacing:.05em;color:var(--ink2);
   transition:color .16s ease}
@@ -561,7 +572,9 @@ body.tabsbottom .tabs button.on::before{content:"";position:absolute;
 /* ⛔ 中間那顆加號不要——它不是分頁，沒有「我在這一頁」這回事。 */
 body.tabsbottom .tabs button[data-t=new]::before,
 body.tabsbottom .tabs #admAdd::before{display:none}
-body.tabsbottom .tabs svg{display:block;width:1.45rem;height:1.45rem}
+/* ★ margin:0 auto 才是圖示置中的那一行。沒有它，svg 貼在按鈕左邊，
+   跟底下的文字差 47px（量過，行政端最明顯）——這個毛病從選單做出來就在。 */
+body.tabsbottom .tabs svg{display:block;width:1.45rem;height:1.45rem;margin:0 auto}
 /* 沒選到看線稿、選到看實心 */
 body.tabsbottom .tabs svg .f{display:none}
 body.tabsbottom .tabs button.on svg .o{display:none}
@@ -578,9 +591,19 @@ body.tabsbottom .tabs button[data-t=new],
 body.tabsbottom .tabs #admAdd{justify-content:center;gap:0;
   padding-top:0;padding-bottom:0}
 body.tabsbottom .tabs button[data-t=new] span{display:none}
+/* ★ 凸出在選單上緣之外（參考圖的造型）。
+   ⚠ 那一圈 box-shadow 不是陰影，是把**背景色**擠出來當切口——
+     沒有它的話這顆看起來像黏在選單上，不是穿過去。
+   ⚠ 位移用 transform，不佔版面高度；下面 :active 的縮放要把這個位移
+     一起寫進去，否則按下去會先彈回原位。 */
 body.tabsbottom .tabs .plus{display:block;position:relative;
   width:2.5rem;height:2.5rem;
   border-radius:50%;background:var(--fill);
+  /* ⚠ 這個數字是**量出來**的，不是估的：按鈕原本在列內置中，
+     下面還留著文字標籤的高度，所以 -15px 只凸出 3px。-30px 才凸出 18px。
+     改列高或 padding 的時候要重量一次。 */
+  transform:translateY(-30px);
+  box-shadow:0 0 0 5px var(--bg);
   transition:transform .14s cubic-bezier(.32,.72,0,1),
              box-shadow .2s ease,background .2s ease}
 body.tabsbottom .tabs .plus::before,
@@ -589,9 +612,11 @@ body.tabsbottom .tabs .plus::after{content:"";position:absolute;left:50%;top:50%
 body.tabsbottom .tabs .plus::before{width:1rem;height:2.3px}
 body.tabsbottom .tabs .plus::after{width:2.3px;height:1rem}
 body.tabsbottom .tabs button[data-t=new]:active .plus,
-body.tabsbottom .tabs #admAdd:active .plus{transform:scale(.9)}
+body.tabsbottom .tabs #admAdd:active .plus{transform:translateY(-30px) scale(.9)}
+/* 正在填寫的時候，切口外面再加一圈淡色的環。
+   ⛔ 兩個 box-shadow 要寫在同一條裡——分開寫的話後面那條會整個蓋掉切口。 */
 body.tabsbottom .tabs button[data-t=new].on .plus{
-  box-shadow:0 0 0 4px var(--brand-soft)}
+  box-shadow:0 0 0 5px var(--bg),0 0 0 9px var(--brand-soft)}
 
 /* 排序：加號要在正中間。上面那一排維持原來的順序，不用動。 */
 body.tabsbottom .tabs button[data-t=cal]{order:1}
@@ -618,8 +643,10 @@ body.adm #admAdd,
 body.ass #admAdd{display:flex}
 
 /* 內容要留出分頁列的高度，不然最後一筆會被蓋住 */
-body.tabsbottom{padding-bottom:calc(58px + var(--sab, env(safe-area-inset-bottom, 0px)))}
-body.tabsbottom #toTop{bottom:calc(var(--sab, env(safe-area-inset-bottom, 0px)) + 70px)}
+/* 選單浮起來之後離底多了 10px，內容的下方留白要跟著補，
+   否則捲到最後一筆會被選單壓住。 */
+body.tabsbottom{padding-bottom:calc(70px + var(--sab, env(safe-area-inset-bottom, 0px)))}
+body.tabsbottom #toTop{bottom:calc(var(--sab, env(safe-area-inset-bottom, 0px)) + 82px)}
 @media (prefers-reduced-transparency:reduce){
   body.tabsbottom .tabs{background:var(--card);backdrop-filter:none;
     -webkit-backdrop-filter:none}
