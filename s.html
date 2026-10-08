@@ -196,13 +196,23 @@ function pt(e) { var b = cv.getBoundingClientRect(); return [e.clientX - b.left,
 cv.onpointerdown = function (e) { e.preventDefault(); down = true; cv.setPointerCapture(e.pointerId); var p = pt(e); cx.beginPath(); cx.moveTo(p[0], p[1]); };
 cv.onpointermove = function (e) { if (!down) return; e.preventDefault(); var p = pt(e); cx.lineTo(p[0], p[1]); cx.stroke(); inked = true; };
 cv.onpointerup = cv.onpointercancel = function () { down = false; };
+/* ⛔ LINE 的內建瀏覽器是一張可以往下拉掉的卡片：簽名時上下畫，iPhone 把它當成「拉動視窗」，整頁晃、甚至被拉掉（他 2026-10-08）。
+   pointer 事件的 preventDefault 擋不住捲動手勢，一定要在 touch 事件上、而且 passive:false 才擋得住。
+   簽名板開著的時候，整頁的 touchmove 一律吃掉。 */
+['touchstart', 'touchmove'].forEach(function (k) { cv.addEventListener(k, function (e) { e.preventDefault(); }, { passive: false }); });
+document.addEventListener('touchmove', function (e) { if ($('board').classList.contains('on')) e.preventDefault(); }, { passive: false });
 $('bclr').onclick = function () { cx.clearRect(0, 0, cv.width, cv.height); inked = false; };
 $('bcancel').onclick = closeBoard;
 $('bok').onclick = function () {
   if (!inked) { alert('還沒簽'); return; }
-  /* 縮成寬 600 的小圖再存（全螢幕原尺寸在高解析手機上太大，上傳慢） */
-  var o = document.createElement('canvas'); o.width = 600; o.height = Math.round(600 * cv.height / cv.width);
-  o.getContext('2d').drawImage(cv, 0, 0, o.width, o.height);
+  /* 裁掉四周空白再存（他 2026-10-08：整張全螢幕存進去，App 和 PDF 上的簽名小到看不見）。
+     做法同 App 的 trimSig：量墨跡外框＋留一點邊，最寬 600 */
+  var w = cv.width, h = cv.height, d = cx.getImageData(0, 0, w, h).data, x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 12) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  var pad = Math.round(Math.min(w, h) * 0.04); x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
+  var k = Math.min(1, 600 / (x1 - x0 + 1)), o = document.createElement('canvas');
+  o.width = Math.round((x1 - x0 + 1) * k); o.height = Math.round((y1 - y0 + 1) * k);
+  o.getContext('2d').drawImage(cv, x0, y0, x1 - x0 + 1, y1 - y0 + 1, 0, 0, o.width, o.height);
   SIG[BK] = o.toDataURL('image/png'); DIRTY = true;
   closeBoard(); drawSigs();
 };

@@ -3277,7 +3277,7 @@ function initSig(box){
     data:   function(){ return st.url; },
     signed: function(){ return !!st.url; },
     clear:  function(){ st.url=''; paint(); markDirty(); },
-    set:    function(u){ st.url=u||''; paint(); markDirty(); }
+    set:    function(u){ st.url=u||''; var o=pad.querySelector('.sigold'); if(o) o.remove(); paint(); markDirty(); }
   };
   pad.addEventListener('click', function(){ openSig(box); });
   box.querySelector('[data-clear]').addEventListener('click', function(e){
@@ -3318,11 +3318,6 @@ function smInit(preset){
   ctx.lineWidth=6.2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#111';
   var drawing=false, dirty=false, last=null;
 
-  if(preset){
-    var im=new Image();
-    im.onload=function(){ ctx.drawImage(im,0,0,r.width,r.height); dirty=true; };
-    im.src=preset;
-  }
   function pt(e){ var b=cv.getBoundingClientRect(); var t=e.touches?e.touches[0]:e;
     return { x:t.clientX-b.left, y:t.clientY-b.top }; }
   function down(e){ e.preventDefault(); drawing=true; dirty=true; last=pt(e); }
@@ -3335,15 +3330,20 @@ function smInit(preset){
   cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.lineWidth=6.2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#111';
-  if(preset){ var im2=new Image();
-    im2.onload=function(){ ctx.drawImage(im2,0,0,r.width,r.height); }; im2.src=preset; }
+  /* ⛔ 只把「這台剛畫的」(data:) 畫回板子。原本存在雲端硬碟的簽名是別的網域的圖，
+     畫上去整塊 canvas 會被瀏覽器鎖住、toDataURL 直接丟錯——重簽按「完成」就沒反應（他 2026-10-08 回報）。
+     雲端那張不畫，按「完成」但沒動筆就照舊留著它（keep）。 */
+  var keep = preset && preset.indexOf('data:') !== 0 ? preset : '';
+  if(preset && !keep){ var im2=new Image();
+    im2.onload=function(){ ctx.drawImage(im2,0,0,r.width,r.height); dirty=true; }; im2.src=preset; }
   ['mousedown','touchstart'].forEach(function(k){ cv.addEventListener(k,down,{passive:false}); });
   ['mousemove','touchmove'].forEach(function(k){ cv.addEventListener(k,move,{passive:false}); });
   ['mouseup','mouseleave','touchend','touchcancel'].forEach(function(k){ cv.addEventListener(k,up); });
 
   SM_ = {
     canvas: cv,
-    clear: function(){ ctx.clearRect(0,0,cv.width,cv.height); dirty=false; },
+    keep: keep,
+    clear: function(){ ctx.clearRect(0,0,cv.width,cv.height); dirty=false; SM_.keep=''; },
     dirty: function(){ return dirty; }
   };
 }
@@ -3389,7 +3389,7 @@ function trimSig(cv){
   return o.toDataURL('image/png');
 }
 $('smOk').addEventListener('click', function(){
-  if(SIG_BOX_ && SM_) SIG_BOX_.__sig.set(SM_.dirty() ? trimSig(SM_.canvas) : '');
+  if(SIG_BOX_ && SM_) SIG_BOX_.__sig.set(SM_.dirty() ? trimSig(SM_.canvas) : SM_.keep);
   closeSig();
 });
 $('sigModal').addEventListener('click', function(e){ if(e.target===this) closeSig(); });
