@@ -188,7 +188,7 @@ function openBoard(k, t) {
   BK = k; $('bwho').textContent = t; $('board').classList.add('on'); document.body.style.overflow = 'hidden';
   var r = window.devicePixelRatio || 1;
   cv.width = cv.clientWidth * r; cv.height = cv.clientHeight * r;
-  cx.setTransform(r, 0, 0, r, 0, 0); cx.lineWidth = 3; cx.lineCap = cx.lineJoin = 'round'; cx.strokeStyle = '#111';
+  cx.setTransform(r, 0, 0, r, 0, 0); cx.lineWidth = 5;   /* 2026-10-08 他：筆劃再粗一點 */ cx.lineCap = cx.lineJoin = 'round'; cx.strokeStyle = '#111';
   inked = false;
 }
 function closeBoard() { $('board').classList.remove('on'); document.body.style.overflow = ''; }

@@ -3315,7 +3315,7 @@ function smInit(preset){
   var dpr = Math.min(window.devicePixelRatio || 1, 2);
   cv.width = Math.round(r.width*dpr); cv.height = Math.round(r.height*dpr);
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.lineWidth=6.2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#111';
+  ctx.lineWidth=9; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#111';
   var drawing=false, dirty=false, last=null;
 
   function pt(e){ var b=cv.getBoundingClientRect(); var t=e.touches?e.touches[0]:e;
@@ -3329,7 +3329,7 @@ function smInit(preset){
   cv = fresh; ctx = cv.getContext('2d');
   cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.lineWidth=6.2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#111';
+  ctx.lineWidth=9; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#111';
   /* ⛔ 只把「這台剛畫的」(data:) 畫回板子。原本存在雲端硬碟的簽名是別的網域的圖，
      畫上去整塊 canvas 會被瀏覽器鎖住、toDataURL 直接丟錯——重簽按「完成」就沒反應（他 2026-10-08 回報）。
      雲端那張不畫，按「完成」但沒動筆就照舊留著它（keep）。 */
