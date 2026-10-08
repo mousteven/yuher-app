@@ -91,7 +91,7 @@ api({ api: 'svclLoad' }).then(function (d) { D = d; init(); }).catch(fail);
 var ED = false;
 function init() {
   ED = D.kind === 'edit';
-  WK = D.workers.map(function (n, i) { return D.roster.filter(function (r) { return r.n === n; })[0] || { n: n, o: '', l: (D.langs && D.langs[i]) || D.lang }; });
+  WK = D.workers.map(function (n, i) { return D.roster.filter(function (r) { return r.n === n; })[0] || { n: n, o: '', l: D.lang }; });
   if (ED) WK.forEach(function (w, i) { if (D.langs[i]) w.l = D.langs[i]; });
   D.big0 = D.big; D.sub0 = D.sub;
   var c0 = D.tax.cats.filter(function (c) { return c.b === D.big; })[0];
@@ -120,8 +120,8 @@ function init() {
   if (ED) {   // 帶入原本的內容
     ['dnote', 'rnote', 'fee', 'memo'].forEach(function (k) { $(k).value = D[k] || ''; });
     press('follow', D.follow);
+    $('save').firstChild.textContent = '存檔修改';
   }
-  if (ED) $('save').firstChild.textContent = '存檔修改';
   $('dock').hidden = false;
 }
 function chips(k, list) {
