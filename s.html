@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- LINE 行程卡「填服務紀錄表」（他 2026-10-07 選方案丙）。後端 migrant-worker-platform/src/LineSvc.gs，走 doPost 的 svclLoad／svclSave。
+<!-- LINE 行程卡「填服務紀錄表」（他 2026-10-07 選方案丙）。2026-10-08 加：電話紀錄（不掛行程）、退回後修改（D.kind = sched／tel／edit）。後端 migrant-worker-platform/src/LineSvc.gs，走 doPost 的 svclLoad／svclSave。
      放 GitHub Pages 不放 Apps Script：那邊頂端的藍色「由 Google Apps Script 的使用者建立」拿不掉，兩層 iframe 也讓整頁會晃。
      存進去的跟 App 同一張「服務紀錄」表，行事曆那筆自動標完成。 -->
 <html lang="zh-Hant"><head><meta charset="utf-8">
@@ -88,12 +88,17 @@ function fail(e) { $('app').innerHTML = '<p id="msg">' + esc(e && e.message || e
 api({ api: 'svclLoad' }).then(function (d) { D = d; init(); }).catch(fail);
 
 /* 名冊裡同名的拿來補原文名與語別；行程上寫的名字對不到名冊也照樣留著 */
+var ED = false;
 function init() {
-  WK = D.workers.map(function (n) { return D.roster.filter(function (r) { return r.n === n; })[0] || { n: n, o: '', l: D.lang }; });
+  ED = D.kind === 'edit';
+  WK = D.workers.map(function (n, i) { return D.roster.filter(function (r) { return r.n === n; })[0] || { n: n, o: '', l: (D.langs && D.langs[i]) || D.lang }; });
+  if (ED) WK.forEach(function (w, i) { if (D.langs[i]) w.l = D.langs[i]; });
+  D.big0 = D.big; D.sub0 = D.sub;
   var c0 = D.tax.cats.filter(function (c) { return c.b === D.big; })[0];
   if (!c0 || !c0.s.some(function (x) { return x.n === D.sub; })) { D.big = D.tax.cats[0].b; D.sub = D.tax.cats[0].s[0].n; }
   $('app').innerHTML =
-    '<header><div class="bar"></div><div><h1>服務紀錄表</h1><p class="sub">' + esc(D.client) + '・' + esc(D.date.replace(/-/g, '/')) + ' ' + esc(D.slot) + '・' + esc(D.crew) + '</p></div></header>' +
+    '<header><div class="bar"></div><div><h1>' + (ED ? '修改服務紀錄' : D.mode === '電話' ? '電話紀錄' : '服務紀錄表') + '</h1><p class="sub">' + (ED ? esc(D.rec) + '・' : '') + esc(D.client) + '・' + esc(D.date.replace(/-/g, '/')) + ' ' + esc(D.slot) + '・' + esc(D.mode) + '・' + esc(D.crew) + '</p></div></header>' +
+    (D.reject ? '<section><div class="lab">退回原因</div><div style="font-weight:700">' + esc(D.reject) + '</div></section>' : '') +
     (D.todo.length ? '<p class="note">交辦：' + D.todo.map(esc).join('、') + '</p>' : '') +
     '<section><div class="lab">移工</div><div id="wks"></div>' +
     '<div><input type="search" id="q" placeholder="' + (D.roster.length ? '搜尋 ' + esc(D.client.replace(/(股份)?有限公司/, '')) + ' 的 ' + D.roster.length + ' 位工人' : '打名字新增') + '" autocomplete="off"><div class="pick" id="pick"></div></div>' +
@@ -112,11 +117,17 @@ function init() {
     var c = e.target.closest('.chip'); if (c) { c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') !== 'true'); DIRTY = true; }
   });
   fillSub(); drawWorkers();
+  if (ED) {   // 帶入原本的內容
+    ['dnote', 'rnote', 'fee', 'memo'].forEach(function (k) { $(k).value = D[k] || ''; });
+    press('follow', D.follow);
+  }
+  if (ED) $('save').firstChild.textContent = '存檔修改';
   $('dock').hidden = false;
 }
 function chips(k, list) {
   return '<div class="chips" data-k="' + k + '">' + list.map(function (t) { return '<button type="button" class="chip" aria-pressed="false">' + esc(t) + '</button>'; }).join('') + '</div>';
 }
+function press(k, list) { [].forEach.call(document.querySelectorAll('[data-k="' + k + '"] .chip'), function (b) { if ((list || []).indexOf(b.textContent) !== -1) b.setAttribute('aria-pressed', 'true'); }); }
 function picked(k) { return [].map.call(document.querySelectorAll('[data-k="' + k + '"] [aria-pressed=true]'), function (b) { return b.textContent; }); }
 function fillSub() {
   var c = D.tax.cats.filter(function (x) { return x.b === D.big; })[0];
@@ -129,6 +140,7 @@ function fillOpts() {
   var s = D.tax.cats.filter(function (x) { return x.b === D.big; })[0].s.filter(function (x) { return x.n === D.sub; })[0];
   $('dbox').innerHTML = chips('did', s.d);
   $('rbox').innerHTML = chips('res', s.r.concat(D.tax.resultCommon));
+  if (ED && D.big === D.big0 && D.sub === D.sub0) { press('did', D.did); press('res', D.res); }
 }
 
 /* ── 移工 ── */
@@ -155,11 +167,19 @@ function drawWorkers() {
 }
 
 /* ── 簽名：key 用名字不用順序，移除一位不會讓別人的簽名錯位 ── */
-function pads() { return [['emp', '雇主／工廠主管']].concat(WK.map(function (w) { return ['w:' + w.n, '移工　' + w.n]; }), [['staff', '翻譯　' + D.crew]]); }
+/* 電話紀錄沒有人在現場，只留翻譯自己簽（可不簽） */
+function pads() { return D.mode === '電話' ? [['staff', '翻譯　' + D.crew]] : [['emp', '雇主／工廠主管']].concat(WK.map(function (w) { return ['w:' + w.n, '移工　' + w.n]; }), [['staff', '翻譯　' + D.crew]]); }
+/* 修改時：原本簽過的顯示原本那張，沒重簽就沿用（伺服器端也是沒送新的就沿用） */
+function oldSig(k) {
+  if (!ED) return '';
+  if (k === 'emp' || k === 'staff') return D.sig[k] || '';
+  var i = D.workers.indexOf(k.slice(2)); return i === -1 ? '' : D.sig.w[i] || '';
+}
 function drawSigs() {
   $('sigs').innerHTML = pads().map(function (p) {
-    return '<div class="sig' + (SIG[p[0]] ? ' ok' : '') + '" data-k="' + esc(p[0]) + '" data-t="' + esc(p[1]) + '"><span class="nm">' + esc(p[1]) + '</span>' +
-      (SIG[p[0]] ? '<img alt="已簽" src="' + SIG[p[0]] + '"><span class="st">重簽</span>' : '<span class="st">點這裡簽名　→</span>') + '</div>';
+    var img = SIG[p[0]] || oldSig(p[0]);
+    return '<div class="sig' + (img ? ' ok' : '') + '" data-k="' + esc(p[0]) + '" data-t="' + esc(p[1]) + '"><span class="nm">' + esc(p[1]) + '</span>' +
+      (img ? '<img alt="已簽" src="' + esc(img) + '"><span class="st">重簽</span>' : '<span class="st">點這裡簽名　→</span>') + '</div>';
   }).join('');
   [].forEach.call($('sigs').querySelectorAll('.sig'), function (el) { el.onclick = function () { openBoard(el.dataset.k, el.dataset.t); }; });
 }
@@ -193,18 +213,24 @@ window.addEventListener('beforeunload', function (e) { if (DIRTY) { e.preventDef
 $('save').onclick = function () {
   if (!WK.length) { alert('還沒選移工'); return; }
   if (!picked('did').length && !picked('res').length) { alert('處理經過或結果至少點一個'); return; }
-  if (!SIG.emp && !confirm('雇主還沒簽名，要先存嗎？（之後可以到 App 補簽）')) return;
+  /* 修改時伺服器按「第幾位」對應原本那一列、沿用那一列的移工簽名。
+     中間刪掉一位、後面的人往前遞補，就會拿到別人的簽名 → 位置變了而且原本那一列有簽名的，要重簽 */
+  if (ED) for (var k = 0; k < Math.min(WK.length, D.workers.length); k++) {
+    if (WK[k].n !== D.workers[k] && D.sig.w[k] && !SIG['w:' + WK[k].n]) { alert(WK[k].n + ' 的順序變了，請幫他重簽一次'); return; }
+  }
+  if (D.mode !== '電話' && !SIG.emp && !oldSig('emp') && !confirm('雇主還沒簽名，要先存嗎？（之後可以回 LINE 按「未結案單」→「修改」補簽）')) return;
   var base = { big: D.big, sub: D.sub, did: picked('did'), dnote: $('dnote').value.trim(), res: picked('res'),
                rnote: $('rnote').value.trim(), fee: $('fee').value.trim(), follow: picked('follow').join('、'), memo: $('memo').value.trim() };
   var workers = WK.map(function (w) { return Object.assign({ name: w.n, lang: w.l || D.lang, sig: SIG['w:' + w.n] || '' }, base); });
-  var btn = this; btn.disabled = true; btn.firstChild.textContent = '存檔中…';
+  var btn = this, label = btn.firstChild.textContent; btn.disabled = true; btn.firstChild.textContent = '存檔中…';
   api({ api: 'svclSave', trip: { cid: CID, sigEmployer: SIG.emp || '', sigStaff: SIG.staff || '' }, workers: workers }).then(function (r) {
     DIRTY = false; $('dock').hidden = true; scrollTo(0, 0);
-    $('app').innerHTML = '<header><div class="bar"></div><div><h1>已存進 App</h1></div></header>' +
+    $('app').innerHTML = '<header><div class="bar"></div><div><h1>' + (ED ? '改好了' : '已存進 App') + '</h1></div></header>' +
       '<section><div class="lab">紀錄代碼</div><div class="big">' + esc(r.code) + '</div>' +
-      '<p class="note">行事曆這筆已標成完成，App 的「查詢」看得到。要修改或補簽名，到 App 打開這一筆。</p>' +
+      '<p class="note">' + (ED ? '' : D.kind === 'sched' ? '行事曆這筆已標成完成。' : '行事曆已補上這一筆。') +
+      '要送審、修改或補簽名：回 LINE 按「未結案單」。</p>' +
       '<p class="note">按右上角 ✕ 回到 LINE。</p></section>';
-  }).catch(function (e) { btn.disabled = false; btn.firstChild.textContent = '存進 App'; alert('沒存成功：' + (e && e.message || e)); });
+  }).catch(function (e) { btn.disabled = false; btn.firstChild.textContent = label; alert('沒存成功：' + (e && e.message || e)); });
 };
 </script>
 </body></html>
