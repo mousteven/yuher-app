@@ -3393,6 +3393,7 @@ body.tabsbottom .tabs.few button{min-width:120px}
 .swrole .swt{font-size:var(--t6);color:var(--ink3);font-weight:700;margin-bottom:.5rem;
   letter-spacing:.02em}
 .swrole .swg{display:flex;flex-wrap:wrap;gap:.4rem}
+.otrow{font-size:var(--t6);padding:.3rem 0;border-bottom:1px solid var(--line2)}
 .swrole button{flex:1 1 auto;min-width:5.4rem;padding:.6rem .5rem;border-radius:var(--r3);
   border:1px solid var(--line);background:var(--card);color:var(--ink2);
   font-size:var(--t5);font-weight:700}

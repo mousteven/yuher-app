@@ -207,6 +207,79 @@ function drawSwitch(){
         '<span class="hint">名單載入失敗，下拉重新整理再試</span></div>'; })
     .helpDirectory(CODE);
 }
+/* 我的加班（2026-10-11）：LINE 小羽送的加班單，帳號選單裡看得到。容器同 drawSwitch 動態插入，不動 Service.html。
+   後端 myOvertime（LineOT.gs）；副理／總經理看全部人的。 */
+/* 簽名圖不公開了（2026-10-11）：後端還是給 lh3 網址（存檔時當「沿用原本那張」的鑰匙），
+   但瀏覽器直接載會 403。這裡盯著畫面上出現的 lh3 圖，換成從後端 sigImages 讀出來的圖。
+   不是簽名資料夾的圖後端回空字串 → 放回原網址（例如公開的說明圖）。 */
+var SIGIMG_ = {};
+var SIGQ_ = [];
+var SIGT_ = 0;
+function sigFix(img){
+  var src = img.getAttribute('src') || '', m = /lh3\.googleusercontent\.com\/d\/([\w-]{20,})/.exec(src);
+  if(!m) return;
+  var id = m[1];
+  if(SIGIMG_[id] !== undefined){ if(SIGIMG_[id]) img.src = SIGIMG_[id]; return; }   // '' ＝不是簽名，照原網址
+  img.dataset.sigwait = src;
+  img.removeAttribute('src');                    // 不先顯示 403 的破圖
+  if(SIGQ_.indexOf(id) < 0) SIGQ_.push(id);
+  clearTimeout(SIGT_);
+  SIGT_ = setTimeout(sigFlush, 30);
+}
+function sigFlush(){
+  var ids = SIGQ_.splice(0, 40);
+  if(!ids.length || !CODE) return;
+  google.script.run.withSuccessHandler(function(r){
+    ids.forEach(function(k){ SIGIMG_[k] = (r && r[k]) || ''; });
+    [].forEach.call(document.querySelectorAll('img[data-sigwait]'), function(el){
+      var w = el.dataset.sigwait, mm = /\/d\/([\w-]{20,})/.exec(w), k = mm && mm[1];
+      if(!k || SIGIMG_[k] === undefined) return;
+      delete el.dataset.sigwait;
+      el.src = SIGIMG_[k] || w;
+    });
+    if(SIGQ_.length) sigFlush();
+  }).withFailureHandler(function(){                 // 讀不到就放回原網址（至少他本人看得到），不要留空白
+    ids.forEach(function(k){ SIGIMG_[k] = ''; });     // 記成「照原網址」，不然放回去又被攔下來重試，無限迴圈
+    [].forEach.call(document.querySelectorAll('img[data-sigwait]'), function(el){ var w = el.dataset.sigwait; delete el.dataset.sigwait; el.src = w; });
+  }).sigImages(CODE, ids);
+}
+new MutationObserver(function(ms){
+  ms.forEach(function(mu){
+    if(mu.type === 'attributes'){ if(mu.target.tagName === 'IMG') sigFix(mu.target); return; }
+    [].forEach.call(mu.addedNodes, function(n){
+      if(n.nodeType !== 1) return;
+      if(n.tagName === 'IMG') sigFix(n);
+      else [].forEach.call(n.querySelectorAll('img[src*="lh3.googleusercontent.com"]'), sigFix);
+    });
+  });
+}).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+
+function drawOT(){
+  var box = $('outOT');
+  if(!box){
+    var anchor = $('outBuild');
+    if(!anchor) return;
+    box = document.createElement('div');
+    box.id = 'outOT';
+    box.className = 'swrole';
+    anchor.parentNode.insertBefore(box, anchor);
+  }
+  box.innerHTML = '<div class="swt">加班紀錄</div><span class="hint">載入中…</span>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      var rows = (r && r.rows) || [];
+      if(!rows.length){ box.innerHTML = '<div class="swt">加班紀錄</div><span class="hint">最近 60 天沒有加班單（在 LINE 對小羽打「加班單」送出）</span>'; return; }
+      var tot = rows.reduce(function(n, x){ return n + (r.boss ? 0 : x.mins); }, 0);
+      box.innerHTML = '<div class="swt">加班紀錄　最近 60 天' + (r.boss ? '（全部人）' : '　共 ' + Math.floor(tot/60) + ' 小時 ' + (tot%60) + ' 分') + '</div>' +
+        rows.slice(0, 30).map(function(x){
+          return '<div class="otrow"><b>' + esc(x.d.slice(5).replace('-', '/')) + '</b>' + (r.boss ? ' ' + esc(x.who) : '') +
+            '　' + esc(x.from) + '–' + esc(x.to) + '（' + Math.floor(x.mins/60) + ':' + ('0' + x.mins%60).slice(-2) + '）' +
+            '<span class="hint">　' + esc(x.st) + (x.why ? '・' + esc(x.why) : '') + '</span></div>';
+        }).join('');
+    })
+    .withFailureHandler(function(){ box.innerHTML = '<div class="swt">加班紀錄</div><span class="hint">載入失敗，下拉重新整理再試</span>'; })
+    .myOvertime(CODE);
+}
 function drawSwitchRows(r){
   var box = $('outSwitch');
   if(!box || !r || !r.rows) return;
@@ -386,6 +459,7 @@ $('whoBtn').addEventListener('click', function(){
   $('outName').textContent = STAFF_NAME || '（未命名）';
   $('outRole').textContent = STAFF_ROLE ? (STAFF_ROLE + '　登入碼 ' + CODE) : ('登入碼 ' + CODE);
   drawSwitch();
+  drawOT();
   $('outBuild').textContent = '目前版本 ' + BUILD;
   $('outModal').style.display = '';
   checkBuild();
