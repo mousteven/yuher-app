@@ -3996,6 +3996,13 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
   border:1px solid var(--line2);font-size:var(--t5);color:var(--ink2)}
 .rtsum b{color:var(--ink)}
 .rtsum .w{color:var(--bad-ink);font-weight:700}
+/* 翻譯在小羽改了路線順序（2026-10-12）：頁首一條，按「知道了」收起來 */
+.rtchg{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;padding:9px 10px;
+  border-radius:var(--r1);border:1px solid var(--line2);border-left:4px solid var(--bad-fill);background:var(--card);
+  font-size:var(--t5);color:var(--ink2);line-height:1.7}
+.rtchg b{color:var(--ink)}
+.rtchg s{text-decoration:none;color:var(--ink3);margin-left:6px}
+.rtchg button{flex:none;font:inherit;font-weight:700;padding:6px 10px;border-radius:var(--r1);border:1px solid var(--line2);background:var(--bg);color:var(--ink);cursor:pointer}
 
 /* 免費的那一條：跳出去給 Google 地圖自己導 */
 .rtgo{display:block;margin-top:10px;text-align:center;text-decoration:none;

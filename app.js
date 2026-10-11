@@ -1504,7 +1504,7 @@ function loadCal(ym, force){
         CAL_CACHE[m] = r.rows || [];
         CAL_CACHE_AT[m] = Date.now();
         if(!CREW.length) CREW = r.crew || [];
-        if(r.leave) LEAVE_ = r.leave;      // 誰哪天不在
+        if(r.leave) LEAVE_ = r.leave; rtChgSet_(r.rtChg);      // 誰哪天不在
         /* ⛔ 只有最後一個月份也回來了才算更新完成。
            上面那段會先拿舊快取畫一次（不要整片變成載入中），
            如果把 refreshed() 放在 drawCal 裡面，下拉的轉圈會在
@@ -10174,7 +10174,8 @@ function assBits(){
   cb.insertAdjacentHTML('afterend',
     '<button data-t="ps1">' + PS1_IC_ + '<span>排班甲</span></button>' +
     '<button data-t="ps2">' + PS2_IC_ + '<span>排班戊</span></button>' +
-    '<button data-t="ps3">' + PS3_IC_ + '<span>路線</span></button>');
+    '<button data-t="ps3">' + PS3_IC_ + '<span>路線</span><i id="rtBadge" class="badge" style="display:none"></i></button>');
+  rtChgSet_();
 }
 
 function sumBits(){
@@ -10805,7 +10806,7 @@ function loadSum(force){
         CAL_CACHE[m] = r.rows || [];
         CAL_CACHE_AT[m] = Date.now();
         if(!CREW.length) CREW = r.crew || [];
-        if(r.leave) LEAVE_ = r.leave;      // 誰哪天不在
+        if(r.leave) LEAVE_ = r.leave; rtChgSet_(r.rtChg);      // 誰哪天不在
         if(--left === 0){ drawSum(); refreshed(); }
       })
       .withFailureHandler(function(e){
@@ -11557,7 +11558,7 @@ function loadPS(which){
     .withSuccessHandler(function(r){
       CAL_CACHE[m] = r.rows || []; CAL_CACHE_AT[m] = Date.now();
       if(!CREW.length) CREW = r.crew || [];
-      if(r.leave) LEAVE_ = r.leave;
+      if(r.leave) LEAVE_ = r.leave; rtChgSet_(r.rtChg);
       calMerge([m]); psDraw(); refreshed();
     })
     .withFailureHandler(function(e){ toast(e.message, true); psDraw(); })
@@ -12197,7 +12198,7 @@ function rtGmap_(stops){
 function drawRT(){
   var box = $('p-ps3'); if(!box) return;
   var gs = rtGroups_();
-  var h = psHead_(false);
+  var h = psHead_(false) + rtChgBar_();
   if(!gs.length){
     box.innerHTML = h + '<div class="mid" style="padding:30px">' +
       '這一天還沒有配好人的行程</div>';
@@ -12240,6 +12241,8 @@ function drawRT(){
     var g = sel[0], stops = rtStops_(g);
     h += '<div class="rtlist"><div class="rth">停靠順序<s>' + stops.length + ' 站</s></div>';
     var far = 0, back = 0;
+    /* 第一段：從翻譯自己選的出發點（公司／家／現在位置，小羽路線頁設的）。名字跟分鐘等 routeInfo 回來才填 */
+    h += '<div class="rthop">↓　<span data-rh="0">出發</span></div>';
     stops.forEach(function(st, i){
       if(i){
         var prev = stops[i-1];
@@ -12247,9 +12250,9 @@ function drawRT(){
         if(cross) far++;
         var dk = rtDist_(prev.key, st.key);
         h += '<div class="rthop' + (cross ? ' far' : '') + '">↓　' +
-          esc(prev.town || '？') + ' → ' + esc(st.town || '？') +
+          esc(prev.town || '？') + ' → ' + esc(st.town || '？') + '<span data-rh="' + i + '">' +
           (prev.key && prev.key === st.key ? '　同一區'
-            : dk ? '　約 ' + (dk < 10 ? dk.toFixed(1) : Math.round(dk)) + ' 公里' : '') +
+            : dk ? '　直線約 ' + (dk < 10 ? dk.toFixed(1) : Math.round(dk)) + ' 公里' : '') + '</span>' +
           (cross ? '　跨縣市' : '') + '</div>';
       }
       var z = psZoneOf_(st.r);
@@ -12268,10 +12271,10 @@ function drawRT(){
       var d1 = rtDist_(stops[k2-2].key, stops[k2-1].key);
       if(d1 > 0 && d0 < d1 * 0.6) back++;
     }
-    /* ⛔ 只寫「直線」。鄉鎮中心對鄉鎮中心，實際開車一定更遠，不要給分鐘數。 */
+    /* 先寫直線；Google 開車分鐘／公里回來再換掉（他 2026-10-12 要分鐘和公里都顯示，Apps Script 內建 Maps 不用錢）。 */
     h += '</div><div class="rtsum"><b>' + esc(g.who) + '</b> 這一天 ' +
       stops.length + ' 站' +
-      (tot ? '　·　直線約 ' + Math.round(tot) + ' 公里' : '') +
+      '<span data-rh="sum">' + (tot ? '　·　直線約 ' + Math.round(tot) + ' 公里' : '') + '</span>' +
       (far ? '　·　<span class="w">跨縣市 ' + far + ' 次</span>' : '　·　都在同一個縣市') +
       (back ? '　·　<span class="w">看起來有 ' + back + ' 段折回頭</span>'
             : '　·　路線沒有明顯折返') + '</div>';
@@ -12311,6 +12314,48 @@ function drawRT(){
   }
   box.innerHTML = h;
   rtPaint_(sel);
+  if(sel.length === 1) rtDrive_(sel[0].who, rtStops_(sel[0]));
+}
+
+/* Google 開車分鐘／公里＋出發點（後端 routeInfo，LineRoute.gs）。同一人同一天同一串地址只問一次。 */
+var RT_DRIVE_ = {};
+function rtDrive_(who, stops){
+  var addrs = stops.map(function(x){ return x.addr || ''; });
+  var k = who + '|' + PS_DAY + '|' + addrs.join('|');
+  function fill(r){
+    var box = $('p-ps3'); if(!box || !r) return;
+    var M = 0, K = 0, miss = 0;
+    r.legs.forEach(function(l){ if(l){ M += l.m; K += l.k; } else miss++; });
+    [].forEach.call(box.querySelectorAll('[data-rh]'), function(el){
+      var i = el.dataset.rh, l = r.legs[+i];
+      if(i === 'sum') el.textContent = '　·　開車共 ' + M + ' 分・' + Math.round(K) + ' 公里' + (miss ? '（' + miss + ' 站沒算到）' : '');
+      else if(i === '0') el.textContent = '從' + r.start + '出發' + (l ? '　開車 ' + l.m + ' 分・' + l.k + ' 公里' : '');
+      else if(l) el.textContent = '　開車 ' + l.m + ' 分・' + l.k + ' 公里';
+    });
+  }
+  if(RT_DRIVE_[k]) return fill(RT_DRIVE_[k]);
+  google.script.run
+    .withSuccessHandler(function(r){ RT_DRIVE_[k] = r; fill(r); })
+    .withFailureHandler(function(){})           // 拿不到就留著直線距離，不打擾她
+    .routeInfo(CODE, who, PS_DAY, addrs);
+}
+
+/* 翻譯在小羽改了路線順序 → 「路線」分頁紅點＋頁首一條（他 2026-10-12 要通知特助，不用 LINE 推播額度）。
+   ⚠ 「知道了」記在這台手機，換手機會再亮一次——寧可多亮，不要漏。 */
+var RT_CHG_ = [];
+function rtSeen_(){ try { return localStorage.getItem('svc.rtseen') || ''; } catch(e){ return ''; } }
+function rtChgSet_(list){
+  if(list) RT_CHG_ = list;
+  var b = $('rtBadge'); if(!b) return;
+  var n = RT_CHG_.filter(function(x){ return x.at > rtSeen_(); }).length;
+  b.textContent = n; b.style.display = n ? '' : 'none';
+}
+function rtChgBar_(){
+  var s = rtSeen_(), on = RT_CHG_.filter(function(x){ return x.at > s; });
+  if(!on.length) return '';
+  return '<div class="rtchg"><div>' + on.slice(0, 5).map(function(x){
+    return '<b>' + esc(x.w) + '</b> 改了 ' + esc(x.d.slice(5).replace('-', '/')) + ' 的順序<s>' + esc(x.at.slice(5)) + '</s>'; }).join('<br>') +
+    '</div><button type="button" data-rt="seen">知道了</button></div>';
 }
 
 function loadRT(){
@@ -12329,6 +12374,10 @@ document.addEventListener('click', function(e){
   var b = e.target.closest && e.target.closest('[data-rt]');
   if(!b || !b.closest('#p-ps3')) return;
   if(b.dataset.rt === 'clear'){ RT_SEL = {}; drawRT(); return; }
+  if(b.dataset.rt === 'seen'){
+    try { localStorage.setItem('svc.rtseen', RT_CHG_[0] ? RT_CHG_[0].at : ''); } catch(e2){}
+    rtChgSet_(); drawRT(); return;
+  }
   var w = b.dataset.who;
   /* 點一下加進來、再點一下拿掉。⚠ 全部取消的話回到只看第一個，
      不要讓畫面變空白（那看起來像壞掉）。 */
