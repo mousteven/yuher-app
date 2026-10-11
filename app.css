@@ -3993,6 +3993,9 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .rthop{display:flex;align-items:center;gap:6px;padding:2px 0 2px 30px;
   font-size:var(--t6);color:var(--ink3)}
 .rthop.far{color:var(--ink2);font-weight:700}
+/* 特助替翻譯選出發點 */
+.rtstart{font:inherit;font-size:var(--t5);font-weight:700;color:var(--ink);background:var(--card,transparent);
+  border:1px solid var(--line);border-radius:8px;padding:6px 8px;max-width:60%}
 
 .rtsum{margin:9px 0 0;padding:9px 10px;border-radius:var(--r1);background:var(--bg);
   border:1px solid var(--line2);font-size:var(--t5);color:var(--ink2)}

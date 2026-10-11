@@ -11790,8 +11790,13 @@ function rtSelected_(){
   if(!on.length && gs.length) on = [gs[0]];
   return on;
 }
+/* ⚠ 路線照翻譯排的「順序」走（跟小羽一樣），不先分上午／下午區——
+   2026-10-12 翻譯把不壓時間的魏文玲排第一，這裡卻因為分區把上午的排到前面，看起來像沒更新。
+   沒排過順序的才照排班頁的位置（psOrdered_ 的 _no）。 */
 function rtStops_(g){
-  return psOrdered_(g.rows).map(function(r){
+  return psOrdered_(g.rows).slice().sort(function(a, b){
+    return ((a.ord || 9999) - (b.ord || 9999)) || (a._no - b._no);
+  }).map(function(r){
     var key = rtKey_(r);
     var m = /^(.{2,3}[市縣])(.+)$/.exec(key) || ['', '', key];
     var cty = m[1];
@@ -12252,7 +12257,9 @@ function drawRT(){
     h += '<div class="rtlist"><div class="rth">停靠順序<s>' + stops.length + ' 站</s></div>';
     var far = 0, back = 0;
     /* 第一段：從翻譯自己選的出發點（公司／家／現在位置，小羽路線頁設的）。名字跟分鐘等 routeInfo 回來才填 */
-    h += '<div class="rthop">↓　<span data-rh="0">出發</span></div>';
+    h += '<div class="rthop">↓　<select class="rtstart" aria-label="出發點">' +
+      '<option value="tc">從台中公司出發</option><option value="nt">從南投公司出發</option><option value="home">從家出發</option>' +
+      '</select><span data-rh="0"></span></div>';
     stops.forEach(function(st, i){
       if(i){
         var prev = stops[i-1];
@@ -12329,25 +12336,41 @@ function drawRT(){
 
 /* Google 開車分鐘／公里＋出發點（後端 routeInfo，LineRoute.gs）。同一人同一天同一串地址只問一次。 */
 var RT_DRIVE_ = {};
+var RT_LAST_ = null;       // 現在畫的那條路線：{who, addrs, k}，改出發點要用
 function rtDrive_(who, stops){
   var addrs = stops.map(function(x){ return x.addr || ''; });
   var k = who + '|' + PS_DAY + '|' + addrs.join('|');
-  function fill(r){
+  RT_LAST_ = { who: who, addrs: addrs, k: k };
+  if(RT_DRIVE_[k]) return rtFill_(RT_DRIVE_[k]);
+  google.script.run
+    .withSuccessHandler(function(r){ RT_DRIVE_[k] = r; rtFill_(r); })
+    .withFailureHandler(function(){})           // 拿不到就留著直線距離，不打擾她
+    .routeInfo(CODE, who, PS_DAY, addrs);
+}
+/* 特助替翻譯換出發點（公司／家）。翻譯在小羽選「現在位置」的話，這裡多一個選項只顯示不能選 */
+document.addEventListener('change', function(e){
+  var t = e.target;
+  if(!t.classList || !t.classList.contains('rtstart') || !RT_LAST_) return;
+  var L = RT_LAST_; t.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(r){ RT_DRIVE_[L.k] = r; t.disabled = false; rtFill_(r); toast('出發點改好了，' + L.who + ' 在小羽也會看到'); })
+    .withFailureHandler(function(err){ t.disabled = false; if(RT_DRIVE_[L.k]) rtFill_(RT_DRIVE_[L.k]); toast(err.message, true); })
+    .routeSetStart(CODE, L.who, PS_DAY, t.value, L.addrs);
+});
+function rtFill_(r){
     var box = $('p-ps3'); if(!box || !r) return;
+    var sel = box.querySelector('.rtstart');
+    if(sel){
+      if(r.k === 'gps' && !sel.querySelector('[value=gps]')) sel.insertAdjacentHTML('beforeend', '<option value="gps" disabled>從現在位置出發（翻譯選的）</option>');
+      sel.value = r.k || r.office || 'tc';
+    }
     var M = 0, K = 0, miss = 0;
     r.legs.forEach(function(l){ if(l){ M += l.m; K += l.k; } else miss++; });
     [].forEach.call(box.querySelectorAll('[data-rh]'), function(el){
       var i = el.dataset.rh, l = r.legs[+i];
       if(i === 'sum') el.textContent = '　·　開車共 ' + M + ' 分・' + Math.round(K) + ' 公里' + (miss ? '（' + miss + ' 站沒算到）' : '');
-      else if(i === '0') el.textContent = '從' + r.start + '出發' + (l ? '　開車 ' + l.m + ' 分・' + l.k + ' 公里' : '');
       else if(l) el.textContent = '　開車 ' + l.m + ' 分・' + l.k + ' 公里';
     });
-  }
-  if(RT_DRIVE_[k]) return fill(RT_DRIVE_[k]);
-  google.script.run
-    .withSuccessHandler(function(r){ RT_DRIVE_[k] = r; fill(r); })
-    .withFailureHandler(function(){})           // 拿不到就留著直線距離，不打擾她
-    .routeInfo(CODE, who, PS_DAY, addrs);
 }
 
 /* 翻譯在小羽改了路線順序 → 「路線」分頁紅點＋頁首一條（他 2026-10-12 要通知特助，不用 LINE 推播額度）。
