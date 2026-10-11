@@ -11139,6 +11139,10 @@ function psOrdered_(rows){
       .forEach(function(r){ out.push(r); });
   });
   out.forEach(function(r, i){ r._no = i + 1; });
+  /* _st＝第幾站：照「順序」欄（翻譯在小羽排的、特助拖的都寫這一欄），沒排過的照上面的位置。
+     卡片上的號碼用這個——2026-10-12 他：翻譯排魏文玲第一，排班頁卻因為分區顯示詠盛興 1，看起來沒同步。 */
+  out.slice().sort(function(a, b){ return ((a.ord || 9999) - (b.ord || 9999)) || (a._no - b._no); })
+    .forEach(function(r, i){ r._st = i + 1; });
   return out;
 }
 /* 拖完存回去。
@@ -11163,7 +11167,7 @@ function psTrip_(r){
   return '<div class="pstr" data-id="' + esc(r.id) + '">' +
     /* ⚠ 時間的字要夠大——他 2026-10-05 說「現在字太小」。
        壓了真的時間的再加粗加深，一眼就分得出哪幾件是有約好時間的。 */
-    '<span class="nz"><span class="no">' + (r._no || '?') + '</span>' +
+    '<span class="nz"><span class="no">' + (r._st || '?') + '</span>' +
       '<span class="sl' + (psTimeOf_(r) !== null ? ' t' : '') + '">' +
       esc(r.slot || '不壓') + '</span></span>' +
     '<span class="bd">' +
@@ -11792,11 +11796,9 @@ function rtSelected_(){
 }
 /* ⚠ 路線照翻譯排的「順序」走（跟小羽一樣），不先分上午／下午區——
    2026-10-12 翻譯把不壓時間的魏文玲排第一，這裡卻因為分區把上午的排到前面，看起來像沒更新。
-   沒排過順序的才照排班頁的位置（psOrdered_ 的 _no）。 */
+   沒排過順序的才照排班頁的位置（psOrdered_ 算好的 _st）。 */
 function rtStops_(g){
-  return psOrdered_(g.rows).slice().sort(function(a, b){
-    return ((a.ord || 9999) - (b.ord || 9999)) || (a._no - b._no);
-  }).map(function(r){
+  return psOrdered_(g.rows).slice().sort(function(a, b){ return a._st - b._st; }).map(function(r){
     var key = rtKey_(r);
     var m = /^(.{2,3}[市縣])(.+)$/.exec(key) || ['', '', key];
     var cty = m[1];
