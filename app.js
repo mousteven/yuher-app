@@ -11209,8 +11209,9 @@ function psHead_(bar){
   var gs = psGroups_();
   return '<div class="pshd">' +
     '<button type="button" class="psnav" data-ps="prev">‹</button>' +
-    '<span class="d"><b>' + esc(dpLabel(PS_DAY)) + '</b>' +
-      '<s>' + psRows_().length + ' 筆　·　' + gs.length + ' 位翻譯</s></span>' +
+    '<span class="d"><b>' + esc(dpLabel(PS_DAY)) + ' ▾</b>' +
+      '<s>' + psRows_().length + ' 筆　·　' + gs.length + ' 位翻譯</s>' +
+      '<input type="date" class="psdate" value="' + esc(PS_DAY) + '" aria-label="選日期"></span>' +
     '<button type="button" class="psnav" data-ps="next">›</button>' +
     '</div>' +
     (PS_DAY !== psTomorrow_()
@@ -11565,6 +11566,14 @@ function loadPS(which){
     .listSchedule(CODE, m);
 }
 
+/* 換天之後重抓：在路線頁就重畫路線頁 */
+function psGoDay_(el){ PS_CUR = 0; if(el.closest('#p-ps3')) loadRT(); else loadPS('ps1'); }
+document.addEventListener('change', function(e){
+  var t = e.target;
+  if(!t.classList || !t.classList.contains('psdate') || !/^\d{4}-\d\d-\d\d$/.test(t.value)) return;
+  PS_DAY = t.value; psGoDay_(t);
+});
+
 /* 動作。⚠ 用委派綁在整頁上，畫面重畫之後不用重綁。 */
 document.addEventListener('click', function(e){
   var t = e.target;
@@ -11572,14 +11581,15 @@ document.addEventListener('click', function(e){
   var b = t.closest('[data-ps]');
   /* ⚠ 面板現在掛在 body 上，所以 .pssheet 也要算進來——
      少了它，面板裡的每一顆按鈕都按不動。 */
-  if(!b || !b.closest('#p-ps1, #p-ps2, .pssheet')) return;
+  /* ⚠ 路線頁（#p-ps3）也用同一個日期列——少了它，路線頁的 ‹ › 按了沒反應（2026-10-12 他回報只能看明天） */
+  if(!b || !b.closest('#p-ps1, #p-ps2, #p-ps3, .pssheet')) return;
   e.stopPropagation(); e.preventDefault();
   var a = b.dataset.ps, id = b.dataset.id;
   var r = id ? (CAL_ROWS.filter(function(x){ return x.id === id; })[0] || {}) : {};
 
-  if(a === 'prev'){ PS_DAY = psShift_(PS_DAY, -1); PS_CUR = 0; loadPS('ps1'); return; }
-  if(a === 'next'){ PS_DAY = psShift_(PS_DAY, 1);  PS_CUR = 0; loadPS('ps1'); return; }
-  if(a === 'tmr'){  PS_DAY = psTomorrow_();        PS_CUR = 0; loadPS('ps1'); return; }
+  if(a === 'prev' || a === 'next' || a === 'tmr'){
+    PS_DAY = a === 'tmr' ? psTomorrow_() : psShift_(PS_DAY, a === 'prev' ? -1 : 1);
+    psGoDay_(b); return; }
   if(a === 'open'){ PS_OPEN = (PS_OPEN === b.dataset.who) ? '' : b.dataset.who;
     psDraw(); return; }
   if(a === 'pprev'){ var n1 = psGroups_().length;

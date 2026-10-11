@@ -12,7 +12,8 @@
 :root{--bg:#FFFFFF;--ink:#111111;--mute:#6B6B6B;--soft:#F4F5F6;--hair:#DDDDDD;--red:#E63946;--warn:#B4461A;
   --sans:"Helvetica Neue",Helvetica,Arial,"PingFang TC","Noto Sans TC",sans-serif;color-scheme:light}
 html,body{margin:0;overflow-x:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%}
-body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans)}
+html{height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans);min-height:calc(100% + 2px)}   /* 永遠能捲 1px，見 keepOff() */
 *{box-sizing:border-box}
 .wrap{max-width:560px;margin:0 auto;padding:20px 16px 130px}
 header{display:flex;gap:12px;margin-bottom:14px}
@@ -21,10 +22,8 @@ h1{font-size:34px;line-height:1.05;font-weight:900;margin:0;letter-spacing:-.02e
 .sub{color:var(--mute);font-size:13px;margin:6px 0 0}
 section{border-top:2px solid var(--ink);padding:12px 0 14px;display:grid;gap:10px}
 .lab{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--red)}
-.seg{display:grid;grid-template-columns:repeat(4,1fr);border:1.5px solid var(--ink)}
-.seg button{font:inherit;font-size:14px;font-weight:700;padding:10px 2px;border:0;border-left:1px solid var(--ink);background:var(--bg);color:var(--ink);cursor:pointer;-webkit-tap-highlight-color:transparent}
-.seg button:first-child{border-left:0}
-.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+select{font:inherit;font-size:16px;font-weight:700;width:100%;border:1.5px solid var(--ink);border-radius:0;padding:8px 30px 8px 10px;color:var(--ink);
+  background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23111' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 10px center;-webkit-appearance:none;appearance:none}
 input[type=text]{font:inherit;font-size:16px;width:100%;border:0;border-bottom:1px solid var(--ink);padding:10px 2px;background:transparent;color:var(--ink);border-radius:0}
 input:focus{outline:none;border-bottom:2px solid var(--red)}
 .note{font-size:12px;color:var(--mute);margin:0}
@@ -34,7 +33,10 @@ input:focus{outline:none;border-bottom:2px solid var(--red)}
 .tot b{font-size:34px;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .tot i{font-style:normal;font-size:12px;color:var(--mute);flex-basis:100%}
 .list{display:flex;flex-direction:column;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}   /* 長按拖曳時不要選到字 */
-.it{display:grid;grid-template-columns:26px 34px minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--ink);background:var(--bg);touch-action:none}
+.it{display:grid;grid-template-columns:26px 34px minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--ink);background:var(--bg)}
+.it[data-id]{cursor:grab}
+.chosen{background:var(--soft);box-shadow:0 6px 18px rgba(0,0,0,.18)}   /* 長按到可以拖的那一刻 */
+.st .x{display:grid;gap:6px}
 .it:first-child{border-top:0}
 .it .h{font-size:22px;color:#9AA1AA;text-align:center;cursor:grab;user-select:none;-webkit-user-select:none}
 .it .n{font-size:19px;font-weight:900;text-align:center;font-variant-numeric:tabular-nums}
@@ -52,7 +54,7 @@ input:focus{outline:none;border-bottom:2px solid var(--red)}
 .dock button span{color:var(--red)}
 .dock button:disabled{opacity:.45}
 .dock p{max-width:560px;margin:6px auto 0;font-size:12.5px;text-align:center;min-height:18px}
-.seg button:focus-visible,.dock button:focus-visible,.go:focus-visible{outline:3px solid #FFC400;outline-offset:2px}
+select:focus-visible,.dock button:focus-visible,.go:focus-visible{outline:3px solid #FFC400;outline-offset:2px}
 #msg{padding:40px 0;font-size:16px}
 .draw{stroke-dasharray:1;animation:dash 1s cubic-bezier(.65,0,.35,1) both}
 @keyframes dash{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
@@ -99,6 +101,12 @@ function learn(stops) {
   if (o && START.indexOf('gps:') !== 0) GEO[startNow().a] = o;
 }
 
+/* LINE 內建瀏覽器：頁面停在最頂端時往下滑，會把整個視窗拉掉。讓頁面永遠離頂端 1px，往下滑就只是捲動。
+   ponytail: 跟 Telegram 小程式同一招；LINE 改了手勢就要重測 */
+function keepOff() { if (window.scrollY < 1) window.scrollTo(0, 1); }
+addEventListener('touchstart', keepOff, { passive: true });
+addEventListener('load', keepOff);
+
 api({ api: 'rtLoad' }).then(function (d) { D = d; START = d.start.k === 'gps' ? 'gps:' + d.start.a : d.start.k; HOME = d.home; learn(d.stops); init(); }).catch(fail);
 
 function init() {
@@ -106,37 +114,37 @@ function init() {
   var opts = [[D.office, D.offices[D.office].n], [D.office === 'tc' ? 'nt' : 'tc', D.offices[D.office === 'tc' ? 'nt' : 'tc'].n], ['home', '家'], ['gps', '現在位置']];
   $('app').innerHTML = '<header><div class="bar"></div><div><h1>路線</h1><p class="sub">' + esc(D.name) + '　' + (dd.getMonth() + 1) + '/' + dd.getDate() +
       '（' + '日一二三四五六'.charAt(dd.getDay()) + '）・按住 ≡ 上下拖</p></div></header>' +
-    '<section><span class="lab">從哪裡出發</span><div class="seg" id="seg">' +
-      opts.map(function (o) { return '<button type="button" data-k="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>' +
-      '<input type="text" id="home" placeholder="家裡地址，例如 台中市北屯區…" hidden value="' + esc(HOME) + '">' +
-      '<p class="note" id="fnote"></p></section>' +
     '<section class="map"><svg id="map" role="img" aria-label="路線地圖"></svg><p>位置是 Google 照地址找的</p></section>' +
     '<section><div class="tot" id="tot"></div><div class="list" id="list"></div><div class="warn" id="warn"></div>' +
       '<a class="go" id="go" target="_blank" rel="noopener" hidden>用 Google 地圖導整條<span>↗</span></a></section>';
   $('dock').hidden = !D.stops.length;
   if (!D.stops.length) { $('list').innerHTML = '<p class="note">這一天沒有還沒做的行程。</p>'; }
+  $('list').insertAdjacentHTML('beforebegin', '<div class="it st"><span class="h"></span><span class="n">⌂</span><span class="x">' +
+    '<select id="sel" aria-label="從哪裡出發">' + opts.map(function (o) { return '<option value="' + o[0] + '">從' + o[1] + '出發</option>'; }).join('') + '</select>' +
+    '<input type="text" id="home" placeholder="家裡地址，例如 台中市北屯區…" hidden value="' + esc(HOME) + '">' +
+    '<small class="note" id="fnote"></small></span><span></span></div>');
   buildList(); paint(true); legsText();
-  $('seg').addEventListener('click', function (e) {
-    var b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.k === 'gps') {
-      if (!navigator.geolocation) return note('這支手機沒辦法取得位置。');
+  $('sel').addEventListener('change', function () {
+    var k = this.value;
+    if (k === 'gps') {
+      if (!navigator.geolocation) { selPaint(); return note('這支手機沒辦法取得位置。'); }
       note('正在取得位置…（手機會問要不要允許）');
       navigator.geolocation.getCurrentPosition(function (p) {
         START = 'gps:' + p.coords.latitude.toFixed(5) + ',' + p.coords.longitude.toFixed(5); changed();
-      }, function () { note('沒拿到位置。可以到手機設定允許 LINE 使用位置，或改選別的。'); }, { timeout: 10000 });
+      }, function () { selPaint(); note('沒拿到位置。可以到手機設定允許 LINE 使用位置，或改選別的。'); }, { timeout: 10000 });
       return;
     }
-    START = b.dataset.k;
-    if (START === 'home' && !HOME) { segPaint(); $('home').focus(); return note('先打家裡地址，打完按鍵盤的「完成」。'); }
+    START = k;
+    if (START === 'home' && !HOME) { selPaint(); $('home').focus(); return note('先打家裡地址，打完按鍵盤的「完成」。'); }
     changed();
   });
   $('home').addEventListener('change', function () { HOME = this.value.trim(); if (START === 'home' && HOME) changed(); });
   $('save').addEventListener('click', save);
 }
 function note(t) { $('fnote').textContent = t; }
-function segPaint() {
+function selPaint() {
   var k = START.indexOf('gps:') === 0 ? 'gps' : START;
-  [].forEach.call($('seg').children, function (b) { b.setAttribute('aria-pressed', b.dataset.k === k); });
+  $('sel').value = k;
   $('home').hidden = k !== 'home';
 }
 /* 起點：畫面上的名字與地址（地址只拿來畫地圖） */
@@ -146,15 +154,19 @@ function startNow() {
   return { n: D.offices[START].n, a: D.offices[START].a };
 }
 
+function rows() { return [].slice.call($('list').querySelectorAll('.it[data-id]:not(.sortable-fallback)')); }
 function buildList() {
-  $('list').innerHTML = '<div class="it lock st" id="srow"></div>' + D.stops.map(function (s, i) {
+  $('list').innerHTML = D.stops.map(function (s, i) {
     return '<div class="it in" style="--i:' + (i + 1) + '" data-id="' + esc(s.id) + '"><span class="h" aria-label="按住拖曳">≡</span><span class="n' + (s.z === '下午' ? ' pm' : '') + '"></span>' +
       '<span><b>' + esc((s.slot ? s.slot + '　' : '') + s.c) + '</b><small>' + esc([town(s.a), s.topic].filter(String).join('・') || (s.a ? '' : '沒有地址，地圖上不會畫')) + '</small></span><span class="l"></span></div>'; }).join('') +
     D.done.map(function (s) { return '<div class="it lock"><span class="h">≡</span><span class="n">✓</span><span><b>' + esc(s.c) + '</b><small>完成，固定在最後</small></span><span></span></div>'; }).join('');
-  if (window.Sortable && D.stops.length > 1) Sortable.create($('list'), { handle: '.h', draggable: '.it[data-id]', ghostClass: 'ghost', animation: 260, easing: 'cubic-bezier(.2,.8,.2,1)',
+  /* 整列都能拖。手機上要按住一下（delay）才開始拖，直接滑就是捲畫面。
+     fallbackOnBody：拖曳時跟著手指的那份複製放到 body，不要混進清單（之前混進來，編號變成 02 05 03 04、同一家出現兩次） */
+  if (window.Sortable && D.stops.length > 1) Sortable.create($('list'), { draggable: '.it[data-id]', ghostClass: 'ghost', chosenClass: 'chosen',
+    delay: 180, delayOnTouchOnly: true, touchStartThreshold: 6, fallbackOnBody: true, animation: 260, easing: 'cubic-bezier(.2,.8,.2,1)',
     onEnd: function () {
       var by = {}; D.stops.forEach(function (s) { by[s.id] = s; });
-      D.stops = [].map.call($('list').querySelectorAll('.it[data-id]'), function (el) { return by[el.dataset.id]; });
+      D.stops = rows().map(function (el) { return by[el.dataset.id]; });
       changed();
     } });
 }
@@ -175,9 +187,7 @@ function changed() {
 }
 function legsText() {
   var st = startNow(), M0 = 0, K0 = 0, wait = false, miss = 0, pm = false, warn = false;
-  $('srow').innerHTML = '<span class="h"></span><span class="n">⌂</span><span><b>' + esc(st.n) + '</b><small>' +
-    esc(START.indexOf('gps:') === 0 ? '手機的位置' : town(st.a) || st.a) + '・出發點，上面可以改</small></span><span></span>';
-  [].forEach.call($('list').querySelectorAll('.it[data-id]'), function (el, i) {
+  rows().forEach(function (el, i) {
     var s = D.stops[i];
     el.querySelector('.n').textContent = pad(i + 1);
     el.querySelector('.l').innerHTML = s.l === undefined ? '…' : s.l ? s.l.m + ' 分<br>' + s.l.k + ' km' : '—';
@@ -191,7 +201,7 @@ function legsText() {
   $('go').hidden = !a.length;
   if (a.length) $('go').href = 'https://www.google.com/maps/dir/?api=1&travelmode=driving' + (START.indexOf('gps:') === 0 ? '' : '&origin=' + encodeURIComponent(st.a)) +
     '&destination=' + encodeURIComponent(a[a.length - 1]) + (a.length > 1 ? '&waypoints=' + a.slice(0, -1).map(encodeURIComponent).join('%7C') : '');
-  segPaint();
+  selPaint();
   note(START === 'home' ? '地址只存在你自己的帳號，別人看不到。只管這一天。' : START.indexOf('gps:') === 0 ? '從你現在的位置算。只管這一天。' : '只管這一天，明天打開又回到' + D.offices[D.office].n + '。');
 }
 
