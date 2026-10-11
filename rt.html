@@ -33,7 +33,7 @@ input:focus{outline:none;border-bottom:2px solid var(--red)}
 .tot{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
 .tot b{font-size:34px;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .tot i{font-style:normal;font-size:12px;color:var(--mute);flex-basis:100%}
-.list{display:flex;flex-direction:column}
+.list{display:flex;flex-direction:column;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}   /* 長按拖曳時不要選到字 */
 .it{display:grid;grid-template-columns:26px 34px minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--ink);background:var(--bg);touch-action:none}
 .it:first-child{border-top:0}
 .it .h{font-size:22px;color:#9AA1AA;text-align:center;cursor:grab;user-select:none;-webkit-user-select:none}
@@ -82,16 +82,24 @@ function fail(e) { $('app').innerHTML = '<p id="msg">' + esc(e && e.message || e
 function pad(n) { return (n < 10 ? '0' : '') + n; }
 function town(a) { return (/[市縣](.{1,4}?[區鄉鎮市])/.exec(String(a || '').replace(/臺/g, '台')) || [])[1] || ''; }
 
-/* 地圖上的位置：地址 → 「縣市＋鄉鎮」的中心點（跟 App rtKey_ 同一個規則）；現在位置用經緯度換算 */
-var M = window.TWMAP;
+/* 地圖上的位置：Google 算路線時找到的門牌經緯度（GEO，地址 → [緯,經]）；
+   還沒問到、或 Google 找不到的，才退回「縣市＋鄉鎮」的中心點。換算跟 twmap.js 同一組常數 */
+var M = window.TWMAP, GEO = {};
+function xy(g) { return [(g[1] - 120) * 101.8, (23.5 - g[0]) * 110.9]; }
 function pos(a) {
+  if (GEO[a]) return xy(GEO[a]);
   var g = /^(-?[\d.]+),(-?[\d.]+)$/.exec(a || '');
-  if (g) return [(+g[2] - 120) * 111.32 * Math.cos(+g[1] * Math.PI / 180), -(+g[1] - 23.5) * 110.57];
+  if (g) return xy([+g[1], +g[2]]);
   var m = /^(.{2,3}[市縣])(.{1,4}?[區鄉鎮市])/.exec(String(a || '').replace(/臺/g, '台'));
   return (m && M && M.p[m[1] + m[2]]) || null;
 }
+function learn(stops) {
+  var o = null;
+  stops.forEach(function (s) { if (s.l && s.l.p) { GEO[s.a] = s.l.p; o = o || s.l.o; } });
+  if (o && START.indexOf('gps:') !== 0) GEO[startNow().a] = o;
+}
 
-api({ api: 'rtLoad' }).then(function (d) { D = d; START = d.start.k === 'gps' ? 'gps:' + d.start.a : d.start.k; HOME = d.home; init(); }).catch(fail);
+api({ api: 'rtLoad' }).then(function (d) { D = d; START = d.start.k === 'gps' ? 'gps:' + d.start.a : d.start.k; HOME = d.home; learn(d.stops); init(); }).catch(fail);
 
 function init() {
   var dd = new Date(D.day + 'T12:00:00+08:00');
@@ -102,7 +110,7 @@ function init() {
       opts.map(function (o) { return '<button type="button" data-k="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>' +
       '<input type="text" id="home" placeholder="家裡地址，例如 台中市北屯區…" hidden value="' + esc(HOME) + '">' +
       '<p class="note" id="fnote"></p></section>' +
-    '<section class="map"><svg id="map" role="img" aria-label="路線地圖"></svg><p>點在鄉鎮中心，不是門牌</p></section>' +
+    '<section class="map"><svg id="map" role="img" aria-label="路線地圖"></svg><p>位置是 Google 照地址找的</p></section>' +
     '<section><div class="tot" id="tot"></div><div class="list" id="list"></div><div class="warn" id="warn"></div>' +
       '<a class="go" id="go" target="_blank" rel="noopener" hidden>用 Google 地圖導整條<span>↗</span></a></section>';
   $('dock').hidden = !D.stops.length;
@@ -161,7 +169,7 @@ function changed() {
       if (my !== SEQ) return;
       var l = {}; d.stops.forEach(function (s) { l[s.id] = s.l; });
       D.stops.forEach(function (s) { s.l = l[s.id] || null; });
-      legsText();
+      learn(D.stops); legsText(); paint(false);
     }).catch(function (e) { if (my === SEQ) { D.stops.forEach(function (s) { s.l = null; }); legsText(); $('st').textContent = e.message; } });
   }, 500);
 }
@@ -201,14 +209,36 @@ function paint(anim) {
   Object.keys(M.c).forEach(function (k) { g += '<path d="' + M.c[k] + '" fill="none" stroke="#111" stroke-width="' + 0.5 * u + '"/>'; });
   var line = [sp].concat(pts).filter(Boolean);
   if (line.length > 1) g += '<polyline pathLength="1" class="' + (anim ? 'draw' : '') + '" points="' + line.map(function (p) { return p.join(','); }).join(' ') + '" fill="none" stroke="#E63946" stroke-width="' + u + '" stroke-linejoin="round" stroke-linecap="round"/>';
-  function mark(p, fill, txt, label) {
-    return '<rect x="' + (p[0] - r) + '" y="' + (p[1] - r) + '" width="' + 2 * r + '" height="' + 2 * r + '" fill="' + fill + '"/>' +
-      '<text x="' + p[0] + '" y="' + (p[1] + fs * 0.36) + '" font-size="' + fs + '" text-anchor="middle" fill="#fff" font-weight="800">' + txt + '</text>' +
-      (label ? '<text x="' + (p[0] + r * 1.35) + '" y="' + (p[1] + fs * 0.35) + '" font-size="' + fs * 0.85 + '" fill="#111" font-weight="700">' + esc(label) + '</text>' : '');
-  }
-  dn.forEach(function (p) { if (p) g += mark(p, '#9AA1AA', '✓'); });
-  if (sp) g += mark(sp, '#111', '⌂', st.n);
-  pts.forEach(function (p, i) { if (p) g += mark(p, D.stops[i].z === '下午' ? '#E63946' : '#111', i + 1, D.stops[i].c); });
+  var mk = [];
+  dn.forEach(function (p) { if (p) mk.push({ p: p, f: '#9AA1AA', t: '✓', n: '' }); });
+  if (sp) mk.push({ p: sp, f: '#111', t: '⌂', n: st.n });
+  pts.forEach(function (p, i) { if (p) mk.push({ p: p, f: D.stops[i].z === '下午' ? '#E63946' : '#111', t: i + 1, n: D.stops[i].c.replace(/(股份)?有限公司$/, '') }); });
+  /* 靠太近的併成一組：方塊並排、名字一行一個；名字撞到別的東西就往下挪 */
+  var grp = [], box = [], fl = fs * 0.85, lh = fs * 1.15;
+  mk.forEach(function (m) {
+    var o = grp.filter(function (q) { return Math.abs(q[0].p[0] - m.p[0]) < 2.4 * r && Math.abs(q[0].p[1] - m.p[1]) < 2.4 * r; })[0];
+    if (o) o.push(m); else grp.push([m]);
+  });
+  function hit(b) { return box.some(function (o) { return b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]; }); }
+  grp.forEach(function (q) {
+    var x = q[0].p[0] - r, y = q[0].p[1];
+    q.forEach(function (m, j) {
+      var cx = x + r + j * 2.1 * r;
+      g += '<rect x="' + (cx - r) + '" y="' + (y - r) + '" width="' + 2 * r + '" height="' + 2 * r + '" fill="' + m.f + '"/>' +
+        '<text x="' + cx + '" y="' + (y + fs * 0.36) + '" font-size="' + fs + '" text-anchor="middle" fill="#fff" font-weight="800">' + m.t + '</text>';
+    });
+    box.push([x, y - r, x + q.length * 2.1 * r, y + r]);
+  });
+  grp.forEach(function (q) {
+    var lx = q[0].p[0] - r + q.length * 2.1 * r + 0.35 * r, ly = q[0].p[1] + fs * 0.35;
+    q.filter(function (m) { return m.n; }).forEach(function (m) {
+      var b, n = 0, t = (q.length > 1 && typeof m.t === 'number' ? m.t + ' ' : '') + m.n;   // 一組裡面的名字前面標號碼
+      while (hit(b = [lx, ly - fl * 0.85, lx + t.length * fl, ly + fl * 0.2]) && n++ < 8) ly += lh;
+      box.push(b);
+      g += '<text x="' + lx + '" y="' + ly + '" font-size="' + fl + '" fill="#111" font-weight="700">' + esc(t) + '</text>';
+      ly += lh;
+    });
+  });
   svg.innerHTML = g;
 }
 
