@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!-- 小羽選單「行程」打開的 LIFF 小視窗（他 2026-10-12 選甲）：抓手機位置 → 送後端（LineRoute.gs rtHere）→ 替他送出「行程」→ 自己關掉。
+     抓不到位置也照樣送「行程」，後端改用今天最後做完的那站當起點。LIFF ID 在 LINE Developers「羽禾小羽」LINE Login channel。
+     位置一律重抓（maximumAge 0）：不準的根源之一就是拿舊位置算。 -->
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>行程</title>
+<style>
+body{margin:0;font:16px/1.5 "Helvetica Neue","PingFang TC","Noto Sans TC",sans-serif;color:#111;background:#fff}
+main{padding:22px 20px;display:grid;gap:10px}
+b{font-size:18px}
+p{margin:0;font-size:13px;color:#4C535C}
+.bar{height:4px;background:#DDD;overflow:hidden}
+.bar i{display:block;height:4px;width:40%;background:#111;animation:go 1.2s ease-in-out infinite}
+@keyframes go{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+@media (prefers-reduced-motion:reduce){.bar i{animation:none;width:100%}}
+</style></head><body>
+<main><b id="t">正在抓你現在的位置…</b><p id="s">抓好會自己關掉，不用按。第一次手機會問能不能用位置，請按「允許」。</p><div class="bar"><i></i></div></main>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+var LIFF_ID = '__LIFF_ID__';
+var API = 'https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec';
+function say(t, s) { document.getElementById('t').textContent = t; document.getElementById('s').textContent = s || ''; }
+function send(lat, lng) {
+  fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // text/plain：application/json 會觸發預檢，Apps Script 接不住
+    body: JSON.stringify({ api: 'rtHere', at: liff.getAccessToken(), lat: lat, lng: lng }) })
+    .then(function (r) { return r.json(); }).catch(function () { return {}; })
+    .then(function (j) {
+      if (j && j.ok === false && j.err) say(String(j.err).replace(/^Error:\s*/, ''));
+      /* 不管位置有沒有存成功都送「行程」：卡片照舊出來，最壞是用上一次的起點 */
+      return liff.sendMessages([{ type: 'text', text: '行程' }]).then(function () { liff.closeWindow(); });
+    })
+    .catch(function () { say('請回聊天室打「行程」', '這個小視窗要從手機 LINE 的小羽選單打開才能自動送出。'); });
+}
+liff.init({ liffId: LIFF_ID }).then(function () {
+  if (!liff.isLoggedIn()) return liff.login();
+  if (!navigator.geolocation) return send(null, null);
+  navigator.geolocation.getCurrentPosition(function (p) { send(p.coords.latitude, p.coords.longitude); },
+    function () { send(null, null); }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 });
+}).catch(function (e) { say('打不開', String(e && e.message || e)); });
+</script>
+</body></html>
