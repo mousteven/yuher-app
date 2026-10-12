@@ -140,6 +140,13 @@ function init() {
   });
   $('home').addEventListener('change', function () { HOME = this.value.trim(); if (START === 'home' && HOME) changed(); });
   $('save').addEventListener('click', save);
+  /* 出發點是「現在位置」：打開就重抓一次（他 2026-10-12：早上記的位置下午還在用，分鐘差一倍）。
+     動了 200 公尺以上才重算並直接存，小羽卡片下次也是新的 */
+  if (START.indexOf('gps:') === 0 && navigator.geolocation && D.stops.length) navigator.geolocation.getCurrentPosition(function (p) {
+    var o = START.slice(4).split(','), la = p.coords.latitude, lo = p.coords.longitude;
+    if (Math.abs(la - o[0]) * 111 + Math.abs(lo - o[1]) * 101 < 0.2) return;
+    START = 'gps:' + la.toFixed(5) + ',' + lo.toFixed(5); changed(); save();
+  }, function () { note('沒拿到現在的位置，分鐘是照上次記的位置算的。'); }, { timeout: 10000, maximumAge: 60000 });
 }
 function note(t) { $('fnote').textContent = t; }
 function selPaint() {
