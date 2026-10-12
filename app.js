@@ -11152,7 +11152,7 @@ function psOrdered_(rows){
       2026-10-04 第一版傳了整天 72 筆進來，存出來變成 5、16、17、37…
       排序still對，但數字看起來莫名其妙，而且一旦改派給別人就全亂了。 */
 function psSaveOrder_(rows){
-  var list = psOrdered_(rows).map(function(r){ return { id: r.id, ord: r._no }; });
+  var list = psOrdered_(rows).map(function(r){ return { id: r.id, ord: r._st }; });   // _st＝照順序欄（拖完已照畫面重編）
   if(!list.length) return;
   google.script.run
     .withSuccessHandler(function(){ toast('順序存好了'); })
@@ -11191,6 +11191,13 @@ function psTrip_(r){
 }
 
 /* 三個區塊。拖進哪一區就變成那個時段（他說直接改，不用再問一次）。 */
+/* 排班戊：一條清單照站序排（跟小羽、路線頁同一個順序，他 2026-10-12「三個地方要同步」）。
+   時段寫在每張卡的號碼下面；這裡拖只改順序、不改時段（沒有 data-z）——改時段用排班甲的分區或「幾點」。 */
+function psOne_(g){
+  return '<div class="pszone" data-who="' + esc(g.who) + '">' +
+    psOrdered_(g.rows).slice().sort(function(a, b){ return a._st - b._st; })
+      .map(function(r){ return psTrip_(r); }).join('') + '</div>';
+}
 function psZones_(g){
   var rows = psOrdered_(g.rows), h = '';
   PS_ZONES_.forEach(function(z){
@@ -11286,7 +11293,7 @@ function drawPS2(){
       '<s>' + g.rows.length + ' 件</s></span>' +
     '<button type="button" class="psnav" data-ps="pnext">›</button></div>' +
     '<div class="pspc open"><div class="psin">' +
-      psZones_(g) +
+      psOne_(g) +
       '<button type="button" class="psok" data-ps="okall" data-who="' +
         esc(g.who) + '">確認 ' + g.rows.length + ' 筆</button>' +
     '</div></div>' +
@@ -11491,8 +11498,9 @@ function psDragBind(){
       var r = CAL_ROWS.filter(function(q){ return q.id === id; })[0];
       if(!r || !zone){ psDraw(); return; }
 
+      var one = !('z' in zone.dataset);   // 排班戊的單一清單：只排順序
       var want = zone.dataset.z;
-      var moved = (psZoneOf_(r) !== want);
+      var moved = !one && (psZoneOf_(r) !== want);
       /* ⚠ 原本填了幾點、又被拖到另一個半天 → 那個時間一定要講一聲再清掉。
          安靜地把 09:30 吃掉，她會以為時間還在。 */
       var hadTime = (moved && psTimeOf_(r) !== null) ? r.slot : '';
@@ -11506,7 +11514,7 @@ function psDragBind(){
       [].forEach.call(card.querySelectorAll('.pszone'), function(q){
         [].forEach.call(q.querySelectorAll('.pstr'), function(t){
           var rr = CAL_ROWS.filter(function(x2){ return x2.id === t.dataset.id; })[0];
-          if(rr){ rr.ord = ++n; if(t === el) rr.slot = q.dataset.z; }
+          if(rr){ rr.ord = ++n; if(t === el && !one) rr.slot = q.dataset.z; }
         });
       });
       psDraw();
