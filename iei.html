@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<!-- 小禾的 LIFF 表單（他 2026-10-13 選乙：一張預填好的 IEI 客戶訪視服務紀錄表）。
+     從今天行程預填 → 他改要改的 → 按送出：存草稿（後端 Main.gs api:'save'）→ 替他送「訪談確認 <ID>」→ 小禾回確認卡。
+     這一頁不送 IEI，送 IEI 是在確認卡上按的。頁面本身沒有任何資料，資料都是 LIFF 驗身分之後才跟後端拿。
+     ⛔ 後端網址寫死在下面（API），不從網址參數拿：不然有人做一個假連結，就能把他的 LINE 通行證送去別的地方。 -->
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>訪談紀錄表</title>
+<style>
+:root{--ink:#111111;--mute:#4A5566;--red:#E30613;--line:#D6DEEA;--tile:#F3F5F8}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.6 "Helvetica Neue",Helvetica,Arial,-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:var(--ink);background:#fff}
+header{padding:16px 16px 0;display:grid;gap:4px}
+.eye{font-size:14px;color:var(--mute)}
+.ttl{display:flex;gap:12px;align-items:stretch}.ttl i{width:5px;background:var(--red);flex:none}
+.ttl b{font-size:22px;line-height:1.25;font-weight:700}
+.rule{height:2px;background:var(--ink);margin-top:8px}
+main{padding:16px 16px 112px;display:grid;gap:24px}
+.f{display:grid;gap:8px}
+.f>span{font-size:14px;font-weight:700;color:var(--mute)}
+input[type=text],input[type=date],input[type=number],input[type=search],textarea,select{font:16px/1.5 inherit;font-family:inherit;color:var(--ink);background:#fff;border:1.5px solid var(--ink);padding:8px 12px;min-height:44px;width:100%;border-radius:0}
+textarea{min-height:72px;resize:vertical}
+:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.two{display:grid;grid-template-columns:1fr 112px;gap:8px}
+.seg{display:flex;border:1.5px solid var(--ink)}
+.seg button{flex:1;min-height:44px;border:0;background:#fff;color:var(--ink);font:700 15px/1.2 inherit;font-family:inherit;padding:4px}
+.seg button+button{border-left:1.5px solid var(--ink)}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{min-height:44px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);font:700 15px/1.2 inherit;font-family:inherit;padding:4px 12px}
+.chips button[aria-pressed=true]{background:var(--ink);color:#fff}
+.btn{min-height:44px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);font:700 15px/1.2 inherit;font-family:inherit}
+.chips button[aria-pressed=true]::before{content:"✓ "}
+details summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer}
+.list{display:grid;gap:0;background:var(--tile)}
+.list label{display:flex;gap:12px;align-items:center;min-height:52px;padding:8px 12px;border-bottom:1px solid #fff}
+.list input{width:24px;height:24px;accent-color:var(--ink);flex:none}
+.list small{display:block;font-size:14px;color:var(--mute)}
+.note{font-size:14px;color:var(--mute)}
+.warn{font-size:15px;color:var(--ink);border-left:5px solid var(--red);padding:4px 12px;background:var(--tile)}
+.row{display:flex;gap:12px;align-items:center;min-height:44px}
+.row input{width:24px;height:24px;accent-color:var(--ink)}
+footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(safe-area-inset-bottom)}
+#go{width:100%;min-height:56px;border:0;background:var(--ink);color:#fff;font:700 17px/1 inherit;font-family:inherit;display:flex;justify-content:space-between;align-items:center;padding:0 16px}
+#go em{color:var(--red);font-style:normal;font-size:20px}
+#go:disabled{background:var(--mute)}
+#msg{padding:8px 16px;font-size:15px;min-height:0}
+#msg:empty{display:none}
+.bar{height:4px;background:var(--line);overflow:hidden}.bar i{display:block;height:4px;width:40%;background:var(--ink);animation:go 1.2s ease-in-out infinite}
+@keyframes go{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+@media (prefers-reduced-motion:reduce){.bar i{animation:none;width:100%}}
+[hidden]{display:none!important}
+</style></head><body>
+<header>
+  <div class="eye" id="eye">客戶訪視服務紀錄表</div>
+  <div class="ttl"><i></i><b id="ttl">讀取中…</b></div>
+  <div class="eye" id="sub"></div>
+  <div class="rule"></div>
+</header>
+<div class="bar" id="bar"><i></i></div>
+<main id="form" hidden>
+  <div class="f" id="tripsF"><span>今天的行程（點一站就帶入）</span><div class="chips" id="trips"></div></div>
+
+  <div class="f"><span>IEI 客戶</span>
+    <div id="custNow" class="note"></div>
+    <div class="list" id="cands"></div>
+    <div class="two"><input type="search" id="q" placeholder="打客戶名稱找"><button type="button" class="btn" id="qGo">找</button></div>
+  </div>
+  <label class="f"><span>服務地址</span><input type="text" id="addr"></label>
+  <div class="two">
+    <label class="f"><span>服務日期</span><input type="date" id="date"></label>
+    <label class="f"><span>第幾次訪視</span><input type="number" id="vt" min="1" step="1" inputmode="numeric"></label>
+  </div>
+
+  <div class="f"><span>服務方式</span><div class="seg" id="method" data-v="1">
+    <button type="button" data-v="1">親自拜訪</button><button type="button" data-v="2">電話</button><button type="button" data-v="3">來電</button><button type="button" data-v="4">書信</button></div></div>
+  <div class="f"><span>服務對象</span><div class="seg" id="labor" data-v="1">
+    <button type="button" data-v="1">雇主與外國人</button><button type="button" data-v="2">雇主</button><button type="button" data-v="3">外國人</button></div></div>
+
+  <div class="f" id="wkF"><span>移工（IEI 名單，行程上的人已勾好）</span>
+    <div class="list" id="wk"><div class="note" style="padding:12px">先選客戶</div></div>
+    <div id="natNote" class="note"></div></div>
+
+  <div class="f"><span>服務項目</span>
+    <div class="chips" id="itemsTop"></div>
+    <details><summary>其他項目 ▾</summary><div class="chips" id="itemsMore"></div></details></div>
+
+  <div class="f" id="cuF"><span>雇主處理經過</span><select id="cuPs"></select><textarea id="cuP"></textarea>
+    <span>雇主處理結果</span><select id="cuAs"></select><textarea id="cuA"></textarea></div>
+
+  <div class="f" id="laF"><span>移工處理經過／結果</span>
+    <label class="row"><input type="checkbox" id="same" checked>同雇主</label>
+    <div id="laBox" class="f" hidden><select id="laPs"></select><textarea id="laP" placeholder="移工處理經過"></textarea>
+      <select id="laAs"></select><textarea id="laA" placeholder="移工處理結果"></textarea>
+      <div class="note">不是片語的字，送出時用 IEI 自己的翻譯功能翻成移工的語言。</div></div></div>
+
+  <label class="f"><span>後續追蹤處理紀錄（選填）</span><textarea id="after"></textarea></label>
+</main>
+<footer><div id="msg" role="status"></div><button id="go" disabled>確認後送出<em>→</em></button></footer>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+var API = 'https://script.google.com/macros/s/AKfycbyZDD8YqjQ7_lBzyNyILy3jJfFsIWlVtz_ouhPJxakT7ka6F4Ou2sYn2khQiJmXY3U/exec';
+var Q = new URLSearchParams(location.search), Q2 = new URLSearchParams(decodeURIComponent(Q.get('liff.state') || '').replace(/^\?/, ''));
+function qp(k) { return Q.get(k) || Q2.get(k) || ''; }
+var LIFF_ID = qp('liff'), DRAFT = qp('d');
+var S = { items: [], picks: {}, workers: [], vtEdited: false, trip: null, cu00: '', cuName: '', client: '' }, META = null;
+function $(id) { return document.getElementById(id); }
+function say(t) { $('msg').textContent = t || ''; }
+function el(tag, txt, attrs) { var e = document.createElement(tag); if (txt != null) e.textContent = txt; for (var k in attrs || {}) e.setAttribute(k, attrs[k]); return e; }
+function api(o) {
+  o.at = liff.getAccessToken();
+  return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(o) })   // text/plain：避開預檢
+    .then(function (r) { return r.json(); })
+    .then(function (j) { if (j.ok === false) throw new Error(j.err); return j; });
+}
+function seg(id, v) { var b = $(id); if (v != null) b.dataset.v = String(v); [].forEach.call(b.children, function (x) { x.setAttribute('aria-pressed', String(x.dataset.v === b.dataset.v)); }); }
+['method', 'labor'].forEach(function (id) {
+  $(id).addEventListener('click', function (e) { var x = e.target.closest('button'); if (!x) return; seg(id, x.dataset.v); sides(); check(); });
+});
+function sides() { var l = $('labor').dataset.v; $('cuF').hidden = l === '3'; $('laF').hidden = $('wkF').hidden = l === '2'; check(); }
+$('same').onchange = function () { $('laBox').hidden = $('same').checked; };
+/* 片語下拉：跟 IEI 一樣，選了就接在後面（逗號隔開） */
+function phrases(selId, boxId, list) {
+  var s = $(selId); s.innerHTML = ''; s.appendChild(el('option', '＋ 加一句片語', { value: '' }));
+  list.forEach(function (t) { s.appendChild(el('option', t, { value: t })); });
+  s.onchange = function () { if (!s.value) return; var b = $(boxId); b.value = b.value ? b.value + ',' + s.value : s.value; s.value = ''; };
+}
+function items() {
+  var top = $('itemsTop'), more = $('itemsMore'), pin = [9, 7, 15, 19];
+  top.innerHTML = more.innerHTML = '';
+  META.items.forEach(function (name, i) {
+    var no = i + 1, b = el('button', no + ' ' + name, { type: 'button', 'aria-pressed': String(S.items.indexOf(no) !== -1) });
+    b.onclick = function () { var k = S.items.indexOf(no); if (k === -1) S.items.push(no); else S.items.splice(k, 1); b.setAttribute('aria-pressed', String(k === -1)); check(); };
+    (pin.indexOf(no) !== -1 || S.items.indexOf(no) !== -1 ? top : more).appendChild(b);
+  });
+}
+function head() {
+  $('ttl').textContent = S.cuName || S.client || '選一個客戶';
+  $('sub').textContent = [$('date').value, S.trip && S.trip.slot, META && META.dry ? '試跑中：按送出也不會進 IEI' : ''].filter(Boolean).join('・');
+}
+/* ---------- 客戶與移工 ---------- */
+function cands(list) {
+  var box = $('cands'); box.innerHTML = '';
+  if (!list.length) { $('custNow').textContent = S.client ? 'IEI 找不到「' + S.client + '」，請在下面打名稱找' : ''; return; }
+  $('custNow').textContent = 'IEI 有 ' + list.length + ' 家像的，請點一家：';
+  list.forEach(function (c) {
+    var lab = el('label'), r = el('input', null, { type: 'radio', name: 'cu' }), t = el('span', c.name);
+    t.appendChild(el('small', c.cu00 + '・' + (c.addr || '沒有地址')));
+    r.onchange = function () { pickCust(c); };
+    lab.appendChild(r); lab.appendChild(t); box.appendChild(lab);
+  });
+}
+function pickCust(c, keepPicks) {
+  S.cu00 = c.cu00; S.cuName = c.name;
+  if (!$('addr').value && c.addr) $('addr').value = c.addr;
+  $('cands').innerHTML = ''; $('custNow').textContent = '✓ ' + c.name + '（' + c.cu00 + '）';
+  head(); say('讀 IEI 移工名單…');
+  return api({ api: 'iei', cu00: c.cu00, workers: S.trip ? S.trip.workers : [] }).then(function (j) { workers(j.workers, keepPicks); say(''); }).catch(function (e) { say(e.message); });
+}
+function workers(rows, keepPicks) {
+  S.workers = rows; if (!keepPicks) { S.picks = {}; rows.forEach(function (w) { if (w.pick) S.picks[w.la00] = 1; }); }
+  var box = $('wk'); box.innerHTML = '';
+  if (!rows.length) box.appendChild(el('div', 'IEI 這家客戶沒有聘僱中的移工', { class: 'note', style: 'padding:12px' }));
+  rows.forEach(function (w) {
+    var lab = el('label'), c = el('input', null, { type: 'checkbox' }), t = el('span', w.zh || w.en);
+    c.checked = !!S.picks[w.la00];
+    t.appendChild(el('small', [w.zh ? w.en : '', w.nat, w.la21 ? '接管 ' + w.la21 : ''].filter(Boolean).join('・')));
+    c.onchange = function () { if (c.checked) S.picks[w.la00] = 1; else delete S.picks[w.la00]; natVt(); check(); };
+    lab.appendChild(c); lab.appendChild(t); box.appendChild(lab);
+  });
+  natVt(); check();
+}
+function picked() { return S.workers.filter(function (w) { return S.picks[w.la00]; }); }
+/* 國籍＝勾的人的國籍（IEI 一張只能一個）。第幾次＝IEI 自己的算法：接管日到服務日每 60 天一次，1～6，取最小。 */
+function natVt() {
+  var p = picked(), nats = p.map(function (w) { return w.nat; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+  S.nat = nats.length === 1 ? nats[0] : '';
+  $('natNote').textContent = nats.length > 1 ? '⚠ IEI 一張只能一個國籍，現在勾到 ' + nats.join('、') + '，請分開送' : (S.nat ? '國籍：' + S.nat : '');
+  if (S.vtEdited) return;
+  var d = new Date($('date').value), best = null;
+  p.forEach(function (w) { var t = Math.round((d - new Date(w.la21)) / 864e5); if (isNaN(t)) return; var v = Math.min(6, Math.max(1, Math.ceil(t / 60))); if (best === null || v < best) best = v; });
+  if (best !== null) $('vt').value = best;
+}
+$('vt').oninput = function () { S.vtEdited = true; };
+$('date').onchange = function () { natVt(); head(); };
+$('qGo').onclick = function () {
+  var q = $('q').value.trim(); if (!q) return;
+  say('在 IEI 找…');
+  api({ api: 'iei', q: q }).then(function (j) { cands(j.cands); say(j.cands.length ? '' : '找不到，換個字試試'); }).catch(function (e) { say(e.message); });
+};
+/* ---------- 行程 ---------- */
+function trips(list) {
+  var box = $('trips'); box.innerHTML = '';
+  $('tripsF').hidden = !list.length;
+  list.forEach(function (t, i) {
+    var b = el('button', (t.slot ? t.slot + ' ' : '') + t.client, { type: 'button', 'aria-pressed': 'false' });
+    b.onclick = function () { [].forEach.call(box.children, function (x) { x.setAttribute('aria-pressed', 'false'); }); b.setAttribute('aria-pressed', 'true'); useTrip(t); };
+    box.appendChild(b);
+    if (i === 0) b.click();
+  });
+}
+function useTrip(t) {
+  S.trip = t; S.client = t.client; S.cu00 = ''; S.cuName = ''; S.items = t.items.slice(); S.vtEdited = false;
+  $('addr').value = t.addr || ''; seg('method', t.method); items(); head();
+  $('wk').innerHTML = ''; say('在 IEI 對客戶…');
+  api({ api: 'iei', client: t.client, workers: t.workers }).then(function (j) {
+    say('');
+    if (j.cu00) { S.cu00 = j.cu00; S.cuName = j.cust ? j.cust.name : t.client; $('custNow').textContent = '✓ ' + S.cuName + '（' + j.cu00 + '）'; $('cands').innerHTML = '';
+      if (!$('addr').value && j.cust) $('addr').value = j.cust.addr; head(); workers(j.workers); }
+    else cands(j.cands);
+  }).catch(function (e) { say(e.message); });
+}
+/* ---------- 送出 ---------- */
+function check() {
+  var l = $('labor').dataset.v, bad = !S.cu00 ? '先選 IEI 客戶' : !S.items.length ? '至少勾一個服務項目'
+    : l !== '2' && !picked().length ? '至少勾一位移工' : l !== '2' && !S.nat ? 'IEI 一張只能一個國籍' : '';
+  $('go').disabled = !!bad; $('go').firstChild.textContent = bad || '確認後送出';
+}
+$('go').onclick = function () {
+  var p = picked(), l = $('labor').dataset.v;
+  var d = { id: DRAFT || '', client: S.client, cuName: S.cuName, cu00: S.cu00, addr: $('addr').value.trim(),
+    date: $('date').value, vt: $('vt').value, nat: l === '2' ? '' : S.nat, method: $('method').dataset.v, labor: l, items: S.items.slice().sort(function (a, b) { return a - b; }),
+    cuP: $('cuP').value.trim(), cuA: $('cuA').value.trim(), same: $('same').checked, laP: $('laP').value.trim(), laA: $('laA').value.trim(),
+    after: $('after').value.trim(), la00: l === '2' ? [] : p.map(function (w) { return w.la00; }), names: l === '2' ? [] : p.map(function (w) { return w.zh || w.en; }) };
+  $('go').disabled = true; say('存草稿…');
+  api({ api: 'save', draft: d }).then(function (j) {
+    DRAFT = j.id;
+    return liff.sendMessages([{ type: 'text', text: '訪談確認 ' + j.id }]).then(function () { liff.closeWindow(); })
+      .catch(function () { say('草稿存好了。回聊天室打：訪談確認 ' + j.id); });
+  }).catch(function (e) { say(e.message); check(); });
+};
+function fill(d) {
+  S.client = d.client; S.cuName = d.cuName; S.items = d.items || []; S.vtEdited = true;
+  $('addr').value = d.addr || ''; $('date').value = d.date; $('vt').value = d.vt || '';
+  seg('method', d.method); seg('labor', d.labor);
+  ['cuP', 'cuA', 'laP', 'laA', 'after'].forEach(function (k) { $(k).value = d[k] || ''; });
+  $('same').checked = d.same !== false; $('laBox').hidden = $('same').checked;
+  S.picks = {}; (d.la00 || []).forEach(function (x) { S.picks[x] = 1; });
+  items(); sides();
+  return pickCust({ cu00: d.cu00, name: d.cuName }, true);
+}
+liff.init({ liffId: LIFF_ID }).then(function () {
+  if (!liff.isLoggedIn()) return liff.login();
+  return api({ api: 'prep', d: DRAFT }).then(function (j) {
+    META = j; $('bar').hidden = true; $('form').hidden = false;
+    phrases('cuPs', 'cuP', j.proc); phrases('cuAs', 'cuA', j.ans); phrases('laPs', 'laP', j.proc); phrases('laAs', 'laA', j.ans);
+    $('date').value = j.day; seg('method', '1'); seg('labor', '1');
+    if (j.draft) { $('tripsF').hidden = true; return fill(j.draft); }
+    $('cuP').value = '巡迴服務-關心移工'; $('cuA').value = '移工表示工作上及生活都沒有問題。';   // 他定的預設
+    items(); head(); trips(j.trips); check();
+  });
+}).catch(function (e) { $('bar').hidden = true; $('ttl').textContent = '打不開'; say(String(e && e.message || e)); });
+</script>
+</body></html>
