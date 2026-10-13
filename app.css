@@ -4014,3 +4014,20 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
   font-size:var(--t3);font-weight:700;padding:13px;border-radius:var(--r1);
   background:var(--fill);color:var(--fill-ink)}
 .rtfoot{margin-top:6px;font-size:var(--t5);color:var(--ink3);text-align:center}
+
+/* 案件頁「要回診」那一格的通知狀態（未通知／已通知／工人已確認／不能去）。
+   顏色只當輔助，字本身就講完了（色弱也看得懂）。 */
+.c6nt{display:inline-block;margin-top:6px;font-size:var(--t5);font-weight:700;
+  border-radius:var(--r2);padding:2px 8px;color:var(--ink3);background:var(--line2)}
+.c6nt.sent{color:var(--brand);background:var(--brand-soft)}
+.c6nt.ok{color:var(--ok-ink);background:var(--ok-bg)}
+.c6nt.no{color:var(--bad-ink);background:var(--bad-bg)}
+
+/* 返鄉細節分三段，用原生 <details>：只展開現在這一段，其他摺著但點得開。 */
+.dfsec{border:1px solid var(--line);border-radius:var(--r2);padding:0 12px;margin-bottom:8px}
+.dfsec summary{display:flex;align-items:center;gap:8px;list-style:none;cursor:pointer;
+  padding:12px 0;font-size:var(--t3);font-weight:700;color:var(--ink)}
+.dfsec summary::-webkit-details-marker{display:none}
+.dfsec summary span{margin-left:auto;font-size:var(--t5);font-weight:700;color:var(--ink3)}
+.dfsec[open] summary{border-bottom:1px solid var(--line2);margin-bottom:10px}
+.dfsec[open] summary span{color:var(--brand)}

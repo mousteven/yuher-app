@@ -2131,6 +2131,13 @@ function swStops(r){
   }
   var plan = r.status === '預排', rv = r.rv || '';
   var a = [];
+  /* 第一格：還沒掛案件的卡「異常」（選嚴重度就開案，2026-10-13 流程研究情境 1）；
+     返鄉案件自動排的回台那筆「回來了」（情境 4）。
+     ⛔ 放第一格、離最遠的紅色「取消」愈遠愈好——評審抓到過相鄰會誤觸。 */
+  if(r.status !== '取消'){
+    if(!r.caseId) a.push({ k:'abn', t:'異常', i:'⚠' });
+    else if(vacBackRow_(r)) a.push({ k:'home', t:'回來了', i:'✓' });
+  }
   if(r.recCode && (rv === '未送審' || rv === '退回補正'))
     a.push({ k:'sub', t:'送審', i:'➤' });
   a.push({ k:'track', t: r.caseId ? '看追蹤' : '追蹤', i:'◷' });
@@ -2181,6 +2188,7 @@ function openCardMenu(r){
   // 追蹤：有就看、沒有就開。這一項每一種狀態都有。
   b.push(r.caseId ? ['seechain', '◷', '看追蹤', r.caseId]
                   : ['track',    '◷', r.recCode ? '加入追蹤' : '開一件追蹤']);
+  if(vacBackRow_(r)) b.push(['home', '✓', '人回來了（結案）', r.caseId]);
   if(r.recCode) b.push(['copy', '⧉', '複製紀錄代碼', r.recCode]);
   if(plan) b.push(['del', '✕', '取消這個行程', '', 1]);
 
@@ -2232,6 +2240,7 @@ function cardMenuDo(a){
     return;
   }
   if(a === 'copy') { copyText(r.recCode, '紀錄代碼'); return; }
+  if(a === 'home') { vacBackSheet(r); return; }
   if(a === 'del')  { cardCancel(r); return; }
 }
 
@@ -2611,11 +2620,99 @@ function swDo(k, r){
                 (r.slot ? '　' + r.slot : ''))) return;
     cardCancel(r); return;
   }
+  if(k === 'abn')  { openAbnSheet(r); return; }
+  if(k === 'home') { vacBackSheet(r); return; }
   if(k === 'track'){
     if(r.caseId){ goTab('track'); openCase(r.caseId); return; }
     if(r.recCode){ openMergePick(r); return; }
     openPick(cardData(r));
   }
+}
+
+/* ── 底部選單（共用）────────────────────────────────────
+   借 #cardMenu 那個容器：骨架在 Service.html，新長一個要吃版本額度。
+   items: [{a, i, t, em, red}]，選了就關掉再回呼。 */
+function sheetMenu(title, sub, items, why, onPick){
+  if(!$('cardMenu')){ toast('要先更新 App', true); return; }
+  $('cmTitle').textContent = title;
+  $('cmSub').textContent = sub || '';
+  $('cmList').innerHTML = items.map(function(x){
+    return '<button type="button" class="cmi'+(x.red?' red':'')+'" data-a="'+esc(x.a)+'">' +
+      '<i>'+esc(x.i)+'</i>'+esc(x.t)+(x.em ? '<em>'+esc(x.em)+'</em>' : '')+'</button>';
+  }).join('');
+  $('cmWhy').textContent = why || '';
+  $('cmWhy').style.display = why ? '' : 'none';
+  $('cardMenu').style.display = '';
+  [].forEach.call($('cmList').children, function(el){
+    el.addEventListener('click', function(){ closeCardMenu(); onPick(el.dataset.a); });
+  });
+}
+
+/* ── 左滑「異常」：選嚴重度就開案 ──────────────────────
+   2026-10-13 流程研究（_flow-study）情境 1：以前 9 步，現在 2 步。
+   四級沿用 CaseFields.gs 的定義；人、廠、日期照這張行程帶（開案日＝行程那天）。 */
+var ABN_LEVELS_ = [
+  ['一般', '記一下，之後追'],
+  ['需開警告書', '衝突、違規、不配合'],
+  ['需通報主管機關', '失聯滿三日要報備'],
+  ['已報警', '']
+];
+function openAbnSheet(r){
+  var items = ABN_LEVELS_.map(function(x, i){ return { a: x[0], i: String(i + 1), t: x[0], em: x[1] }; });
+  items.push({ a: '_pick', i: '✎', t: '不是這幾位，或要開別種' });
+  sheetMenu('異常事件　' + (r.client || ''),
+    (r.workers || '') + '　·　' + (r.topic || r.sub || '') + '　' + shortDate_(r.date || ''),
+    items, '選一個就開案。這一趟的服務紀錄存檔後會自動掛進去；開錯了在案件頁按「這件開錯了」。',
+    function(a){
+      if(a === '_pick'){ openPick(cardData(r)); return; }
+      var d = cardData(r);
+      google.script.run
+        .withSuccessHandler(function(res){
+          toast('已開 ' + res.id + '　' + a);
+          calBust(); TK_CUR = '異常事件'; tkBust();
+          goTab('track'); openCase(res.id);
+        })
+        .withFailureHandler(function(e){ alert(e.message); })
+        .addCase(CODE, { kind: '異常事件', client: d.client, workers: d.workers, lang: d.lang,
+          big: d.big, sub: d.sub, date: d.date, target: d.target, title: d.sub,
+          recCode: d.rc, schedId: d.go, detail: { level: a } });
+    });
+}
+
+/* ── 返鄉：回台那天的卡一顆「人回來了」（情境 4）────────────
+   只認返鄉案件**自動排**的那筆（setCaseNext 排的接機／回台），
+   而且日期到了才出現；離境那趟不會有這一格。 */
+function vacBackRow_(r){
+  return r.caseId && r.caseKind === '返鄉休假' && r.auto &&
+         r.status !== '取消' && (r.date || '') <= todayStr();
+}
+function vacBackSheet(r){
+  sheetMenu('返鄉・回台　' + (r.client || ''), (r.workers || '') + '　·　' + r.caseId, [
+    { a: 'back', i: '✓', t: '人回來了', em: '結案' },
+    { a: 'abn',  i: '⚠', t: '沒回來，開異常事件', red: 1 }
+  ], '', function(a){
+    if(a === 'back'){
+      google.script.run
+        .withSuccessHandler(function(){ toast('已結案　已回台'); calBust(); loadCal(); tkBust(); })
+        .withFailureHandler(function(e){ alert(e.message); })
+        .closeCase(CODE, r.caseId, '已回台');
+      return;
+    }
+    /* 逃逸七成從這裡來：開一件異常並跟返鄉那件連起來。
+       ⛔ 不帶 schedId／recCode——這筆行程已經屬於返鄉那件，帶了後端會擋。 */
+    var d = cardData(r);
+    google.script.run
+      .withSuccessHandler(function(res){
+        google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(){})
+          .linkCases(CODE, res.id, r.caseId);
+        toast('已開 ' + res.id); calBust(); TK_CUR = '異常事件'; tkBust();
+        goTab('track'); openCase(res.id);
+      })
+      .withFailureHandler(function(e){ alert(e.message); })
+      .addCase(CODE, { kind: '異常事件', client: d.client, workers: d.workers, lang: d.lang,
+        target: d.target, date: d.date, title: '返鄉未歸',
+        note: '由返鄉休假 ' + r.caseId + ' 而來', detail: { level: '需通報主管機關' } });
+  });
 }
 
 /* ── 長按拖曳改期 ──────────────────────────────
@@ -3521,6 +3618,10 @@ function addWorker(){
      '<p class="hint">接著補寫細節：</p>'+
      '<textarea data-k="rnote" placeholder="例如：8/12 上午回診拆線，已跟工廠請假"></textarea></div>'+
    '<div class="f" data-adm="hide"><label>費用</label><input data-k="fee" placeholder="車資200"></div>'+
+   /* 後續追蹤：勾了存檔就開案並把這張表掛進去（svcFollowOpen_）。
+      以前這一欄送出永遠是空字串，後端 listServiceFollowUps 沒有畫面在用。 */
+   '<div class="f" data-adm="hide"><label>後續追蹤</label><select data-k="follow">'+
+     '<option value="">不用</option><option>異常事件</option><option>就醫追蹤</option></select></div>'+
    '<div class="f" data-adm="hide"><label>備註</label><input data-k="memo" placeholder="選填"></div>'+
    '<div class="sig" data-adm="hide" data-sig="worker">'+
      '<div class="lb"><label>移工簽名</label><button type="button" data-clear>清除</button></div>'+
@@ -3767,7 +3868,7 @@ function collectForm(){
       did:[].map.call(c.querySelectorAll('[data-do] input:checked'),function(i){return i.value;}),
       dnote:g('dnote'),
       res:[].map.call(c.querySelectorAll('[data-res] input:checked'),function(i){return i.value;}),
-      rnote:g('rnote'), fee:g('fee'), follow:'', memo:g('memo'),
+      rnote:g('rnote'), fee:g('fee'), follow:g('follow'), memo:g('memo'),
       sig: sigOf(c.querySelector('[data-sig=worker]'))
     });
   });
@@ -3808,12 +3909,14 @@ $('save').addEventListener('click', function(){
   var job = { cid: trip.cid, at: Date.now(), code: CODE,
               trip: trip, workers: workers, tries: 0, err: '' };
   toast('儲存中…');
+  var medCase = svcMedCaseOf_(trip);
   OB.put(job).then(function(){
     obSend(job, function(r){
       b.disabled = false;
       calBust(); revBust();     // 那一趟會從「待處理」變「已完成」，送審清單也多一筆
       try{ showSaved(r.code); }
       catch(err){ toast('已存檔（'+r.code+'），但畫面沒換過來：'+err.message, true); }
+      if(medCase && !r.dup) svcAfterMed_(medCase, trip);
     }, function(msg, keep){
       b.disabled = false;
       if(keep){
@@ -3854,6 +3957,7 @@ function obSend(job, ok, bad){
       /* ⛔ 一定要等後端回「寫好了」才從手機刪掉。
          先刪再送 = 送失敗就永遠不見。 */
       OB.del(job.cid).then(function(){ obPaint(); });
+      try{ svcFollowOpen_(r, job); }catch(eF){}
       ok(r);
     })
     .withFailureHandler(function(e){
@@ -3871,6 +3975,52 @@ function obSend(job, ok, bad){
       bad(msg || '送不出去', keep);
     })
     .saveServiceLog(job.code || CODE, job.trip, job.workers);
+}
+
+/* 填表勾了「後續追蹤」→ 存檔同時開案並把這張表掛進去（流程研究情境 1 丙）。
+   ⚠ 後端下一次部署會自己做這件事並回 caseId，到時看到 r.caseId 就不動。
+   行程本來就掛在別件底下的，addCase 會擋「已經掛在」——那是對的，安靜略過。 */
+function svcFollowOpen_(r, job){
+  if(!r || r.dup || r.caseId) return;
+  var ws = (job.workers || []).filter(function(w){ return w.follow; });
+  if(!ws.length) return;
+  var t = job.trip || {}, kind = ws[0].follow;
+  google.script.run
+    .withSuccessHandler(function(res){
+      toast('已開 ' + kind + ' ' + res.id + '，這張表已掛進去'); tkBust(); calBust();
+    })
+    .withFailureHandler(function(e){
+      if(!/已經掛在/.test(e.message || '')) toast('沒開成' + kind + '：' + e.message, true);
+    })
+    .addCase(CODE, { kind: kind, client: t.client || '', target: t.target || '', date: t.date || '',
+      workers: ws.map(function(w){ return w.name; }).filter(String).join('、'),
+      lang: ws[0].lang || '', big: ws[0].big, sub: ws[0].sub, title: ws[0].sub,
+      recCode: r.code, schedId: t.sched || '' });
+}
+
+/* 這張表是從就醫追蹤的行程來的嗎？是的話存完要問下一步（情境 2 乙）。 */
+function svcMedCaseOf_(trip){
+  var row = (typeof CAL_ROWS !== 'undefined' ? CAL_ROWS : [])
+    .filter(function(x){ return trip.sched && x.id === trip.sched; })[0];
+  if(row && row.caseId && row.caseKind === '就醫追蹤') return row.caseId;
+  if(CASE_FOR_ && CK_CUR && CK_CUR.id === CASE_FOR_ && CK_CUR.kind === '就醫追蹤') return CASE_FOR_;
+  return '';
+}
+/* 存完問一句。痊癒要等這張表歸檔才結得了案（後端擋的），所以這裡只問回診。 */
+function svcAfterMed_(caseId, trip){
+  sheetMenu('這一趟之後', (trip.client || '') + '　·　' + caseId, [
+    { a: 'next',  i: '📅', t: '要回診 → 選日期' },
+    { a: 'later', i: '…',  t: '不用回診／之後再說' }
+  ], '痊癒的話，等這張表歸檔再到案件頁按結案。', function(a){
+    if(a !== 'next') return;
+    openDatePick({ kind: '就醫追蹤', nextDate: '', nextNote: '' }, function(d, note){
+      if(!d) return;
+      google.script.run
+        .withSuccessHandler(function(res){ toast('已排回診 ' + res.date + '，行事曆上也有了'); calBust(); tkBust(); })
+        .withFailureHandler(function(e){ toast(e.message, true); })
+        .setCaseNext(CODE, caseId, d, note);
+    });
+  });
 }
 
 /* 把手機裡還沒送出去的都送一遍。
@@ -3987,7 +4137,7 @@ function collectWorkers(){
       did:[].map.call(c.querySelectorAll('[data-do] input:checked'),function(i){return i.value;}),
       dnote:g('dnote'),
       res:[].map.call(c.querySelectorAll('[data-res] input:checked'),function(i){return i.value;}),
-      rnote:g('rnote'), fee:g('fee'), follow:'', memo:g('memo'),
+      rnote:g('rnote'), fee:g('fee'), follow:g('follow'), memo:g('memo'),
       el:c
     });
   });
@@ -6819,10 +6969,15 @@ function caseLine(c){
     if(CASE_FORM_[c.kind]) acts += '<a data-a="new">＋ 開一筆</a>';
     acts += '<a data-a="next">' + (c.nextDate ? '改日期' : '排日期') + '</a>';
     if(c.kind !== '異常事件') acts += '<a data-a="msg">提醒訊息</a>';
+    /* 通知到哪了：未通知／已轉傳／已電話通知／工人已確認／工人說不能去。
+       detail.noticeAt＋noticeHow 是翻譯按的，ack＋ackAt 是工人在簽章頁按的（後端下一版）。 */
+    var nt = noticeTag_(c);
+    if(nt && nt[0] === 'none') acts += '<a data-a="phoned">已電話通知</a>';
     h += c6row('next', '!', when, '要' + what,
-      c.nextDate
+      (c.nextDate
         ? (esc(c.nextNote || '') || '行事曆上已經排好一筆了')
-        : '還沒排。排了會自動出現在行事曆上。', acts);
+        : '還沒排。排了會自動出現在行事曆上。') +
+      (nt ? '<br><span class="c6nt ' + nt[0] + '">' + esc(nt[1]) + '</span>' : ''), acts);
 
     var ca = '';
     var defs = (CK_SCHEMA && CK_SCHEMA.fields && CK_SCHEMA.fields[c.kind]) || [];
@@ -6862,6 +7017,16 @@ function c6grid(it){
   }).join('') + '</dl>';
 }
 
+/* [class, 文字]。只有排了日期的就醫／體檢才有這一行；異常與返鄉沒有「通知工人」這件事。 */
+function noticeTag_(c){
+  if(!c.nextDate || (c.kind !== '就醫追蹤' && c.kind !== '體檢通知')) return null;
+  var d = c.detail || {};
+  if(d.ack === 'no') return ['no', '工人說不能去' + (d.ackAt ? '　' + d.ackAt : '')];
+  if(d.ack) return ['ok', '工人已確認' + (d.ackAt ? '　' + d.ackAt : '')];
+  if(d.noticeAt) return ['sent', (d.noticeHow === '電話' ? '已電話通知' : '已通知') + '　' + shortDate_(d.noticeAt)];
+  return ['none', '未通知'];
+}
+
 function c6row(cls, dot, when, title, body, acts){
   return '<div class="c6i ' + cls + '"><span class="d">' + esc(dot) + '</span>' +
     '<div class="c">' + (when ? '<em>' + esc(when) + '</em>' : '') +
@@ -6898,6 +7063,12 @@ function bindCase(c){
       }
     },
     'med':    function(){ caseSpawnMed(c); },
+    'phoned': function(){
+      google.script.run
+        .withSuccessHandler(function(){ toast('已記下：電話通知'); openCase(c.id); })
+        .withFailureHandler(function(e){ toast(e.message, true); })
+        .setCaseDetail(CODE, c.id, { noticeAt: todayStr(), noticeHow: '電話' });
+    },
     'detail': function(){ openDetailForm(c); },
     'close':  function(){ caseClose(c); },
     'cancel': function(){ caseCancelAll(c); }
@@ -7380,6 +7551,15 @@ function saveCaseNext(c, d, note){
   google.script.run
     .withSuccessHandler(function(r){
       toast(r.date ? ('已排 ' + r.date + '，行事曆上也有了') : '已取消下一次');
+      /* 日期變了，之前的通知就不算數：清掉已通知／已確認，提醒重發。
+         只做就醫——體檢的通知是整批人各自確認，走它自己的那套。 */
+      var dt = c.detail || {};
+      if(c.kind === '就醫追蹤' && d !== c.nextDate && (dt.noticeAt || dt.ack)){
+        google.script.run
+          .withSuccessHandler(function(){ toast('日期改了，之前的通知已作廢，要重發給工人', true); openCase(c.id); })
+          .withFailureHandler(function(){})
+          .setCaseDetail(CODE, c.id, { noticeAt: '', noticeHow: '', ack: '', ackAt: '' });
+      }
       calBust(); tkBust(); openCase(c.id); loadTrack(true);
     })
     .withFailureHandler(function(e){ toast(e.message, true); })
@@ -7401,9 +7581,25 @@ function caseSpawnMed(c){
 
 /* 結案。後端會擋住底下還沒歸檔的紀錄，而且會講是哪一筆卡在誰那裡——
    那段訊息有換行，用 alert 才看得完整，toast 會被截掉。 */
+/* 結案結果用選的，不打字——工廠戴手套打不出字（跟日期改原生選擇器同一個理由）。 */
+var CLOSE_OPTS_ = {
+  '異常事件': ['已處理完畢', '已開警告書', '已通報主管機關'],
+  '就醫追蹤': ['痊癒，不用回診', '轉院／換醫院', '工人自行處理'],
+  '返鄉休假': ['已回台', '期滿離境，不再回來'],
+  '體檢通知': ['已完成體檢']
+};
 function caseClose(c){
-  var r = prompt('結案結果是什麼？（會留在紀錄上）', '');
-  if(r === null) return;
+  var items = (CLOSE_OPTS_[c.kind] || []).map(function(t){ return { a: t, i: '✓', t: t }; });
+  items.push({ a: '_other', i: '✎', t: '其他（打字）' });
+  sheetMenu('結案結果', c.id + '　' + (c.workers || c.client || ''), items,
+    '底下還有一筆沒歸檔的話，會告訴你是哪一筆、卡在誰那裡。',
+    function(a){
+      var r = a;
+      if(a === '_other'){ r = prompt('結案結果是什麼？（會留在紀錄上）', ''); if(!r) return; }
+      doCloseCase_(c, r);
+    });
+}
+function doCloseCase_(c, r){
   google.script.run
     .withSuccessHandler(function(res){
       toast('已結案');
@@ -7621,7 +7817,32 @@ function openDetailForm(c){
   if(!defs.length){ toast('這個類型沒有可以填的細節', true); return; }
   var d = c.detail || {};
   $('dfTitle').textContent = c.kind + '的細節';
-  $('dfBody').innerHTML = defs.map(function(f){
+  /* 返鄉 23 格分三段、只展開現在這一段（流程研究情境 4 戊）；
+     OEC 是菲律賓的規定，這家公司菲籍走英文組，其他語別整格不出現。 */
+  if(c.kind === '返鄉休假'){
+    var isPh = /英|菲/.test(c.lang || '');
+    var byK = {};
+    defs.forEach(function(f){ if(f.k !== 'oec' || isPh) byK[f.k] = f; });
+    var now = !(d.out && d.back) ? 0 : !(d.air || d.rair || d.book) ? 1 : 2;
+    $('dfBody').innerHTML = VAC_SEC_.map(function(s, i){
+      var fs = s[1].map(function(k){ return byK[k]; }).filter(Boolean);
+      var filled = fs.filter(function(f){ return f.t === 'check' ? d[f.k] : d[f.k]; }).length;
+      return '<details class="dfsec"' + (i === now ? ' open' : '') + '><summary>' + esc(s[0]) +
+        '<span>' + (i === now ? '現在' : (filled ? '已填 ' + filled + '/' + fs.length : s[2])) + '</span></summary>' +
+        fs.map(function(f){ return dfField_(f, d); }).join('') + '</details>';
+    }).join('');
+  } else {
+    $('dfBody').innerHTML = defs.map(function(f){ return dfField_(f, d); }).join('');
+  }
+  dfWire_(c);
+}
+var VAC_SEC_ = [
+  ['① 請假與日期', ['askedBoss', 'out', 'back', 'pickup', 'twPhone', 'con'], '先填'],
+  ['② 機票',       ['air', 'from', 'fromName', 'outTime', 'to', 'toName', 'rair', 'backTime',
+                    'book', 'domConn', 'domAirport', 'bagKg', 'ticketPhoto', 'oec'], '訂好票再填'],
+  ['③ 證件',       ['passport', 'arc', 'reentry', 'ticket'], '出發前']
+];
+function dfField_(f, d){
     var v = d[f.k] === undefined ? '' : d[f.k];
     var hint = f.hint ? '<p class="hint" style="margin:3px 0 0">' + esc(f.hint) + '</p>' : '';
     if(f.t === 'check'){
@@ -7652,7 +7873,8 @@ function openDetailForm(c){
     return '<div class="f"><label>' + esc(f.l) + '</label>' +
       '<input type="' + type + '" data-k="' + esc(f.k) + '" value="' + esc(v) + '">' +
       hint + '</div>';
-  }).join('');
+}
+function dfWire_(c){
   $('detailModal').style.display = '';
   $('dfBody').scrollTop = 0;
 
