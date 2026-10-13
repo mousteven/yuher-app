@@ -278,9 +278,41 @@ $('save').onclick = function () {
     $('app').innerHTML = '<header><div class="bar"></div><div><h1>' + (ED ? '改好了' : '已存進 App') + '</h1></div></header>' +
       '<section><div class="lab">紀錄代碼</div><div class="big">' + esc(r.code) + '</div>' +
       '<p class="note">' + (ED ? '' : D.kind === 'sched' ? '行事曆這筆已標成完成。' : '行事曆已補上這一筆。') +
+      (r.opened ? '已開 ' + esc(r.opened) + '，這張表掛進去了。' : '') +
       '要送審、修改或補簽名：回 LINE 按「未結案單」。</p>' +
-      '<p class="note">按右上角 ✕ 回到 LINE。</p></section>';
+      '<p class="note">按右上角 ✕ 回到 LINE。</p></section>' + afterMed(r);
+    bindAfterMed(r);
   }).catch(function (e) { btn.disabled = false; btn.firstChild.textContent = label; alert('沒存成功：' + (e && e.message || e)); });
 };
+
+/* 就醫案件的行程存完問一句（2026-10-13 流程研究情境 2 乙）：要回診→選日期／住院中／痊癒；群組回報文字已擬好。
+   後端 svclAfter 用同一條簽章連結，只能動這筆行程掛的案件。 */
+function afterMed(r) {
+  if (r.caseKind !== '就醫追蹤' || D.kind !== 'sched') return '';
+  return '<section id="am"><div class="lab">這一趟之後（' + esc(r.caseId) + '）</div>' +
+    '<button type="button" class="pvbtn" data-am="next">要回診 → 選日期</button>' +
+    '<input type="date" id="amDate" style="display:none"><input type="text" id="amNote" placeholder="例：回診拆線" style="display:none">' +
+    '<button type="button" class="pvbtn" data-am="inp">住院中（案件不倒數）</button>' +
+    '<button type="button" class="pvbtn" data-am="heal">痊癒（紀錄歸檔後自動結案）</button>' +
+    (r.report ? '<div class="lab" style="margin-top:8px">群組回報（長按複製）</div><p style="margin:0;font-size:15px;user-select:all;-webkit-user-select:all">' + esc(r.report) + '</p>' : '') +
+    '</section>';
+}
+function bindAfterMed(r) {
+  if (!$('am')) return;
+  [].forEach.call($('am').querySelectorAll('[data-am]'), function (b) {
+    b.onclick = function () {
+      var act = b.dataset.am, date = '', note = '';
+      if (act === 'next') {
+        if ($('amDate').style.display === 'none') { $('amDate').style.display = ''; $('amNote').style.display = ''; b.textContent = '排好了 →'; $('amDate').focus(); return; }
+        date = $('amDate').value; note = $('amNote').value.trim();
+        if (!date) { alert('先選日期'); return; }
+      }
+      b.disabled = true;
+      api({ api: 'svclAfter', act: act, date: date, note: note }).then(function (x) {
+        $('am').innerHTML = '<div class="lab">已記下</div><p class="note">' + esc(x.text || '') + '</p>';
+      }).catch(function (e) { b.disabled = false; alert('沒記成：' + (e && e.message || e)); });
+    };
+  });
+}
 </script>
 </body></html>

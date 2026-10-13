@@ -1919,6 +1919,7 @@ function drawDay(){
         '</span>'+
         // 移工名（自然截斷）＋ 人數標（永遠不縮）。一對多改成「全廠宣導」
         cardWkLine_(r)+
+        medLastLine_(r)+
         evAddr_(r)+
         // 時段與翻譯降到最後一行的小字。排一天的行程時還是要看得到。
         /* 時段與翻譯那一列的右邊掛交代，收著的時候卡片一行都不多。
@@ -2276,6 +2277,24 @@ function cardWkLine_(r){
     (n>1?'<span class="c4cnt">'+n+' 人</span>':'')+'</span>';
 }
 
+/* 醫療行程卡的「上次」（流程研究情境 2 甲）：後端 listSchedule 帶 r.last
+   （同一個移工＋同一家的醫療陪同最近 3 筆、次數、車資合計，不靠案件代碼）。點一下看前三次。 */
+function medLastLine_(r){
+  var x = r.last;
+  if(!x || !x.items || !x.items.length) return '';
+  var it = x.items[0];
+  return '<span class="c4last" data-hist="1">上次 ' + esc(shortDate_(it.date)) + (it.tel ? '（電聯）' : '') + ' ' +
+    esc(it.hnote || it.sub || '') + (it.result ? '・' + esc(it.result) : '') +
+    '<i>' + x.n + ' 次' + (x.fee ? '・車資 ' + x.fee : '') + ' ›</i></span>';
+}
+function medHistSheet(r){
+  var x = r.last || { items: [], n: 0 };
+  sheetMenu((r.workers || '').split('、')[0] + ' 之前的就醫', x.n + ' 次' + (x.fee ? '・車資共 ' + x.fee : '') + '（電聯算次數、不算車資）',
+    x.items.map(function(it){
+      return { a: it.rec, i: '', t: shortDate_(it.date) + (it.tel ? '（電聯）' : '') + '　' + (it.hnote || it.sub || '') + (it.result ? '・' + it.result : ''), em: it.fee || '' };
+    }), '', function(a){ openRecord(a, { rec: a, label: '就醫', name: r.client || '' }); });
+}
+
 function cardData(r){
   /* ⚠ date 一定要帶。不帶的話後端用「今天」當開案日——
      他 2026-10-04 在 10/7 的行程上按追蹤，開案日變成 10/4
@@ -2596,6 +2615,8 @@ function bindSwipe(w, r){
     if(DRAG) return;
     if(moved){ ev.stopPropagation(); ev.preventDefault(); moved = false; return; }
     ev.stopPropagation();
+    // 「上次 …」那一行：看前三次，不要開整張表
+    if(ev.target.closest && ev.target.closest('.c4last')){ ev.preventDefault(); medHistSheet(r); return; }
     // 預排的點一下開始填寫，已完成的打開那張服務表。整張卡都算數。
     if(r.status === '預排'){ if(r.id) startFromSchedule(r.id); return; }
     if(r.recCode){
@@ -3916,7 +3937,9 @@ $('save').addEventListener('click', function(){
       calBust(); revBust();     // 那一趟會從「待處理」變「已完成」，送審清單也多一筆
       try{ showSaved(r.code); }
       catch(err){ toast('已存檔（'+r.code+'），但畫面沒換過來：'+err.message, true); }
-      if(medCase && !r.dup) svcAfterMed_(medCase, trip);
+      if(r.opened) toast('已開 ' + r.opened + '，這張表已掛進去');
+      var mc = medCase || (r.caseKind === '就醫追蹤' ? r.caseId : '');
+      if(mc && !r.dup) svcAfterMed_(mc, trip, r);
     }, function(msg, keep){
       b.disabled = false;
       if(keep){
@@ -4006,12 +4029,19 @@ function svcMedCaseOf_(trip){
   if(CASE_FOR_ && CK_CUR && CK_CUR.id === CASE_FOR_ && CK_CUR.kind === '就醫追蹤') return CASE_FOR_;
   return '';
 }
-/* 存完問一句。痊癒要等這張表歸檔才結得了案（後端擋的），所以這裡只問回診。 */
-function svcAfterMed_(caseId, trip){
-  sheetMenu('這一趟之後', (trip.client || '') + '　·　' + caseId, [
-    { a: 'next',  i: '📅', t: '要回診 → 選日期' },
-    { a: 'later', i: '…',  t: '不用回診／之後再說' }
-  ], '痊癒的話，等這張表歸檔再到案件頁按結案。', function(a){
+/* 存完問一句：要回診→選日期／痊癒（紀錄全歸檔後自動結案）／住院中／群組回報文字（後端擬好）。 */
+function svcAfterMed_(caseId, trip, r){
+  var items = [
+    { a: 'next', i: '📅', t: '要回診 → 選日期' },
+    { a: 'heal', i: '✓',  t: '痊癒', em: '歸檔後自動結案' },
+    { a: 'inp',  i: '🏥', t: '住院中', em: '不倒數' }
+  ];
+  if(r && r.report) items.push({ a: 'rep', i: '⧉', t: '群組就醫回報（複製）' });
+  items.push({ a: 'later', i: '…', t: '之後再說' });
+  sheetMenu('這一趟之後', (trip.client || '') + '　·　' + caseId, items, '', function(a){
+    if(a === 'rep'){ copyText(r.report, '就醫回報'); return; }
+    if(a === 'heal'){ caseMark_(caseId, { heal: 1, inpatient: '' }, '已標痊癒。紀錄全部歸檔後會自動結案。'); return; }
+    if(a === 'inp'){ caseMark_(caseId, { inpatient: 1, heal: '' }, '記成住院中，案件不會倒數。'); return; }
     if(a !== 'next') return;
     openDatePick({ kind: '就醫追蹤', nextDate: '', nextNote: '' }, function(d, note){
       if(!d) return;
@@ -6871,6 +6901,7 @@ function caseSummary(c){
   if(c.crew) m.push('負責 <b>' + esc(c.crew) + '</b>');
   if(c.openedAt) m.push('開案 <b>' + esc(shortDate_(c.openedAt)) + '</b>');
   m.push('已服務 <b>' + c.items.length + ' 次</b>');
+  if(c.feeSum) m.push('車資 <b>' + c.feeSum + '</b>');   // 電聯不算（後端 caseFeeSum_）
   if(!open) m.push('<b>' + esc(c.status) + '</b>');
   h += '<div class="c6meta">' + m.map(function(x){
     return '<span>' + x + '</span>'; }).join('') + '</div>';
@@ -6973,6 +7004,12 @@ function caseLine(c){
        detail.noticeAt＋noticeHow 是翻譯按的，ack＋ackAt 是工人在簽章頁按的（後端下一版）。 */
     var nt = noticeTag_(c);
     if(nt && nt[0] === 'none') acts += '<a data-a="phoned">已電話通知</a>';
+    /* 就醫：住院中（不倒數，出院再排回診）、痊癒（紀錄全歸檔後自動結案）。後端 casePhase_ 讀 detail.inpatient／heal。 */
+    if(c.kind === '就醫追蹤'){
+      var dm = c.detail || {};
+      if(dm.inpatient) acts += '<a data-a="next">出院了 → 選回診日</a>';
+      else { if(!dm.heal) acts += '<a data-a="heal">痊癒</a>'; acts += '<a data-a="inp">住院中</a>'; }
+    }
     h += c6row('next', '!', when, '要' + what,
       (c.nextDate
         ? (esc(c.nextNote || '') || '行事曆上已經排好一筆了')
@@ -7069,6 +7106,8 @@ function bindCase(c){
         .withFailureHandler(function(e){ toast(e.message, true); })
         .setCaseDetail(CODE, c.id, { noticeAt: todayStr(), noticeHow: '電話' });
     },
+    'inp':  function(){ caseMark_(c.id, { inpatient: 1, heal: '' }, '記成住院中，案件不會倒數。出院了再排回診。'); },
+    'heal': function(){ caseMark_(c.id, { heal: 1, inpatient: '' }, '已標痊癒。這件的紀錄全部歸檔後會自動結案。'); },
     'detail': function(){ openDetailForm(c); },
     'close':  function(){ caseClose(c); },
     'cancel': function(){ caseCancelAll(c); }
@@ -7525,6 +7564,19 @@ function setVal(id, v){
 
 function caseSetNext(c){
   openDatePick(c, function(d, note){ saveCaseNext(c, d, note); });
+}
+
+/* 住院中／痊癒：寫明細＋清掉下次日期（住院不倒數、痊癒等歸檔）。 */
+function caseMark_(id, patch, msg){
+  google.script.run
+    .withSuccessHandler(function(){
+      google.script.run
+        .withSuccessHandler(function(){ toast(msg); tkBust(); calBust(); openCase(id); })
+        .withFailureHandler(function(e){ toast(e.message, true); openCase(id); })
+        .setCaseNext(CODE, id, '', '');
+    })
+    .withFailureHandler(function(e){ toast(e.message, true); })
+    .setCaseDetail(CODE, id, patch);
 }
 
 /* 日期用原生的 <input type="date">，手機上會跳系統的滾輪。
@@ -10520,6 +10572,13 @@ function admSiteBits(){
       '<input type="checkbox" id="admGo"><span>排完直接確認</span>' +
       '<s>不用再去排班頁按一次</s></label>');
   }
+  /* 行政開單時就知道這是異常（行程表寫「異常事件處理」的就是行政）：勾了後端順便開案，翻譯的行程卡出發前就帶著。 */
+  if(!$('admAbnWrap')){
+    row.insertAdjacentHTML('beforebegin',
+      '<label class="plango" id="admAbnWrap">' +
+      '<input type="checkbox" id="admAbn"><span>這是異常事件</span>' +
+      '<s>開單就開案，翻譯跑完存檔自動掛回</s></label>');
+  }
   admSiteSrc();
   admGoSync();
 }
@@ -10643,7 +10702,8 @@ function admSaveTrip(){
         workers: names.join('、'),
         wkItems: wkItems,
         site: $('admSite') ? $('admSite').value.trim() : '',
-        todo: admTodoRows().map(function(t){ return {t:t, d:0}; })
+        todo: admTodoRows().map(function(t){ return {t:t, d:0}; }),
+        kind: ($('admAbn') && $('admAbn').checked) ? '異常事件' : ''
       });
     return;
   }

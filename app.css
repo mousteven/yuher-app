@@ -4031,3 +4031,8 @@ body.psdrag{-webkit-user-select:none;user-select:none;overscroll-behavior:contai
 .dfsec summary span{margin-left:auto;font-size:var(--t5);font-weight:700;color:var(--ink3)}
 .dfsec[open] summary{border-bottom:1px solid var(--line2);margin-bottom:10px}
 .dfsec[open] summary span{color:var(--brand)}
+
+/* 醫療行程卡的「上次 …」一行（後端 listSchedule 帶 last） */
+.c4last{display:block;margin-top:4px;font-size:var(--t5);font-weight:600;color:var(--brand);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c4last i{font-style:normal;font-weight:700;color:var(--ink3);margin-left:6px}

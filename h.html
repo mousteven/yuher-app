@@ -124,6 +124,16 @@ ul.rows li b.lk{color:var(--w38);font-family:var(--mono)}
   text-align:center;line-height:1.55}
 
 .pad{padding:0 18px 18px}
+/* 回診通知模式（?c=），同一套深藍病歷封面 */
+.case .nm{font-size:22px;font-weight:700;margin:2px 0}
+.case .hero{margin:14px 0 12px;padding:14px 16px;background:var(--w08);border-radius:13px}
+.case .hero .d{font-family:var(--mono);font-size:2.2rem;font-weight:500;line-height:1}
+.case .hero .t{font-family:var(--mono);font-size:1.3rem;color:var(--w75);margin-top:6px}
+.case .row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--w12)}
+.case .row .k{font-size:13px;color:var(--w62)}
+.case .row .k small{font-size:11px;color:var(--w45)}
+.case .row b{font-size:16px;text-align:right}
+.case .pad button+button{margin-top:10px}
 button{display:block;width:100%;border:0;border-radius:12px;padding:16px;
   font-family:inherit;font-size:17px;font-weight:700;background:var(--med);
   color:#fff;margin-top:12px}
@@ -1373,7 +1383,62 @@ function gone(){
     '<div class="m">!</div><b>Link not valid</b>' +
     '<span>這個連結無效或已經過期。<br>請聯絡你的翻譯。</span></div></div>';
 }
+/* ── 回診通知（2026-10-13 流程研究情境 3）：同一頁多一個模式 ?c=案件代碼.簽章 ──
+   翻譯從小羽／App 轉傳的回診通知附這條連結；工人按「知道了」或「不能去」寫回案件（CaseFlow.gs caseAck）。
+   ⛔ 不走體檢那套 D／STEP：那是「這一批」的資料與生日驗證，回診是一個人一件事，連結本身就是簽章。 */
+var CCODE = (function(){
+  try { var m = /[?&]c=([^&]*)/.exec(location.search || ''); return m ? decodeURIComponent(m[1]).replace(/[^\w.-]/g, '').slice(0, 40) : ''; }
+  catch(e){ return ''; }
+})();
+var CT = {
+  zh:{ head:'回診通知', date:'日期', time:'時間', hos:'醫院', dep:'科別', num:'看診號', bring:'要帶', nofood:'前一晚 22:00 之後不要吃東西，可以喝水',
+       ok:'知道了', no:'我不能去', okT:'已確認，翻譯會看到', noT:'已告訴翻譯你不能去，會再跟你約時間', closed:'這件已經結束', contact:'聯絡' },
+  en:{ head:'Follow-up Appointment', date:'Date', time:'Time', hos:'Hospital', dep:'Department', num:'Number', bring:'Bring', nofood:'No food after 22:00 the night before. Water is OK.',
+       ok:'I understand', no:'I cannot go', okT:'Confirmed. Your interpreter can see this.', noT:'Your interpreter will contact you for a new time.', closed:'This appointment is closed', contact:'Contact' },
+  vi:{ head:'Lịch tái khám', date:'Ngày', time:'Giờ', hos:'Bệnh viện', dep:'Khoa', num:'Số thứ tự', bring:'Mang theo', nofood:'Không ăn sau 22:00 đêm trước. Được uống nước.',
+       ok:'Tôi đã hiểu', no:'Tôi không đi được', okT:'Đã xác nhận. Phiên dịch sẽ thấy.', noT:'Phiên dịch sẽ liên hệ để hẹn giờ khác.', closed:'Lịch này đã kết thúc', contact:'Liên hệ' },
+  id:{ head:'Jadwal Kontrol', date:'Tanggal', time:'Jam', hos:'Rumah sakit', dep:'Bagian', num:'Nomor', bring:'Bawa', nofood:'Jangan makan setelah jam 22:00 malam sebelumnya. Air boleh.',
+       ok:'Saya mengerti', no:'Saya tidak bisa pergi', okT:'Sudah dikonfirmasi. Penerjemah bisa melihat.', noT:'Penerjemah akan menghubungi untuk jadwal baru.', closed:'Jadwal ini sudah selesai', contact:'Kontak' },
+  th:{ head:'นัดติดตามอาการ', date:'วันที่', time:'เวลา', hos:'โรงพยาบาล', dep:'แผนก', num:'หมายเลข', bring:'นำมา', nofood:'งดอาหารหลัง 22:00 คืนก่อน ดื่มน้ำได้',
+       ok:'เข้าใจแล้ว', no:'ไปไม่ได้', okT:'ยืนยันแล้ว ล่ามจะเห็น', noT:'ล่ามจะติดต่อเพื่อนัดเวลาใหม่', closed:'นัดนี้สิ้นสุดแล้ว', contact:'ติดต่อ' }
+};
+function caseApi(fn, body, ok, bad){
+  body.api = fn; body.c = CCODE;
+  apiFetch_(API_, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(body) }, API_TRIES_, ok, bad);
+}
+function caseDraw(c){
+  var L = CT[c.lang] || CT.en, Z = CT.zh, two = c.lang !== 'zh';
+  function row(k, v){ return v ? '<div class="row"><span class="k">' + esc(L[k]) + (two ? '<br><small>' + esc(Z[k]) + '</small>' : '') + '</span><b>' + esc(v) + '</b></div>' : ''; }
+  var h = '<div class="pg case"><div class="hd"><span class="cx"></span><div class="c"><span class="k">YU HER MANAGEMENT</span><b>' + esc(L.head) + '</b></div></div>' +
+    '<div class="bd"><div class="nm">' + esc(c.name) + '</div><p class="note" style="margin:0">' + esc(c.client) + '</p>' +
+    '<div class="hero"><div class="d">' + esc(c.date) + '</div>' + (c.time ? '<div class="t">' + esc(c.time) + '</div>' : '') + '</div>' +
+    row('hos', c.hos) + row('dep', c.dep) + row('num', c.no) + row('bring', c.bring) +
+    (c.fast ? '<div class="note">※ ' + esc(L.nofood) + (two ? '<br>' + esc(Z.nofood) : '') + '</div>' : '') +
+    (c.contact ? '<p class="note">' + esc(L.contact) + '：' + esc(c.contact) + '</p>' : '');
+  if(c.closed) h += '<div class="ok"><span class="m">✓</span><div><b>' + esc(L.closed) + '</b></div></div>';
+  else if(c.ack) h += '<div class="ok"><span class="m">' + (c.ack === 'no' ? '!' : '✓') + '</span><div><b>' + esc(c.ack === 'no' ? L.noT : L.okT) + '</b><span>' + esc(c.ack === 'no' ? Z.noT : Z.okT) + (c.ackAt ? '　' + esc(c.ackAt) : '') + '</span></div></div>';
+  else h += '<div class="pad"><button type="button" id="cok">' + esc(L.ok) + (two ? '　·　' + esc(Z.ok) : '') + '</button>' +
+            '<button type="button" class="s" id="cno">' + esc(L.no) + (two ? '　·　' + esc(Z.no) : '') + '</button></div>';
+  $('app').innerHTML = h + '</div></div>';
+  ['cok', 'cno'].forEach(function(id){
+    var b = $(id); if(!b) return;
+    b.addEventListener('click', function(){
+      b.disabled = true;
+      caseApi('caseAck', { yes: id === 'cok' ? 1 : 0 }, function(r){
+        if(!r || !r.ok){ b.disabled = false; alert('Please try again 請再按一次'); return; }
+        c.ack = r.ack; c.ackAt = r.ackAt; caseDraw(c);
+      }, function(){ b.disabled = false; alert('Network error 網路不穩，請再按一次'); });
+    });
+  });
+}
+function caseLoad(){
+  caseApi('caseView', {}, function(r){
+    if(!r || !r.ok){ gone(); return; }
+    caseDraw(r);
+  }, function(){ $('app').innerHTML = '<p class="load">網路不穩，請下拉重新整理</p>'; });
+}
 function load(){
+  if(CCODE){ caseLoad(); return; }
   /* 短碼根本不在網址上（有人手打了半截、或連結被截斷）——
      直接給無效畫面，不要打後端。 */
   if(!SCODE){ gone(); return; }
