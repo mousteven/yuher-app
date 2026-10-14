@@ -171,7 +171,7 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
 var API = 'https://script.google.com/macros/s/AKfycbyZDD8YqjQ7_lBzyNyILy3jJfFsIWlVtz_ouhPJxakT7ka6F4Ou2sYn2khQiJmXY3U/exec';
 var Q = new URLSearchParams(location.search), Q2 = new URLSearchParams(decodeURIComponent(Q.get('liff.state') || '').replace(/^\?/, ''));
 function qp(k) { return Q.get(k) || Q2.get(k) || ''; }
-var LIFF_ID = qp('liff'), DRAFT = qp('d') || qp('sign');   // ?sign= 是舊的簽名頁連結，現在同一頁
+var LIFF_ID = qp('liff'), DRAFT = qp('d') || qp('sign'), TRIP = qp('t'), DAY = qp('day');   // ?sign= 是舊的簽名頁連結；t／day：從行程卡點進來直接帶那一站
 var S = { items: [], auto: 0, autoP: '', autoA: '', picks: {}, workers: [], vtEdited: false, trip: null, cu00: '', cuName: '', client: '', cat: -1, sub: -1, nat: '' };
 var META = null, X = null, ST = {}, FL = {}, SAVED = '', SENT = false, LANG = '中', TRC = {}, POLL = false, BQ = [], BI = 0, RELAY = false, trTimer = 0;
 var LC = { '菲律賓': 'EN', '越南': 'VI', '印尼': 'ID', '泰國': 'TH' };
@@ -323,9 +323,10 @@ function preview() {
 function trips(list) {
   var box = $('trips'); box.innerHTML = '';
   $('tripsF').hidden = !list.length;
-  list.forEach(function (t, i) {
+  var pick = list.filter(function (t) { return t.id === TRIP; })[0] || list[0];
+  list.forEach(function (t) {
     var b = chip(box, (t.slot ? t.slot + ' ' : '') + t.client, false, function () { [].forEach.call(box.children, function (x) { x.setAttribute('aria-pressed', 'false'); }); b.setAttribute('aria-pressed', 'true'); useTrip(t); });
-    if (i === 0) b.click();
+    if (t === pick) b.click();
   });
 }
 function findSub(big, sub) {
@@ -511,7 +512,7 @@ function finish() {
 }
 liff.init({ liffId: LIFF_ID }).then(function () {
   if (!liff.isLoggedIn()) return liff.login();
-  return api({ api: 'prep', d: DRAFT }).then(function (j) {
+  return api({ api: 'prep', d: DRAFT, date: DAY }).then(function (j) {
     META = j; $('bar').hidden = true; $('form').hidden = false;
     $('date').value = j.day; seg('method', '1'); seg('labor', '1');
     if (j.draft) { $('tripsF').hidden = true; apply(j.state); return fill(j.draft).then(function () { SAVED = JSON.stringify(Object.assign({}, draft(), { id: '' })); }); }
