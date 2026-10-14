@@ -51,6 +51,31 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
 @keyframes go{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
 @media (prefers-reduced-motion:reduce){.bar i{animation:none;width:100%}}
 [hidden]{display:none!important}
+/* 簽名頁（?sign=）：名單一格一人，點了才開全螢幕簽名板，捲動時不可能畫到（同 s.html） */
+#hub{padding:16px 16px 112px;display:grid;gap:16px}
+.ppl{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.p{display:flex;background:var(--tile)}
+.p.todo,.p.fail{box-shadow:inset 5px 0 0 var(--ink)}
+.pm{flex:1;display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 16px;border:0;background:none;text-align:left;font:inherit;color:var(--ink)}
+.pm .nm{flex:1;font-weight:700;font-size:17px;line-height:1.35}
+.pm small{display:block;font-size:14px;font-weight:400;color:var(--mute)}
+.pm .st{font-size:15px;font-weight:700;white-space:nowrap}
+.p.ok .st,.p.dry .st,.p.absent .st{color:var(--mute);font-weight:400}
+.qr{flex:none;width:56px;border:0;border-left:2px solid #fff;background:none;color:var(--ink);display:grid;place-items:center}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.board{position:fixed;inset:0;background:#fff;z-index:9;display:flex;flex-direction:column;touch-action:none;overscroll-behavior:none}
+.bhd{position:relative;padding:16px 16px 8px;border-bottom:2px solid var(--ink);display:grid;gap:4px}
+.bhd b{font-size:28px;line-height:1.2;padding-right:56px}
+.bhd .say{font-size:20px;font-weight:700}
+.bhd .x{position:absolute;top:8px;right:8px;width:44px;height:44px;border:0;background:none;font:700 22px/1 inherit;font-family:inherit;color:var(--ink)}
+#cv{flex:1;width:100%;display:block;background:#fff linear-gradient(var(--ink),var(--ink)) 24px 70%/calc(100% - 48px) 1px no-repeat}
+.qbody{flex:1;display:grid;place-content:center;justify-items:center;gap:16px;padding:16px}
+#qbox{padding:16px;background:#fff}
+.bft{display:grid;grid-template-columns:1fr 1fr 2fr;border-top:2px solid var(--ink);padding-bottom:env(safe-area-inset-bottom)}
+.bft button{min-height:56px;font:700 16px/1 inherit;font-family:inherit;border:0;background:#fff;color:var(--ink)}
+.bft button+button{border-left:1.5px solid var(--ink)}
+.bft .go{background:var(--ink);color:#fff;display:flex;justify-content:space-between;align-items:center;padding:0 16px}
+.bft .go em{color:var(--red);font-style:normal;font-size:20px}
 </style></head><body>
 <header>
   <div class="eye" id="eye">客戶訪視服務紀錄表</div>
@@ -97,9 +122,26 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
 
   <label class="f"><span>後續追蹤處理紀錄（選填）</span><textarea id="after"></textarea></label>
 </main>
+<section id="hub" hidden>
+  <ul class="ppl" id="ppl"></ul>
+  <div class="acts"><button type="button" class="btn" id="qrAll">給移工掃 QR</button><button type="button" class="btn" id="reload">重新整理</button><button type="button" class="btn" id="done">完成</button></div>
+  <div class="note" id="hubNote"></div>
+</section>
+<div class="board" id="board" hidden>
+  <div class="bhd"><span class="eye" id="brole"></span><b id="bwho"></b><span class="say" id="bsay"></span><span class="eye">請在這裡簽名</span>
+    <button type="button" class="x" id="bx" aria-label="結束"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <canvas id="cv"></canvas>
+  <div class="bft"><button type="button" id="b1"></button><button type="button" id="b2"></button><button type="button" class="go" id="b3">簽好了<em>→</em></button></div>
+</div>
+<div class="board" id="qrm" hidden>
+  <div class="bhd"><span class="eye" id="qrole"></span><b id="qwho"></b><span class="say" id="qsay"></span><span class="eye">用自己的手機掃，在 IEI 的頁面簽名</span></div>
+  <div class="qbody"><div id="qbox"></div><div class="note">簽好後按「關閉」，這裡會重新讀一次誰簽了</div></div>
+  <div class="bft"><button type="button" id="q1">關閉</button><button type="button" class="go" id="q2">下一位<em>→</em></button></div>
+</div>
 <footer><div id="msg" role="status"></div><button id="go" disabled>確認後送出<em>→</em></button></footer>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 var API = 'https://script.google.com/macros/s/AKfycbyZDD8YqjQ7_lBzyNyILy3jJfFsIWlVtz_ouhPJxakT7ka6F4Ou2sYn2khQiJmXY3U/exec';
 var Q = new URLSearchParams(location.search), Q2 = new URLSearchParams(decodeURIComponent(Q.get('liff.state') || '').replace(/^\?/, ''));
@@ -241,8 +283,125 @@ function fill(d) {
   items(); sides();
   return pickCust({ cu00: d.cu00, name: d.cuName }, true);
 }
+/* ---------- 簽名頁（?sign=<紀錄ID>，2026-10-14 他選甲乙丙合併）----------
+   乙：名單，點一個人開全螢幕簽名板。甲：底部「接力簽」一人一頁走完沒簽的（不在＝跳過，留著沒簽）。
+   丙：QR 是 IEI 自己的簽名網址，移工用自己的手機掃、在 IEI 的頁面簽；這裡只顯示，關掉時重讀狀態。
+   翻譯格：他第一次手簽，後端存起來，之後打開這頁就自動帶入。 */
+var SIGN = qp('sign'), H = null, P = [], ST = {}, BQ = [], BI = 0, RELAY = false, QQ = [], QI = 0;
+var SAY = { '菲律賓': 'Please sign here.', '越南': 'Vui lòng ký tên tại đây.', '印尼': 'Silakan tanda tangan di sini.', '泰國': 'กรุณาเซ็นชื่อที่นี่' };
+var STX = { ok: '✓ 已簽', dry: '✓ 試跑沒上傳', todo: '未簽', absent: '不在', up: '上傳中…', fail: '沒傳上去，再簽一次' };
+var QR_ICON = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2M20 14v6h-6"/></svg>';
+function hubLoad() {
+  $('bar').hidden = false;
+  return api({ api: 'sign', d: SIGN }).then(function (j) {
+    H = j; $('bar').hidden = true; $('hub').hidden = false;
+    $('ttl').textContent = j.cuName;
+    $('sub').textContent = [j.date, 'IEI 編號 ' + j.svid, j.dry ? '試跑中：簽名不會上傳到 IEI' : ''].filter(Boolean).join('・');
+    P = [{ k: 'lbr', role: '翻譯', name: j.me || '我', s: j.lbr }];
+    if (j.labor !== '3') P.push({ k: 'cu', role: '雇主', name: j.cuName, s: j.cu });
+    j.workers.forEach(function (w) { P.push({ k: 'w:' + w.svl, role: '移工', name: w.zh || w.en, sub: w.zh ? w.en : '', s: w, say: SAY[j.nat] || '' }); });
+    P.forEach(function (p) { if (p.s.signed) ST[p.k] = 'ok'; else if (!ST[p.k] || ST[p.k] === 'ok') ST[p.k] = 'todo'; });   // IEI 說了算；不在／試跑／上傳中留著
+    $('hubNote').textContent = j.auto || (j.lbrSaved ? '' : '你的簽名第一次要簽一次，之後每張自動帶入。');
+    hubDraw();
+  }).catch(function (e) { $('bar').hidden = true; say(e.message); });
+}
+function todo() { return P.filter(function (p) { return ST[p.k] === 'todo' || ST[p.k] === 'fail'; }); }
+function hubDraw() {
+  var ul = $('ppl'); ul.innerHTML = '';
+  P.forEach(function (p) {
+    var li = el('li', null, { class: 'p ' + ST[p.k] }), b = el('button', null, { type: 'button', class: 'pm' }), nm = el('span', p.name, { class: 'nm' });
+    nm.appendChild(el('small', [p.role, p.sub].filter(Boolean).join('・')));
+    b.appendChild(nm); b.appendChild(el('span', p.k === 'lbr' && ST.lbr === 'todo' && !H.lbrSaved ? '第一次請簽' : STX[ST[p.k]], { class: 'st' }));
+    b.onclick = function () { board([p], false); };
+    li.appendChild(b);
+    if (p.s.qr && ST[p.k] !== 'ok') {
+      var q = el('button', null, { type: 'button', class: 'qr', 'aria-label': p.name + ' 掃 QR 簽名' }); q.innerHTML = QR_ICON;
+      q.onclick = function () { qrOpen([p]); }; li.appendChild(q);
+    }
+    ul.appendChild(li);
+  });
+  var n = todo().length;
+  $('go').disabled = false; $('go').firstChild.textContent = n ? '接力簽（剩 ' + n + ' 位）' : '完成，留底傳到 LINE';
+  $('qrAll').hidden = !qrList().length;
+}
+function qrList() { return P.filter(function (p) { return p.k.charAt(0) === 'w' && p.s.qr && ST[p.k] !== 'ok' && ST[p.k] !== 'dry'; }); }
+/* 簽名板（做法照 yuher-app/s.html：全螢幕、吃掉 touchmove、裁空白、最寬 600） */
+var cv = $('cv'), cx = cv.getContext('2d'), inked = false, down = false;
+function board(q, relay) { BQ = q; BI = 0; RELAY = relay; $('board').hidden = false; document.body.style.overflow = 'hidden'; page(); }
+function page() {
+  var p = BQ[BI], last = BI === BQ.length - 1;
+  $('brole').textContent = p.role + (RELAY ? '・第 ' + (BI + 1) + '／' + BQ.length + ' 位' : '');
+  $('bwho').textContent = p.name; $('bsay').textContent = p.say || '';
+  $('b1').textContent = RELAY ? '不在' : '取消'; $('b2').textContent = RELAY ? '重簽' : '清除';
+  $('b3').firstChild.textContent = RELAY && !last ? '下一位' : '簽好了';
+  var r = window.devicePixelRatio || 1;
+  cv.width = cv.clientWidth * r; cv.height = cv.clientHeight * r;
+  cx.setTransform(r, 0, 0, r, 0, 0); cx.lineWidth = 5; cx.lineCap = cx.lineJoin = 'round'; cx.strokeStyle = '#111';
+  inked = false;
+}
+function next() { if (++BI < BQ.length) page(); else closeBoard(); }
+function closeBoard() { $('board').hidden = true; document.body.style.overflow = ''; hubDraw(); }
+function pt(e) { var b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; }
+cv.onpointerdown = function (e) { e.preventDefault(); down = true; cv.setPointerCapture(e.pointerId); var p = pt(e); cx.beginPath(); cx.moveTo(p[0], p[1]); };
+cv.onpointermove = function (e) { if (!down) return; e.preventDefault(); var p = pt(e); cx.lineTo(p[0], p[1]); cx.stroke(); inked = true; };
+cv.onpointerup = cv.onpointercancel = function () { down = false; };
+/* ⛔ LINE 內建瀏覽器可以往下拉掉：pointer 的 preventDefault 擋不住，要在 touch 事件上 passive:false 才擋得住（s.html 2026-10-08 踩過） */
+['touchstart', 'touchmove'].forEach(function (k) { cv.addEventListener(k, function (e) { e.preventDefault(); }, { passive: false }); });
+document.addEventListener('touchmove', function (e) { if (!$('board').hidden || !$('qrm').hidden) e.preventDefault(); }, { passive: false });
+function crop() {   // 裁掉四周空白＋留一點邊，最寬 600（整張全螢幕存進去，簽名會小到看不見）
+  var w = cv.width, h = cv.height, d = cx.getImageData(0, 0, w, h).data, x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 12) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  var pad = Math.round(Math.min(w, h) * 0.04); x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
+  var k = Math.min(1, 600 / (x1 - x0 + 1)), o = document.createElement('canvas');
+  o.width = Math.round((x1 - x0 + 1) * k); o.height = Math.round((y1 - y0 + 1) * k);
+  o.getContext('2d').drawImage(cv, x0, y0, x1 - x0 + 1, y1 - y0 + 1, 0, 0, o.width, o.height);
+  return o.toDataURL('image/png');
+}
+$('b1').onclick = function () { if (RELAY) { ST[BQ[BI].k] = 'absent'; next(); } else closeBoard(); };
+$('b2').onclick = function () { cx.clearRect(0, 0, cv.width, cv.height); inked = false; };
+$('b3').onclick = function () {
+  if (!inked) { alert(RELAY ? '還沒簽。人不在就按「不在」。' : '還沒簽'); return; }
+  save(BQ[BI], crop()); next();   // 上傳在背景跑，不用等，直接換下一位
+};
+$('bx').onclick = closeBoard;
+function save(p, png) {
+  ST[p.k] = 'up'; hubDraw();
+  api({ api: 'signPut', d: SIGN, k: p.k, png: png }).then(function (j) {
+    ST[p.k] = j.dry ? 'dry' : 'ok';
+    if (p.k === 'lbr' && !j.dry) { H.lbrSaved = true; $('hubNote').textContent = '你的簽名存好了，之後每張自動帶入。'; }
+    hubDraw();
+  }).catch(function (e) { ST[p.k] = 'fail'; hubDraw(); say(p.name + '：' + e.message); });
+}
+/* QR：一次一位，「下一位」換人；關掉就重讀誰簽了 */
+function qrOpen(q) { QQ = q; QI = 0; $('qrm').hidden = false; qrPage(); }
+function qrPage() {
+  var p = QQ[QI];
+  $('qrole').textContent = p.role + (QQ.length > 1 ? '・第 ' + (QI + 1) + '／' + QQ.length + ' 位' : '');
+  $('qwho').textContent = p.name; $('qsay').textContent = p.say || '';
+  $('qbox').innerHTML = '';
+  new QRCode($('qbox'), { text: p.s.qr, width: 240, height: 240, correctLevel: QRCode.CorrectLevel.L });
+  $('q2').hidden = QI >= QQ.length - 1; $('qrm').querySelector('.bft').style.gridTemplateColumns = $('q2').hidden ? '1fr' : '1fr 2fr';
+}
+$('q1').onclick = function () { $('qrm').hidden = true; hubLoad(); };
+$('q2').onclick = function () { QI++; qrPage(); };
+$('qrAll').onclick = function () { qrOpen(qrList()); };
+$('reload').onclick = hubLoad;
+/* 完成：替他送「簽名完成」→ 小禾用 reply 回留底卡（免費）。送不出去才請後端推播（吃每月額度）。 */
+function finish() {
+  if (P.some(function (p) { return ST[p.k] === 'up'; })) return say('還有簽名在上傳，等一下再按');
+  say('傳留底到 LINE…');
+  liff.sendMessages([{ type: 'text', text: '簽名完成 ' + SIGN }]).then(function () { liff.closeWindow(); })
+    .catch(function () { return api({ api: 'signDone', d: SIGN }).then(function (j) { say(j.pushed ? '留底卡已傳到 LINE' : '這張的留底之前傳過了（簽名人數沒變）'); }); })
+    .catch(function (e) { say(e.message); });
+}
+$('done').onclick = finish;
 liff.init({ liffId: LIFF_ID }).then(function () {
   if (!liff.isLoggedIn()) return liff.login();
+  if (SIGN) {
+    $('eye').textContent = '確認簽名';
+    $('go').onclick = function () { var t = todo(); if (t.length) board(t, true); else finish(); };
+    return hubLoad();
+  }
   return api({ api: 'prep', d: DRAFT }).then(function (j) {
     META = j; $('bar').hidden = true; $('form').hidden = false;
     phrases('cuPs', 'cuP', j.proc); phrases('cuAs', 'cuA', j.ans); phrases('laPs', 'laP', j.proc); phrases('laAs', 'laA', j.ans);
