@@ -78,6 +78,8 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .list.big small{font-size:15px;font-weight:400;margin-top:2px}
 .all{margin-left:auto;min-height:36px;padding:0 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--blue);font-weight:700;font-size:14px;font-family:inherit}
 .list.big label span b{color:var(--blue);font-weight:900}
+.list .gh{font-size:13px;font-weight:800;color:var(--mute);background:var(--soft);padding:6px 14px}
+.list .more{border:0;border-top:1px solid var(--hair);background:none;min-height:48px;padding:0 14px;text-align:left;color:var(--blue);font:inherit;font-weight:700;font-size:15px}
 .list{display:grid;border:1.5px solid var(--line);border-radius:14px;overflow:hidden}
 .list:empty{display:none}
 .list label{display:flex;gap:12px;align-items:center;min-height:52px;padding:8px 14px;cursor:pointer}
@@ -213,7 +215,8 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
       <button type="button" data-v="1"><svg class="ic s"><use href="#i-pin"/></svg>到場</button><button type="button" data-v="2"><svg class="ic s"><use href="#i-tel"/></svg>電話</button></div>
     <div class="seg" id="labor" data-v="1" role="group" aria-label="服務對象">
       <button type="button" data-v="1">雇主＋移工</button><button type="button" data-v="2">雇主</button></div>
-    <div class="f" id="wkF"><div class="lab"><svg class="ic s"><use href="#i-users"/></svg>移工（行程上的人已勾好）<button type="button" class="all" id="wkAll" hidden>全選</button></div>
+    <div class="f" id="wkF"><div class="lab"><svg class="ic s"><use href="#i-users"/></svg><span id="wkN">移工（行程上的人已勾好）</span><button type="button" class="all" id="wkAll" hidden>全選</button></div>
+      <label class="fld" id="wkQF" hidden><svg class="ic"><use href="#i-users"/></svg><input type="search" id="wkQ" aria-label="在這家的移工裡找" autocomplete="off"></label>
       <div class="list" id="wk"><div class="note" style="padding:12px 14px">先選客戶</div></div>
       <div id="natNote" class="note"></div></div>
    </section>
@@ -344,45 +347,71 @@ function head() {
 }
 $('close').onclick = function () { try { liff.closeWindow(); } catch (e) { history.back(); } };
 /* ---------- 客戶與移工 ---------- */
-function cands(list, q) {
-  var box = $('cands'); box.innerHTML = '';
-  if (!list.length) { $('custNow').textContent = S.client ? 'IEI 找不到「' + S.client + '」，請在上面打名稱找' : ''; return; }
+/* 搜尋結果（他 10/15 選方案一）：工人一組（後面寫在哪一家）、工廠一組。點工人＝帶工廠＋把他勾好 */
+function hl(name, q) {   // 打到的字標藍
+  var t = el('span'), k = q ? name.indexOf(q) : -1;
+  if (k === -1) t.textContent = name; else { t.appendChild(document.createTextNode(name.slice(0, k))); t.appendChild(el('b', name.substr(k, q.length))); t.appendChild(document.createTextNode(name.slice(k + q.length))); }
+  return t;
+}
+function cands(list, q, wks) {
+  var box = $('cands'); box.innerHTML = ''; wks = wks || [];
+  if (!list.length && !wks.length) { $('custNow').textContent = S.client ? 'IEI 找不到「' + S.client + '」，請在上面打名稱找' : ''; return; }
   $('custNow').textContent = q ? '' : 'IEI 有 ' + list.length + ' 家像的，請點一家：';
-  list.forEach(function (c) {
-    var lab = el('label'), r = el('input', null, { type: 'radio', name: 'cu' }), t = el('span'), k = q ? c.name.indexOf(q) : -1;
-    if (k === -1) t.textContent = c.name; else { t.appendChild(document.createTextNode(c.name.slice(0, k))); t.appendChild(el('b', c.name.substr(k, q.length))); t.appendChild(document.createTextNode(c.name.slice(k + q.length))); }
-    t.appendChild(el('small', c.cu00 + '・' + (c.addr || '沒有地址')));
-    r.onchange = function () { pickCust(c); };
-    lab.appendChild(r); lab.appendChild(t); box.appendChild(lab);
-  });
+  function row(name, sub, fn) {
+    var lab = el('label'), r = el('input', null, { type: 'radio', name: 'cu' }), t = hl(name, q);
+    t.appendChild(el('small', sub)); r.onchange = fn; lab.appendChild(r); lab.appendChild(t); box.appendChild(lab);
+  }
+  if (wks.length) box.appendChild(el('div', '工人', { class: 'gh' }));
+  wks.forEach(function (w) { row(w.zh, (w.co || w.cu) + '・' + (w.nat || ''), function () { pickWorker(w); }); });
+  if (wks.length && list.length) box.appendChild(el('div', '工廠', { class: 'gh' }));
+  list.forEach(function (c) { row(c.name, c.cu00 + '・' + (c.addr || '沒有地址'), function () { pickCust(c); }); });
+}
+function pickWorker(w) {
+  var c = (CUST || []).filter(function (x) { return x.cu00 === w.cu; })[0] || { cu00: w.cu, name: w.co || w.cu };
+  pickCust(c).then(function () { if (S.cu00 !== w.cu) return; S.picks[w.la] = 1; workers(S.workers, true); });
 }
 function pickCust(c, keepPicks) {
   S.cu00 = c.cu00; S.cuName = c.name;
   if (!$('addr').value && c.addr) $('addr').value = c.addr;
   $('cands').innerHTML = ''; $('custNow').textContent = ''; $('q').value = c.name;   // 他 10/14：選好的名稱就放在搜尋欄裡
+  S.wkOpen = false; $('wkQ').value = '';
   head(); say('讀 IEI 移工名單…');
   return api({ api: 'iei', cu00: c.cu00, workers: S.trip ? S.trip.workers : [] }).then(function (j) { workers(j.workers, keepPicks); say(''); }).catch(function (e) { say(e.message); });
 }
 function workers(rows, keepPicks) {
   S.workers = rows; if (!keepPicks) { S.picks = {}; rows.forEach(function (w) { if (w.pick) S.picks[w.la00] = 1; }); }
-  var box = $('wk'); box.innerHTML = '';
-  if (!rows.length) box.appendChild(el('div', 'IEI 這家客戶沒有聘僱中的移工', { class: 'note', style: 'padding:12px 14px' }));
-  rows.forEach(function (w) {
+  drawWk();
+  allBtn(); natVt(); drawSigns(); check();
+}
+/* 人多的工廠（他 10/15 方案一）：超過 5 位 → 上面多一格「在 N 位裡找」，勾好的排最上面，其他先列到湊滿 5 位、按「看全部」才展開。
+   勾選當下不重排（不然手指下面的那一列會跳走），下次重畫才排。 */
+function drawWk() {
+  var rows = S.workers, box = $('wk'), q = norm($('wkQ').value), many = rows.length > 5, on = function (w) { return !!S.picks[w.la00]; };
+  box.innerHTML = ''; $('wkQF').hidden = !many; $('wkQ').placeholder = '在 ' + rows.length + ' 位裡找（中文、英文都可以）';
+  if (!rows.length) box.appendChild(el('div', S.cu00 ? 'IEI 這家客戶沒有聘僱中的移工' : '先選客戶', { class: 'note', style: 'padding:12px 14px' }));
+  var list = rows.filter(on).concat(rows.filter(function (w) { return !on(w); }));
+  if (q) list = list.filter(function (w) { return norm((w.zh || '') + (w.en || '')).indexOf(q) !== -1; });
+  else if (many && !S.wkOpen) list = list.slice(0, Math.max(5, rows.filter(on).length));
+  if (q && !list.length) box.appendChild(el('div', '這家沒有「' + $('wkQ').value.trim() + '」', { class: 'note', style: 'padding:12px 14px' }));
+  list.forEach(function (w) {
     var lab = el('label'), c = el('input', null, { type: 'checkbox' }), t = el('span', w.zh || w.en);
     c.checked = !!S.picks[w.la00];
     t.appendChild(el('small', [w.zh ? w.en : '', w.nat, w.la21 ? '接管 ' + w.la21 : ''].filter(Boolean).join('・')));
     c.onchange = function () { if (c.checked) S.picks[w.la00] = 1; else delete S.picks[w.la00]; allBtn(); natVt(); drawSigns(); check(); };
     lab.appendChild(c); lab.appendChild(t); box.appendChild(lab);
   });
-  allBtn(); natVt(); drawSigns(); check();
+  if (!q && list.length < rows.length) { var m = el('button', '看全部 ' + rows.length + ' 位 ›', { type: 'button', class: 'more' }); m.onclick = function () { S.wkOpen = true; drawWk(); }; box.appendChild(m); }
 }
+$('wkQ').oninput = drawWk;
 /* 全選／全不選（他 10/14 要）：勾的人有變就跟著換字 */
-function allBtn() { var b = $('wkAll'), n = S.workers.length; b.hidden = n < 2; b.textContent = picked().length === n ? '全不選' : '全選'; }
+function allBtn() {
+  var b = $('wkAll'), n = S.workers.length; b.hidden = n < 2; b.textContent = picked().length === n ? '全不選' : '全選';
+  $('wkN').textContent = n ? '移工（勾了 ' + picked().length + '／' + n + ' 位）' : '移工（行程上的人已勾好）';
+}
 $('wkAll').onclick = function () {
   var on = picked().length !== S.workers.length; S.picks = {};
   if (on) S.workers.forEach(function (w) { S.picks[w.la00] = 1; });
-  [].forEach.call($('wk').querySelectorAll('input[type=checkbox]'), function (c) { c.checked = on; });
-  allBtn(); natVt(); drawSigns(); check();
+  drawWk(); allBtn(); natVt(); drawSigns(); check();
 };
 function picked() { return S.workers.filter(function (w) { return S.picks[w.la00]; }); }
 /* 國籍＝勾的人的國籍（IEI 一張只能一個）。第幾次＝IEI 自己的算法：接管日到服務日每 60 天一次，1～6，取最小。 */
@@ -403,6 +432,15 @@ $('date').onchange = function () { natVt(); head(); };
 var CUST = null;
 try { CUST = JSON.parse(localStorage.getItem('xh.cust') || 'null'); } catch (e) {}
 function setCust(list) { if (!list || !list.length) return; CUST = list; try { localStorage.setItem('xh.cust', JSON.stringify(list)); } catch (e) {} if ($('q').value.trim() && !S.cu00) find(); }
+/* 全公司移工（IEI，他 10/15 要從 IEI 讀）：同客戶清單，存手機、背景再對新的。{ co: {CU00: 公司}, w: [[LA00, CU00, 中文名, 國籍]] } */
+var WKS = null;
+try { WKS = JSON.parse(localStorage.getItem('xh.wk') || 'null'); } catch (e) {}
+function setWks(o) { if (!o || !o.w || !o.w.length) return; WKS = o; try { localStorage.setItem('xh.wk', JSON.stringify(o)); } catch (e) {} if ($('q').value.trim() && !S.cu00) find(); }
+function wkFind(q) {
+  var n = norm(q); if (!n || !WKS) return [];
+  return WKS.w.filter(function (w) { return norm(w[2]).indexOf(n) !== -1; }).slice(0, 8)
+    .map(function (w) { return { la: w[0], cu: w[1], zh: w[2], nat: w[3], co: WKS.co[w[1]] || '' }; });
+}
 function norm(t) { return String(t || '').replace(/[\s　]/g, '').replace(/(股份)?有限公司|企業社|實業社|工業社|商行/g, '').toUpperCase(); }   // 同 Iei.gs 的 ieiNorm_
 function localFind(q) {
   var n = norm(q); if (!n) return [];
@@ -413,7 +451,7 @@ function find(ask) {
   var q = $('q').value.trim();
   clearTimeout(qTimer);
   if (!q) { $('cands').innerHTML = ''; $('custNow').textContent = ''; return; }
-  if (CUST && !ask) { var hit = localFind(q); cands(hit, q); if (hit.length) return; }
+  if ((CUST || WKS) && !ask) { var hit = CUST ? localFind(q) : [], wh = wkFind(q); cands(hit, q, wh); if (hit.length || wh.length) return; }
   /* 沒有放大鏡了（他 10/14）：手機上找不到、或清單還沒下載好 → 停手 0.6 秒自動問 IEI（新客戶也找得到） */
   if (!ask) { $('custNow').textContent = '在 IEI 找…'; qTimer = setTimeout(function () { find(true); }, 600); return; }
   say('在 IEI 找…');
@@ -426,9 +464,8 @@ $('q').oninput = function () {
 };
 $('q').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); find(); $('q').blur(); } };
 function unpick() {
-  S.cu00 = ''; S.cuName = ''; S.workers = []; S.picks = {};
-  $('wk').innerHTML = ''; $('wk').appendChild(el('div', '先選客戶', { class: 'note', style: 'padding:12px 14px' }));
-  allBtn(); natVt(); head(); drawSigns();
+  S.cu00 = ''; S.cuName = ''; S.workers = []; S.picks = {}; S.wkOpen = false; $('wkQ').value = '';
+  drawWk(); allBtn(); natVt(); head(); drawSigns();
 }
 /* ---------- 服務：App 的大項／細項 → IEI 服務項目（自動對好，可改） ---------- */
 function chip(box, label, on, fn) { var b = el('button', label, { type: 'button', 'aria-pressed': String(!!on) }); b.onclick = fn; box.appendChild(b); return b; }
@@ -892,6 +929,8 @@ liff.init({ liffId: LIFF_ID }).then(function () {
     cats(); items(); head(); trips(j.trips); langs(); check();
     if (j.custs) setCust(j.custs);   // 伺服器手上有就順便帶來，不用再跑一趟
     api({ api: 'custs' }).then(function (c) { setCust(c.list); }).catch(function () {});   // 背景跟 IEI 對最新的，存到手機
+    if (j.wks) setWks(j.wks);
+    api({ api: 'wks' }).then(function (c) { setWks(c.list); }).catch(function () {});
   });
 }).catch(function (e) {
   $('bar').hidden = true; $('ttl').textContent = '打不開';
