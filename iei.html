@@ -1,7 +1,9 @@
 <!DOCTYPE html>
-<!-- 小禾的 LIFF 表單（他 2026-10-13 選乙：一張預填好的 IEI 客戶訪視服務紀錄表）。
-     從今天行程預填 → 他改要改的 → 按送出：存草稿（後端 Main.gs api:'save'）→ 替他送「訪談確認 <ID>」→ 小禾回確認卡。
-     這一頁不送 IEI，送 IEI 是在確認卡上按的。頁面本身沒有任何資料，資料都是 LIFF 驗身分之後才跟後端拿。
+<!-- 小禾的 LIFF 表單：一頁捲到底（他 2026-10-14 選甲：能一次完成不分兩次、一個動作不分兩個、一頁搞定不分兩頁）。
+     上 → 下：客戶／日期／移工（從今天行程預填）→ App 的服務大項／細項（自動對到 IEI 服務項目，可改）→ 處理經過／結果片語
+     → 預覽（移工語言，跟羽禾 App 同一套 Google 翻譯，＝送進 IEI 的那一份）→ 簽名格（也可一個 QR 大家掃）
+     → 底部一顆「送出到 IEI（N 個簽名）」＝ Create ＋ 先簽好的簽名一起補進去。送出後同一頁繼續補簽（QR 14 天內有效）。
+     頁面本身沒有任何資料，資料都是 LIFF 驗身分之後才跟後端拿。舊的 ?sign=<ID> 連結也開這一頁。
      ⛔ 後端網址寫死在下面（API），不從網址參數拿：不然有人做一個假連結，就能把他的 LINE 通行證送去別的地方。 -->
 <html lang="zh-Hant"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -16,10 +18,14 @@ header{padding:16px 16px 0;display:grid;gap:4px}
 .ttl{display:flex;gap:12px;align-items:stretch}.ttl i{width:5px;background:var(--red);flex:none}
 .ttl b{font-size:22px;line-height:1.25;font-weight:700}
 .rule{height:2px;background:var(--ink);margin-top:8px}
-main{padding:16px 16px 112px;display:grid;gap:24px}
+main{padding:16px 16px 120px;display:grid;gap:24px}
+#edit{display:grid;gap:24px}
+#edit.locked{pointer-events:none;opacity:.55}
 .f{display:grid;gap:8px}
-.f>span{font-size:14px;font-weight:700;color:var(--mute)}
-input[type=text],input[type=date],input[type=number],input[type=search],textarea,select{font:16px/1.5 inherit;font-family:inherit;color:var(--ink);background:#fff;border:1.5px solid var(--ink);padding:8px 12px;min-height:44px;width:100%;border-radius:0}
+.f>span,.lab{font-size:14px;font-weight:700;color:var(--mute)}
+.lab{display:flex;justify-content:space-between;align-items:center;gap:8px}
+h2{margin:8px 0 0;font-size:18px;line-height:1.3;border-top:2px solid var(--ink);padding-top:12px}
+input[type=text],input[type=date],input[type=number],input[type=search],textarea{font:16px/1.5 inherit;font-family:inherit;color:var(--ink);background:#fff;border:1.5px solid var(--ink);padding:8px 12px;min-height:44px;width:100%;border-radius:0}
 textarea{min-height:72px;resize:vertical}
 :focus-visible{outline:3px solid var(--red);outline-offset:2px}
 .two{display:grid;grid-template-columns:1fr 112px;gap:8px}
@@ -28,48 +34,53 @@ textarea{min-height:72px;resize:vertical}
 .seg button+button{border-left:1.5px solid var(--ink)}
 .seg button[aria-pressed=true]{background:var(--ink);color:#fff}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chips button{min-height:44px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);font:700 15px/1.2 inherit;font-family:inherit;padding:4px 12px}
-.chips button[aria-pressed=true]{background:var(--ink);color:#fff}
-.btn{min-height:44px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);font:700 15px/1.2 inherit;font-family:inherit}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;margin:0 -16px;padding-left:16px;padding-right:16px}
+.chips button{min-height:44px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);font:700 15px/1.2 inherit;font-family:inherit;padding:4px 12px;white-space:nowrap}
+.chips.ph button{border-style:dashed;font-weight:400;white-space:normal;text-align:left}
+.chips button[aria-pressed=true]{background:var(--ink);color:#fff;border-style:solid}
 .chips button[aria-pressed=true]::before{content:"✓ "}
-details summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer}
+.btn{min-height:44px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);font:700 15px/1.2 inherit;font-family:inherit;padding:0 12px}
+.link{border:0;background:none;padding:8px 0;min-height:44px;font:inherit;font-size:15px;color:var(--ink);text-align:left;text-decoration:underline;text-underline-offset:3px}
+details summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer;font-size:15px}
 .list{display:grid;gap:0;background:var(--tile)}
 .list label{display:flex;gap:12px;align-items:center;min-height:52px;padding:8px 12px;border-bottom:1px solid #fff}
 .list input{width:24px;height:24px;accent-color:var(--ink);flex:none}
 .list small{display:block;font-size:14px;color:var(--mute)}
 .note{font-size:14px;color:var(--mute)}
-.warn{font-size:15px;color:var(--ink);border-left:5px solid var(--red);padding:4px 12px;background:var(--tile)}
-.row{display:flex;gap:12px;align-items:center;min-height:44px}
-.row input{width:24px;height:24px;accent-color:var(--ink)}
+.pv{background:var(--tile);padding:12px 16px;display:grid;gap:4px}
+.pv small{font-size:14px;color:var(--mute);font-weight:700}
+.pv p{margin:0 0 8px;font-size:16px;line-height:1.55}
+.langs{display:flex;border:1.5px solid var(--ink)}
+.langs button{min-height:36px;min-width:48px;border:0;background:#fff;color:var(--ink);font:700 14px/1 inherit;font-family:inherit;padding:0 12px}
+.langs button+button{border-left:1.5px solid var(--ink)}
+.langs button[aria-pressed=true]{background:var(--ink);color:#fff}
+.signs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{font:inherit;border:0;background:var(--tile);color:var(--ink);min-height:76px;padding:8px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;box-shadow:inset 0 4px 0 var(--ink);min-width:0}
+.tile b{font-size:15px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.tile small{font-size:14px;color:var(--ink);font-weight:700}
+.tile.ok,.tile.held,.tile.dry,.tile.auto,.tile.absent{box-shadow:none}
+.tile.ok small,.tile.held small,.tile.dry small,.tile.auto small,.tile.absent small{color:var(--mute);font-weight:400}
+.tile.flash{animation:fl 1.6s ease-out}
+@keyframes fl{from{background:var(--line)}}
+@media (prefers-reduced-motion:reduce){.tile.flash{animation:none}}
+.sacts{display:flex;gap:8px}
+pre{white-space:pre-wrap;word-break:break-all;font-size:13px;background:var(--tile);padding:12px;margin:0}
 footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(safe-area-inset-bottom)}
 #go{width:100%;min-height:56px;border:0;background:var(--ink);color:#fff;font:700 17px/1 inherit;font-family:inherit;display:flex;justify-content:space-between;align-items:center;padding:0 16px}
 #go em{color:var(--red);font-style:normal;font-size:20px}
 #go:disabled{background:var(--mute)}
-#msg{padding:8px 16px;font-size:15px;min-height:0}
+#msg{padding:8px 16px;font-size:15px;min-height:0;border-top:2px solid var(--ink)}
 #msg:empty{display:none}
 .bar{height:4px;background:var(--line);overflow:hidden}.bar i{display:block;height:4px;width:40%;background:var(--ink);animation:go 1.2s ease-in-out infinite}
 @keyframes go{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
 @media (prefers-reduced-motion:reduce){.bar i{animation:none;width:100%}}
 [hidden]{display:none!important}
-/* 簽名頁（?sign=）：名單一格一人，點了才開全螢幕簽名板，捲動時不可能畫到（同 s.html） */
-#hub{padding:16px 16px 112px;display:grid;gap:16px}
-.ppl{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.p{display:flex;background:var(--tile)}
-.p.todo,.p.fail{box-shadow:inset 5px 0 0 var(--ink)}
-.pm{flex:1;display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 16px;border:0;background:none;text-align:left;font:inherit;color:var(--ink)}
-.pm .nm{flex:1;font-weight:700;font-size:17px;line-height:1.35}
-.pm small{display:block;font-size:14px;font-weight:400;color:var(--mute)}
-.pm .st{font-size:15px;font-weight:700;white-space:nowrap}
-.p.ok .st,.p.dry .st,.p.absent .st{color:var(--mute);font-weight:400}
-.p.flash,.ql li.flash{animation:fl 1.6s ease-out}
-@keyframes fl{from{background:var(--line)}}
-@media (prefers-reduced-motion:reduce){.p.flash,.ql li.flash{animation:none}}
-.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+/* 全螢幕簽名板（同 s.html：點格子才開，捲動時不可能畫到） */
 .board{position:fixed;inset:0;background:#fff;z-index:9;display:flex;flex-direction:column;touch-action:none;overscroll-behavior:none}
 .bhd{position:relative;padding:16px 16px 8px;border-bottom:2px solid var(--ink);display:grid;gap:4px}
 .bhd b{font-size:28px;line-height:1.2;padding-right:56px}
 .bhd .say{font-size:20px;font-weight:700}
-.bhd .x{position:absolute;top:8px;right:8px;width:44px;height:44px;border:0;background:none;font:700 22px/1 inherit;font-family:inherit;color:var(--ink)}
+.bhd .x{position:absolute;top:8px;right:8px;width:44px;height:44px;border:0;background:none;color:var(--ink)}
 #cv{flex:1;width:100%;display:block;background:#fff linear-gradient(var(--ink),var(--ink)) 24px 70%/calc(100% - 48px) 1px no-repeat}
 .qbody{flex:1;overflow-y:auto;overscroll-behavior:contain;display:grid;align-content:start;justify-items:center;gap:16px;padding:16px}
 #qbox{padding:8px;background:#fff}
@@ -77,7 +88,8 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
 .ql{list-style:none;margin:0;padding:0;width:100%;display:grid;gap:4px}
 .ql li{display:flex;justify-content:space-between;gap:12px;min-height:44px;align-items:center;padding:4px 12px;background:var(--tile);font-weight:700}
 .ql li span{white-space:nowrap}
-.ql li.ok span,.ql li.dry span{color:var(--mute);font-weight:400}
+.ql li.ok span,.ql li.held span,.ql li.dry span{color:var(--mute);font-weight:400}
+.ql li.flash{animation:fl 1.6s ease-out}
 .bft{display:grid;grid-template-columns:1fr 1fr 2fr;border-top:2px solid var(--ink);padding-bottom:env(safe-area-inset-bottom)}
 .bft button{min-height:56px;font:700 16px/1 inherit;font-family:inherit;border:0;background:#fff;color:var(--ink)}
 .bft button+button{border-left:1.5px solid var(--ink)}
@@ -92,6 +104,7 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
 </header>
 <div class="bar" id="bar"><i></i></div>
 <main id="form" hidden>
+ <div id="edit">
   <div class="f" id="tripsF"><span>今天的行程（點一站就帶入）</span><div class="chips" id="trips"></div></div>
 
   <div class="f"><span>IEI 客戶</span>
@@ -104,36 +117,41 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
     <label class="f"><span>服務日期</span><input type="date" id="date"></label>
     <label class="f"><span>第幾次訪視</span><input type="number" id="vt" min="1" step="1" inputmode="numeric"></label>
   </div>
-
   <div class="f"><span>服務方式</span><div class="seg" id="method" data-v="1">
     <button type="button" data-v="1">親自拜訪</button><button type="button" data-v="2">電話</button><button type="button" data-v="3">來電</button><button type="button" data-v="4">書信</button></div></div>
   <div class="f"><span>服務對象</span><div class="seg" id="labor" data-v="1">
     <button type="button" data-v="1">雇主與外國人</button><button type="button" data-v="2">雇主</button><button type="button" data-v="3">外國人</button></div></div>
-
   <div class="f" id="wkF"><span>移工（IEI 名單，行程上的人已勾好）</span>
     <div class="list" id="wk"><div class="note" style="padding:12px">先選客戶</div></div>
     <div id="natNote" class="note"></div></div>
 
-  <div class="f"><span>服務項目</span>
-    <div class="chips" id="itemsTop"></div>
-    <details><summary>其他項目 ▾</summary><div class="chips" id="itemsMore"></div></details></div>
+  <h2>服務</h2>
+  <div class="f"><span>服務大項</span><div class="chips scroll" id="cats"></div></div>
+  <div class="f" id="subF" hidden><span>細項</span><div class="chips" id="subs"></div></div>
+  <div class="f"><button type="button" class="link" id="ieiNow"></button>
+    <div class="chips" id="itemsAll" hidden></div></div>
 
-  <div class="f" id="cuF"><span>雇主處理經過</span><select id="cuPs"></select><textarea id="cuP"></textarea>
-    <span>雇主處理結果</span><select id="cuAs"></select><textarea id="cuA"></textarea></div>
+  <div class="f"><span>處理經過（點片語就加入，再點一次拿掉）</span>
+    <div class="chips ph" id="pc"></div>
+    <details><summary>IEI 片語 ▾</summary><div class="chips ph" id="pcI"></div></details>
+    <textarea id="p" aria-label="處理經過"></textarea></div>
+  <div class="f"><span>處理結果</span>
+    <div class="chips ph" id="ac"></div>
+    <details><summary>IEI 片語 ▾</summary><div class="chips ph" id="acI"></div></details>
+    <textarea id="a" aria-label="處理結果"></textarea></div>
+  <details><summary>後續追蹤處理紀錄（選填）▾</summary><textarea id="after" aria-label="後續追蹤處理紀錄"></textarea></details>
+ </div>
 
-  <div class="f" id="laF"><span>移工處理經過／結果</span>
-    <label class="row"><input type="checkbox" id="same" checked>同雇主</label>
-    <div id="laBox" class="f" hidden><select id="laPs"></select><textarea id="laP" placeholder="移工處理經過"></textarea>
-      <select id="laAs"></select><textarea id="laA" placeholder="移工處理結果"></textarea>
-      <div class="note">不是片語的字，送出時用 IEI 自己的翻譯功能翻成移工的語言。</div></div></div>
+  <h2>預覽給工人和雇主看</h2>
+  <div class="lab"><span id="pvNote">這就是存進 IEI 的內容</span><div class="langs" id="langs"></div></div>
+  <div class="pv" id="pv"></div>
 
-  <label class="f"><span>後續追蹤處理紀錄（選填）</span><textarea id="after"></textarea></label>
+  <h2 id="signH">簽名</h2>
+  <div class="sacts"><button type="button" class="btn" id="relay">接力簽</button><button type="button" class="btn" id="qrAll">QR 大家掃</button></div>
+  <div class="signs" id="signs"></div>
+  <div class="note" id="signNote"></div>
+  <pre id="dryOut" hidden></pre>
 </main>
-<section id="hub" hidden>
-  <ul class="ppl" id="ppl"></ul>
-  <div class="acts"><button type="button" class="btn" id="qrAll">QR 給大家掃</button><button type="button" class="btn" id="reload">重新整理</button><button type="button" class="btn" id="done">完成</button></div>
-  <div class="note" id="hubNote"></div>
-</section>
 <div class="board" id="board" hidden>
   <div class="bhd"><span class="eye" id="brole"></span><b id="bwho"></b><span class="say" id="bsay"></span><span class="eye">請在這裡簽名</span>
     <button type="button" class="x" id="bx" aria-label="結束"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
@@ -141,7 +159,7 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
   <div class="bft"><button type="button" id="b1"></button><button type="button" id="b2"></button><button type="button" class="go" id="b3">簽好了<em>→</em></button></div>
 </div>
 <div class="board" id="qrm" hidden>
-  <div class="bhd"><span class="eye">一個 QR 大家掃，用自己的手機簽</span><b id="qwho"></b><span class="eye">誰簽了下面會馬上打勾</span></div>
+  <div class="bhd"><span class="eye">一個 QR 大家掃，用自己的手機簽（14 天內有效）</span><b id="qwho"></b><span class="eye">誰簽了下面會馬上打勾</span></div>
   <div class="qbody"><div id="qbox"></div><input type="text" id="qurl" readonly aria-label="簽名連結"><ul class="ql" id="qppl"></ul></div>
   <div class="bft" style="grid-template-columns:1fr"><button type="button" id="q1">關閉</button></div>
 </div>
@@ -153,8 +171,12 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
 var API = 'https://script.google.com/macros/s/AKfycbyZDD8YqjQ7_lBzyNyILy3jJfFsIWlVtz_ouhPJxakT7ka6F4Ou2sYn2khQiJmXY3U/exec';
 var Q = new URLSearchParams(location.search), Q2 = new URLSearchParams(decodeURIComponent(Q.get('liff.state') || '').replace(/^\?/, ''));
 function qp(k) { return Q.get(k) || Q2.get(k) || ''; }
-var LIFF_ID = qp('liff'), DRAFT = qp('d');
-var S = { items: [], picks: {}, workers: [], vtEdited: false, trip: null, cu00: '', cuName: '', client: '' }, META = null;
+var LIFF_ID = qp('liff'), DRAFT = qp('d') || qp('sign');   // ?sign= 是舊的簽名頁連結，現在同一頁
+var S = { items: [], auto: 0, autoP: '', autoA: '', picks: {}, workers: [], vtEdited: false, trip: null, cu00: '', cuName: '', client: '', cat: -1, sub: -1, nat: '' };
+var META = null, X = null, ST = {}, FL = {}, SAVED = '', SENT = false, LANG = '中', TRC = {}, POLL = false, BQ = [], BI = 0, RELAY = false, trTimer = 0;
+var LC = { '菲律賓': 'EN', '越南': 'VI', '印尼': 'ID', '泰國': 'TH' };
+var SAY = { '菲律賓': 'Please sign here.', '越南': 'Vui lòng ký tên tại đây.', '印尼': 'Silakan tanda tangan di sini.', '泰國': 'กรุณาเซ็นชื่อที่นี่' };
+var STX = { ok: '✓ 已簽', held: '✓ 簽好了', dry: '✓ 試跑', todo: '點這裡簽', absent: '不在', up: '上傳中…', fail: '沒傳上去，再簽', auto: '自動沿用' };
 function $(id) { return document.getElementById(id); }
 function say(t) { $('msg').textContent = t || ''; }
 function el(tag, txt, attrs) { var e = document.createElement(tag); if (txt != null) e.textContent = txt; for (var k in attrs || {}) e.setAttribute(k, attrs[k]); return e; }
@@ -166,28 +188,13 @@ function api(o) {
 }
 function seg(id, v) { var b = $(id); if (v != null) b.dataset.v = String(v); [].forEach.call(b.children, function (x) { x.setAttribute('aria-pressed', String(x.dataset.v === b.dataset.v)); }); }
 ['method', 'labor'].forEach(function (id) {
-  $(id).addEventListener('click', function (e) { var x = e.target.closest('button'); if (!x) return; seg(id, x.dataset.v); sides(); check(); });
+  $(id).addEventListener('click', function (e) { var x = e.target.closest('button'); if (!x) return; seg(id, x.dataset.v); sides(); });
 });
-function sides() { var l = $('labor').dataset.v; $('cuF').hidden = l === '3'; $('laF').hidden = $('wkF').hidden = l === '2'; check(); }
-$('same').onchange = function () { $('laBox').hidden = $('same').checked; };
-/* 片語下拉：跟 IEI 一樣，選了就接在後面（逗號隔開） */
-function phrases(selId, boxId, list) {
-  var s = $(selId); s.innerHTML = ''; s.appendChild(el('option', '＋ 加一句片語', { value: '' }));
-  list.forEach(function (t) { s.appendChild(el('option', t, { value: t })); });
-  s.onchange = function () { if (!s.value) return; var b = $(boxId); b.value = b.value ? b.value + ',' + s.value : s.value; s.value = ''; };
-}
-function items() {
-  var top = $('itemsTop'), more = $('itemsMore'), pin = [9, 7, 15, 19];
-  top.innerHTML = more.innerHTML = '';
-  META.items.forEach(function (name, i) {
-    var no = i + 1, b = el('button', no + ' ' + name, { type: 'button', 'aria-pressed': String(S.items.indexOf(no) !== -1) });
-    b.onclick = function () { var k = S.items.indexOf(no); if (k === -1) S.items.push(no); else S.items.splice(k, 1); b.setAttribute('aria-pressed', String(k === -1)); check(); };
-    (pin.indexOf(no) !== -1 || S.items.indexOf(no) !== -1 ? top : more).appendChild(b);
-  });
-}
+function sides() { $('wkF').hidden = $('labor').dataset.v === '2'; drawSigns(); check(); }
 function head() {
   $('ttl').textContent = S.cuName || S.client || '選一個客戶';
-  $('sub').textContent = [$('date').value, S.trip && S.trip.slot, META && META.dry ? '試跑中：按送出也不會進 IEI' : ''].filter(Boolean).join('・');
+  $('sub').textContent = [$('date').value, S.trip && S.trip.slot, X && X.svid ? 'IEI 編號 ' + X.svid + '（已送出）' : '',
+    META && META.dry ? '試跑中：按送出也不會進 IEI' : ''].filter(Boolean).join('・');
 }
 /* ---------- 客戶與移工 ---------- */
 function cands(list) {
@@ -216,10 +223,10 @@ function workers(rows, keepPicks) {
     var lab = el('label'), c = el('input', null, { type: 'checkbox' }), t = el('span', w.zh || w.en);
     c.checked = !!S.picks[w.la00];
     t.appendChild(el('small', [w.zh ? w.en : '', w.nat, w.la21 ? '接管 ' + w.la21 : ''].filter(Boolean).join('・')));
-    c.onchange = function () { if (c.checked) S.picks[w.la00] = 1; else delete S.picks[w.la00]; natVt(); check(); };
+    c.onchange = function () { if (c.checked) S.picks[w.la00] = 1; else delete S.picks[w.la00]; natVt(); drawSigns(); check(); };
     lab.appendChild(c); lab.appendChild(t); box.appendChild(lab);
   });
-  natVt(); check();
+  natVt(); drawSigns(); check();
 }
 function picked() { return S.workers.filter(function (w) { return S.picks[w.la00]; }); }
 /* 國籍＝勾的人的國籍（IEI 一張只能一個）。第幾次＝IEI 自己的算法：接管日到服務日每 60 天一次，1～6，取最小。 */
@@ -227,6 +234,7 @@ function natVt() {
   var p = picked(), nats = p.map(function (w) { return w.nat; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
   S.nat = nats.length === 1 ? nats[0] : '';
   $('natNote').textContent = nats.length > 1 ? '⚠ IEI 一張只能一個國籍，現在勾到 ' + nats.join('、') + '，請分開送' : (S.nat ? '國籍：' + S.nat : '');
+  langs();
   if (S.vtEdited) return;
   var d = new Date($('date').value), best = null;
   p.forEach(function (w) { var t = Math.round((d - new Date(w.la21)) / 864e5); if (isNaN(t)) return; var v = Math.min(6, Math.max(1, Math.ceil(t / 60))); if (best === null || v < best) best = v; });
@@ -239,21 +247,98 @@ $('qGo').onclick = function () {
   say('在 IEI 找…');
   api({ api: 'iei', q: q }).then(function (j) { cands(j.cands); say(j.cands.length ? '' : '找不到，換個字試試'); }).catch(function (e) { say(e.message); });
 };
+/* ---------- 服務：App 的大項／細項 → IEI 服務項目（自動對好，可改） ---------- */
+function chip(box, label, on, fn) { var b = el('button', label, { type: 'button', 'aria-pressed': String(!!on) }); b.onclick = fn; box.appendChild(b); return b; }
+function cats() {
+  var box = $('cats'); box.innerHTML = '';
+  META.cats.forEach(function (c, i) { chip(box, c.b, i === S.cat, function () { S.cat = i; S.sub = -1; cats(); }); });
+  var sb = $('subs'); sb.innerHTML = ''; $('subF').hidden = S.cat < 0;
+  if (S.cat >= 0) META.cats[S.cat].s.forEach(function (x, i) { chip(sb, x[0], i === S.sub, function () { pickSub(S.cat, i, true); }); });
+  phrases();
+}
+/* 選細項：換掉上一個自動對的 IEI 項目（他手動加的留著）；手動點的細項，文字還沒改過就換成這個細項的第一句片語 */
+function pickSub(ci, si, byHand) {
+  S.cat = ci; S.sub = si;
+  var x = META.cats[ci].s[si], no = META.lfa[x[0]];
+  if (S.auto) S.items = S.items.filter(function (n) { return n !== S.auto; });
+  if (no && S.items.indexOf(no) === -1) S.items.push(no);
+  S.auto = no;
+  if (byHand) {
+    if ($('p').value === S.autoP) $('p').value = S.autoP = x[1][0] || '';
+    if ($('a').value === S.autoA) $('a').value = S.autoA = x[2][0] || '';
+  }
+  cats(); items(); preview(); check();
+}
+function items() {
+  var box = $('itemsAll'); box.innerHTML = '';
+  META.items.forEach(function (name, i) {
+    var no = i + 1;
+    chip(box, name, S.items.indexOf(no) !== -1, function () { var k = S.items.indexOf(no); if (k === -1) S.items.push(no); else S.items.splice(k, 1); items(); check(); });
+  });
+  var now = S.items.slice().sort(function (a, b) { return a - b; }).map(function (n) { return META.items[n - 1]; }).join('、');
+  $('ieiNow').textContent = 'IEI 服務項目：' + (now || '還沒選') + '（' + (S.auto ? '自動對好，' : '') + ($('itemsAll').hidden ? '點這裡改' : '點這裡收起') + '）';
+}
+$('ieiNow').onclick = function () { $('itemsAll').hidden = !$('itemsAll').hidden; items(); };
+/* 片語：點一下加進框框（逗號分開，跟 IEI 一樣），再點一次拿掉 */
+function parts(id) { return $(id).value.split(',').map(function (t) { return t.trim(); }).filter(Boolean); }
+function phraseChips(boxId, list, id) {
+  var box = $(boxId), have = parts(id); box.innerHTML = '';
+  list.forEach(function (t) {
+    chip(box, t, have.indexOf(t) !== -1, function () {
+      var p = parts(id), k = p.indexOf(t); if (k === -1) p.push(t); else p.splice(k, 1);
+      $(id).value = p.join(','); phrases(); preview();
+    });
+  });
+}
+function phrases() {
+  var x = S.cat >= 0 && S.sub >= 0 ? META.cats[S.cat].s[S.sub] : null;
+  phraseChips('pc', x ? x[1] : [], 'p'); phraseChips('ac', x ? x[2] : [], 'a');
+  phraseChips('pcI', META.proc, 'p'); phraseChips('acI', META.ans, 'a');
+}
+['p', 'a'].forEach(function (id) { $(id).addEventListener('input', function () { phrases(); preview(); }); });
+/* ---------- 預覽：中文＋移工語言（後端用羽禾 App 同一套 Google 翻譯；同一段字只翻一次） ---------- */
+function langs() {
+  var box = $('langs'), all = ['中'].concat(LC[S.nat] ? [LC[S.nat]] : []); box.innerHTML = '';
+  if (all.indexOf(LANG) === -1) LANG = '中';
+  all.forEach(function (l) { var b = el('button', l, { type: 'button', 'aria-pressed': String(l === LANG) }); b.onclick = function () { LANG = l; langs(); preview(); }; box.appendChild(b); });
+  preview();
+}
+function preview() {
+  var p = $('p').value.trim(), a = $('a').value.trim(), box = $('pv'), zh = LANG === '中', k = S.nat + '|' + p + '|' + a, t = TRC[k];
+  box.innerHTML = '';
+  function show(lp, la, note) {
+    box.appendChild(el('small', zh ? '處理經過' : 'What was done')); box.appendChild(el('p', lp || '—'));
+    box.appendChild(el('small', zh ? '處理結果' : 'Result')); box.appendChild(el('p', la || '—'));
+    $('pvNote').textContent = note;
+  }
+  if (zh || (!p && !a)) return show(p, a, zh ? '這就是存進 IEI 的內容（雇主看中文）' : '');
+  if (t) return show(t[0] || p, t[1] || a, t[0] || t[1] ? '移工看到的＝存進 IEI 的譯文（機器翻譯，中文是正式紀錄）' : '翻譯暫時沒回來，先顯示中文；送出時會再翻一次');
+  show(p, a, '翻譯中…');
+  clearTimeout(trTimer);
+  trTimer = setTimeout(function () {   // 停手 0.7 秒才翻，打字時不會一直燒翻譯額度
+    api({ api: 'tr', nat: S.nat, texts: [p, a] }).then(function (j) { TRC[k] = j.out; preview(); }).catch(function () { TRC[k] = ['', '']; preview(); });
+  }, 700);
+}
 /* ---------- 行程 ---------- */
 function trips(list) {
   var box = $('trips'); box.innerHTML = '';
   $('tripsF').hidden = !list.length;
   list.forEach(function (t, i) {
-    var b = el('button', (t.slot ? t.slot + ' ' : '') + t.client, { type: 'button', 'aria-pressed': 'false' });
-    b.onclick = function () { [].forEach.call(box.children, function (x) { x.setAttribute('aria-pressed', 'false'); }); b.setAttribute('aria-pressed', 'true'); useTrip(t); };
-    box.appendChild(b);
+    var b = chip(box, (t.slot ? t.slot + ' ' : '') + t.client, false, function () { [].forEach.call(box.children, function (x) { x.setAttribute('aria-pressed', 'false'); }); b.setAttribute('aria-pressed', 'true'); useTrip(t); });
     if (i === 0) b.click();
   });
 }
+function findSub(big, sub) {
+  for (var i = 0; i < META.cats.length; i++) for (var j = 0; j < META.cats[i].s.length; j++)
+    if (META.cats[i].s[j][0] === sub && (!big || META.cats[i].b === big)) return [i, j];
+  return null;
+}
 function useTrip(t) {
-  S.trip = t; S.client = t.client; S.cu00 = ''; S.cuName = ''; S.items = t.items.slice(); S.vtEdited = false;
-  $('addr').value = t.addr || ''; seg('method', t.method); items(); head();
-  $('wk').innerHTML = ''; say('在 IEI 對客戶…');
+  S.trip = t; S.client = t.client; S.cu00 = ''; S.cuName = ''; S.items = t.items.slice(); S.auto = 0; S.vtEdited = false;
+  $('addr').value = t.addr || ''; seg('method', t.method);
+  var hit = findSub(t.big, t.sub);
+  if (hit) pickSub(hit[0], hit[1], false); else { S.cat = -1; cats(); items(); }
+  head(); $('wk').innerHTML = ''; say('在 IEI 對客戶…');
   api({ api: 'iei', client: t.client, workers: t.workers }).then(function (j) {
     say('');
     if (j.cu00) { S.cu00 = j.cu00; S.cuName = j.cust ? j.cust.name : t.client; $('custNow').textContent = '✓ ' + S.cuName + '（' + j.cu00 + '）'; $('cands').innerHTML = '';
@@ -261,79 +346,76 @@ function useTrip(t) {
     else cands(j.cands);
   }).catch(function (e) { say(e.message); });
 }
-/* ---------- 送出 ---------- */
-function check() {
-  var l = $('labor').dataset.v, bad = !S.cu00 ? '先選 IEI 客戶' : !S.items.length ? '至少勾一個服務項目'
-    : l !== '2' && !picked().length ? '至少勾一位移工' : l !== '2' && !S.nat ? 'IEI 一張只能一個國籍' : '';
-  $('go').disabled = !!bad; $('go').firstChild.textContent = bad || '確認後送出';
+/* ---------- 草稿 ---------- */
+function draft() {
+  var p = picked(), l = $('labor').dataset.v, x = S.cat >= 0 && S.sub >= 0 ? META.cats[S.cat] : null;
+  return { id: DRAFT || '', client: S.client, cuName: S.cuName, cu00: S.cu00, addr: $('addr').value.trim(),
+    date: $('date').value, vt: $('vt').value, nat: l === '2' ? '' : S.nat, method: $('method').dataset.v, labor: l,
+    items: S.items.slice().sort(function (a, b) { return a - b; }), cat: x ? x.b : '', sub: x ? x.s[S.sub][0] : '',
+    cuP: $('p').value.trim(), cuA: $('a').value.trim(), same: true, after: $('after').value.trim(),
+    la00: l === '2' ? [] : p.map(function (w) { return w.la00; }), names: l === '2' ? [] : p.map(function (w) { return w.zh || w.en; }),
+    wk: l === '2' ? [] : p.map(function (w) { return { la00: w.la00, en: w.en, zh: w.zh }; }) };
 }
-$('go').onclick = function () {
-  var p = picked(), l = $('labor').dataset.v;
-  var d = { id: DRAFT || '', client: S.client, cuName: S.cuName, cu00: S.cu00, addr: $('addr').value.trim(),
-    date: $('date').value, vt: $('vt').value, nat: l === '2' ? '' : S.nat, method: $('method').dataset.v, labor: l, items: S.items.slice().sort(function (a, b) { return a - b; }),
-    cuP: $('cuP').value.trim(), cuA: $('cuA').value.trim(), same: $('same').checked, laP: $('laP').value.trim(), laA: $('laA').value.trim(),
-    after: $('after').value.trim(), la00: l === '2' ? [] : p.map(function (w) { return w.la00; }), names: l === '2' ? [] : p.map(function (w) { return w.zh || w.en; }) };
-  $('go').disabled = true; say('存草稿…');
-  api({ api: 'save', draft: d }).then(function (j) {
-    DRAFT = j.id;
-    return liff.sendMessages([{ type: 'text', text: '訪談確認 ' + j.id }]).then(function () { liff.closeWindow(); })
-      .catch(function () { say('草稿存好了。回聊天室打：訪談確認 ' + j.id); });
-  }).catch(function (e) { say(e.message); check(); });
-};
+/* 簽名或開 QR 之前先存一份（QR 網址要有草稿編號）；內容沒變就不重存 */
+function ensureDraft() {
+  if (SENT) return Promise.resolve();
+  if (!S.cu00) return Promise.reject(new Error('先選 IEI 客戶'));
+  var d = draft(), js = JSON.stringify(Object.assign({}, d, { id: '' }));
+  if (DRAFT && js === SAVED) return Promise.resolve();
+  return api({ api: 'save', draft: d }).then(function (j) { DRAFT = j.id; SAVED = js; apply(j.state); });
+}
 function fill(d) {
   S.client = d.client; S.cuName = d.cuName; S.items = d.items || []; S.vtEdited = true;
   $('addr').value = d.addr || ''; $('date').value = d.date; $('vt').value = d.vt || '';
   seg('method', d.method); seg('labor', d.labor);
-  ['cuP', 'cuA', 'laP', 'laA', 'after'].forEach(function (k) { $(k).value = d[k] || ''; });
-  $('same').checked = d.same !== false; $('laBox').hidden = $('same').checked;
+  $('p').value = d.cuP || ''; $('a').value = d.cuA || ''; $('after').value = d.after || '';
   S.picks = {}; (d.la00 || []).forEach(function (x) { S.picks[x] = 1; });
-  items(); sides();
+  var hit = d.sub && findSub(d.cat, d.sub);
+  if (hit) { S.cat = hit[0]; S.sub = hit[1]; S.auto = META.lfa[d.sub] || 0; }
+  cats(); items(); sides();
   return pickCust({ cu00: d.cu00, name: d.cuName }, true);
 }
-/* ---------- 簽名頁（?sign=<紀錄ID>，2026-10-14 他選甲乙丙合併）----------
-   乙：名單，點一個人開全螢幕簽名板。甲：底部「接力簽」一人一頁走完沒簽的（不在＝跳過，留著沒簽）。
-   丙：一個 QR 大家掃（公開頁 qsign.html，他 2026-10-14 要「像羽禾 App 那樣」）；簽名頁開著時每 4 秒問一次，誰簽了馬上打勾。
-   翻譯格：他第一次手簽，後端存起來，之後打開這頁就自動帶入。 */
-var SIGN = qp('sign'), H = null, P = [], ST = {}, FL = {}, BQ = [], BI = 0, RELAY = false, POLL = false;
-var SAY = { '菲律賓': 'Please sign here.', '越南': 'Vui lòng ký tên tại đây.', '印尼': 'Silakan tanda tangan di sini.', '泰國': 'กรุณาเซ็นชื่อที่นี่' };
-var STX = { ok: '✓ 已簽', dry: '✓ 試跑沒上傳', todo: '未簽', absent: '不在', up: '上傳中…', fail: '沒傳上去，再簽一次' };
-function hubLoad() {
-  $('bar').hidden = false;
-  return api({ api: 'sign', d: SIGN }).then(function (j) {
-    H = j; $('bar').hidden = true; $('hub').hidden = false;
-    $('ttl').textContent = j.cuName;
-    $('sub').textContent = [j.date, 'IEI 編號 ' + j.svid, j.dry ? '試跑中：簽名不會上傳到 IEI' : ''].filter(Boolean).join('・');
-    P = [{ k: 'lbr', role: '翻譯', name: j.me || '我', s: j.lbr }];
-    if (j.labor !== '3') P.push({ k: 'cu', role: '雇主', name: j.cuName, s: j.cu });
-    j.workers.forEach(function (w) { P.push({ k: 'w:' + w.svl, role: '移工', name: w.zh || w.en, sub: w.zh ? w.en : '', s: w, say: SAY[j.nat] || '' }); });
-    P.forEach(function (p) { if (p.s.signed) ST[p.k] = 'ok'; else if (!ST[p.k] || ST[p.k] === 'ok') ST[p.k] = 'todo'; });   // IEI 說了算；不在／試跑／上傳中留著
-    $('hubNote').textContent = j.auto || (j.lbrSaved ? '' : '你的簽名第一次要簽一次，之後每張自動帶入。');
-    hubDraw();
-  }).catch(function (e) { $('bar').hidden = true; say(e.message); });
+/* ---------- 簽名格 ---------- */
+function slots() {
+  var l = $('labor').dataset.v, out = [{ k: 'lbr', role: '翻譯', name: '翻譯（我）' }];
+  if (l !== '3') out.push({ k: 'cu', role: '雇主', name: S.cuName || '雇主' });
+  if (l !== '2') picked().forEach(function (w) { out.push({ k: 'w:' + w.la00, role: '移工', name: w.zh || w.en, sub: w.zh ? w.en : '', say: SAY[w.nat] || '' }); });
+  return out;
 }
-function todo() { return P.filter(function (p) { return ST[p.k] === 'todo' || ST[p.k] === 'fail'; }); }
-function hubDraw() {
-  var ul = $('ppl'); ul.innerHTML = '';
-  P.forEach(function (p) {
-    var li = el('li', null, { class: 'p ' + ST[p.k] + (FL[p.k] ? ' flash' : '') }), b = el('button', null, { type: 'button', class: 'pm' }), nm = el('span', p.name, { class: 'nm' });
-    nm.appendChild(el('small', [p.role, p.sub].filter(Boolean).join('・')));
-    b.appendChild(nm); b.appendChild(el('span', p.k === 'lbr' && ST.lbr === 'todo' && !H.lbrSaved ? '第一次請簽' : STX[ST[p.k]], { class: 'st' }));
+function lbrSaved() { return X ? X.lbrSaved : META.lbrSaved; }
+function st(k) { return ST[k] || (k === 'lbr' && lbrSaved() ? 'auto' : 'todo'); }
+function nSigned() { return slots().filter(function (p) { return /ok|held|dry|auto/.test(st(p.k)); }).length; }
+function todo() { return slots().filter(function (p) { return /todo|fail/.test(st(p.k)); }); }
+function drawSigns() {
+  var box = $('signs'), ql = $('qppl'), all = slots(); box.innerHTML = ''; ql.innerHTML = '';
+  all.forEach(function (p) {
+    var s = st(p.k), b = el('button', null, { type: 'button', class: 'tile ' + s + (FL[p.k] ? ' flash' : '') });
+    b.appendChild(el('b', p.name)); b.appendChild(el('small', STX[s]));
     b.onclick = function () { board([p], false); };
-    li.appendChild(b);
-    ul.appendChild(li);
-  });
-  var n = todo().length;
-  $('go').disabled = false; $('go').firstChild.textContent = n ? '接力簽（剩 ' + n + ' 位）' : '完成，留底傳到 LINE';
-  var ql = $('qppl'); ql.innerHTML = '';   // QR 畫面下面那份即時名單（翻譯不在 QR 上簽）
-  P.forEach(function (p) {
-    if (p.k === 'lbr') return;
-    var li = el('li', p.name, { class: ST[p.k] + (FL[p.k] ? ' flash' : '') }); li.appendChild(el('span', STX[ST[p.k]])); ql.appendChild(li);
+    box.appendChild(b);
+    if (p.k !== 'lbr') { var li = el('li', p.name, { class: s + (FL[p.k] ? ' flash' : '') }); li.appendChild(el('span', s === 'todo' ? '未簽' : STX[s])); ql.appendChild(li); }
   });
   FL = {};
+  $('signH').textContent = '簽名 ' + nSigned() + '／' + all.length;
+  $('signNote').textContent = SENT ? '沒簽的人 14 天內可以補簽（點格子或用 QR）。' : !lbrSaved() ? '你的簽名第一次要簽一次，之後每張自動帶入。' : '沒簽完也能送出，沒簽的人送出後可以補簽。';
+  check();
+}
+/* 伺服器的狀態 → 格子。true＝已在 IEI、held＝先簽好送出時一起補、dry＝試跑；本機的「上傳中／不在／失敗」不被蓋掉 */
+function apply(s, live) {   // live：輪詢來的，改變的格子閃一下
+  if (!s) return;
+  X = s; SENT = !!s.svid;
+  s.slots.forEach(function (x) {
+    var v = x.signed === true ? 'ok' : x.signed === 'held' ? 'held' : x.signed === 'dry' ? 'dry' : '';
+    if (v) { if (live && ST[x.k] !== v && ST[x.k] !== 'ok') FL[x.k] = 1; ST[x.k] = v; }
+    else if (/ok|held|dry/.test(ST[x.k] || '')) delete ST[x.k];
+  });
+  if (s.deleted) say('這張在 IEI 被刪掉了（原編號 ' + s.deleted + '），可以改內容重送。');
+  $('edit').classList.toggle('locked', SENT); $('edit').inert = SENT;
+  head(); drawSigns();
 }
 /* 簽名板（做法照 yuher-app/s.html：全螢幕、吃掉 touchmove、裁空白、最寬 600） */
 var cv = $('cv'), cx = cv.getContext('2d'), inked = false, down = false;
-function board(q, relay) { BQ = q; BI = 0; RELAY = relay; $('board').hidden = false; document.body.style.overflow = 'hidden'; page(); }
+function board(q, relay) { if (!q.length) return; BQ = q; BI = 0; RELAY = relay; $('board').hidden = false; document.body.style.overflow = 'hidden'; page(); }
 function page() {
   var p = BQ[BI], last = BI === BQ.length - 1;
   $('brole').textContent = p.role + (RELAY ? '・第 ' + (BI + 1) + '／' + BQ.length + ' 位' : '');
@@ -346,9 +428,9 @@ function page() {
   inked = false;
 }
 function next() { if (++BI < BQ.length) page(); else closeBoard(); }
-function closeBoard() { $('board').hidden = true; document.body.style.overflow = ''; hubDraw(); }
+function closeBoard() { $('board').hidden = true; document.body.style.overflow = ''; drawSigns(); }
 function pt(e) { var b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; }
-cv.onpointerdown = function (e) { e.preventDefault(); down = true; cv.setPointerCapture(e.pointerId); var p = pt(e); cx.beginPath(); cx.moveTo(p[0], p[1]); };
+cv.onpointerdown = function (e) { e.preventDefault(); down = true; try { cv.setPointerCapture(e.pointerId); } catch (x) {} var p = pt(e); cx.beginPath(); cx.moveTo(p[0], p[1]); };
 cv.onpointermove = function (e) { if (!down) return; e.preventDefault(); var p = pt(e); cx.lineTo(p[0], p[1]); cx.stroke(); inked = true; };
 cv.onpointerup = cv.onpointercancel = function () { down = false; };
 /* ⛔ LINE 內建瀏覽器可以往下拉掉：pointer 的 preventDefault 擋不住，要在 touch 事件上 passive:false 才擋得住（s.html 2026-10-08 踩過） */
@@ -371,56 +453,66 @@ $('b3').onclick = function () {
 };
 $('bx').onclick = closeBoard;
 function save(p, png) {
-  ST[p.k] = 'up'; hubDraw();
-  api({ api: 'signPut', d: SIGN, k: p.k, png: png }).then(function (j) {
-    ST[p.k] = j.dry ? 'dry' : 'ok';
-    if (p.k === 'lbr' && !j.dry) { H.lbrSaved = true; $('hubNote').textContent = '你的簽名存好了，之後每張自動帶入。'; }
-    hubDraw();
-  }).catch(function (e) { ST[p.k] = 'fail'; hubDraw(); say(p.name + '：' + e.message); });
+  ST[p.k] = 'up'; drawSigns();
+  ensureDraft().then(function () { return api({ api: 'signPut', d: DRAFT, k: p.k, png: png }); }).then(function (j) {
+    ST[p.k] = j.v === 'held' ? 'held' : j.dry ? 'dry' : 'ok';
+    if (p.k === 'lbr' && j.v === true) X.lbrSaved = true;
+    drawSigns();
+  }).catch(function (e) { ST[p.k] = 'fail'; drawSigns(); say(p.name + '：' + e.message); });
 }
-/* 一個 QR：網址帶這張紀錄的簽章（後端做的），移工掃了到公開頁 qsign.html 自己選名字簽 */
+$('relay').onclick = function () { board(todo(), true); };
+/* 一個 QR：網址帶這張的簽章（後端做的），送出前就能用（簽名先暫存）。移工掃了到公開頁 qsign.html 自己選名字簽 */
 $('qrAll').onclick = function () {
-  $('qrm').hidden = false; $('qwho').textContent = H.cuName; $('qurl').value = H.qurl; $('qbox').innerHTML = '';
-  new QRCode($('qbox'), { text: H.qurl, width: 256, height: 256, correctLevel: QRCode.CorrectLevel.M });
+  say('準備 QR…');
+  ensureDraft().then(function () {
+    say(''); $('qrm').hidden = false; $('qwho').textContent = S.cuName; $('qurl').value = X.qurl; $('qbox').innerHTML = '';
+    new QRCode($('qbox'), { text: X.qurl, width: 256, height: 256, correctLevel: QRCode.CorrectLevel.M });
+  }).catch(function (e) { say(e.message); });
 };
 $('q1').onclick = function () { $('qrm').hidden = true; };
-/* 即時更新：簽名頁看得到的時候每 4 秒問一次（後端只讀快取，不打 IEI）。上傳中不問，免得蓋掉「上傳中」 */
+/* 即時更新：有草稿、頁面看得到時每 4 秒問一次（後端只讀快取，不打 IEI）。上傳中不問，免得蓋掉「上傳中」 */
 setInterval(function () {
-  if (!H || POLL || $('hub').hidden || document.hidden || P.some(function (p) { return ST[p.k] === 'up'; })) return;
+  if (!DRAFT || !X || POLL || document.hidden || slots().some(function (p) { return ST[p.k] === 'up'; })) return;
   POLL = true;
-  api({ api: 'signPoll', d: SIGN }).then(function (j) {
-    var ch = false;
-    P.forEach(function (p) {
-      var v = j.on[p.k] === true ? 'ok' : j.on[p.k] === 'dry' ? 'dry' : '';
-      if (v && ST[p.k] !== v && ST[p.k] !== 'ok') { ST[p.k] = v; FL[p.k] = 1; ch = true; }
-    });
-    if (ch) hubDraw();
+  api({ api: 'signPoll', d: DRAFT }).then(function (j) {
+    apply(Object.assign({}, X, { slots: Object.keys(j.on).map(function (k) { return { k: k, signed: j.on[k] }; }) }), true);
   }).catch(function () {}).then(function () { POLL = false; });
 }, 4000);
-$('reload').onclick = hubLoad;
-/* 完成：替他送「簽名完成」→ 小禾用 reply 回留底卡（免費）。送不出去才請後端推播（吃每月額度）。 */
+/* ---------- 送出：一顆按鈕＝存草稿＋Create＋先簽好的簽名一起補進 IEI ---------- */
+function check() {
+  if (SENT) { $('go').disabled = false; $('go').firstChild.textContent = '傳留底到 LINE（' + nSigned() + '／' + slots().length + ' 已簽）'; return; }
+  var l = $('labor').dataset.v, bad = !S.cu00 ? '先選 IEI 客戶' : !S.items.length ? '至少選一個服務項目'
+    : l !== '2' && !picked().length ? '至少勾一位移工' : l !== '2' && !S.nat ? 'IEI 一張只能一個國籍' : '';
+  $('go').disabled = !!bad; $('go').firstChild.textContent = bad || '送出到 IEI（' + nSigned() + ' 個簽名）';
+}
+$('go').onclick = function () {
+  if (SENT) return finish();
+  if (slots().some(function (p) { return ST[p.k] === 'up'; })) return say('還有簽名在存，等一下再按');
+  $('go').disabled = true; say('送出中…（存紀錄、補簽名，約 10～30 秒）'); $('dryOut').hidden = true;
+  api({ api: 'send', draft: draft() }).then(function (j) {
+    if (j.dry) {
+      DRAFT = j.id; say('試跑：沒有送出。下面是會送給 IEI 的內容，另外有 ' + j.held + ' 個簽名會一起補進去。');
+      $('dryOut').textContent = j.form; $('dryOut').hidden = false; check(); return;
+    }
+    apply(j.state);
+    say('已送出 ✓ IEI 編號 ' + j.svid + (j.flushed ? '，' + j.flushed + ' 個簽名已補進去' : '') + (j.fail.length ? '。沒補成：' + j.fail.join('；') : ''));
+    finish();
+  }).catch(function (e) { say(e.message); check(); });
+};
+/* 留底卡：替他送「送出結果」→ 小禾用 reply 回（免費）。送不出去才請後端推播（吃每月額度）。頁面不關，可以繼續補簽 */
 function finish() {
-  if (P.some(function (p) { return ST[p.k] === 'up'; })) return say('還有簽名在上傳，等一下再按');
-  say('傳留底到 LINE…');
-  liff.sendMessages([{ type: 'text', text: '簽名完成 ' + SIGN }]).then(function () { liff.closeWindow(); })
-    .catch(function () { return api({ api: 'signDone', d: SIGN }).then(function (j) { say(j.pushed ? '留底卡已傳到 LINE' : '這張的留底之前傳過了（簽名人數沒變）'); }); })
+  liff.sendMessages([{ type: 'text', text: '送出結果 ' + DRAFT }])
+    .catch(function () { return api({ api: 'signDone', d: DRAFT }).then(function (j) { if (!j.pushed) say('留底卡之前傳過了（簽名人數沒變）'); }); })
     .catch(function (e) { say(e.message); });
 }
-$('done').onclick = finish;
 liff.init({ liffId: LIFF_ID }).then(function () {
   if (!liff.isLoggedIn()) return liff.login();
-  if (SIGN) {
-    $('eye').textContent = '確認簽名';
-    $('go').onclick = function () { var t = todo(); if (t.length) board(t, true); else finish(); };
-    return hubLoad();
-  }
   return api({ api: 'prep', d: DRAFT }).then(function (j) {
     META = j; $('bar').hidden = true; $('form').hidden = false;
-    phrases('cuPs', 'cuP', j.proc); phrases('cuAs', 'cuA', j.ans); phrases('laPs', 'laP', j.proc); phrases('laAs', 'laA', j.ans);
     $('date').value = j.day; seg('method', '1'); seg('labor', '1');
-    if (j.draft) { $('tripsF').hidden = true; return fill(j.draft); }
-    $('cuP').value = '巡迴服務-關心移工'; $('cuA').value = '移工表示工作上及生活都沒有問題。';   // 他定的預設
-    items(); head(); trips(j.trips); check();
+    if (j.draft) { $('tripsF').hidden = true; apply(j.state); return fill(j.draft).then(function () { SAVED = JSON.stringify(Object.assign({}, draft(), { id: '' })); }); }
+    $('p').value = S.autoP = '巡迴服務-關心移工'; $('a').value = S.autoA = '移工表示工作上及生活都沒有問題。';   // 他定的預設
+    cats(); items(); head(); trips(j.trips); langs(); check();
   });
 }).catch(function (e) { $('bar').hidden = true; $('ttl').textContent = '打不開'; say(String(e && e.message || e)); });
 </script>
