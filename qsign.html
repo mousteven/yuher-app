@@ -9,9 +9,9 @@
 <meta name="robots" content="noindex">
 <title>簽名 · Sign</title>
 <style>
-:root{--ink:#111111;--mute:#4A5566;--red:#E30613;--line:#D6DEEA;--tile:#F3F5F8}
+:root{--ink:#1B1C1E;--mute:#55565A;--red:#C8102E;--line:#D9D5CC;--tile:#E4E1DA;--bg:#F0EEE9;--paper:#FAF9F6;--blue:#1F4E9C}   /* 雲舞白（他 2026-10-14 選）*/
 *{box-sizing:border-box}
-body{margin:0;font:16px/1.6 "Helvetica Neue",Helvetica,Arial,-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:var(--ink);background:#fff}
+body{margin:0;font:16px/1.6 "Helvetica Neue",Helvetica,Arial,-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:var(--ink);background:var(--bg)}
 header{padding:16px 16px 0;display:grid;gap:4px}
 .eye{font-size:14px;color:var(--mute)}
 .ttl{display:flex;gap:12px;align-items:stretch}.ttl i{width:5px;background:var(--red);flex:none}
@@ -34,7 +34,7 @@ h2 small{display:block;font-size:14px;font-weight:400;color:var(--mute)}
 .note{font-size:14px;color:var(--mute)}
 .go{width:100%;min-height:56px;border:0;background:var(--ink);color:#fff;font:700 17px/1.2 inherit;font-family:inherit;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 16px;text-align:left}
 .go em{color:var(--red);font-style:normal;font-size:20px}
-.btn{width:100%;min-height:48px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);font:700 16px/1.2 inherit;font-family:inherit}
+.btn{width:100%;min-height:48px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);font:700 16px/1.2 inherit;font-family:inherit}
 .err{border-left:5px solid var(--red);background:var(--tile);padding:12px 16px;font-size:16px}
 .done{text-align:center;padding:32px 0;display:grid;gap:8px}
 .done .ic{font-size:48px;line-height:1}
@@ -43,13 +43,13 @@ h2 small{display:block;font-size:14px;font-weight:400;color:var(--mute)}
 @keyframes mv{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
 @media (prefers-reduced-motion:reduce){.bar i{animation:none;width:100%}}
 /* 簽名板：跟小禾簽名頁（iei.html）同一套 */
-.board{position:fixed;inset:0;background:#fff;z-index:9;display:flex;flex-direction:column;touch-action:none;overscroll-behavior:none}
+.board{position:fixed;inset:0;background:var(--paper);z-index:9;display:flex;flex-direction:column;touch-action:none;overscroll-behavior:none}
 .bhd{padding:16px 16px 8px;border-bottom:2px solid var(--ink);display:grid;gap:4px}
 .bhd b{font-size:28px;line-height:1.2}
 .bhd .say{font-size:20px;font-weight:700}
-#cv{flex:1;width:100%;display:block;background:#fff linear-gradient(var(--ink),var(--ink)) 24px 70%/calc(100% - 48px) 1px no-repeat}
+#cv{flex:1;width:100%;display:block;background:var(--paper) linear-gradient(var(--ink),var(--ink)) 24px 70%/calc(100% - 48px) 1px no-repeat}
 .bft{display:grid;grid-template-columns:1fr 1fr 2fr;border-top:2px solid var(--ink);padding-bottom:env(safe-area-inset-bottom)}
-.bft button{min-height:56px;font:700 16px/1.2 inherit;font-family:inherit;border:0;background:#fff;color:var(--ink);padding:0 8px}
+.bft button{min-height:56px;font:700 16px/1.2 inherit;font-family:inherit;border:0;background:var(--paper);color:var(--ink);padding:0 8px}
 .bft button+button{border-left:1.5px solid var(--ink)}
 .bft .go{min-height:56px}
 [hidden]{display:none!important}
@@ -156,7 +156,7 @@ function openBoard() {
   $('b1').textContent = L.back; $('b2').textContent = L.clear; $('b3').firstChild.textContent = L.submit; $('b3').disabled = false;
   var r = window.devicePixelRatio || 1;
   cv.width = cv.clientWidth * r; cv.height = cv.clientHeight * r;
-  cx.setTransform(r, 0, 0, r, 0, 0); cx.lineWidth = 5; cx.lineCap = cx.lineJoin = 'round'; cx.strokeStyle = '#111';
+  cx.setTransform(r, 0, 0, r, 0, 0); cx.lineWidth = 5; cx.lineCap = cx.lineJoin = 'round'; cx.strokeStyle = '#1B1C1E';
   inked = false;
 }
 function closeBoard() { $('board').hidden = true; document.body.style.overflow = ''; }

@@ -10,9 +10,9 @@
 <meta name="robots" content="noindex">
 <title>訪談紀錄表</title>
 <style>
-:root{--ink:#111111;--mute:#4A5566;--red:#E30613;--line:#D6DEEA;--tile:#F3F5F8}
+:root{--ink:#1B1C1E;--mute:#55565A;--red:#C8102E;--line:#D9D5CC;--tile:#E4E1DA;--bg:#F0EEE9;--paper:#FAF9F6;--blue:#1F4E9C}   /* 雲舞白（他 2026-10-14 選）*/
 *{box-sizing:border-box}
-body{margin:0;font:16px/1.6 "Helvetica Neue",Helvetica,Arial,-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:var(--ink);background:#fff}
+body{margin:0;font:16px/1.6 "Helvetica Neue",Helvetica,Arial,-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:var(--ink);background:var(--bg)}
 header{padding:16px 16px 0;display:grid;gap:4px}
 .eye{font-size:14px;color:var(--mute)}
 .ttl{display:flex;gap:12px;align-items:stretch}.ttl i{width:5px;background:var(--red);flex:none}
@@ -25,25 +25,25 @@ main{padding:16px 16px 120px;display:grid;gap:24px}
 .f>span,.lab{font-size:14px;font-weight:700;color:var(--mute)}
 .lab{display:flex;justify-content:space-between;align-items:center;gap:8px}
 h2{margin:8px 0 0;font-size:18px;line-height:1.3;border-top:2px solid var(--ink);padding-top:12px}
-input[type=text],input[type=date],input[type=number],input[type=search],textarea{font:16px/1.5 inherit;font-family:inherit;color:var(--ink);background:#fff;border:1.5px solid var(--ink);padding:8px 12px;min-height:44px;width:100%;border-radius:0}
+input[type=text],input[type=date],input[type=number],input[type=search],textarea{font:16px/1.5 inherit;font-family:inherit;color:var(--ink);background:var(--paper);border:1.5px solid var(--ink);padding:8px 12px;min-height:44px;width:100%;border-radius:0}
 textarea{min-height:72px;resize:vertical}
 :focus-visible{outline:3px solid var(--red);outline-offset:2px}
 .two{display:grid;grid-template-columns:1fr 112px;gap:8px}
 .seg{display:flex;border:1.5px solid var(--ink)}
-.seg button{flex:1;min-height:44px;border:0;background:#fff;color:var(--ink);font:700 15px/1.2 inherit;font-family:inherit;padding:4px}
+.seg button{flex:1;min-height:44px;border:0;background:var(--paper);color:var(--ink);font:700 15px/1.2 inherit;font-family:inherit;padding:4px}
 .seg button+button{border-left:1.5px solid var(--ink)}
-.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.seg button[aria-pressed=true]{background:var(--blue);color:#fff}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chips.scroll{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;margin:0 -16px;padding-left:16px;padding-right:16px}
-.chips button{min-height:44px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);font:700 15px/1.2 inherit;font-family:inherit;padding:4px 12px;white-space:nowrap}
+.chips button{min-height:44px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);font:700 15px/1.2 inherit;font-family:inherit;padding:4px 12px;white-space:nowrap}
 .chips.ph button{border-style:dashed;font-weight:400;white-space:normal;text-align:left}
-.chips button[aria-pressed=true]{background:var(--ink);color:#fff;border-style:solid}
+.chips button[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:#fff;border-style:solid}
 .chips button[aria-pressed=true]::before{content:"✓ "}
-.btn{min-height:44px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);font:700 15px/1.2 inherit;font-family:inherit;padding:0 12px}
+.btn{min-height:44px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);font:700 15px/1.2 inherit;font-family:inherit;padding:0 12px}
 .link{border:0;background:none;padding:8px 0;min-height:44px;font:inherit;font-size:15px;color:var(--ink);text-align:left;text-decoration:underline;text-underline-offset:3px}
 details summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer;font-size:15px}
 .list{display:grid;gap:0;background:var(--tile)}
-.list label{display:flex;gap:12px;align-items:center;min-height:52px;padding:8px 12px;border-bottom:1px solid #fff}
+.list label{display:flex;gap:12px;align-items:center;min-height:52px;padding:8px 12px;border-bottom:1px solid var(--paper)}
 .list input{width:24px;height:24px;accent-color:var(--ink);flex:none}
 .list small{display:block;font-size:14px;color:var(--mute)}
 .note{font-size:14px;color:var(--mute)}
@@ -51,9 +51,9 @@ details summary{min-height:44px;display:flex;align-items:center;font-weight:700;
 .pv small{font-size:14px;color:var(--mute);font-weight:700}
 .pv p{margin:0 0 8px;font-size:16px;line-height:1.55}
 .langs{display:flex;border:1.5px solid var(--ink)}
-.langs button{min-height:36px;min-width:48px;border:0;background:#fff;color:var(--ink);font:700 14px/1 inherit;font-family:inherit;padding:0 12px}
+.langs button{min-height:36px;min-width:48px;border:0;background:var(--paper);color:var(--ink);font:700 14px/1 inherit;font-family:inherit;padding:0 12px}
 .langs button+button{border-left:1.5px solid var(--ink)}
-.langs button[aria-pressed=true]{background:var(--ink);color:#fff}
+.langs button[aria-pressed=true]{background:var(--blue);color:#fff}
 .signs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .tile{font:inherit;border:0;background:var(--tile);color:var(--ink);min-height:76px;padding:8px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;box-shadow:inset 0 4px 0 var(--ink);min-width:0}
 .tile b{font-size:15px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
@@ -65,7 +65,7 @@ details summary{min-height:44px;display:flex;align-items:center;font-weight:700;
 @media (prefers-reduced-motion:reduce){.tile.flash{animation:none}}
 .sacts{display:flex;gap:8px}
 pre{white-space:pre-wrap;word-break:break-all;font-size:13px;background:var(--tile);padding:12px;margin:0}
-footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(safe-area-inset-bottom)}
+footer{position:fixed;left:0;right:0;bottom:0;background:var(--paper);padding:0 0 env(safe-area-inset-bottom)}
 #go{width:100%;min-height:56px;border:0;background:var(--ink);color:#fff;font:700 17px/1 inherit;font-family:inherit;display:flex;justify-content:space-between;align-items:center;padding:0 16px}
 #go em{color:var(--red);font-style:normal;font-size:20px}
 #go:disabled{background:var(--mute)}
@@ -76,12 +76,12 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
 @media (prefers-reduced-motion:reduce){.bar i{animation:none;width:100%}}
 [hidden]{display:none!important}
 /* 全螢幕簽名板（同 s.html：點格子才開，捲動時不可能畫到） */
-.board{position:fixed;inset:0;background:#fff;z-index:9;display:flex;flex-direction:column;touch-action:none;overscroll-behavior:none}
+.board{position:fixed;inset:0;background:var(--paper);z-index:9;display:flex;flex-direction:column;touch-action:none;overscroll-behavior:none}
 .bhd{position:relative;padding:16px 16px 8px;border-bottom:2px solid var(--ink);display:grid;gap:4px}
 .bhd b{font-size:28px;line-height:1.2;padding-right:56px}
 .bhd .say{font-size:20px;font-weight:700}
 .bhd .x{position:absolute;top:8px;right:8px;width:44px;height:44px;border:0;background:none;color:var(--ink)}
-#cv{flex:1;width:100%;display:block;background:#fff linear-gradient(var(--ink),var(--ink)) 24px 70%/calc(100% - 48px) 1px no-repeat}
+#cv{flex:1;width:100%;display:block;background:var(--paper) linear-gradient(var(--ink),var(--ink)) 24px 70%/calc(100% - 48px) 1px no-repeat}
 .qbody{flex:1;overflow-y:auto;overscroll-behavior:contain;display:grid;align-content:start;justify-items:center;gap:16px;padding:16px}
 #qbox{padding:8px;background:#fff}
 #qurl{font-size:14px;min-height:44px;color:var(--mute)}
@@ -91,7 +91,7 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
 .ql li.ok span,.ql li.held span,.ql li.dry span{color:var(--mute);font-weight:400}
 .ql li.flash{animation:fl 1.6s ease-out}
 .bft{display:grid;grid-template-columns:1fr 1fr 2fr;border-top:2px solid var(--ink);padding-bottom:env(safe-area-inset-bottom)}
-.bft button{min-height:56px;font:700 16px/1 inherit;font-family:inherit;border:0;background:#fff;color:var(--ink)}
+.bft button{min-height:56px;font:700 16px/1 inherit;font-family:inherit;border:0;background:var(--paper);color:var(--ink)}
 .bft button+button{border-left:1.5px solid var(--ink)}
 .bft .go{background:var(--ink);color:#fff;display:flex;justify-content:space-between;align-items:center;padding:0 16px}
 .bft .go em{color:var(--red);font-style:normal;font-size:20px}
@@ -425,7 +425,7 @@ function page() {
   $('b3').firstChild.textContent = RELAY && !last ? '下一位' : '簽好了';
   var r = window.devicePixelRatio || 1;
   cv.width = cv.clientWidth * r; cv.height = cv.clientHeight * r;
-  cx.setTransform(r, 0, 0, r, 0, 0); cx.lineWidth = 5; cx.lineCap = cx.lineJoin = 'round'; cx.strokeStyle = '#111';
+  cx.setTransform(r, 0, 0, r, 0, 0); cx.lineWidth = 5; cx.lineCap = cx.lineJoin = 'round'; cx.strokeStyle = '#1B1C1E';
   inked = false;
 }
 function next() { if (++BI < BQ.length) page(); else closeBoard(); }
