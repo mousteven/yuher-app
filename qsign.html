@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- 小禾的共用 QR 簽名頁（他 2026-10-14：「一個 QR 大家掃，誰簽了立即更新」，照羽禾 App 的宣導簽到 sign.html）。
-     移工掃翻譯手機上的 QR → 這頁：點自己的名字 → 看處理經過／結果（他的語言）→ 全螢幕簽名 → 謝謝。
+     移工掃翻譯手機上的 QR → 這頁（2026-10-14 換成「01 懸浮視窗」樣式，跟 iei.html 一致）：點自己的名字 → 看處理經過／結果（他的語言）→ 全螢幕簽名 → 謝謝。
      ⛔ 不用 LINE 登入（移工不是小禾的好友）。網址的 t＝<紀錄>.<到期日>.<簽章>，後端驗；服務日 +14 天後失效。
      ⛔ 後端只回名字、簽了沒、處理經過；不回 IEI 代碼、不回簽名圖。已簽的名字不能再點（防蓋掉別人的）。
      ⛔ 後端網址寫死在下面（小禾鐵則 7）。檔名 qsign.html 與參數 t 不可以改：QR 一出去就改不掉。 -->
@@ -9,57 +9,68 @@
 <meta name="robots" content="noindex">
 <title>簽名 · Sign</title>
 <style>
-:root{--ink:#1B1C1E;--mute:#55565A;--red:#C8102E;--line:#D9D5CC;--tile:#E4E1DA;--bg:#F0EEE9;--paper:#FAF9F6;--blue:#1F4E9C}   /* 雲舞白（他 2026-10-14 選）*/
+:root{--ink:#1B1C1E;--mute:#55565A;--red:#C8102E;--line:#D9D5CC;--tile:#E4E1DA;--bg:#F0EEE9;--paper:#FAF9F6;--blue:#1F4E9C;   /* 雲舞白（他 2026-10-14 選）*/
+  --card:#FFFFFF;--soft:#F4F2EE;--blue2:#2F64C0;--plum:#8A4E8E;                                                                 /* 01 懸浮視窗（同 iei.html）*/
+  --go:linear-gradient(100deg,var(--blue) 0%,var(--blue2) 45%,var(--plum) 75%,var(--red) 100%);
+  --sh:0 18px 40px rgba(60,52,40,.12),0 2px 6px rgba(60,52,40,.06);--sh1:0 2px 8px rgba(60,52,40,.10);--ease:cubic-bezier(.2,.8,.2,1);color-scheme:light}
 *{box-sizing:border-box}
 body{margin:0;font:16px/1.6 "Helvetica Neue",Helvetica,Arial,-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:var(--ink);background:var(--bg)}
-header{padding:16px 16px 0;display:grid;gap:4px}
-.eye{font-size:14px;color:var(--mute)}
-.ttl{display:flex;gap:12px;align-items:stretch}.ttl i{width:5px;background:var(--red);flex:none}
-.ttl b{font-size:22px;line-height:1.25;font-weight:700}
-.rule{height:2px;background:var(--ink);margin-top:8px}
-main{padding:16px 16px 32px;display:grid;gap:16px;max-width:560px}
-h2{margin:0;font-size:20px;line-height:1.35}
-h2 small{display:block;font-size:14px;font-weight:400;color:var(--mute)}
+button{font-family:inherit;cursor:pointer}
+header{padding:20px 16px 0;display:grid;gap:2px;max-width:560px;margin:0 auto}
+.eye{font-size:14px;color:var(--mute);font-weight:700}
+.ttl b{font-size:22px;line-height:1.3;font-weight:900;letter-spacing:-.01em;overflow-wrap:anywhere}
+main{margin:16px auto 0;padding:20px 16px 24px;display:grid;gap:16px;max-width:528px;background:var(--card);border-radius:28px;box-shadow:var(--sh);width:calc(100% - 32px);animation:pop .24s var(--ease) both}
+main:empty{display:none}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+h2{margin:0;font-size:20px;line-height:1.35;font-weight:900}
+h2 small{display:block;font-size:14px;font-weight:500;color:var(--mute)}
 .ppl{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.ppl button{width:100%;display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 16px;border:0;background:var(--tile);box-shadow:inset 5px 0 0 var(--ink);text-align:left;font:inherit;color:var(--ink)}
-.ppl b{flex:1;font-size:18px;line-height:1.35}
-.ppl b small{display:block;font-size:14px;font-weight:400;color:var(--mute)}
-.ppl em{font-style:normal;font-weight:700;font-size:20px}
-.ppl button:disabled{box-shadow:none;color:var(--mute)}
-.ppl button:disabled em{font-size:15px;font-weight:400}
-.txt{margin:0;display:grid;gap:4px;background:var(--tile);padding:12px 16px}
+.ppl button{width:100%;display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 16px;border:1.5px solid var(--line);border-radius:18px;background:var(--card);text-align:left;font:inherit;color:var(--ink);box-shadow:0 1px 3px rgba(60,52,40,.06)}
+.ppl b{flex:1;font-size:18px;line-height:1.35;min-width:0;overflow-wrap:anywhere}
+.ppl b small{display:block;font-size:14px;font-weight:500;color:var(--mute)}
+.ppl em{font-style:normal;font-weight:700;font-size:20px;color:var(--blue);white-space:nowrap}
+.ppl button:disabled{background:var(--soft);border-color:transparent;box-shadow:none;color:var(--mute);cursor:default}
+.ppl button:disabled em{font-size:15px;font-weight:500;color:var(--mute)}
+.txt{margin:0;display:grid;gap:2px;background:var(--soft);border-radius:16px;padding:12px 16px}
 .txt dt{font-size:14px;font-weight:700;color:var(--mute)}
 .txt dd{margin:0 0 8px;font-size:18px;line-height:1.5;font-weight:700}
-.txt dd .zh{display:block;font-size:14px;font-weight:400;color:var(--mute)}
+.txt dd .zh{display:block;font-size:14px;font-weight:500;color:var(--mute)}
 .note{font-size:14px;color:var(--mute)}
-.go{width:100%;min-height:56px;border:0;background:var(--ink);color:#fff;font:700 17px/1.2 inherit;font-family:inherit;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 16px;text-align:left}
-.go em{color:var(--red);font-style:normal;font-size:20px}
-.btn{width:100%;min-height:48px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);font:700 16px/1.2 inherit;font-family:inherit}
-.err{border-left:5px solid var(--red);background:var(--tile);padding:12px 16px;font-size:16px}
-.done{text-align:center;padding:32px 0;display:grid;gap:8px}
-.done .ic{font-size:48px;line-height:1}
+.go{width:100%;min-height:56px;border:0;border-radius:999px;background:var(--go);color:#fff;font:700 17px/1.2 inherit;font-family:inherit;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 20px;text-align:left;box-shadow:0 10px 22px rgba(120,60,110,.26)}
+.go em{font-style:normal;font-size:20px}
+.go:disabled{background:var(--soft);color:var(--mute);box-shadow:none}
+.btn{width:100%;min-height:52px;border:1.5px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);font:700 16px/1.2 inherit;font-family:inherit}
+.go:active,.btn:active,.ppl button:active,.bft button:active{transform:scale(.97)}
+.err{border-left:4px solid var(--red);background:var(--soft);border-radius:4px 16px 16px 4px;padding:12px 16px;font-size:16px}
+.done{text-align:center;padding:24px 0 8px;display:grid;gap:8px;justify-items:center}
+.done .ic{width:72px;height:72px;border-radius:50%;background:linear-gradient(180deg,var(--blue2),var(--blue));color:#fff;display:grid;place-items:center;font-size:36px;line-height:1;box-shadow:0 10px 22px rgba(31,78,156,.28)}
 .done h2{font-size:26px}
-.bar{height:4px;background:var(--line);overflow:hidden}.bar i{display:block;height:4px;width:40%;background:var(--ink);animation:mv 1.2s ease-in-out infinite}
+.done p{margin:0}
+.bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden;max-width:528px;margin:16px auto 0;width:calc(100% - 32px)}.bar i{display:block;height:4px;width:40%;border-radius:2px;background:var(--blue);animation:mv 1.2s ease-in-out infinite}
 @keyframes mv{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
-@media (prefers-reduced-motion:reduce){.bar i{animation:none;width:100%}}
-/* 簽名板：跟小禾簽名頁（iei.html）同一套 */
-.board{position:fixed;inset:0;background:var(--paper);z-index:9;display:flex;flex-direction:column;touch-action:none;overscroll-behavior:none}
-.bhd{padding:16px 16px 8px;border-bottom:2px solid var(--ink);display:grid;gap:4px}
-.bhd b{font-size:28px;line-height:1.2}
-.bhd .say{font-size:20px;font-weight:700}
-#cv{flex:1;width:100%;display:block;background:var(--paper) linear-gradient(var(--ink),var(--ink)) 24px 70%/calc(100% - 48px) 1px no-repeat}
-.bft{display:grid;grid-template-columns:1fr 1fr 2fr;border-top:2px solid var(--ink);padding-bottom:env(safe-area-inset-bottom)}
-.bft button{min-height:56px;font:700 16px/1.2 inherit;font-family:inherit;border:0;background:var(--paper);color:var(--ink);padding:0 8px}
-.bft button+button{border-left:1.5px solid var(--ink)}
-.bft .go{min-height:56px}
+/* 簽名板：跟 iei.html 同一套 */
+.board{position:fixed;inset:0;background:var(--bg);z-index:9;display:flex;flex-direction:column;touch-action:none;overscroll-behavior:none}
+.bhd{padding:20px 20px 8px;display:grid;gap:2px}
+.bhd b{font-size:28px;line-height:1.2;font-weight:900;overflow-wrap:anywhere}
+.bhd .zh{font-size:15px;color:var(--mute)}
+.pad{flex:1;position:relative;margin:8px 16px 12px;background:#fff;border-radius:24px;box-shadow:var(--sh);overflow:hidden}
+.pad::after{content:"";position:absolute;left:24px;right:24px;top:70%;border-top:1.5px dashed var(--line);pointer-events:none}
+.pad .hint{position:absolute;left:0;right:0;top:calc(70% + 10px);text-align:center;font-size:18px;font-weight:700;color:var(--mute);pointer-events:none}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.bft{display:grid;grid-template-columns:1fr 1fr 2fr;gap:8px;padding:0 16px calc(12px + env(safe-area-inset-bottom))}
+.bft button{min-height:54px;border-radius:999px;font:700 15px/1.2 inherit;font-family:inherit;border:0;background:var(--card);color:var(--ink);padding:0 8px;box-shadow:var(--sh1)}
+.bft .go{min-height:54px;padding:0 16px;box-shadow:0 10px 22px rgba(120,60,110,.26);background:var(--go);color:#fff}
+.bft .go:disabled{background:var(--soft);color:var(--mute);box-shadow:none}
+:focus-visible{outline:2px solid var(--blue2);outline-offset:2px}
 [hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.bar i{width:100%}}
 </style></head><body>
-<header><div class="eye" id="eye">簽名 · Sign</div><div class="ttl"><i></i><b id="ttl">…</b></div><div class="eye" id="sub"></div><div class="rule"></div></header>
+<header><div class="eye" id="eye">簽名 · Sign</div><div class="ttl"><b id="ttl">…</b></div><div class="eye" id="sub"></div></header>
 <div class="bar" id="bar"><i></i></div>
 <main id="app"></main>
 <div class="board" id="board" hidden>
-  <div class="bhd"><b id="bwho"></b><span class="say" id="bsay"></span><span class="eye" id="bzh"></span></div>
-  <canvas id="cv"></canvas>
+  <div class="bhd"><b id="bwho"></b><span class="zh" id="bzh"></span></div>
+  <div class="pad"><span class="hint" id="bsay"></span><canvas id="cv"></canvas></div>
   <div class="bft"><button type="button" id="b1"></button><button type="button" id="b2"></button><button type="button" class="go" id="b3"><span></span><em>→</em></button></div>
 </div>
 <script>
