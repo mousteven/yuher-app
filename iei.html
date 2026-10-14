@@ -78,6 +78,8 @@ details summary::after{content:"";width:8px;height:8px;border:solid currentColor
 details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .list.big label span{font-size:18px;font-weight:700;line-height:1.35}
 .list.big small{font-size:15px;font-weight:400;margin-top:2px}
+.all{margin-left:auto;min-height:36px;padding:0 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--blue);font-weight:700;font-size:14px;font-family:inherit}
+.list.big label span b{color:var(--blue);font-weight:900}
 .list{display:grid;border:1.5px solid var(--line);border-radius:14px;overflow:hidden}
 .list:empty{display:none}
 .list label{display:flex;gap:12px;align-items:center;min-height:52px;padding:8px 14px;cursor:pointer}
@@ -205,7 +207,7 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
       <button type="button" data-v="1"><svg class="ic s"><use href="#i-pin"/></svg>到場</button><button type="button" data-v="2"><svg class="ic s"><use href="#i-tel"/></svg>電話</button></div>
     <div class="seg" id="labor" data-v="1" role="group" aria-label="服務對象">
       <button type="button" data-v="1">雇主＋移工</button><button type="button" data-v="2">雇主</button></div>
-    <div class="f" id="wkF"><div class="lab"><svg class="ic s"><use href="#i-users"/></svg>移工（行程上的人已勾好）</div>
+    <div class="f" id="wkF"><div class="lab"><svg class="ic s"><use href="#i-users"/></svg>移工（行程上的人已勾好）<button type="button" class="all" id="wkAll" hidden>全選</button></div>
       <div class="list" id="wk"><div class="note" style="padding:12px 14px">先選客戶</div></div>
       <div id="natNote" class="note"></div></div>
    </section>
@@ -315,12 +317,13 @@ function head() {
 }
 $('close').onclick = function () { try { liff.closeWindow(); } catch (e) { history.back(); } };
 /* ---------- 客戶與移工 ---------- */
-function cands(list) {
+function cands(list, q) {
   var box = $('cands'); box.innerHTML = '';
   if (!list.length) { $('custNow').textContent = S.client ? 'IEI 找不到「' + S.client + '」，請在上面打名稱找' : ''; return; }
-  $('custNow').textContent = 'IEI 有 ' + list.length + ' 家像的，請點一家：';
+  $('custNow').textContent = q ? '' : 'IEI 有 ' + list.length + ' 家像的，請點一家：';
   list.forEach(function (c) {
-    var lab = el('label'), r = el('input', null, { type: 'radio', name: 'cu' }), t = el('span', c.name);
+    var lab = el('label'), r = el('input', null, { type: 'radio', name: 'cu' }), t = el('span'), k = q ? c.name.indexOf(q) : -1;
+    if (k === -1) t.textContent = c.name; else { t.appendChild(document.createTextNode(c.name.slice(0, k))); t.appendChild(el('b', c.name.substr(k, q.length))); t.appendChild(document.createTextNode(c.name.slice(k + q.length))); }
     t.appendChild(el('small', c.cu00 + '・' + (c.addr || '沒有地址')));
     r.onchange = function () { pickCust(c); };
     lab.appendChild(r); lab.appendChild(t); box.appendChild(lab);
@@ -341,11 +344,19 @@ function workers(rows, keepPicks) {
     var lab = el('label'), c = el('input', null, { type: 'checkbox' }), t = el('span', w.zh || w.en);
     c.checked = !!S.picks[w.la00];
     t.appendChild(el('small', [w.zh ? w.en : '', w.nat, w.la21 ? '接管 ' + w.la21 : ''].filter(Boolean).join('・')));
-    c.onchange = function () { if (c.checked) S.picks[w.la00] = 1; else delete S.picks[w.la00]; natVt(); drawSigns(); check(); };
+    c.onchange = function () { if (c.checked) S.picks[w.la00] = 1; else delete S.picks[w.la00]; allBtn(); natVt(); drawSigns(); check(); };
     lab.appendChild(c); lab.appendChild(t); box.appendChild(lab);
   });
-  natVt(); drawSigns(); check();
+  allBtn(); natVt(); drawSigns(); check();
 }
+/* 全選／全不選（他 10/14 要）：勾的人有變就跟著換字 */
+function allBtn() { var b = $('wkAll'), n = S.workers.length; b.hidden = n < 2; b.textContent = picked().length === n ? '全不選' : '全選'; }
+$('wkAll').onclick = function () {
+  var on = picked().length !== S.workers.length; S.picks = {};
+  if (on) S.workers.forEach(function (w) { S.picks[w.la00] = 1; });
+  [].forEach.call($('wk').querySelectorAll('input[type=checkbox]'), function (c) { c.checked = on; });
+  allBtn(); natVt(); drawSigns(); check();
+};
 function picked() { return S.workers.filter(function (w) { return S.picks[w.la00]; }); }
 /* 國籍＝勾的人的國籍（IEI 一張只能一個）。第幾次＝IEI 自己的算法：接管日到服務日每 60 天一次，1～6，取最小。 */
 function natVt() {
@@ -360,23 +371,26 @@ function natVt() {
 }
 $('vt').oninput = function () { S.vtEdited = true; };
 $('date').onchange = function () { natVt(); head(); };
-/* 搜尋（他 10/14 要快）：打開表單就在背景把 IEI 客戶清單拿下來，之後邊打邊在手機上篩，不用每次問 IEI。清單還沒到才走舊的伺服器搜尋 */
+/* 搜尋（他 10/14：邊打邊出提示、再快 80%）：客戶清單存在手機上（下次打開立刻能用），背景再跟 IEI 對一次新的。
+   每打一個字就在手機上篩，不等網路；手機上找不到才問 IEI（伺服器會重抓最新清單，新客戶也找得到）。 */
 var CUST = null;
+try { CUST = JSON.parse(localStorage.getItem('xh.cust') || 'null'); } catch (e) {}
+function setCust(list) { if (!list || !list.length) return; CUST = list; try { localStorage.setItem('xh.cust', JSON.stringify(list)); } catch (e) {} if ($('q').value.trim() && !S.cu00) find(); }
 function norm(t) { return String(t || '').replace(/[\s　]/g, '').replace(/(股份)?有限公司|企業社|實業社|工業社|商行/g, '').toUpperCase(); }   // 同 Iei.gs 的 ieiNorm_
 function localFind(q) {
   var n = norm(q); if (!n) return [];
   var ex = CUST.filter(function (c) { return norm(c.name) === n; });
-  return ex.length ? ex : CUST.filter(function (c) { var m = norm(c.name); return m && m.indexOf(n) !== -1; }).slice(0, 20);
+  return ex.length ? ex : CUST.filter(function (c) { var m = norm(c.name); return m && m.indexOf(n) !== -1; }).slice(0, 8);
 }
-function find() {
+function find(ask) {
   var q = $('q').value.trim();
-  if (!q) { if (!S.cu00) { $('cands').innerHTML = ''; $('custNow').textContent = ''; } return; }
-  if (CUST) { var hit = localFind(q); cands(hit); say(hit.length ? '' : '找不到，換個字試試'); return; }
+  if (!q) { $('cands').innerHTML = ''; $('custNow').textContent = S.cuName ? '✓ ' + S.cuName + '（' + S.cu00 + '）' : ''; return; }
+  if (CUST && !ask) { var hit = localFind(q); cands(hit, q); if (!hit.length) $('custNow').textContent = '手機上找不到，按放大鏡問 IEI'; return; }
   say('在 IEI 找…');
-  api({ api: 'iei', q: q }).then(function (j) { cands(j.cands); say(j.cands.length ? '' : '找不到，換個字試試'); }).catch(function (e) { say(e.message); });
+  api({ api: 'iei', q: q }).then(function (j) { say(''); if (j.list) setCust(j.list); cands(j.cands, q); if (!j.cands.length) $('custNow').textContent = 'IEI 也找不到，換個字試試'; }).catch(function (e) { say(e.message); });
 }
-var findT; $('q').oninput = function () { if (CUST) { clearTimeout(findT); findT = setTimeout(find, 120); } };
-$('qGo').onclick = find;
+$('q').oninput = function () { if (CUST) find(); };
+$('qGo').onclick = function () { find(true); };
 $('q').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); find(); $('q').blur(); } };
 /* ---------- 服務：App 的大項／細項 → IEI 服務項目（自動對好，可改） ---------- */
 function chip(box, label, on, fn) { var b = el('button', label, { type: 'button', 'aria-pressed': String(!!on) }); b.onclick = fn; box.appendChild(b); return b; }
@@ -768,7 +782,8 @@ liff.init({ liffId: LIFF_ID }).then(function () {
     if (j.draft) { $('tripsF').hidden = true; apply(j.state); return fill(j.draft).then(function () { SAVED = JSON.stringify(Object.assign({}, draft(), { id: '' })); }); }
     $('p').value = S.autoP = '巡迴服務-關心移工'; $('a').value = S.autoA = '移工表示工作上及生活都沒有問題。';   // 他定的預設
     cats(); items(); head(); trips(j.trips); langs(); check();
-    api({ api: 'custs' }).then(function (c) { CUST = c.list; }).catch(function () {});   // 背景拿客戶清單，失敗就用舊的搜尋
+    if (j.custs) setCust(j.custs);   // 伺服器手上有就順便帶來，不用再跑一趟
+    api({ api: 'custs' }).then(function (c) { setCust(c.list); }).catch(function () {});   // 背景跟 IEI 對最新的，存到手機
   });
 }).catch(function (e) { $('bar').hidden = true; $('ttl').textContent = '打不開'; say(String(e && e.message || e)); });
 </script>
