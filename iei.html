@@ -980,10 +980,11 @@ function finish() {
 }
 liff.init({ liffId: LIFF_ID }).then(function () {
   if (!liff.isLoggedIn()) return liff.login();
-  return api({ api: 'prep', d: DRAFT, date: DAY }).then(function (j) {
+  return api({ api: 'prep', d: DRAFT, t: TRIP, date: DAY }).then(function (j) {
     META = j; $('bar').hidden = true; $('form').hidden = false;
     $('date').value = j.day; seg('method', '1'); seg('labor', '1');
-    if (j.draft) { $('tripsF').hidden = true; S.trip = j.trips.filter(function (t) { return t.id === j.draft.trip; })[0] || null; drawTodo(); apply(j.state); return fill(j.draft).then(function () { SAVED = JSON.stringify(Object.assign({}, draft(), { id: '' })); }); }
+    if (j.draft) { DRAFT = j.draft.id || DRAFT; $('tripsF').hidden = true;   // 從行程卡進來、後端找到存過的草稿＝接著改那一張（不另存新的）
+      S.trip = j.trips.filter(function (t) { return t.id === j.draft.trip; })[0] || null; drawTodo(); apply(j.state); return fill(j.draft).then(function () { SAVED = JSON.stringify(Object.assign({}, draft(), { id: '' })); }); }
     $('p').value = S.autoP = '巡迴服務-關心移工'; $('a').value = S.autoA = '移工表示工作上及生活都沒有問題。';   // 他定的預設
     cats(); items(); head(); trips(j.trips); langs(); check();
     if (j.custs) setCust(j.custs);   // 伺服器手上有就順便帶來，不用再跑一趟
