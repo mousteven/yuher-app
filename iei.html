@@ -78,13 +78,6 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .list.big small{font-size:15px;font-weight:400;margin-top:2px}
 .all{margin-left:auto;min-height:36px;padding:0 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--blue);font-weight:700;font-size:14px;font-family:inherit}
 .list.big label span b{color:var(--blue);font-weight:900}
-.dup{background:#FFF4F4;border-left:4px solid var(--red);border-radius:14px;padding:12px 14px;display:grid;gap:8px}
-.dup .t{font-weight:900;font-size:16px}
-.dup .it{background:var(--card);border-radius:12px;padding:10px 12px;font-size:15px;line-height:1.45}
-.dup .it small{display:block;color:var(--mute);font-size:13px}
-.dup .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.dup .btns button{min-height:46px;border-radius:12px;font:inherit;font-weight:800;font-size:15px;border:1.5px solid var(--line);background:var(--card);color:var(--ink)}
-.dup .btns .go{background:var(--blue);color:#fff;border:0;justify-content:center}
 .list .gh{font-size:13px;font-weight:800;color:var(--mute);background:var(--soft);padding:6px 14px}
 .list .more{border:0;border-top:1px solid var(--hair);background:none;min-height:48px;padding:0 14px;text-align:left;color:var(--blue);font:inherit;font-weight:700;font-size:15px}
 .list{display:grid;border:1.5px solid var(--line);border-radius:14px;overflow:hidden}
@@ -229,8 +222,7 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
     <div class="f" id="wkF"><div class="lab"><svg class="ic s"><use href="#i-users"/></svg><span id="wkN">移工（行程上的人已勾好）</span><button type="button" class="all" id="wkAll" hidden>全選</button></div>
       <label class="fld" id="wkQF" hidden><svg class="ic"><use href="#i-users"/></svg><input type="search" id="wkQ" aria-label="在這家的移工裡找" autocomplete="off"></label>
       <div class="list" id="wk"><div class="note" style="padding:12px 14px">先選客戶</div></div>
-      <div id="natNote" class="note"></div>
-      <div class="dup" id="dup" hidden></div></div>
+      <div id="natNote" class="note"></div></div>
    </section>
 
    <section class="svc">
@@ -431,7 +423,7 @@ function natVt() {
   var p = picked(), nats = p.map(function (w) { return w.nat; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
   S.nat = nats.length === 1 ? nats[0] : '';
   $('natNote').textContent = nats.length > 1 ? '⚠ IEI 一張只能一個國籍，現在勾到 ' + nats.join('、') + '，請分開送' : (S.nat ? '國籍：' + S.nat : '');
-  langs(); drawWarn(); dupCheck();
+  langs(); drawWarn();
   if (S.vtEdited) return;
   var d = new Date($('date').value), best = null;
   p.forEach(function (w) { var t = Math.round((d - new Date(w.la21)) / 864e5); if (isNaN(t)) return; var v = Math.min(6, Math.max(1, Math.ceil(t / 60))); if (best === null || v < best) best = v; });
@@ -439,39 +431,6 @@ function natVt() {
 }
 $('vt').oninput = function () { S.vtEdited = true; };
 $('date').onchange = function () { natVt(); head(); };
-/* 重複提醒（他 10/15，前後 3 天）：選好工廠／勾了工人／改日期之後停 0.8 秒問一次；同一組合問過、按過「還是要新寫」就不再問 */
-var DUPK = '', DUPX = {}, dupT = 0;
-function dupCheck() {
-  clearTimeout(dupT);
-  if (SENT || !S.cu00) { DUPK = ''; $('dup').hidden = true; return; }
-  var p = picked(), k = [S.cu00, $('date').value, p.map(function (w) { return w.la00; }).sort().join(',')].join('|');
-  if (k === DUPK) return;
-  DUPK = k; $('dup').hidden = true;
-  if (DUPX[k]) return;
-  dupT = setTimeout(function () {
-    api({ api: 'dup', cu00: S.cu00, date: $('date').value, d: DRAFT, la: p.map(function (w) { return w.la00; }), names: p.map(function (w) { return [w.zh, w.en]; }) })
-      .then(function (j) { if (DUPK === k && j.list.length && !SENT) showDup(j.list, k); }).catch(function () {});
-  }, 800);
-}
-function relDay(ds) {
-  var t = new Date(), a = Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()), m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ds), n = m ? Math.round((Date.UTC(+m[1], m[2] - 1, +m[3]) - a) / 864e5) : NaN;
-  return { '-2': '前天', '-1': '昨天', '0': '今天', '1': '明天', '2': '後天' }[n] || '';
-}
-function showDup(list, k) {
-  var box = $('dup'), first = list.filter(function (x) { return x.id; })[0]; box.innerHTML = '';
-  box.appendChild(el('div', '⚠ ' + S.cuName + ' 前後 3 天內已經寫過了', { class: 't' }));
-  list.slice(0, 3).forEach(function (x) {
-    var it = el('div', x.date.slice(5).replace('-', '/') + (relDay(x.date) ? '（' + relDay(x.date) + '）' : '') + (x.who ? '・' + x.who : ''), { class: 'it' });
-    it.appendChild(el('small', x.id ? (x.svid ? '小禾寫的・已送出 IEI ' + x.svid : '小禾草稿・還沒送出到 IEI') : '在 IEI 上（編號 ' + x.svid + '），不是小禾寫的'));
-    box.appendChild(it);
-  });
-  var bt = el('div', null, { class: 'btns' }), no = el('button', first ? '還是要新寫' : '知道了', { type: 'button' });
-  no.onclick = function () { DUPX[k] = 1; box.hidden = true; };
-  bt.appendChild(no);
-  if (first) { var go = el('button', '打開那張', { type: 'button', class: 'go' }); go.onclick = function () { location.href = 'https://liff.line.me/' + LIFF_ID + '?liff=' + encodeURIComponent(LIFF_ID) + '&d=' + first.id; }; bt.appendChild(go); }
-  else bt.style.gridTemplateColumns = '1fr';
-  box.appendChild(bt); box.hidden = false;
-}
 /* 搜尋（他 10/14：邊打邊出提示、再快 80%）：客戶清單存在手機上（下次打開立刻能用），背景再跟 IEI 對一次新的。
    每打一個字就在手機上篩，不等網路；手機上找不到才問 IEI（伺服器會重抓最新清單，新客戶也找得到）。 */
 var CUST = null;
@@ -690,7 +649,7 @@ function findSub(big, sub) {
   return null;
 }
 function useTrip(t) {
-  S.trip = t; S.client = t.client; S.cu00 = ''; S.cuName = ''; S.items = t.items.slice(); S.auto = 0; S.vtEdited = false;
+  S.trip = t; S.tripId = t.id; S.client = t.client; S.cu00 = ''; S.cuName = ''; S.items = t.items.slice(); S.auto = 0; S.vtEdited = false;
   $('addr').value = t.addr || ''; seg('method', t.method);
   var hit = findSub(t.big, t.sub);
   if (hit) pickSub(hit[0], hit[1], false); else { S.cat = -1; cats(); items(); }
@@ -750,7 +709,7 @@ function drawWarn() {
 /* ---------- 草稿 ---------- */
 function draft() {
   var p = picked(), l = $('labor').dataset.v, x = S.cat >= 0 && S.sub >= 0 ? META.cats[S.cat] : null;
-  return { id: DRAFT || '', client: S.client, cuName: S.cuName, cu00: S.cu00, addr: $('addr').value.trim(),
+  return { id: DRAFT || '', trip: S.tripId || '', client: S.client, cuName: S.cuName, cu00: S.cu00, addr: $('addr').value.trim(),
     date: $('date').value, vt: $('vt').value, nat: l === '2' ? '' : S.nat, method: $('method').dataset.v, labor: l,
     items: S.items.slice().sort(function (a, b) { return a - b; }), cat: x ? x.b : '', sub: x ? x.s[S.sub][0] : '',
     cuP: texts(0)[0], cuA: texts(0)[1], same: true, after: $('after').value.trim(),
@@ -769,7 +728,7 @@ function ensureDraft() {
   return api({ api: 'save', draft: d }).then(function (j) { DRAFT = j.id; SAVED = js; apply(j.state); });
 }
 function fill(d) {
-  S.client = d.client; S.cuName = d.cuName; S.items = d.items || []; S.vtEdited = true;
+  S.client = d.client; S.tripId = d.trip || ''; S.cuName = d.cuName; S.items = d.items || []; S.vtEdited = true;
   $('addr').value = d.addr || ''; $('date').value = d.date; $('vt').value = d.vt || '';
   seg('method', d.method); seg('labor', d.labor);
   S.pk = d.pk || { d: {}, r: {} }; S.sl = d.sl || {};   // 舊草稿沒有 pk：整段當成自己打的（跟以前一樣機器翻）
