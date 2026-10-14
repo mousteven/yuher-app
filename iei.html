@@ -130,7 +130,7 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
 .go:disabled>.ic{color:inherit}
 .go:disabled .n{display:none}
 #go{width:100%}
-#only{text-align:center;color:var(--ink)}
+#only,#keep{text-align:center;color:var(--ink)}
 .chips button:active,.seg button:active,.langs button:active,.go:active,.pill:active,.tile:active,.x:active,.soft:active{transform:scale(.97)}
 .bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}.bar i{display:block;height:4px;width:40%;border-radius:2px;background:var(--blue);animation:go 1.2s ease-in-out infinite}
 @keyframes go{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
@@ -292,7 +292,8 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
 </div></div>
 <footer><div><div id="msg" role="status"></div>
   <button id="go" class="go" disabled><span id="goT">確認後送出</span><span class="n" id="goB" hidden><svg class="ic s"><use href="#i-sign"/></svg><span id="goN"></span></span><svg class="ic"><use href="#i-arrow"/></svg></button>
-  <button type="button" class="link" id="only" hidden>只傳留底到 LINE，先不送簽核</button></div></footer>
+  <button type="button" class="link" id="only" hidden>只傳留底到 LINE，先不送簽核</button>
+  <button type="button" class="link" id="keep" hidden>儲存草稿，先不送出</button></div></footer>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -921,7 +922,7 @@ setInterval(function () {
 /* ---------- 送出：一顆按鈕＝存草稿＋Create＋先簽好的簽名一起補進 IEI；送出後同一顆變「送簽核到 IEI」 ---------- */
 function goSet(t, badge, aria) { $('goT').textContent = t; $('goN').textContent = badge || ''; $('goB').hidden = !badge; $('go').setAttribute('aria-label', aria || t); }
 function check() {
-  $('only').hidden = !SENT;
+  $('only').hidden = !SENT; $('keep').hidden = SENT || !S.cu00;   // 他 10/15：草稿先存、微調完再送
   if (SENT) {
     var n = nSigned() + '／' + slots().length + ' 已簽';
     $('go').disabled = locked();
@@ -957,6 +958,11 @@ $('go').onclick = function () {
 $('shNo').onclick = function () { $('sheet').hidden = true; };
 $('shGo').onclick = submit;
 $('only').onclick = finish;
+$('keep').onclick = function () {   // 存進小禾（不進 IEI）；行程卡會變「草稿・還沒送出」，下次從卡片點進來就是這一張
+  if (slots().some(function (p) { return ST[p.k] === 'up'; })) return say('還有簽名在存，等一下再按');
+  say('儲存中…');
+  ensureDraft().then(function () { say('已儲存草稿 ✓ 還沒送出到 IEI。之後從行程卡「打開草稿」就是這一張。'); }).catch(function (e) { say(e.message); });
+};
 /* 送簽核＝IEI 的 sendSite('2')。⛔ 送了就鎖住，不能再補簽。成功後順手傳留底（卡片會顯示「已送簽核」） */
 function submit() {
   $('sheet').hidden = true; $('go').disabled = true; say('送簽核中…'); $('dryOut').hidden = true;
