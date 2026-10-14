@@ -225,6 +225,13 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
     <div class="f" id="subF" hidden><div class="lab"><i class="nb">2</i>細項</div><div class="chips" id="subs" role="group" aria-label="細項"></div><div class="f" id="xF" hidden></div></div>
     <div class="f"><button type="button" class="link" id="ieiNow"></button>
       <div class="chips" id="itemsAll" hidden></div></div></div>
+   <!-- 警告單（他 10/14）：IEI 服務項目有「警告」就出現；一位移工一張，送出時跟訪談一起進 IEI 的「警告單」 -->
+   <div class="card wn" id="wnF" hidden>
+    <div class="sh"><svg class="ic"><use href="#i-note"/></svg>IEI 警告單<span class="sp"></span><span class="wtag">每位移工各開一張</span></div>
+    <div class="f"><div class="lab">開給誰、第幾次</div><div class="list" id="wnW"></div></div>
+    <div class="f"><div class="lab">違反哪幾項（可以複選）</div><div class="list" id="wnI"></div>
+      <label class="fld ta" id="wnOF" hidden><svg class="ic"><use href="#i-pen"/></svg><textarea id="wnO" aria-label="其他：寫清楚" placeholder="其他：寫清楚（例：10/12 宿舍點名未到）"></textarea></label></div>
+   </div>
    <div class="card">
     <div class="f"><div class="lab"><i class="nb">3</i>處理經過（點片語加入，再點拿掉）</div>
       <div class="chips ph" id="pc"></div>
@@ -236,13 +243,6 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
    </div>
    </section>
 
-   <!-- 警告單（他 10/14）：IEI 服務項目有「警告」就出現；一位移工一張，送出時跟訪談一起進 IEI 的「警告單」 -->
-   <section class="card wn" id="wnF" hidden>
-    <div class="sh"><svg class="ic"><use href="#i-note"/></svg>IEI 警告單<span class="sp"></span><span class="wtag">每位移工各開一張</span></div>
-    <div class="f"><div class="lab">開給誰、第幾次</div><div class="list" id="wnW"></div></div>
-    <div class="f"><div class="lab">違反哪幾項（可以複選）</div><div class="list" id="wnI"></div>
-      <label class="fld ta" id="wnOF" hidden><svg class="ic"><use href="#i-pen"/></svg><textarea id="wnO" aria-label="其他：寫清楚" placeholder="其他：寫清楚（例：10/12 宿舍點名未到）"></textarea></label></div>
-   </section>
   </div>
 
   <section class="card">
