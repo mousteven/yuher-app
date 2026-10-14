@@ -318,10 +318,18 @@ var TL = {
 function $(id) { return document.getElementById(id); }
 function say(t) { $('msg').textContent = t || ''; }
 function el(tag, txt, attrs) { var e = document.createElement(tag); if (txt != null) e.textContent = txt; for (var k in attrs || {}) e.setAttribute(k, attrs[k]); return e; }
-function api(o) {
+/* 10/15 他早上打開出現「The string did not match the expected pattern」＝iPhone 讀不懂回來的東西（不是 JSON：Google 的錯誤頁或連線中斷）。
+   伺服器那幾筆都正常結束，所以是中間的問題：不是 JSON 就等 1.5 秒自動再試一次，還是不行才報，並帶回來的前幾個字（看得出是什麼頁） */
+function api(o, retry) {
   o.at = liff.getAccessToken();
   return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(o) })   // text/plain：避開預檢
-    .then(function (r) { return r.json(); })
+    .then(function (r) { return r.text().then(function (t) { try { return JSON.parse(t); } catch (e) { throw { bad: 'HTTP ' + r.status + '：' + t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) }; } }); },
+          function () { throw { bad: '連不上（訊號不穩？）' }; })
+    .catch(function (e) {
+      if (!e || !e.bad) throw e;
+      if (!retry && o.api !== 'send' && o.api !== 'submit') return new Promise(function (ok) { setTimeout(ok, 1500); }).then(function () { return api(o, true); });
+      throw new Error(/send|submit/.test(o.api) ? '伺服器沒有正常回應：先到 IEI 看有沒有進去，沒有再按一次（' + e.bad + '）' : '伺服器沒有正常回應，請再試一次（' + e.bad + '）');
+    })
     .then(function (j) { if (j.ok === false) throw new Error(j.err); return j; });
 }
 function seg(id, v) { var b = $(id); if (v != null) b.dataset.v = String(v); [].forEach.call(b.children, function (x) { x.setAttribute('aria-pressed', String(x.dataset.v === b.dataset.v)); }); }
@@ -885,6 +893,11 @@ liff.init({ liffId: LIFF_ID }).then(function () {
     if (j.custs) setCust(j.custs);   // 伺服器手上有就順便帶來，不用再跑一趟
     api({ api: 'custs' }).then(function (c) { setCust(c.list); }).catch(function () {});   // 背景跟 IEI 對最新的，存到手機
   });
-}).catch(function (e) { $('bar').hidden = true; $('ttl').textContent = '打不開'; say(String(e && e.message || e)); });
+}).catch(function (e) {
+  $('bar').hidden = true; $('ttl').textContent = '打不開';
+  var at = String(e && e.stack || '').split(String.fromCharCode(10))[0].replace(/^.*\//, '').slice(-40);   // 頁面自己出錯時帶行號，截圖給 Claude 就查得到
+  say(String(e && e.message || e) + (at && !/伺服器|連不上/.test(e && e.message) ? '（' + at + '）' : ''));
+  $('go').disabled = false; goSet('再試一次'); $('go').onclick = function () { location.reload(); };
+});
 </script>
 </body></html>
