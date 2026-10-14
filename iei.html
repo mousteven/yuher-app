@@ -53,6 +53,10 @@ main{padding:16px 16px 190px;display:grid;gap:16px;max-width:560px;margin:0 auto
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chips.scroll{flex-wrap:nowrap;overflow-x:auto;margin:0 -16px;padding:2px 16px 8px;scrollbar-width:none}
 .chips button{min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font:700 14px/1.25 inherit;font-family:inherit;white-space:nowrap;box-shadow:0 1px 3px rgba(60,52,40,.06);transition:background-color .15s,border-color .15s,transform .1s}
+.chips .seg.opt{flex-basis:100%;margin:-2px 0 4px}
+.chips .seg.opt button{flex:1;min-width:0;padding:0 6px;border:0;border-radius:14px;background:transparent;color:var(--mute);box-shadow:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chips .seg.opt button[aria-pressed=true]{background:var(--card);color:var(--blue);box-shadow:var(--sh1)}.chips .seg.opt button::before{content:none}
+.stp{display:flex;align-items:center;gap:8px}.stp button{min-width:44px;min-height:44px;border:0;border-radius:12px;background:var(--soft);color:var(--ink);font:700 20px/1 inherit;font-family:inherit}.stp b{min-width:28px;text-align:center;font-size:16px;color:var(--ink)}
 .chips.ph button{border-style:dashed;font-weight:500;white-space:normal;text-align:left;border-radius:18px;padding:8px 14px}
 .chips button[aria-pressed=true]{background:linear-gradient(180deg,var(--blue2),var(--blue));border-color:transparent;border-style:solid;color:#fff;box-shadow:0 6px 14px rgba(31,78,156,.28)}
 .chips button[aria-pressed=true]::before{content:"✓ "}
@@ -202,17 +206,17 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
    <section class="card">
     <div class="sh"><svg class="ic"><use href="#i-list"/></svg>服務</div>
     <div class="chips scroll" id="cats" role="group" aria-label="服務大項"></div>
-    <div class="f" id="subF" hidden><div class="chips" id="subs" role="group" aria-label="細項"></div></div>
+    <div class="f" id="subF" hidden><div class="chips" id="subs" role="group" aria-label="細項"></div><div class="f" id="xF" hidden></div></div>
     <div class="f"><button type="button" class="link" id="ieiNow"></button>
       <div class="chips" id="itemsAll" hidden></div></div>
     <div class="f"><div class="lab"><svg class="ic s"><use href="#i-pen"/></svg>處理經過（點片語加入，再點拿掉）</div>
       <div class="chips ph" id="pc"></div>
       <details><summary>IEI 片語</summary><div class="chips ph" id="pcI"></div></details>
-      <label class="fld ta"><svg class="ic"><use href="#i-pen"/></svg><textarea id="p" aria-label="處理經過"></textarea></label></div>
+      <label class="fld ta"><svg class="ic"><use href="#i-pen"/></svg><textarea id="p" aria-label="處理經過：自己補充" placeholder="自己補充（這段會機器翻譯）"></textarea></label></div>
     <div class="f"><div class="lab"><svg class="ic s"><use href="#i-ok"/></svg>處理結果</div>
       <div class="chips ph" id="ac"></div>
       <details><summary>IEI 片語</summary><div class="chips ph" id="acI"></div></details>
-      <label class="fld ta"><svg class="ic"><use href="#i-ok"/></svg><textarea id="a" aria-label="處理結果"></textarea></label></div>
+      <label class="fld ta"><svg class="ic"><use href="#i-ok"/></svg><textarea id="a" aria-label="處理結果：自己補充" placeholder="自己補充（這段會機器翻譯）"></textarea></label></div>
     <details><summary>後續追蹤處理紀錄（選填）</summary><label class="fld ta"><svg class="ic"><use href="#i-note"/></svg><textarea id="after" aria-label="後續追蹤處理紀錄"></textarea></label></details>
    </section>
   </div>
@@ -259,7 +263,7 @@ var API = 'https://script.google.com/macros/s/AKfycbyZDD8YqjQ7_lBzyNyILy3jJfFsIW
 var Q = new URLSearchParams(location.search), Q2 = new URLSearchParams(decodeURIComponent(Q.get('liff.state') || '').replace(/^\?/, ''));
 function qp(k) { return Q.get(k) || Q2.get(k) || ''; }
 var LIFF_ID = qp('liff'), DRAFT = qp('d') || qp('sign'), TRIP = qp('t'), DAY = qp('day');   // ?sign= 是舊的簽名頁連結；t／day：從行程卡點進來直接帶那一站
-var S = { items: [], auto: 0, autoP: '', autoA: '', picks: {}, workers: [], vtEdited: false, trip: null, cu00: '', cuName: '', client: '', cat: -1, sub: -1, nat: '' };
+var S = { items: [], auto: 0, autoP: '', autoA: '', pk: { d: {}, r: {} }, sl: {}, picks: {}, workers: [], vtEdited: false, trip: null, cu00: '', cuName: '', client: '', cat: -1, sub: -1, nat: '' };
 var META = null, X = null, ST = {}, FL = {}, SAVED = '', SENT = false, LANG = '中', TRC = {}, POLL = false, BQ = [], BI = 0, RELAY = false, trTimer = 0;
 var LC = { '菲律賓': 'EN', '越南': 'VI', '印尼': 'ID', '泰國': 'TH' };
 var STX = { ok: '✓ 已簽', held: '✓ 簽好了', dry: '✓ 試跑', todo: '點這裡簽', absent: '不在', up: '上傳中…', fail: '沒傳上去，再簽', auto: '自動沿用' };
@@ -364,14 +368,16 @@ function cats() {
 }
 /* 選細項：換掉上一個自動對的 IEI 項目（他手動加的留著）；手動點的細項，文字還沒改過就換成這個細項的第一句片語 */
 function pickSub(ci, si, byHand) {
+  var same = S.cat === ci && S.sub === si;
   S.cat = ci; S.sub = si;
   var x = META.cats[ci].s[si], no = META.lfa[x[0]];
   if (S.auto) S.items = S.items.filter(function (n) { return n !== S.auto; });
   if (no && S.items.indexOf(no) === -1) S.items.push(no);
   S.auto = no;
-  if (byHand) {
-    if ($('p').value === S.autoP) $('p').value = S.autoP = x[1][0] || '';
-    if ($('a').value === S.autoA) $('a').value = S.autoA = x[2][0] || '';
+  if (!same) { S.pk = { d: {}, r: {} }; S.sl = {}; }   // 片語序號是跟著細項的
+  if (byHand && !same) {   // 預設那句還沒改過 → 拿掉，改勾這個細項的第一句片語
+    if ($('p').value === S.autoP) { $('p').value = S.autoP = ''; S.pk.d[0] = 0; }
+    if ($('a').value === S.autoA) { $('a').value = S.autoA = ''; S.pk.r[0] = 0; }
   }
   cats(); items(); preview(); check();
 }
@@ -385,7 +391,7 @@ function items() {
   $('ieiNow').textContent = 'IEI 服務項目：' + (now || '還沒選') + '（' + (S.auto ? '自動對好，' : '') + ($('itemsAll').hidden ? '點這裡改' : '點這裡收起') + '）';
 }
 $('ieiNow').onclick = function () { $('itemsAll').hidden = !$('itemsAll').hidden; items(); };
-/* 片語：點一下加進框框（逗號分開，跟 IEI 一樣），再點一次拿掉 */
+/* IEI 片語：點一下加進「自己補充」框框（逗號分開，跟 IEI 一樣），再點一次拿掉——跟以前一樣，這段機器翻 */
 function parts(id) { return $(id).value.split(',').map(function (t) { return t.trim(); }).filter(Boolean); }
 function phraseChips(boxId, list, id) {
   var box = $(boxId), have = parts(id); box.innerHTML = '';
@@ -396,10 +402,62 @@ function phraseChips(boxId, list, id) {
     });
   });
 }
+/* 細項的片語（Phrase.gs 改寫過的完整句子，譯文校對過）：點了記在 S.pk，有 {甲|乙} 的在片語後面出現小選項 */
+function subChips(boxId, list, k) {
+  var box = $(boxId), m = S.pk[k]; box.innerHTML = '';
+  (list || []).forEach(function (row, i) {
+    var on = i in m, o = /\{([^}]*)\}/.exec(row[0]), opts = o ? o[1].split('|') : null;
+    chip(box, row[0].replace(/\{[^}]*\}/, on ? '…' : opts ? opts.join('／') : '').replace(/\[(\w+)\|([^|\]]*)\|([^\]]*)\]/g, '$3'), on, function () {
+      if (on) delete m[i]; else m[i] = 0;
+      phrases(); preview();
+    });
+    if (!on || !opts) return;
+    var sg = el('div', null, { class: 'seg opt', role: 'group', 'aria-label': '選一個' });
+    opts.forEach(function (t, j) { var b = el('button', t, { type: 'button', 'aria-pressed': String(+m[i] === j) }); b.onclick = function () { m[i] = j; phrases(); preview(); }; sg.appendChild(b); });
+    box.appendChild(sg);
+  });
+}
+function curPh() { return S.cat >= 0 && S.sub >= 0 ? META.ph[META.cats[S.cat].s[S.sub][0]] || null : null; }
 function phrases() {
-  var x = S.cat >= 0 && S.sub >= 0 ? META.cats[S.cat].s[S.sub] : null;
-  phraseChips('pc', x ? x[1] : [], 'p'); phraseChips('ac', x ? x[2] : [], 'a');
+  var x = curPh();
+  subChips('pc', x && x.d, 'd'); subChips('ac', x && x.r, 'r');
   phraseChips('pcI', META.proc, 'p'); phraseChips('acI', META.ans, 'a');
+  extras(x);
+}
+/* 補充欄位（最常用的細項才有，Phrase.gs 的 sl）：值原樣放進句子，每種語言都一樣 */
+var XIC = { text: 'i-pin', date: 'i-cal', num: 'i-users' };
+function needPick(k) {   // 填了補充欄位、但用到它的片語都沒勾 → 自動勾第一句用到它的（不然填了沒進句子）
+  var x = curPh(), hit = null;
+  ['d', 'r'].forEach(function (s) { (x[s] || []).forEach(function (row, i) { if (row[0].indexOf('[' + k + '|') === -1) return; if (i in S.pk[s]) hit = true; else if (!hit) hit = [s, i]; }); });
+  if (hit && hit !== true) { S.pk[hit[0]][hit[1]] = 0; phrases(); }
+}
+function extras(x) {
+  var box = $('xF'), defs = x && x.sl || [], key = JSON.stringify(defs) + S.cat + '.' + S.sub;
+  box.hidden = !defs.length;
+  if (box.dataset.k === key) return;   // 同一個細項不重畫（打字時游標不跳）
+  box.dataset.k = key; box.innerHTML = '';
+  defs.forEach(function (d) {
+    var k = d[0], lab = el('label', null, { class: 'fld' }), ns = 'http://www.w3.org/2000/svg', ic = document.createElementNS(ns, 'svg'), u = document.createElementNS(ns, 'use');
+    ic.setAttribute('class', 'ic'); u.setAttribute('href', '#' + XIC[d[2]]); ic.appendChild(u); lab.appendChild(ic);
+    if (d[2] === 'num') {   // 用點的：− 數字 ＋（0＝沒填）
+      var v = el('b', S.sl[k] || '—'), st = el('div', null, { class: 'stp' });
+      lab.appendChild(el('span', d[1], { style: 'flex:1' }));
+      [['−', -1], null, ['＋', 1]].forEach(function (b) {
+        if (!b) return st.appendChild(v);
+        var bt = el('button', b[0], { type: 'button', 'aria-label': d[1] + (b[1] > 0 ? '加一' : '減一') });
+        bt.onclick = function (e) { e.preventDefault(); var n = Math.max(0, (+S.sl[k] || 0) + b[1]); if (n) { S.sl[k] = String(n); needPick(k); } else delete S.sl[k]; v.textContent = S.sl[k] || '—'; preview(); };
+        st.appendChild(bt);
+      });
+      lab.appendChild(st);
+    } else {
+      var inp = el('input', null, { type: d[2], placeholder: d[1], 'aria-label': d[1] });
+      inp.value = S.sl[k] || '';
+      inp.oninput = function () { if (inp.value.trim()) { S.sl[k] = inp.value.trim(); needPick(k); } else delete S.sl[k]; preview(); };
+      if (d[2] === 'date') lab.appendChild(el('span', d[1], { style: 'white-space:nowrap' }));
+      lab.appendChild(inp);
+    }
+    box.appendChild(lab);
+  });
 }
 ['p', 'a'].forEach(function (id) { $(id).addEventListener('input', function () { phrases(); preview(); }); });
 /* ---------- 預覽：中文＋移工語言（後端用羽禾 App 同一套 Google 翻譯；同一段字只翻一次） ---------- */
@@ -409,23 +467,54 @@ function langs() {
   all.forEach(function (l) { var b = el('button', l, { type: 'button', 'aria-pressed': String(l === LANG) }); b.onclick = function () { LANG = l; langs(); preview(); }; box.appendChild(b); });
   preview();
 }
+/* ↓↓ 組句：iei.html 有一份一字不差的副本（預覽要即時），check.js 比對。改一邊要改兩邊。 ↓↓
+   [主詞, 逗號, 三句以上最後一句前, 兩句時中間, 句尾, 句子之間] */
+var PH_J_ = [['翻譯', '，', '，並', '，並', '。', ''], ['The interpreter ', ', ', ', and ', ' and ', '.', ' '],
+  ['Phiên dịch viên đã ', ', ', ', và ', ' và ', '.', ' '], ['Penerjemah ', ', ', ', dan ', ' dan ', '.', ' '], ['ล่าม', ' ', ' และ', ' และ', '', ' ']];
+/* ph＝PH_ 的一項；pk＝{d:{片語序號:選項序號}, r:{…}}；sl＝補充欄位的值；L＝0 中 1 英 2 越 3 印 4 泰；fp／fa＝他自己打的（已經是 L 語言）。照片語順序排，不照點的順序 */
+function phCompose(ph, pk, sl, L, fp, fa) {
+  var J = PH_J_[L];
+  function fill(row, o) {
+    return row[L].replace(/\{([^}]*)\}/, function (m, x) { x = x.split('|'); return x[o] || x[0]; })
+      .replace(/\[(\w+)\|([^|\]]*)\|([^\]]*)\]/g, function (m, k, a, b) { var v = String((sl || {})[k] || '').trim(); return v ? a.replace('#', v) : b; });
+  }
+  function pick(list, m) {
+    return Object.keys(m || {}).map(Number).sort(function (a, b) { return a - b; }).filter(function (i) { return list && list[i]; })
+      .map(function (i) { return { t: fill(list[i], +m[i] || 0), s: list[i][5] === 1 }; });
+  }
+  function join(a, free) { free = String(free || '').trim(); return a.concat(free ? [free] : []).filter(Boolean).join(J[5]); }
+  var d = pick(ph && ph.d, pk && pk.d), c = d.filter(function (x) { return !x.s; }).map(function (x) { return x.t; }), n = c.length;
+  var main = n ? J[0] + c.slice(0, -1).join(J[1]) + (n > 2 ? J[2] : n > 1 ? J[3] : '') + c[n - 1] + J[4] : '';
+  return { p: join([main].concat(d.filter(function (x) { return x.s; }).map(function (x) { return x.t; })), fp),
+           a: join(pick(ph && ph.r, pk && pk.r).map(function (x) { return x.t; }), fa) };
+}
+/* ↑↑ 組句 ↑↑ */
+var PH_L = { '菲律賓': 1, '越南': 2, '印尼': 3, '泰國': 4 };
+/* 只有他自己打的那段（框框）要機器翻；片語的譯文已經在 META.ph */
 function trKey() { return S.nat + '|' + $('p').value.trim() + '|' + $('a').value.trim(); }
-function translate(k, p, a) {   // 譯文進 TRC；預覽和移工的簽名板共用這一份
-  return api({ api: 'tr', nat: S.nat, texts: [p, a] }).then(function (j) { TRC[k] = j.out; }).catch(function () { TRC[k] = ['', '']; });
+function translate(k) {   // 譯文進 TRC；預覽和移工的簽名板共用這一份
+  return api({ api: 'tr', nat: S.nat, texts: [$('p').value.trim(), $('a').value.trim()] }).then(function (j) { TRC[k] = j.out; }).catch(function () { TRC[k] = ['', '']; });
+}
+/* L 語言的 [處理經過, 處理結果]＝片語組句＋自己打的（翻好的；翻譯失敗用中文，跟後端一樣）。自己打的還沒翻回來 → null */
+function texts(L) {
+  var px = $('p').value.trim(), ax = $('a').value.trim(), t = [px, ax];
+  if (L && (px || ax)) { var hit = TRC[trKey()]; if (!hit) return null; t = [hit[0] || px, hit[1] || ax]; }
+  var c = phCompose(curPh(), S.pk, S.sl, L, t[0], t[1]);
+  return [c.p, c.a];
 }
 function preview() {
-  var p = $('p').value.trim(), a = $('a').value.trim(), box = $('pv'), zh = LANG === '中', k = trKey(), t = TRC[k];
+  var box = $('pv'), L = LANG === '中' ? 0 : PH_L[S.nat] || 0, t = texts(L), k = trKey();
   box.innerHTML = '';
-  function show(lp, la, note) {
-    box.appendChild(el('small', zh ? '處理經過' : 'What was done')); box.appendChild(el('p', lp || '—'));
-    box.appendChild(el('small', zh ? '處理結果' : 'Result')); box.appendChild(el('p', la || '—'));
+  function show(r, note) {
+    box.appendChild(el('small', L ? 'What was done' : '處理經過')); box.appendChild(el('p', r[0] || '—'));
+    box.appendChild(el('small', L ? 'Result' : '處理結果')); box.appendChild(el('p', r[1] || '—'));
     $('pvNote').textContent = note;
   }
-  if (zh || (!p && !a)) return show(p, a, zh ? '這就是存進 IEI 的內容（雇主看中文）' : '');
-  if (t) return show(t[0] || p, t[1] || a, t[0] || t[1] ? '移工看到的＝存進 IEI 的譯文（機器翻譯，中文是正式紀錄）' : '翻譯暫時沒回來，先顯示中文；送出時會再翻一次');
-  show(p, a, '翻譯中…');
+  if (!L) return show(t, '這就是存進 IEI 的內容（雇主看中文）');
+  if (t) return show(t, $('p').value.trim() || $('a').value.trim() ? '移工看到的＝存進 IEI 的譯文（片語是校對過的譯文；自己打的那段是機器翻譯）' : '移工看到的＝存進 IEI 的譯文（校對過的譯文）');
+  show(texts(0), '翻譯你自己打的那段…');
   clearTimeout(trTimer);
-  trTimer = setTimeout(function () { translate(k, p, a).then(preview); }, 700);   // 停手 0.7 秒才翻，打字時不會一直燒翻譯額度
+  trTimer = setTimeout(function () { translate(k).then(preview); }, 700);   // 停手 0.7 秒才翻，打字時不會一直燒翻譯額度
 }
 /* ---------- 行程 ---------- */
 function trips(list) {
@@ -461,7 +550,8 @@ function draft() {
   return { id: DRAFT || '', client: S.client, cuName: S.cuName, cu00: S.cu00, addr: $('addr').value.trim(),
     date: $('date').value, vt: $('vt').value, nat: l === '2' ? '' : S.nat, method: $('method').dataset.v, labor: l,
     items: S.items.slice().sort(function (a, b) { return a - b; }), cat: x ? x.b : '', sub: x ? x.s[S.sub][0] : '',
-    cuP: $('p').value.trim(), cuA: $('a').value.trim(), same: true, after: $('after').value.trim(),
+    cuP: texts(0)[0], cuA: texts(0)[1], same: true, after: $('after').value.trim(),
+    pk: S.pk, sl: S.sl, px: $('p').value.trim(), ax: $('a').value.trim(),   // 片語＋補充欄位＋自己打的；cuP／cuA 是組好的中文（送進 IEI 的）
     la00: l === '2' ? [] : p.map(function (w) { return w.la00; }), names: l === '2' ? [] : p.map(function (w) { return w.zh || w.en; }),
     wk: l === '2' ? [] : p.map(function (w) { return { la00: w.la00, en: w.en, zh: w.zh }; }) };
 }
@@ -477,7 +567,8 @@ function fill(d) {
   S.client = d.client; S.cuName = d.cuName; S.items = d.items || []; S.vtEdited = true;
   $('addr').value = d.addr || ''; $('date').value = d.date; $('vt').value = d.vt || '';
   seg('method', d.method); seg('labor', d.labor);
-  $('p').value = d.cuP || ''; $('a').value = d.cuA || ''; $('after').value = d.after || '';
+  S.pk = d.pk || { d: {}, r: {} }; S.sl = d.sl || {};   // 舊草稿沒有 pk：整段當成自己打的（跟以前一樣機器翻）
+  $('p').value = (d.pk ? d.px : d.cuP) || ''; $('a').value = (d.pk ? d.ax : d.cuA) || ''; $('after').value = d.after || '';
   S.picks = {}; (d.la00 || []).forEach(function (x) { S.picks[x] = 1; });
   var hit = d.sub && findSub(d.cat, d.sub);
   if (hit) { S.cat = hit[0]; S.sub = hit[1]; S.auto = META.lfa[d.sub] || 0; }
@@ -488,7 +579,7 @@ function fill(d) {
 function slots() {
   var l = $('labor').dataset.v, out = [{ k: 'lbr', role: '翻譯', name: '翻譯（我）' }];
   if (l !== '3') out.push({ k: 'cu', role: '雇主', name: S.cuName || '雇主' });
-  if (l !== '2') picked().forEach(function (w) { out.push({ k: 'w:' + w.la00, role: '移工', name: w.zh || w.en, sub: w.zh ? w.en : '', en: w.en, L: TL[NATL[w.nat]] || null }); });
+  if (l !== '2') picked().forEach(function (w) { out.push({ k: 'w:' + w.la00, role: '移工', name: w.zh || w.en, sub: w.zh ? w.en : '', en: w.en, L: TL[NATL[w.nat]] || null, ph: PH_L[w.nat] || 0 }); });
   return out;
 }
 function lbrSaved() { return X ? X.lbrSaved : META.lbrSaved; }
@@ -547,12 +638,12 @@ function page() {
 }
 /* 簽名前先看處理經過／結果：移工看預覽那一份譯文（＝送進 IEI 的），雇主看中文，翻譯自己不用看 */
 function readBox(p, L) {
-  var pz = $('p').value.trim(), az = $('a').value.trim(), k = trKey(), t = p.L && L !== TL['中'] ? TRC[k] : null;
-  $('bread').hidden = p.k === 'lbr' || (!pz && !az);
+  var zh = texts(0), t = p.L && L !== TL['中'] ? texts(p.ph) : zh;
+  $('bread').hidden = p.k === 'lbr' || (!zh[0] && !zh[1]);
   if ($('bread').hidden) return;
-  if (p.L && L !== TL['中'] && !t) translate(k, pz, az).then(function () { if (BQ[BI] === p && !$('board').hidden) readBox(p, L); });
+  if (!t) translate(trKey()).then(function () { if (BQ[BI] === p && !$('board').hidden) readBox(p, L); });
   $('bsum').textContent = L.proc; var box = $('btx'); box.innerHTML = '';
-  [[L.proc, t && t[0] || pz], [L.res, t && t[1] || az]].forEach(function (r) { if (!r[1]) return; var e = el('p', r[1]); e.insertBefore(el('b', r[0]), e.firstChild); box.appendChild(e); });
+  [[L.proc, (t || zh)[0]], [L.res, (t || zh)[1]]].forEach(function (r) { if (!r[1]) return; var e = el('p', r[1]); e.insertBefore(el('b', r[0]), e.firstChild); box.appendChild(e); });
 }
 function next() { if (++BI < BQ.length) page(); else closeBoard(); }
 function closeBoard() { $('board').hidden = true; document.body.style.overflow = ''; drawSigns(); }
