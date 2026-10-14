@@ -48,8 +48,6 @@ main{padding:16px 16px 190px;display:grid;gap:16px;max-width:560px;margin:0 auto
 .fld input,.fld textarea{flex:1;min-width:0;width:100%;border:0;outline:none;background:none;font-weight:500;font-size:16px;line-height:1.5;font-family:inherit;color:var(--ink);padding:0;border-radius:0}
 .fld textarea{padding:12px 0;min-height:76px;resize:vertical}
 .fld.ta{align-items:flex-start}.fld.ta>.ic{margin-top:14px}
-.row2{display:grid;grid-template-columns:1fr 50px;gap:8px}
-.ib{width:50px;height:50px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--blue);display:grid;place-items:center}
 .seg{display:flex;background:var(--soft);border-radius:14px;padding:4px;gap:4px}
 .seg button{flex:1;min-width:0;min-height:44px;border:0;border-radius:10px;background:transparent;color:var(--mute);display:flex;gap:6px;align-items:center;justify-content:center;font-weight:700;font-size:14px;line-height:1.2;font-family:inherit;padding:0 4px;transition:background-color .18s var(--ease),color .18s,box-shadow .18s}
 .seg button[aria-pressed=true]{background:var(--card);color:var(--blue);box-shadow:var(--sh1)}
@@ -128,7 +126,7 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
 .go:disabled .n{display:none}
 #go{width:100%}
 #only{text-align:center;color:var(--ink)}
-.chips button:active,.seg button:active,.langs button:active,.go:active,.pill:active,.tile:active,.ib:active,.x:active,.soft:active{transform:scale(.97)}
+.chips button:active,.seg button:active,.langs button:active,.go:active,.pill:active,.tile:active,.x:active,.soft:active{transform:scale(.97)}
 .bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}.bar i{display:block;height:4px;width:40%;border-radius:2px;background:var(--blue);animation:go 1.2s ease-in-out infinite}
 @keyframes go{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
 [hidden]{display:none!important}
@@ -188,7 +186,6 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
   <symbol id="i-note" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h5"/></symbol>
   <symbol id="i-sign" viewBox="0 0 24 24"><path d="M3 17c2-3 3-7 5-7s0 7 2 7 2-4 4-4 1 3 3 3 2-1 4-1"/><path d="M3 21h18"/></symbol>
   <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
-  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
   <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8.2 18h6.3a3.5 3.5 0 000-7h-5a3.5 3.5 0 010-7h6.3"/></symbol>
   <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-qr" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18v2M18 14h2"/></symbol>
@@ -205,8 +202,7 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
    <section class="card">
     <div class="f" id="tripsF" hidden><div class="lab"><svg class="ic s"><use href="#i-route"/></svg>今天的行程</div><div class="chips scroll" id="trips"></div></div>
     <div class="f">
-      <div class="row2"><label class="fld"><svg class="ic"><use href="#i-co"/></svg><input type="search" id="q" placeholder="打客戶名稱找" aria-label="打客戶名稱找" autocomplete="off"></label>
-        <button type="button" class="ib" id="qGo" aria-label="找"><svg class="ic"><use href="#i-search"/></svg></button></div>
+      <label class="fld"><svg class="ic"><use href="#i-co"/></svg><input type="search" id="q" placeholder="打客戶名稱，打一個字就有提示" aria-label="打客戶名稱找" autocomplete="off"></label>
       <div id="custNow" class="note"></div>
       <div class="list big" id="cands"></div>
     </div>
@@ -355,7 +351,7 @@ function cands(list, q) {
 function pickCust(c, keepPicks) {
   S.cu00 = c.cu00; S.cuName = c.name;
   if (!$('addr').value && c.addr) $('addr').value = c.addr;
-  $('cands').innerHTML = ''; $('custNow').textContent = '✓ ' + c.name + '（' + c.cu00 + '）';
+  $('cands').innerHTML = ''; $('custNow').textContent = ''; $('q').value = c.name;   // 他 10/14：選好的名稱就放在搜尋欄裡
   head(); say('讀 IEI 移工名單…');
   return api({ api: 'iei', cu00: c.cu00, workers: S.trip ? S.trip.workers : [] }).then(function (j) { workers(j.workers, keepPicks); say(''); }).catch(function (e) { say(e.message); });
 }
@@ -407,14 +403,25 @@ function localFind(q) {
 }
 function find(ask) {
   var q = $('q').value.trim();
-  if (!q) { $('cands').innerHTML = ''; $('custNow').textContent = S.cuName ? '✓ ' + S.cuName + '（' + S.cu00 + '）' : ''; return; }
-  if (CUST && !ask) { var hit = localFind(q); cands(hit, q); if (!hit.length) $('custNow').textContent = '手機上找不到，按放大鏡問 IEI'; return; }
+  clearTimeout(qTimer);
+  if (!q) { $('cands').innerHTML = ''; $('custNow').textContent = ''; return; }
+  if (CUST && !ask) { var hit = localFind(q); cands(hit, q); if (hit.length) return; }
+  /* 沒有放大鏡了（他 10/14）：手機上找不到、或清單還沒下載好 → 停手 0.6 秒自動問 IEI（新客戶也找得到） */
+  if (!ask) { $('custNow').textContent = '在 IEI 找…'; qTimer = setTimeout(function () { find(true); }, 600); return; }
   say('在 IEI 找…');
   api({ api: 'iei', q: q }).then(function (j) { say(''); if (j.list) setCust(j.list); cands(j.cands, q); if (!j.cands.length) $('custNow').textContent = 'IEI 也找不到，換個字試試'; }).catch(function (e) { say(e.message); });
 }
-$('q').oninput = function () { if (CUST) find(); };
-$('qGo').onclick = function () { find(true); };
+var qTimer = 0;
+$('q').oninput = function () {
+  if (S.cu00 && $('q').value.trim() !== S.cuName) unpick();   // 選好之後又改字＝要換一家
+  find();
+};
 $('q').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); find(); $('q').blur(); } };
+function unpick() {
+  S.cu00 = ''; S.cuName = ''; S.workers = []; S.picks = {};
+  $('wk').innerHTML = ''; $('wk').appendChild(el('div', '先選客戶', { class: 'note', style: 'padding:12px 14px' }));
+  allBtn(); natVt(); head(); drawSigns();
+}
 /* ---------- 服務：App 的大項／細項 → IEI 服務項目（自動對好，可改） ---------- */
 function chip(box, label, on, fn) { var b = el('button', label, { type: 'button', 'aria-pressed': String(!!on) }); b.onclick = fn; box.appendChild(b); return b; }
 function cats() {
@@ -583,7 +590,7 @@ function useTrip(t) {
   head(); $('wk').innerHTML = ''; say('在 IEI 對客戶…');
   api({ api: 'iei', client: t.client, workers: t.workers }).then(function (j) {
     say('');
-    if (j.cu00) { S.cu00 = j.cu00; S.cuName = j.cust ? j.cust.name : t.client; $('custNow').textContent = '✓ ' + S.cuName + '（' + j.cu00 + '）'; $('cands').innerHTML = '';
+    if (j.cu00) { S.cu00 = j.cu00; S.cuName = j.cust ? j.cust.name : t.client; $('q').value = S.cuName; $('custNow').textContent = ''; $('cands').innerHTML = '';
       if (!$('addr').value && j.cust) $('addr').value = j.cust.addr; head(); workers(j.workers); }
     else cands(j.cands);
   }).catch(function (e) { say(e.message); });
