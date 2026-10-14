@@ -442,8 +442,9 @@ function initPad(){
       if(x1<0) return '';
       var p=Math.round(Math.min(w,h)*0.04);
       x0=Math.max(0,x0-p); y0=Math.max(0,y0-p); x1=Math.min(w-1,x1+p); y1=Math.min(h-1,y1+p);
-      var o=document.createElement('canvas'); o.width=x1-x0+1; o.height=y1-y0+1;
-      o.getContext('2d').drawImage(cv,x0,y0,o.width,o.height,0,0,o.width,o.height);
+      var cw=x1-x0+1, ch=y1-y0+1, k=Math.min(1,600/cw,300/ch);   // 縮到寬 ≤600、高 ≤300（同 App／小禾）
+      var o=document.createElement('canvas'); o.width=Math.max(1,Math.round(cw*k)); o.height=Math.max(1,Math.round(ch*k));
+      o.getContext('2d').drawImage(cv,x0,y0,cw,ch,0,0,o.width,o.height);
       return o.toDataURL('image/png');
     }
   };

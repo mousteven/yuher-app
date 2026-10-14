@@ -3576,8 +3576,10 @@ function trimSig(cv){
   x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad);
   x1=Math.min(w-1,x1+pad); y1=Math.min(h-1,y1+pad);
   var cw=x1-x0+1, ch=y1-y0+1;
-  var o=document.createElement('canvas'); o.width=cw; o.height=ch;
-  o.getContext('2d').drawImage(cv, x0,y0,cw,ch, 0,0,cw,ch);
+  /* 縮到寬 ≤600、高 ≤300（同 s.html／小禾）。不縮的話手機三倍解析度、簽滿整個螢幕一張可到 350KB，平板會撞後端 400KB 上限 */
+  var k=Math.min(1,600/cw,300/ch);
+  var o=document.createElement('canvas'); o.width=Math.max(1,Math.round(cw*k)); o.height=Math.max(1,Math.round(ch*k));
+  o.getContext('2d').drawImage(cv, x0,y0,cw,ch, 0,0,o.width,o.height);
   return o.toDataURL('image/png');
 }
 $('smOk').addEventListener('click', function(){
