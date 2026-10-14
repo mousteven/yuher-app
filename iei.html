@@ -103,6 +103,16 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .tile.ok,.tile.held,.tile.dry,.tile.auto{background:var(--soft);border-color:transparent}
 .tile.ok small,.tile.held small,.tile.dry small,.tile.auto small,.tile.absent small{color:var(--mute);font-weight:500}
 .tile.fail small{color:var(--red)}
+/* 警告單（他 10/14）：紅色左線＝「這是另一份文件」；簽名格分組，警告單那組淡紅框 */
+.card.wn{border-left:4px solid var(--red)}
+.wtag{font-size:13px;font-weight:700;color:var(--red)}
+.wrow{display:grid;gap:8px;padding:8px 14px 10px}
+.wrow+.wrow{border-top:1px solid var(--hair)}
+.wrow label{padding:0;min-height:44px}
+.wrow .seg button{min-height:40px}
+.sg{grid-column:1/-1;font-size:14px;font-weight:800;color:var(--mute);margin-top:4px}
+.sg.w{color:var(--red)}
+.tile.wt{border-color:#F3B7BB}
 .tile.flash{animation:fl 1.6s ease-out}
 @keyframes fl{from{background:var(--tint)}}
 pre{white-space:pre-wrap;word-break:break-all;font-size:13px;background:var(--soft);border-radius:14px;padding:12px;margin:0}
@@ -229,6 +239,14 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
     <input type="hidden" id="after">   <!-- 後續追蹤：他 10/14 畫掉；舊草稿有寫的照樣帶著送 -->
    </div>
    </section>
+
+   <!-- 警告單（他 10/14）：IEI 服務項目有「警告」就出現；一位移工一張，送出時跟訪談一起進 IEI 的「警告單」 -->
+   <section class="card wn" id="wnF" hidden>
+    <div class="sh"><svg class="ic"><use href="#i-note"/></svg>IEI 警告單<span class="sp"></span><span class="wtag">每位移工各開一張</span></div>
+    <div class="f"><div class="lab">開給誰、第幾次</div><div class="list" id="wnW"></div></div>
+    <div class="f"><div class="lab">違反哪幾項（可以複選）</div><div class="list" id="wnI"></div>
+      <label class="fld ta" id="wnOF" hidden><svg class="ic"><use href="#i-pen"/></svg><textarea id="wnO" aria-label="其他：寫清楚" placeholder="其他：寫清楚（例：10/12 宿舍點名未到）"></textarea></label></div>
+   </section>
   </div>
 
   <section class="card">
@@ -282,19 +300,24 @@ var NATL = { '菲律賓': '英', '越南': '越', '印尼': '印', '泰國': '�
 var TL = {
   '英': { worker: 'Worker', todo: 'Tap to sign', signed: 'Signed', dry: 'Test run', absent: 'Absent', up: 'Sending…', fail: 'Not sent. Sign again',
           hint: 'Please sign here.', clear: 'Clear', resign: 'Sign again', next: 'Next', done: 'Done', cancel: 'Cancel',
-          needSign: 'Please sign first', proc: 'What we did', res: 'Result' },
+          needSign: 'Please sign first', proc: 'What we did', res: 'Result',
+          warn: 'Warning letter', nth: ['1st warning', '2nd warning', '3rd warning'], vio: 'Rules broken', three: 'After three warning letters, you will be sent back to your home country.' },
   '越': { worker: 'Công nhân', todo: 'Chạm để ký', signed: 'Đã ký', dry: 'Chạy thử', absent: 'Vắng mặt', up: 'Đang gửi…', fail: 'Chưa gửi được, ký lại',
           hint: 'Vui lòng ký tên tại đây.', clear: 'Xóa', resign: 'Ký lại', next: 'Tiếp theo', done: 'Xong', cancel: 'Hủy',
-          needSign: 'Vui lòng ký tên trước', proc: 'Nội dung xử lý', res: 'Kết quả' },
+          needSign: 'Vui lòng ký tên trước', proc: 'Nội dung xử lý', res: 'Kết quả',
+          warn: 'Thư cảnh cáo', nth: ['Cảnh cáo lần 1', 'Cảnh cáo lần 2', 'Cảnh cáo lần 3'], vio: 'Các vi phạm', three: 'Nhận đủ ba thư cảnh cáo sẽ bị đưa về nước.' },
   '印': { worker: 'Pekerja', todo: 'Ketuk untuk tanda tangan', signed: 'Sudah', dry: 'Uji coba', absent: 'Tidak hadir', up: 'Mengirim…', fail: 'Gagal terkirim, tanda tangan lagi',
           hint: 'Silakan tanda tangan di sini.', clear: 'Hapus', resign: 'Ulangi', next: 'Berikutnya', done: 'Selesai', cancel: 'Batal',
-          needSign: 'Silakan tanda tangan dulu', proc: 'Proses penanganan', res: 'Hasil' },
+          needSign: 'Silakan tanda tangan dulu', proc: 'Proses penanganan', res: 'Hasil',
+          warn: 'Surat peringatan', nth: ['Peringatan ke-1', 'Peringatan ke-2', 'Peringatan ke-3'], vio: 'Pelanggaran', three: 'Setelah menerima tiga surat peringatan, Anda akan dipulangkan ke negara asal.' },
   '泰': { worker: 'แรงงาน', todo: 'แตะเพื่อเซ็น', signed: 'เซ็นแล้ว', dry: 'ทดลอง', absent: 'ไม่อยู่', up: 'กำลังส่ง…', fail: 'ส่งไม่สำเร็จ เซ็นใหม่',
           hint: 'กรุณาเซ็นชื่อที่นี่', clear: 'ลบ', resign: 'เซ็นใหม่', next: 'ถัดไป', done: 'เสร็จ', cancel: 'ยกเลิก',
-          needSign: 'กรุณาเซ็นชื่อก่อน', proc: 'การดำเนินการ', res: 'ผลลัพธ์' },
+          needSign: 'กรุณาเซ็นชื่อก่อน', proc: 'การดำเนินการ', res: 'ผลลัพธ์',
+          warn: 'หนังสือเตือน', nth: ['เตือนครั้งที่ 1', 'เตือนครั้งที่ 2', 'เตือนครั้งที่ 3'], vio: 'ข้อที่ทำผิด', three: 'หากได้รับหนังสือเตือนครบสามครั้ง จะถูกส่งกลับประเทศ' },
   '中': { worker: '移工', todo: '點這裡簽', signed: '已簽', dry: '試跑', absent: '不在', up: '上傳中…', fail: '沒傳上去，再簽',
           hint: '請在這裡簽名', clear: '清除', resign: '重簽', next: '下一位', done: '簽好了', cancel: '取消',
-          needSign: '還沒簽', proc: '處理經過', res: '處理結果' }
+          needSign: '還沒簽', proc: '處理經過', res: '處理結果',
+          warn: '警告單', nth: ['第一次警告', '第二次警告', '第三次警告'], vio: '違反事項', three: '收到警告書三次，將遣送回國。' }
 };
 function $(id) { return document.getElementById(id); }
 function say(t) { $('msg').textContent = t || ''; }
@@ -309,7 +332,7 @@ function seg(id, v) { var b = $(id); if (v != null) b.dataset.v = String(v); [].
 ['method', 'labor'].forEach(function (id) {
   $(id).addEventListener('click', function (e) { var x = e.target.closest('button'); if (!x) return; seg(id, x.dataset.v); sides(); });
 });
-function sides() { $('wkF').hidden = $('labor').dataset.v === '2'; drawSigns(); check(); }
+function sides() { $('wkF').hidden = $('labor').dataset.v === '2'; drawWarn(); drawSigns(); check(); }
 function head() {
   $('ttl').textContent = S.cuName || S.client || '選一個客戶';
   $('sub').textContent = [$('date').value, S.trip && S.trip.slot, X && X.svid ? 'IEI ' + X.svid + (X.locked ? '・已送簽核' : '・已送出') : '',
@@ -363,7 +386,7 @@ function natVt() {
   var p = picked(), nats = p.map(function (w) { return w.nat; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
   S.nat = nats.length === 1 ? nats[0] : '';
   $('natNote').textContent = nats.length > 1 ? '⚠ IEI 一張只能一個國籍，現在勾到 ' + nats.join('、') + '，請分開送' : (S.nat ? '國籍：' + S.nat : '');
-  langs();
+  langs(); drawWarn();
   if (S.vtEdited) return;
   var d = new Date($('date').value), best = null;
   p.forEach(function (w) { var t = Math.round((d - new Date(w.la21)) / 864e5); if (isNaN(t)) return; var v = Math.min(6, Math.max(1, Math.ceil(t / 60))); if (best === null || v < best) best = v; });
@@ -425,6 +448,7 @@ function items() {
   });
   var now = S.items.slice().sort(function (a, b) { return a - b; }).map(function (n) { return META.items[n - 1]; }).join('、');
   $('ieiNow').textContent = 'IEI 服務項目：' + (now || '還沒選') + '（' + (S.auto ? '自動對好，' : '') + ($('itemsAll').hidden ? '點這裡改' : '點這裡收起') + '）';
+  drawWarn(); drawSigns();
 }
 $('ieiNow').onclick = function () { $('itemsAll').hidden = !$('itemsAll').hidden; items(); };
 /* 細項的片語（Phrase.gs 改寫過的完整句子，譯文校對過）：點了記在 S.pk，有 {甲|乙} 的在片語後面出現小選項 */
@@ -564,6 +588,51 @@ function useTrip(t) {
     else cands(j.cands);
   }).catch(function (e) { say(e.message); });
 }
+/* ---------- 警告單（他 10/14：服務項目有「警告」→ 同一頁長出 IEI 警告單；IEI 一張只能一位移工，勾幾位開幾張） ----------
+   WN.la 開給誰、fq 第幾次（'1'～'3'）、hand 他自己點過第幾次（不再自動改）、n IEI 已經有幾張（null＝查詢中）、seen 出現過的移工（第一次出現預設要開）、it 違規項目 1～8 */
+var WN = { la: {}, fq: {}, hand: {}, n: {}, seen: {}, it: [] };
+function wnOn() { return !!META && $('labor').dataset.v !== '2' && S.items.indexOf(META.items.indexOf('警告') + 1) !== -1; }
+function wnWk() { return wnOn() ? picked().filter(function (w) { return WN.la[w.la00]; }) : []; }
+function wnFq(la) { return WN.fq[la] || '1'; }
+function wnText(n, nat) { return META.warn[n - 1][nat ? META.warnL[nat] || 1 : 0]; }   // nat 空白＝中文
+function drawWarn() {
+  var on = wnOn(); $('wnF').hidden = !on;
+  if (!on) return;
+  var p = picked(), ask = [], box = $('wnW'), ib = $('wnI');
+  p.forEach(function (w) { if (!WN.seen[w.la00]) { WN.seen[w.la00] = 1; WN.la[w.la00] = 1; } if (!(w.la00 in WN.n)) { WN.n[w.la00] = null; ask.push(w); } });
+  box.innerHTML = '';
+  if (!p.length) box.appendChild(el('div', '先在上面勾移工', { class: 'note', style: 'padding:12px 14px' }));
+  p.forEach(function (w) {
+    var row = el('div', null, { class: 'wrow' }), lab = el('label'), c = el('input', null, { type: 'checkbox' }), t = el('span', w.zh || w.en), n = WN.n[w.la00];
+    t.appendChild(el('small', n === null ? 'IEI 查詢中…' : n === '?' ? '查不到 IEI 紀錄，請自己選第幾次' : n ? 'IEI 已經有 ' + n + ' 張' : 'IEI 還沒有他的警告單'));
+    c.checked = !!WN.la[w.la00];
+    c.onchange = function () { if (c.checked) WN.la[w.la00] = 1; else delete WN.la[w.la00]; drawWarn(); drawSigns(); };
+    lab.appendChild(c); lab.appendChild(t); row.appendChild(lab);
+    if (WN.la[w.la00]) {
+      var sg = el('div', null, { class: 'seg', role: 'group', 'aria-label': (w.zh || w.en) + ' 第幾次' });
+      ['第一次', '第二次', '第三次'].forEach(function (x, i) {
+        var b = el('button', x, { type: 'button', 'aria-pressed': String(wnFq(w.la00) === String(i + 1)) });
+        b.onclick = function () { WN.fq[w.la00] = String(i + 1); WN.hand[w.la00] = 1; drawWarn(); };
+        sg.appendChild(b);
+      });
+      row.appendChild(sg);
+    }
+    box.appendChild(row);
+  });
+  ib.innerHTML = '';
+  META.warn.forEach(function (x, i) {   // 中文＋移工的語言（IEI 自己的譯文；沒有泰文，泰國看英文）
+    var no = i + 1, lab = el('label'), c = el('input', null, { type: 'checkbox' }), t = el('span', no + '. ' + x[0]);
+    if (S.nat) t.appendChild(el('small', wnText(no, S.nat)));
+    c.checked = WN.it.indexOf(no) !== -1;
+    c.onchange = function () { var k = WN.it.indexOf(no); if (c.checked && k === -1) WN.it.push(no); if (!c.checked && k !== -1) WN.it.splice(k, 1); $('wnOF').hidden = WN.it.indexOf(8) === -1; check(); };
+    lab.appendChild(c); lab.appendChild(t); ib.appendChild(lab);
+  });
+  $('wnOF').hidden = WN.it.indexOf(8) === -1;
+  if (ask.length && S.cuName) api({ api: 'warnN', cu: S.cuName, ws: ask.map(function (w) { return { la00: w.la00, zh: w.zh }; }) }).then(function (j) {
+    for (var k in j.n) { WN.n[k] = j.n[k]; if (!WN.hand[k]) WN.fq[k] = String(Math.min(3, j.n[k] + 1)); }   // 已經有 1 張 → 先選第二次
+  }, function () { ask.forEach(function (w) { WN.n[w.la00] = '?'; }); }).then(drawWarn);
+}
+
 /* ---------- 草稿 ---------- */
 function draft() {
   var p = picked(), l = $('labor').dataset.v, x = S.cat >= 0 && S.sub >= 0 ? META.cats[S.cat] : null;
@@ -573,7 +642,9 @@ function draft() {
     cuP: texts(0)[0], cuA: texts(0)[1], same: true, after: $('after').value.trim(),
     pk: S.pk, sl: S.sl, px: $('p').value.trim(), ax: $('a').value.trim(),   // 片語＋補充欄位＋自己打的；cuP／cuA 是組好的中文（送進 IEI 的）
     la00: l === '2' ? [] : p.map(function (w) { return w.la00; }), names: l === '2' ? [] : p.map(function (w) { return w.zh || w.en; }),
-    wk: l === '2' ? [] : p.map(function (w) { return { la00: w.la00, en: w.en, zh: w.zh }; }) };
+    wk: l === '2' ? [] : p.map(function (w) { return { la00: w.la00, en: w.en, zh: w.zh }; }),
+    warn: wnOn() ? { la: wnWk().map(function (w) { return w.la00; }), fq: wnWk().reduce(function (o, w) { o[w.la00] = wnFq(w.la00); return o; }, {}),
+                     it: WN.it.slice().sort(function (a, b) { return a - b; }), other: $('wnO').value.trim() } : null };
 }
 /* 簽名或開 QR 之前先存一份（QR 網址要有草稿編號）；內容沒變就不重存 */
 function ensureDraft() {
@@ -589,7 +660,8 @@ function fill(d) {
   seg('method', d.method); seg('labor', d.labor);
   S.pk = d.pk || { d: {}, r: {} }; S.sl = d.sl || {};   // 舊草稿沒有 pk：整段當成自己打的（跟以前一樣機器翻）
   $('p').value = (d.pk ? d.px : d.cuP) || ''; $('a').value = (d.pk ? d.ax : d.cuA) || ''; $('after').value = d.after || '';
-  S.picks = {}; (d.la00 || []).forEach(function (x) { S.picks[x] = 1; });
+  S.picks = {}; (d.la00 || []).forEach(function (x) { S.picks[x] = 1; WN.seen[x] = 1; });
+  if (d.warn) { WN.la = {}; d.warn.la.forEach(function (x) { WN.la[x] = 1; }); WN.fq = d.warn.fq || {}; WN.hand = Object.assign({}, WN.fq); WN.it = d.warn.it || []; $('wnO').value = d.warn.other || ''; }
   var hit = d.sub && findSub(d.cat, d.sub);
   if (hit) { S.cat = hit[0]; S.sub = hit[1]; S.auto = META.lfa[d.sub] || 0; }
   cats(); items(); sides();
@@ -600,11 +672,18 @@ function slots() {
   var l = $('labor').dataset.v, out = [{ k: 'lbr', role: '翻譯', name: '翻譯（我）' }];
   if (l !== '3') out.push({ k: 'cu', role: '雇主', name: S.cuName || '雇主' });
   if (l !== '2') picked().forEach(function (w) { out.push({ k: 'w:' + w.la00, role: '移工', name: w.zh || w.en, sub: w.zh ? w.en : '', en: w.en, L: TL[NATL[w.nat]] || null, ph: PH_L[w.nat] || 0 }); });
+  wnWk().forEach(function (w) {   // 警告單三格：外國人、雇主、見證人（＝他，存好的簽名自動帶）
+    var g = '警告單・' + (w.zh || w.en);
+    out.push({ k: 'wl:' + w.la00, role: '移工', g: g, wn: w, name: w.zh || w.en, sub: w.zh ? w.en : '', en: w.en, L: TL[NATL[w.nat]] || null, ph: PH_L[w.nat] || 0 },
+             { k: 'wc:' + w.la00, role: '雇主', g: g, wn: w, name: S.cuName || '雇主', sub: '雇主' },
+             { k: 'wb:' + w.la00, role: '見證人', g: g, wn: w, name: '見證人（我）', sub: '仲介' });
+  });
   return out;
 }
+function mine(k) { return k === 'lbr' || k.indexOf('wb:') === 0; }   // 用他存好的簽名的格子
 function lbrSaved() { return X ? X.lbrSaved : META.lbrSaved; }
 function locked() { return !!(X && X.locked); }
-function st(k) { return ST[k] || (k === 'lbr' && lbrSaved() ? 'auto' : 'todo'); }
+function st(k) { return ST[k] || (mine(k) && lbrSaved() ? 'auto' : 'todo'); }
 function stText(p, s) {   // 移工的格子用他的語言；翻譯、雇主維持中文
   var L = p.L; if (!L) return STX[s];
   return { ok: '✓ ' + L.signed, held: '✓ ' + L.signed, dry: '✓ ' + L.dry, todo: L.todo, absent: L.absent, up: L.up, fail: L.fail }[s];
@@ -613,13 +692,15 @@ function nSigned() { return slots().filter(function (p) { return /ok|held|dry|au
 function todo() { return slots().filter(function (p) { return /todo|fail/.test(st(p.k)); }); }
 function unsigned() { return slots().filter(function (p) { return !/ok|dry|auto/.test(st(p.k)); }); }   // 送簽核前要提醒的（還沒進 IEI 的都算）
 function drawSigns() {
-  var box = $('signs'), ql = $('qppl'), all = slots(); box.innerHTML = ''; ql.innerHTML = '';
+  var box = $('signs'), ql = $('qppl'), all = slots(), hasG = all.some(function (p) { return p.g; }), g0 = ''; box.innerHTML = ''; ql.innerHTML = '';
   all.forEach(function (p) {
-    var s = st(p.k), b = el('button', null, { type: 'button', class: 'tile ' + s + (FL[p.k] ? ' flash' : '') });
+    var g = p.g || (hasG ? '訪談紀錄表' : '');   // 有警告單才分組
+    if (g && g !== g0) { box.appendChild(el('div', g, { class: 'sg' + (p.g ? ' w' : '') })); g0 = g; }
+    var s = st(p.k), b = el('button', null, { type: 'button', class: 'tile ' + s + (p.g ? ' wt' : '') + (FL[p.k] ? ' flash' : '') });
     b.appendChild(el('b', p.name)); if (p.sub) b.appendChild(el('i', p.sub)); b.appendChild(el('small', stText(p, s)));
     b.onclick = function () { if (locked()) return say('已送簽核，IEI 鎖住了，不能再補簽'); board([p], false); };
     box.appendChild(b);
-    if (p.k !== 'lbr') { var li = el('li', p.name, { class: s + (FL[p.k] ? ' flash' : '') }); li.appendChild(el('span', s === 'todo' ? '未簽' : STX[s])); ql.appendChild(li); }
+    if (!mine(p.k)) { var li = el('li', (p.g ? '警告單・' : '') + p.name, { class: s + (FL[p.k] ? ' flash' : '') }); li.appendChild(el('span', s === 'todo' ? '未簽' : STX[s])); ql.appendChild(li); }
   });
   FL = {};
   $('signH').textContent = '簽名 ' + nSigned() + '／' + all.length;
@@ -645,7 +726,7 @@ var cv = $('cv'), cx = cv.getContext('2d'), inked = false, down = false;
 function board(q, relay) { if (!q.length) return; BQ = q; BI = 0; RELAY = relay; $('board').hidden = false; document.body.style.overflow = 'hidden'; page(); }
 function page() {
   var p = BQ[BI], last = BI === BQ.length - 1, L = p.L || TL['中'], zh = L === TL['中'];
-  $('brole').textContent = (p.L ? L.worker : p.role) + (RELAY ? (zh ? '・第 ' + (BI + 1) + '／' + BQ.length + ' 位' : ' · ' + (BI + 1) + ' / ' + BQ.length) : '');
+  $('brole').textContent = (p.wn ? L.warn + '・' : '') + (p.L ? L.worker : p.role) + (RELAY ? (zh ? '・第 ' + (BI + 1) + '／' + BQ.length + ' 位' : ' · ' + (BI + 1) + ' / ' + BQ.length) : '');
   $('bwho').textContent = p.L && p.en ? p.en : p.name; $('bzh').textContent = p.L && p.en && p.sub ? p.name : '';   // 移工：英文名最大、中文名在下面
   $('bsay').textContent = L.hint;
   $('b1').textContent = RELAY ? L.absent : L.cancel; $('b2').textContent = RELAY ? L.resign : L.clear;
@@ -658,12 +739,23 @@ function page() {
 }
 /* 簽名前先看處理經過／結果：移工看預覽那一份譯文（＝送進 IEI 的），雇主看中文，翻譯自己不用看 */
 function readBox(p, L) {
+  if (p.wn) return warnBox(p, L);
   var zh = texts(0), t = p.L && L !== TL['中'] ? texts(p.ph) : zh;
   $('bread').hidden = p.k === 'lbr' || (!zh[0] && !zh[1]);
   if ($('bread').hidden) return;
   if (!t) translate(trKey()).then(function () { if (BQ[BI] === p && !$('board').hidden) readBox(p, L); });
   $('bsum').textContent = L.proc; var box = $('btx'); box.innerHTML = '';
   [[L.proc, (t || zh)[0]], [L.res, (t || zh)[1]]].forEach(function (r) { if (!r[1]) return; var e = el('p', r[1]); e.insertBefore(el('b', r[0]), e.firstChild); box.appendChild(e); });
+}
+/* 警告單的格子：看的是警告單（第幾次、違反哪幾項、三次遣返），移工看他的語言 */
+function warnBox(p, L) {
+  $('bread').hidden = mine(p.k);
+  if ($('bread').hidden) return;
+  var nat = p.L && L !== TL['中'] ? p.wn.nat : '', box = $('btx'), other = $('wnO').value.trim();
+  $('bsum').textContent = L.warn + '・' + L.nth[+wnFq(p.wn.la00) - 1]; box.innerHTML = '';
+  var e = el('p'); e.appendChild(el('b', L.vio)); box.appendChild(e);
+  WN.it.slice().sort(function (a, b) { return a - b; }).forEach(function (n) { box.appendChild(el('p', '• ' + wnText(n, nat) + (n === 8 && other ? '：' + other : ''))); });
+  box.appendChild(el('p', L.three));
 }
 function next() { if (++BI < BQ.length) page(); else closeBoard(); }
 function closeBoard() { $('board').hidden = true; document.body.style.overflow = ''; drawSigns(); }
@@ -733,7 +825,8 @@ function check() {
     return;
   }
   var l = $('labor').dataset.v, bad = !S.cu00 ? '先選 IEI 客戶' : !S.items.length ? '至少選一個服務項目'
-    : l !== '2' && !picked().length ? '至少勾一位移工' : l !== '2' && !S.nat ? 'IEI 一張只能一個國籍' : '';
+    : l !== '2' && !picked().length ? '至少勾一位移工' : l !== '2' && !S.nat ? 'IEI 一張只能一個國籍'
+    : wnOn() && !wnWk().length ? '警告單至少開給一位移工' : wnOn() && !WN.it.length ? '警告單至少勾一項違規' : '';
   $('go').disabled = !!bad;
   if (bad) goSet(bad); else goSet('送出到 IEI', String(nSigned()), '送出到 IEI（' + nSigned() + ' 個簽名）');
 }
@@ -752,7 +845,7 @@ $('go').onclick = function () {
       $('dryOut').textContent = j.form; $('dryOut').hidden = false; check(); return;
     }
     apply(j.state);
-    say('已送出 ✓ IEI 編號 ' + j.svid + (j.flushed ? '，' + j.flushed + ' 個簽名已補進去' : '') + (j.fail.length ? '。沒補成：' + j.fail.join('；') : ''));
+    say('已送出 ✓ IEI 編號 ' + j.svid + (j.warns ? '，警告單 ' + j.warns + ' 張' : '') + (j.flushed ? '，' + j.flushed + ' 個簽名已補進去' : '') + (j.fail.length ? '。沒補成：' + j.fail.join('；') : ''));
     finish();
   }).catch(function (e) { say(e.message); check(); });
 };

@@ -32,7 +32,7 @@ h2 small{display:block;font-size:14px;font-weight:500;color:var(--mute)}
 .ppl button:disabled em{font-size:15px;font-weight:500;color:var(--mute)}
 .txt{margin:0;display:grid;gap:2px;background:var(--soft);border-radius:14px;padding:12px 16px}
 .txt dt{font-size:14px;font-weight:700;color:var(--mute)}
-.txt dd{margin:0 0 8px;font-size:18px;line-height:1.5;font-weight:700}
+.txt dd{margin:0 0 8px;white-space:pre-line;font-size:18px;line-height:1.5;font-weight:700}
 .txt dd .zh{display:block;font-size:14px;font-weight:500;color:var(--mute)}
 .note{font-size:14px;color:var(--mute)}
 .go{width:100%;min-height:56px;border:0;border-radius:16px;background:var(--blue);color:#fff;font-weight:700;font-size:17px;line-height:1.2;font-family:inherit;font-family:inherit;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 20px;text-align:left;box-shadow:0 8px 20px rgba(0,87,184,.25)}
@@ -81,22 +81,27 @@ var T = {
   '英': { pick: 'Tap your name', read: 'Please read', proc: 'What we did', res: 'Result', go: 'I have read it. Sign', hint: 'Please sign here.',
           back: 'Back', clear: 'Clear', submit: 'Submit', sending: 'Sending…', thanks: 'Thank you!', thanksMsg: 'Your signature has been sent.',
           signed: 'Signed', next: 'Back to the list', zh: 'The Chinese text is the official record.', needSign: 'Please sign first',
-          err: 'Could not send. Please try again.', taken: 'This name has already signed.' },
+          err: 'Could not send. Please try again.', taken: 'This name has already signed.',
+          warn: 'Warning letter', nth: ['1st warning', '2nd warning', '3rd warning'], vio: 'Rules broken', three: 'After three warning letters, you will be sent back to your home country.' },
   '越': { pick: 'Chạm vào tên của bạn', read: 'Vui lòng đọc', proc: 'Nội dung xử lý', res: 'Kết quả', go: 'Tôi đã đọc. Ký tên', hint: 'Vui lòng ký tên tại đây.',
           back: 'Quay lại', clear: 'Xóa', submit: 'Gửi', sending: 'Đang gửi…', thanks: 'Cảm ơn bạn!', thanksMsg: 'Chữ ký của bạn đã được gửi.',
           signed: 'Đã ký', next: 'Quay lại danh sách', zh: 'Bản tiếng Trung là bản chính thức.', needSign: 'Vui lòng ký tên trước',
-          err: 'Không gửi được. Vui lòng thử lại.', taken: 'Tên này đã ký rồi.' },
+          err: 'Không gửi được. Vui lòng thử lại.', taken: 'Tên này đã ký rồi.',
+          warn: 'Thư cảnh cáo', nth: ['Cảnh cáo lần 1', 'Cảnh cáo lần 2', 'Cảnh cáo lần 3'], vio: 'Các vi phạm', three: 'Nhận đủ ba thư cảnh cáo sẽ bị đưa về nước.' },
   '印': { pick: 'Ketuk nama Anda', read: 'Silakan baca', proc: 'Proses penanganan', res: 'Hasil', go: 'Sudah saya baca. Tanda tangan', hint: 'Silakan tanda tangan di sini.',
           back: 'Kembali', clear: 'Hapus', submit: 'Kirim', sending: 'Mengirim…', thanks: 'Terima kasih!', thanksMsg: 'Tanda tangan Anda sudah terkirim.',
           signed: 'Sudah', next: 'Kembali ke daftar', zh: 'Versi bahasa Mandarin adalah catatan resmi.', needSign: 'Silakan tanda tangan dulu',
-          err: 'Gagal mengirim. Silakan coba lagi.', taken: 'Nama ini sudah tanda tangan.' },
+          err: 'Gagal mengirim. Silakan coba lagi.', taken: 'Nama ini sudah tanda tangan.',
+          warn: 'Surat peringatan', nth: ['Peringatan ke-1', 'Peringatan ke-2', 'Peringatan ke-3'], vio: 'Pelanggaran', three: 'Setelah menerima tiga surat peringatan, Anda akan dipulangkan ke negara asal.' },
   '泰': { pick: 'แตะชื่อของคุณ', read: 'กรุณาอ่าน', proc: 'การดำเนินการ', res: 'ผลลัพธ์', go: 'อ่านแล้ว เซ็นชื่อ', hint: 'กรุณาเซ็นชื่อที่นี่',
           back: 'กลับ', clear: 'ลบ', submit: 'ส่ง', sending: 'กำลังส่ง…', thanks: 'ขอบคุณ!', thanksMsg: 'ส่งลายเซ็นของคุณแล้ว',
           signed: 'เซ็นแล้ว', next: 'กลับไปที่รายชื่อ', zh: 'ฉบับภาษาจีนเป็นบันทึกทางการ', needSign: 'กรุณาเซ็นชื่อก่อน',
-          err: 'ส่งไม่สำเร็จ กรุณาลองอีกครั้ง', taken: 'ชื่อนี้เซ็นแล้ว' },
+          err: 'ส่งไม่สำเร็จ กรุณาลองอีกครั้ง', taken: 'ชื่อนี้เซ็นแล้ว',
+          warn: 'หนังสือเตือน', nth: ['เตือนครั้งที่ 1', 'เตือนครั้งที่ 2', 'เตือนครั้งที่ 3'], vio: 'ข้อที่ทำผิด', three: 'หากได้รับหนังสือเตือนครบสามครั้ง จะถูกส่งกลับประเทศ' },
   '中': { pick: '點你的名字', read: '請看一下', proc: '處理經過', res: '處理結果', go: '看完了，請簽名', hint: '請在這裡簽名',
           back: '返回', clear: '清除', submit: '送出', sending: '送出中…', thanks: '謝謝！', thanksMsg: '簽名已送出。',
-          signed: '已簽', next: '回名單', zh: '', needSign: '請先簽名', err: '沒送出去，請再試一次', taken: '這個名字已經簽過了' }
+          signed: '已簽', next: '回名單', zh: '', needSign: '請先簽名', err: '沒送出去，請再試一次', taken: '這個名字已經簽過了',
+          warn: '警告單', nth: ['第一次警告', '第二次警告', '第三次警告'], vio: '違反事項', three: '收到警告書三次，將遣送回國。' }
 };
 var INFO = null, ME = null, L = T['中'];
 function $(id) { return document.getElementById(id); }
@@ -134,9 +139,9 @@ function list() {
   var h = el('h2', W.pick); h.appendChild(el('small', '點你的名字')); a.appendChild(h);
   var ul = el('ul', null, { class: 'ppl' });
   INFO.people.slice().sort(function (x, y) { return x.signed - y.signed; }).forEach(function (p) {
-    var lang = p.role === 'cu' ? T['中'] : W, b = el('button', null, { type: 'button' }), nm = el('b', p.role === 'cu' ? p.zh : (p.en || p.zh));
-    if (p.role !== 'cu' && p.en && p.zh) nm.appendChild(el('small', p.zh));
-    if (p.role === 'cu') nm.appendChild(el('small', '雇主'));
+    var cu = p.role === 'cu' || p.role === 'wc', lang = cu ? T['中'] : W, b = el('button', null, { type: 'button' }), nm = el('b', cu ? p.zh : (p.en || p.zh));
+    var tag = [!cu && p.en && p.zh ? p.zh : '', cu ? '雇主' : '', p.role === 'wl' || p.role === 'wc' ? lang.warn : ''].filter(Boolean).join(' · ');   // 警告單是另一份，名字會出現兩次
+    if (tag) nm.appendChild(el('small', tag));
     b.appendChild(nm); b.appendChild(el('em', p.signed ? '✓ ' + lang.signed : '→'));
     b.disabled = p.signed;
     b.onclick = function () { ME = p; L = lang; readIt(); };
@@ -147,10 +152,12 @@ function list() {
 /* 第二步：看處理經過／結果（移工看 IEI 存的譯文，中文附在下面；雇主看中文） */
 function readIt() {
   window.scrollTo(0, 0);
-  var a = $('app'), cu = ME.role === 'cu', tx = cu ? INFO.cu : INFO.w; a.innerHTML = '';
-  var h = el('h2', cu ? ME.zh : (ME.en || ME.zh)); h.appendChild(el('small', L.read)); a.appendChild(h);
-  var dl = el('dl', null, { class: 'txt' });
-  [[L.proc, cu ? tx.p : tx.pt, cu ? '' : tx.p], [L.res, cu ? tx.a : tx.at, cu ? '' : tx.a]].forEach(function (r) {
+  var a = $('app'), cu = ME.role === 'cu' || ME.role === 'wc', tx = cu ? INFO.cu : INFO.w, wn = ME.role === 'wl' || ME.role === 'wc'; a.innerHTML = '';
+  var h = el('h2', cu ? ME.zh : (ME.en || ME.zh)); h.appendChild(el('small', wn ? L.warn + ' · ' + L.nth[(+ME.fq || 1) - 1] : L.read)); a.appendChild(h);
+  var dl = el('dl', null, { class: 'txt' }), W = INFO.warn || { zh: [], tl: [], other: '' };
+  /* 警告單：違反哪幾項（移工看 IEI 的譯文、中文附在下面）＋三次遣返；訪談：處理經過／結果 */
+  (wn ? [[L.vio, (cu ? W.zh : W.tl).join('\n') + (W.other ? '\n' + W.other : ''), cu ? '' : W.zh.join('、')], [L.warn, L.three, '']]
+      : [[L.proc, cu ? tx.p : tx.pt, cu ? '' : tx.p], [L.res, cu ? tx.a : tx.at, cu ? '' : tx.a]]).forEach(function (r) {
     if (!r[1] && !r[2]) return;
     dl.appendChild(el('dt', r[0])); var dd = el('dd', r[1] || r[2]); if (r[1] && r[2]) dd.appendChild(el('span', r[2], { class: 'zh' })); dl.appendChild(dd);
   });
