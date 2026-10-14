@@ -617,7 +617,24 @@ function langs() {
 var PH_J_ = [['翻譯', '，', '，並', '，並', '。', ''], ['The interpreter ', ', ', ', and ', ' and ', '.', ' '],
   ['Phiên dịch viên đã ', ', ', ', và ', ' và ', '.', ' '], ['Penerjemah ', ', ', ', dan ', ' dan ', '.', ' '], ['ล่าม', ' ', ' และ', ' และ', '', ' ']];
 /* ph＝PH_ 的一項；pk＝{d:{片語序號:選項序號}, r:{…}}；sl＝補充欄位的值；L＝0 中 1 英 2 越 3 印 4 泰；fp／fa＝他自己打的（已經是 L 語言）。照片語順序排，不照點的順序 */
-function phCompose(ph, pk, sl, L, fp, fa) {
+/* 雇主是個人（家庭類，例如「趙守一」）→ 片語裡的「工廠」換成雇主（他 10/15：英文不要 factory，要 employer）。
+   只換片語組出來的句子，他自己打的字不動。L 同上。順序有意義：先換「工廠與雇主」「工廠主管」「到工廠」這種，最後才換單獨的「工廠」。 */
+function phPerson(name) {
+  name = String(name || '').replace(/\s/g, '');
+  return /^[一-鿿]{2,4}$/.test(name) && !/公司|廠|企業|實業|工業|社|行|商|店|場|院|會|所|園|館|坊|中心|農|宮|寺|堂/.test(name);
+}
+var PH_FAM_ = [
+  [[/工廠與雇主|雇主與工廠/g, '雇主'], [/工廠主管/g, '雇主'], [/(到|至|送達|送至)工?廠/g, '$1雇主家'], [/工廠全景/g, '雇主家環境'], [/工廠規則/g, '家中規矩'], [/駐廠/g, '在雇主家'], [/工廠/g, '雇主']],
+  [[/the (?:factory and the employer|employer and the factory)/g, 'the employer'], [/the factory supervisor/g, 'the employer'], [/\b(went to|at|visit) the factory/g, "$1 the employer's home"],
+   [/the whole factory/g, "the employer's home"], [/the factory rules/g, 'the house rules'], [/\bThe factory\b/g, 'The employer'], [/\bthe factory\b/g, 'the employer']],
+  [[/nhà máy và chủ thuê|chủ thuê và nhà máy/g, 'chủ thuê'], [/quản lý nhà máy/g, 'chủ thuê'], [/(đến|tại|tham quan|ở lại) nhà máy/g, '$1 nhà chủ thuê'], [/toàn cảnh nhà máy/g, 'toàn cảnh nhà chủ thuê'],
+   [/nội quy nhà máy/g, 'nội quy gia đình'], [/Nhà máy/g, 'Chủ thuê'], [/nhà máy/g, 'chủ thuê']],
+  [[/pabrik dan majikan|majikan dan pabrik/g, 'majikan'], [/atasan (?:di )?pabrik/g, 'majikan'], [/seluruh area pabrik/g, 'rumah majikan'], [/\b(datang ke|berkunjung ke|di) pabrik/g, '$1 rumah majikan'], [/(mengantar [^,.]*?ke) pabrik/g, '$1 rumah majikan'],
+   [/peraturan pabrik/g, 'peraturan rumah'], [/Pabrik/g, 'Majikan'], [/pabrik/g, 'majikan']],
+  [[/โรงงานและนายจ้าง|นายจ้างและโรงงาน/g, 'นายจ้าง'], [/หัวหน้าโรงงาน/g, 'นายจ้าง'], [/(ที่|ไปดู|ไป)โรงงาน/g, '$1บ้านนายจ้าง'], [/กฎของโรงงาน/g, 'กฎของบ้าน'], [/ภาพรวมของโรงงาน/g, 'ภาพรวมของบ้านนายจ้าง'], [/โรงงาน/g, 'นายจ้าง']]
+];
+function phFam(t, L) { return PH_FAM_[L].reduce(function (s, r) { return s.replace(r[0], r[1]); }, t); }
+function phCompose(ph, pk, sl, L, fp, fa, fam) {   // fam：雇主是個人 → 工廠換雇主
   var J = PH_J_[L];
   function fill(row, o) {
     return row[L].replace(/\{([^}]*)\}/, function (m, x) { x = x.split('|'); return x[o] || x[0]; })
@@ -625,7 +642,7 @@ function phCompose(ph, pk, sl, L, fp, fa) {
   }
   function pick(list, m) {
     return Object.keys(m || {}).map(Number).sort(function (a, b) { return a - b; }).filter(function (i) { return list && list[i]; })
-      .map(function (i) { return { t: fill(list[i], +m[i] || 0), s: list[i][5] === 1 }; });
+      .map(function (i) { var t = fill(list[i], +m[i] || 0); return { t: fam ? phFam(t, L) : t, s: list[i][5] === 1 }; });
   }
   function join(a, free) { free = String(free || '').trim(); return a.concat(free ? [free] : []).filter(Boolean).join(J[5]); }
   var d = pick(ph && ph.d, pk && pk.d), c = d.filter(function (x) { return !x.s; }).map(function (x) { return x.t; }), n = c.length;
@@ -644,7 +661,7 @@ function translate(k) {   // 譯文進 TRC；預覽和移工的簽名板共用�
 function texts(L) {
   var px = $('p').value.trim(), ax = $('a').value.trim(), t = [px, ax];
   if (L && (px || ax)) { var hit = TRC[trKey()]; if (!hit) return null; t = [hit[0] || px, hit[1] || ax]; }
-  var c = phCompose(curPh(), S.pk, S.sl, L, t[0], t[1]);
+  var c = phCompose(curPh(), S.pk, S.sl, L, t[0], t[1], phPerson(S.cuName));
   return [c.p, c.a];
 }
 function preview() {
