@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- 小禾的共用 QR 簽名頁（他 2026-10-14：「一個 QR 大家掃，誰簽了立即更新」，照羽禾 App 的宣導簽到 sign.html）。
-     移工掃翻譯手機上的 QR → 這頁（2026-10-14 換成「01 懸浮視窗」樣式，跟 iei.html 一致）：點自己的名字 → 看處理經過／結果（他的語言）→ 全螢幕簽名 → 謝謝。
+     移工掃翻譯手機上的 QR → 這頁（2026-10-14 換成「20 品牌卡片」樣式，跟 iei.html 一致）：點自己的名字 → 看處理經過／結果（他的語言）→ 全螢幕簽名 → 謝謝。
      ⛔ 不用 LINE 登入（移工不是小禾的好友）。網址的 t＝<紀錄>.<到期日>.<簽章>，後端驗；服務日 +14 天後失效。
      ⛔ 後端只回名字、簽了沒、處理經過；不回 IEI 代碼、不回簽名圖。已簽的名字不能再點（防蓋掉別人的）。
      ⛔ 後端網址寫死在下面（小禾鐵則 7）。檔名 qsign.html 與參數 t 不可以改：QR 一出去就改不掉。 -->
@@ -9,41 +9,41 @@
 <meta name="robots" content="noindex">
 <title>簽名 · Sign</title>
 <style>
-:root{--ink:#1B1C1E;--mute:#55565A;--red:#C8102E;--line:#D9D5CC;--tile:#E4E1DA;--bg:#F0EEE9;--paper:#FAF9F6;--blue:#1F4E9C;   /* 雲舞白（他 2026-10-14 選）*/
-  --card:#FFFFFF;--soft:#F4F2EE;--blue2:#2F64C0;--plum:#8A4E8E;                                                                 /* 01 懸浮視窗（同 iei.html）*/
-  --go:linear-gradient(100deg,var(--blue) 0%,var(--blue2) 45%,var(--plum) 75%,var(--red) 100%);
-  --sh:0 18px 40px rgba(60,52,40,.12),0 2px 6px rgba(60,52,40,.06);--sh1:0 2px 8px rgba(60,52,40,.10);--ease:cubic-bezier(.2,.8,.2,1);color-scheme:light}
+:root{--ink:#0B1B33;--mute:#4A5565;--red:#E30613;--line:#D6DEEA;--bg:#EEF2F6;--blue:#0057B8;   /* 20 品牌卡片（同 iei.html，他 2026-10-14 選）*/
+  --card:#FFFFFF;--soft:#F3F5F8;--arrow:#FF8A8F;
+  --sh:0 8px 20px rgba(11,27,51,.08);--sh1:0 2px 8px rgba(11,27,51,.08);--ease:cubic-bezier(.2,.8,.2,1);color-scheme:light}
 *{box-sizing:border-box}
 body{margin:0;font:16px/1.6 "Helvetica Neue",Helvetica,Arial,-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:var(--ink);background:var(--bg)}
 button{font-family:inherit;cursor:pointer}
 header{padding:20px 16px 0;display:grid;gap:2px;max-width:560px;margin:0 auto}
 .eye{font-size:14px;color:var(--mute);font-weight:700}
 .ttl b{font-size:22px;line-height:1.3;font-weight:900;letter-spacing:-.01em;overflow-wrap:anywhere}
-main{margin:16px auto 0;padding:20px 16px 24px;display:grid;gap:16px;max-width:528px;background:var(--card);border-radius:28px;box-shadow:var(--sh);width:calc(100% - 32px);animation:pop .24s var(--ease) both}
+main{margin:16px auto 0;padding:20px 16px 24px;display:grid;gap:16px;max-width:528px;background:var(--card);border-radius:20px;box-shadow:var(--sh);width:calc(100% - 32px);animation:pop .24s var(--ease) both}
 main:empty{display:none}
 @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
 h2{margin:0;font-size:20px;line-height:1.35;font-weight:900}
 h2 small{display:block;font-size:14px;font-weight:500;color:var(--mute)}
 .ppl{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.ppl button{width:100%;display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 16px;border:1.5px solid var(--line);border-radius:18px;background:var(--card);text-align:left;font:inherit;color:var(--ink);box-shadow:0 1px 3px rgba(60,52,40,.06)}
+.ppl button{width:100%;display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 16px;border:1.5px solid var(--line);border-radius:16px;background:var(--card);text-align:left;font:inherit;color:var(--ink);box-shadow:var(--sh1)}
 .ppl b{flex:1;font-size:18px;line-height:1.35;min-width:0;overflow-wrap:anywhere}
 .ppl b small{display:block;font-size:14px;font-weight:500;color:var(--mute)}
 .ppl em{font-style:normal;font-weight:700;font-size:20px;color:var(--blue);white-space:nowrap}
 .ppl button:disabled{background:var(--soft);border-color:transparent;box-shadow:none;color:var(--mute);cursor:default}
 .ppl button:disabled em{font-size:15px;font-weight:500;color:var(--mute)}
-.txt{margin:0;display:grid;gap:2px;background:var(--soft);border-radius:16px;padding:12px 16px}
+.txt{margin:0;display:grid;gap:2px;background:var(--soft);border-radius:14px;padding:12px 16px}
 .txt dt{font-size:14px;font-weight:700;color:var(--mute)}
 .txt dd{margin:0 0 8px;font-size:18px;line-height:1.5;font-weight:700}
 .txt dd .zh{display:block;font-size:14px;font-weight:500;color:var(--mute)}
 .note{font-size:14px;color:var(--mute)}
-.go{width:100%;min-height:56px;border:0;border-radius:999px;background:var(--go);color:#fff;font-weight:700;font-size:17px;line-height:1.2;font-family:inherit;font-family:inherit;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 20px;text-align:left;box-shadow:0 10px 22px rgba(120,60,110,.26)}
-.go em{font-style:normal;font-size:20px}
+.go{width:100%;min-height:56px;border:0;border-radius:16px;background:var(--blue);color:#fff;font-weight:700;font-size:17px;line-height:1.2;font-family:inherit;font-family:inherit;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 20px;text-align:left;box-shadow:0 8px 20px rgba(0,87,184,.25)}
+.go em{font-style:normal;font-size:20px;color:var(--arrow)}
 .go:disabled{background:var(--soft);color:var(--mute);box-shadow:none}
-.btn{width:100%;min-height:52px;border:1.5px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);font-weight:700;font-size:16px;line-height:1.2;font-family:inherit;font-family:inherit}
+.go:disabled em{color:inherit}
+.btn{width:100%;min-height:52px;border:1.5px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);font-weight:700;font-size:16px;line-height:1.2;font-family:inherit;font-family:inherit}
 .go:active,.btn:active,.ppl button:active,.bft button:active{transform:scale(.97)}
-.err{border-left:4px solid var(--red);background:var(--soft);border-radius:4px 16px 16px 4px;padding:12px 16px;font-size:16px}
+.err{border-left:4px solid var(--red);background:var(--soft);border-radius:4px 14px 14px 4px;padding:12px 16px;font-size:16px}
 .done{text-align:center;padding:24px 0 8px;display:grid;gap:8px;justify-items:center}
-.done .ic{width:72px;height:72px;border-radius:50%;background:linear-gradient(180deg,var(--blue2),var(--blue));color:#fff;display:grid;place-items:center;font-size:36px;line-height:1;box-shadow:0 10px 22px rgba(31,78,156,.28)}
+.done .ic{width:72px;height:72px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:36px;line-height:1;box-shadow:0 8px 20px rgba(0,87,184,.25)}
 .done h2{font-size:26px}
 .done p{margin:0}
 .bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden;max-width:528px;margin:16px auto 0;width:calc(100% - 32px)}.bar i{display:block;height:4px;width:40%;border-radius:2px;background:var(--blue);animation:mv 1.2s ease-in-out infinite}
@@ -53,15 +53,15 @@ h2 small{display:block;font-size:14px;font-weight:500;color:var(--mute)}
 .bhd{padding:20px 20px 8px;display:grid;gap:2px}
 .bhd b{font-size:28px;line-height:1.2;font-weight:900;overflow-wrap:anywhere}
 .bhd .zh{font-size:15px;color:var(--mute)}
-.pad{flex:1;position:relative;margin:8px 16px 12px;background:#fff;border-radius:24px;box-shadow:var(--sh);overflow:hidden}
+.pad{flex:1;position:relative;margin:8px 16px 12px;background:#fff;border-radius:20px;box-shadow:var(--sh);overflow:hidden}
 .pad::after{content:"";position:absolute;left:24px;right:24px;top:70%;border-top:1.5px dashed var(--line);pointer-events:none}
 .pad .hint{position:absolute;left:0;right:0;top:calc(70% + 10px);text-align:center;font-size:18px;font-weight:700;color:var(--mute);pointer-events:none}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 .bft{display:grid;grid-template-columns:1fr 1fr 2fr;gap:8px;padding:0 16px calc(12px + env(safe-area-inset-bottom))}
-.bft button{min-height:54px;border-radius:999px;font-weight:700;font-size:15px;line-height:1.2;font-family:inherit;font-family:inherit;border:0;background:var(--card);color:var(--ink);padding:0 8px;box-shadow:var(--sh1)}
-.bft .go{min-height:54px;padding:0 16px;box-shadow:0 10px 22px rgba(120,60,110,.26);background:var(--go);color:#fff}
+.bft button{min-height:54px;border-radius:16px;font-weight:700;font-size:15px;line-height:1.2;font-family:inherit;font-family:inherit;border:0;background:var(--card);color:var(--ink);padding:0 8px;box-shadow:var(--sh1)}
+.bft .go{min-height:54px;padding:0 16px;box-shadow:0 8px 20px rgba(0,87,184,.25);background:var(--blue);color:#fff}
 .bft .go:disabled{background:var(--soft);color:var(--mute);box-shadow:none}
-:focus-visible{outline:2px solid var(--blue2);outline-offset:2px}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.bar i{width:100%}}
 </style></head><body>
