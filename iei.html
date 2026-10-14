@@ -383,6 +383,7 @@ function chip(box, label, on, fn) { var b = el('button', label, { type: 'button'
 function cats() {
   var box = $('cats'); box.innerHTML = '';
   META.cats.forEach(function (c, i) { chip(box, c.b, i === S.cat, function () { S.cat = i; S.sub = -1; cats(); }); });
+  var on = box.querySelector('[aria-pressed=true]'); if (on) box.scrollLeft += on.getBoundingClientRect().left - box.getBoundingClientRect().left - 16;   // 選到的大項如果在右邊看不到，自動捲過去
   var sb = $('subs'); sb.innerHTML = ''; $('subF').hidden = S.cat < 0;
   if (S.cat >= 0) META.cats[S.cat].s.forEach(function (x, i) { chip(sb, x[0], i === S.sub, function () { pickSub(S.cat, i, true); }); });
   phrases();
