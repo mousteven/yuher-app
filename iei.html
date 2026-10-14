@@ -81,6 +81,9 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 #tdF{border-left:4px solid var(--red)}
 #tdL label.on span{color:var(--mute);text-decoration:line-through}
 #tdL label.on{background:var(--soft)}
+.ld{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:var(--tint);color:var(--blue);font-weight:700;font-size:15px}
+.ld::before{content:"";width:14px;height:14px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
 .list .gh{font-size:13px;font-weight:800;color:var(--mute);background:var(--soft);padding:6px 14px}
 .list .more{border:0;border-top:1px solid var(--hair);background:none;min-height:48px;padding:0 14px;text-align:left;color:var(--blue);font:inherit;font-weight:700;font-size:15px}
 .list{display:grid;border:1.5px solid var(--line);border-radius:14px;overflow:hidden}
@@ -213,6 +216,7 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
   </section>
   <div id="edit">
    <section class="card">
+    <div class="ld" id="ld" role="status" hidden></div>
     <div class="f" id="tripsF" hidden><div class="lab"><svg class="ic s"><use href="#i-route"/></svg>今天的行程</div><div class="chips scroll" id="trips"></div></div>
     <div class="f">
       <label class="fld"><svg class="ic"><use href="#i-co"/></svg><input type="search" id="q" placeholder="打客戶名稱，打一個字就有提示" aria-label="打客戶名稱找" autocomplete="off"></label>
@@ -382,13 +386,14 @@ function pickWorker(w) {
   var c = (CUST || []).filter(function (x) { return x.cu00 === w.cu; })[0] || { cu00: w.cu, name: w.co || w.cu };
   pickCust(c).then(function () { if (S.cu00 !== w.cu) return; S.picks[w.la] = 1; workers(S.workers, true); });
 }
+function load(t) { $('ld').textContent = t || ''; $('ld').hidden = !t; }   // 跟 IEI 要資料時，搜尋欄上方的藍色提示（他 10/15）
 function pickCust(c, keepPicks) {
   S.cu00 = c.cu00; S.cuName = c.name;
   if (!$('addr').value && c.addr) $('addr').value = c.addr;
   $('cands').innerHTML = ''; $('custNow').textContent = ''; $('q').value = c.name;   // 他 10/14：選好的名稱就放在搜尋欄裡
   S.wkOpen = false; $('wkQ').value = '';
-  head(); say('讀 IEI 移工名單…');
-  return api({ api: 'iei', cu00: c.cu00, workers: S.trip ? S.trip.workers : [] }).then(function (j) { workers(j.workers, keepPicks); say(''); }).catch(function (e) { say(e.message); });
+  head(); load('讀 IEI 移工名單…');
+  return api({ api: 'iei', cu00: c.cu00, workers: S.trip ? S.trip.workers : [] }).then(function (j) { workers(j.workers, keepPicks); load(''); }).catch(function (e) { load(''); say(e.message); });
 }
 function workers(rows, keepPicks) {
   S.workers = rows; if (!keepPicks) { S.picks = {}; rows.forEach(function (w) { if (w.pick) S.picks[w.la00] = 1; }); }
@@ -466,8 +471,8 @@ function find(ask) {
   if ((CUST || WKS) && !ask) { var hit = CUST ? localFind(q) : [], wh = wkFind(q); cands(hit, q, wh); if (hit.length || wh.length) return; }
   /* 沒有放大鏡了（他 10/14）：手機上找不到、或清單還沒下載好 → 停手 0.6 秒自動問 IEI（新客戶也找得到） */
   if (!ask) { $('custNow').textContent = '在 IEI 找…'; qTimer = setTimeout(function () { find(true); }, 600); return; }
-  say('在 IEI 找…');
-  api({ api: 'iei', q: q }).then(function (j) { say(''); if (j.list) setCust(j.list); cands(j.cands, q); if (!j.cands.length) $('custNow').textContent = 'IEI 也找不到，換個字試試'; }).catch(function (e) { say(e.message); });
+  load('在 IEI 找…');
+  api({ api: 'iei', q: q }).then(function (j) { load(''); if (j.list) setCust(j.list); cands(j.cands, q); if (!j.cands.length) $('custNow').textContent = 'IEI 也找不到，換個字試試'; }).catch(function (e) { load(''); say(e.message); });
 }
 var qTimer = 0;
 $('q').oninput = function () {
@@ -679,13 +684,13 @@ function useTrip(t) {
   $('addr').value = t.addr || ''; seg('method', t.method); drawTodo();
   var hit = findSub(t.big, t.sub);
   if (hit) pickSub(hit[0], hit[1], true); else { S.cat = -1; cats(); items(); }   // 照行程／交辦事項先選好細項，句子換成那個細項的第一句（他 10/15：草稿先填好）
-  head(); $('wk').innerHTML = ''; say('在 IEI 對客戶…');
+  head(); $('wk').innerHTML = ''; load('在 IEI 對客戶…');
   api({ api: 'iei', client: t.client, workers: t.workers }).then(function (j) {
-    say('');
+    load('');
     if (j.cu00) { S.cu00 = j.cu00; S.cuName = j.cust ? j.cust.name : t.client; $('q').value = S.cuName; $('custNow').textContent = ''; $('cands').innerHTML = '';
       if (!$('addr').value && j.cust) $('addr').value = j.cust.addr; head(); workers(j.workers); }
     else cands(j.cands);
-  }).catch(function (e) { say(e.message); });
+  }).catch(function (e) { load(''); say(e.message); });
 }
 /* ---------- 警告單（他 10/14：服務項目有「警告」→ 同一頁長出 IEI 警告單；IEI 一張只能一位移工，勾幾位開幾張） ----------
    WN.la 開給誰、fq 第幾次（'1'～'3'）、hand 他自己點過第幾次（不再自動改）、n IEI 已經有幾張（null＝查詢中）、seen 出現過的移工（第一次出現預設要開）、it 違規項目 1～8 */
@@ -742,6 +747,7 @@ function draft() {
     pk: S.pk, sl: S.sl, px: $('p').value.trim(), ax: $('a').value.trim(),   // 片語＋補充欄位＋自己打的；cuP／cuA 是組好的中文（送進 IEI 的）
     la00: l === '2' ? [] : p.map(function (w) { return w.la00; }), names: l === '2' ? [] : p.map(function (w) { return w.zh || w.en; }),
     wk: l === '2' ? [] : p.map(function (w) { return { la00: w.la00, en: w.en, zh: w.zh }; }),
+    wl: S.workers.map(function (w) { return { la00: w.la00, en: w.en, zh: w.zh, nat: w.nat, la21: w.la21 }; }),   // 這家整份移工名單：打開草稿不用等 IEI
     warn: wnOn() ? { la: wnWk().map(function (w) { return w.la00; }), fq: wnWk().reduce(function (o, w) { o[w.la00] = wnFq(w.la00); return o; }, {}),
                      it: WN.it.slice().sort(function (a, b) { return a - b; }), other: $('wnO').value.trim() } : null };
 }
@@ -764,7 +770,12 @@ function fill(d) {
   var hit = d.sub && findSub(d.cat, d.sub);
   if (hit) { S.cat = hit[0]; S.sub = hit[1]; S.auto = META.lfa[d.sub] || 0; }
   cats(); items(); sides();
-  return pickCust({ cu00: d.cu00, name: d.cuName }, true);
+  if (!(d.wl && d.wl.length)) return pickCust({ cu00: d.cu00, name: d.cuName }, true);
+  /* 他 10/15：存過的草稿打開不要再等 IEI——用草稿裡的名單馬上畫，背景再跟 IEI 對一次（有新來的人就補上） */
+  S.cu00 = d.cu00; S.cuName = d.cuName; $('q').value = d.cuName; S.wkOpen = false; head();
+  workers(d.wl, true);
+  api({ api: 'iei', cu00: d.cu00 }).then(function (j) { if (S.cu00 === d.cu00 && !SENT && JSON.stringify(j.workers.map(function (w) { return w.la00; })) !== JSON.stringify(d.wl.map(function (w) { return w.la00; }))) workers(j.workers, true); }).catch(function () {});
+  return Promise.resolve();
 }
 /* ---------- 簽名格 ---------- */
 function slots() {
