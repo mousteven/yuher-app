@@ -78,6 +78,9 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .list.big small{font-size:15px;font-weight:400;margin-top:2px}
 .all{margin-left:auto;min-height:36px;padding:0 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--blue);font-weight:700;font-size:14px;font-family:inherit}
 .list.big label span b{color:var(--blue);font-weight:900}
+#tdF{border-left:4px solid var(--red)}
+#tdL label.on span{color:var(--mute);text-decoration:line-through}
+#tdL label.on{background:var(--soft)}
 .list .gh{font-size:13px;font-weight:800;color:var(--mute);background:var(--soft);padding:6px 14px}
 .list .more{border:0;border-top:1px solid var(--hair);background:none;min-height:48px;padding:0 14px;text-align:left;color:var(--blue);font:inherit;font-weight:700;font-size:15px}
 .list{display:grid;border:1.5px solid var(--line);border-radius:14px;overflow:hidden}
@@ -204,6 +207,10 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
 <main>
  <div class="bar" id="bar"><i></i></div>
  <div id="form" hidden>
+  <section class="card" id="tdF" hidden>   <!-- 交辦事項（他 10/15）：跟羽禾 App、小羽同一份，勾了寫回行程表 -->
+    <div class="sh"><svg class="ic"><use href="#i-ok"/></svg>交辦事項<span class="sp"></span><span class="note" id="tdN"></span></div>
+    <div class="list" id="tdL"></div>
+  </section>
   <div id="edit">
    <section class="card">
     <div class="f" id="tripsF" hidden><div class="lab"><svg class="ic s"><use href="#i-route"/></svg>今天的行程</div><div class="chips scroll" id="trips"></div></div>
@@ -648,11 +655,29 @@ function findSub(big, sub) {
     if (META.cats[i].s[j][0] === sub && (!big || META.cats[i].b === big)) return [i, j];
   return null;
 }
+/* 交辦事項（他 10/15）：點一下打勾＝完成，寫回行程表（羽禾 App、小羽看到的同一份）。全部勾完那一站就標完成 */
+function drawTodo() {
+  var t = S.trip, list = t && t.todo || [], box = $('tdL');
+  $('tdF').hidden = !list.length;
+  if (!list.length) return;
+  $('tdN').textContent = list.filter(function (x) { return x.d; }).length + '／' + list.length + '・跟羽禾 App 同步';
+  box.innerHTML = '';
+  list.forEach(function (x, i) {
+    var lab = el('label', null, { class: x.d ? 'on' : '' }), c = el('input', null, { type: 'checkbox' });
+    c.checked = !!x.d; lab.appendChild(c); lab.appendChild(el('span', x.t));
+    c.onchange = function () {
+      var on = c.checked; x.d = on ? 1 : 0; drawTodo();
+      api({ api: 'todo', trip: t.id, i: i, t: x.t, d: on }).then(function (j) { t.todo = j.todo; drawTodo(); })
+        .catch(function (e) { x.d = on ? 0 : 1; drawTodo(); say(e.message); });
+    };
+    box.appendChild(lab);
+  });
+}
 function useTrip(t) {
   S.trip = t; S.tripId = t.id; S.client = t.client; S.cu00 = ''; S.cuName = ''; S.items = t.items.slice(); S.auto = 0; S.vtEdited = false;
-  $('addr').value = t.addr || ''; seg('method', t.method);
+  $('addr').value = t.addr || ''; seg('method', t.method); drawTodo();
   var hit = findSub(t.big, t.sub);
-  if (hit) pickSub(hit[0], hit[1], false); else { S.cat = -1; cats(); items(); }
+  if (hit) pickSub(hit[0], hit[1], true); else { S.cat = -1; cats(); items(); }   // 照行程／交辦事項先選好細項，句子換成那個細項的第一句（他 10/15：草稿先填好）
   head(); $('wk').innerHTML = ''; say('在 IEI 對客戶…');
   api({ api: 'iei', client: t.client, workers: t.workers }).then(function (j) {
     say('');
@@ -952,7 +977,7 @@ liff.init({ liffId: LIFF_ID }).then(function () {
   return api({ api: 'prep', d: DRAFT, date: DAY }).then(function (j) {
     META = j; $('bar').hidden = true; $('form').hidden = false;
     $('date').value = j.day; seg('method', '1'); seg('labor', '1');
-    if (j.draft) { $('tripsF').hidden = true; apply(j.state); return fill(j.draft).then(function () { SAVED = JSON.stringify(Object.assign({}, draft(), { id: '' })); }); }
+    if (j.draft) { $('tripsF').hidden = true; S.trip = j.trips.filter(function (t) { return t.id === j.draft.trip; })[0] || null; drawTodo(); apply(j.state); return fill(j.draft).then(function () { SAVED = JSON.stringify(Object.assign({}, draft(), { id: '' })); }); }
     $('p').value = S.autoP = '巡迴服務-關心移工'; $('a').value = S.autoA = '移工表示工作上及生活都沒有問題。';   // 他定的預設
     cats(); items(); head(); trips(j.trips); langs(); check();
     if (j.custs) setCust(j.custs);   // 伺服器手上有就順便帶來，不用再跑一趟
