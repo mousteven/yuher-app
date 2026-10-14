@@ -137,17 +137,21 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
 /* 全螢幕簽名板（同 s.html：點格子才開，捲動時不可能畫到） */
 .board{position:fixed;inset:0;background:var(--bg);z-index:9;display:flex;flex-direction:column;touch-action:none;overscroll-behavior:none;animation:fade .2s ease-out both}
 @keyframes fade{from{opacity:0}}
-.bhd{position:relative;padding:16px 72px 8px 20px;display:grid;gap:2px}
-.bhd .eye{font-size:14px;color:var(--mute);font-weight:700}
-.bhd b{font-size:28px;line-height:1.2;font-weight:900;overflow-wrap:anywhere}
-.bhd .zh{font-size:15px;color:var(--mute)}
+.bhd{position:relative;padding:16px 72px 12px 20px;display:grid;gap:2px;background:var(--card);border-bottom:3px solid var(--navy)}
+.bhd .eye{font-size:12px;color:var(--red);font-weight:800;letter-spacing:.08em}
+.bhd b{font-size:24px;line-height:1.2;font-weight:900;overflow-wrap:anywhere}
+.bhd .zh{font-size:14px;color:var(--mute)}
 .bhd .x{position:absolute;top:12px;right:16px;background:var(--card)}
-.read{margin:4px 16px 0;background:var(--card);border-radius:16px;padding:0 16px;box-shadow:var(--sh1);max-height:34vh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
-.read p{margin:0 0 10px;font-size:16px;line-height:1.55}
-.read p b{display:block;font-size:14px;color:var(--mute)}
+.read{background:var(--card);max-height:38vh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
+.rw{display:grid;grid-template-columns:88px minmax(0,1fr);border-bottom:1px solid var(--hair)}
+.rw>span:first-child{background:var(--soft);font-size:12px;font-weight:800;color:var(--mute);padding:10px 8px;line-height:1.35;white-space:pre-line}
+.rw>span:last-child{padding:10px 14px;font-size:16px;line-height:1.5;white-space:pre-line}
+.rw em{display:block;font-style:normal;font-size:14px;color:var(--mute);margin-top:2px;white-space:pre-line}
 .pad{flex:1;position:relative;margin:12px 16px;background:#fff;border-radius:20px;box-shadow:var(--sh);overflow:hidden;min-height:160px}
-.pad::after{content:"";position:absolute;left:24px;right:24px;top:70%;border-top:1.5px dashed var(--line);pointer-events:none}
-.pad .hint{position:absolute;left:0;right:0;top:calc(70% + 10px);text-align:center;font-size:16px;color:var(--mute);pointer-events:none}
+.pad::after{content:"";position:absolute;left:24px;right:24px;top:70%;border-top:2px solid var(--ink);pointer-events:none}
+.pad .hint{position:absolute;left:0;right:0;top:14px;text-align:center;font-size:15px;color:var(--mute);pointer-events:none}
+.pad .snm,.pad .sdt{position:absolute;top:calc(70% + 8px);font-size:14px;color:var(--mute);pointer-events:none;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pad .snm{left:24px}.pad .sdt{right:24px;font-variant-numeric:tabular-nums}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 .bft{display:grid;grid-template-columns:1fr 1fr 2fr;gap:8px;padding:0 16px calc(12px + env(safe-area-inset-bottom))}
 .bft button{min-height:54px;border-radius:16px;font-weight:700;font-size:15px;line-height:1.2;font-family:inherit;padding:0 8px;text-align:center}
@@ -266,8 +270,8 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
 <div class="board" id="board" hidden>
   <div class="bhd"><span class="eye" id="brole"></span><b id="bwho"></b><span class="zh" id="bzh"></span>
     <button type="button" class="x" id="bx" aria-label="結束"><svg class="ic s"><use href="#i-x"/></svg></button></div>
-  <details class="read" id="bread" open><summary id="bsum"></summary><div id="btx"></div></details>
-  <div class="pad"><span class="hint" id="bsay"></span><canvas id="cv"></canvas></div>
+  <div class="read" id="bread"><div id="btx"></div></div>
+  <div class="pad"><span class="hint" id="bsay"></span><span class="snm" id="bnm"></span><span class="sdt" id="bdt"></span><canvas id="cv"></canvas></div>
   <div class="bft"><button type="button" class="soft" id="b1"></button><button type="button" class="soft" id="b2"></button><button type="button" class="go" id="b3"><span></span><svg class="ic"><use href="#i-arrow"/></svg></button></div>
 </div>
 <div class="board" id="qrm" hidden>
@@ -778,8 +782,12 @@ var cv = $('cv'), cx = cv.getContext('2d'), inked = false, down = false;
 function board(q, relay) { if (!q.length) return; BQ = q; BI = 0; RELAY = relay; $('board').hidden = false; document.body.style.overflow = 'hidden'; page(); }
 function page() {
   var p = BQ[BI], last = BI === BQ.length - 1, L = p.L || TL['中'], zh = L === TL['中'];
-  $('brole').textContent = (p.wn ? L.warn + '・' : '') + (p.L ? L.worker : p.role) + (RELAY ? (zh ? '・第 ' + (BI + 1) + '／' + BQ.length + ' 位' : ' · ' + (BI + 1) + ' / ' + BQ.length) : '');
-  $('bwho').textContent = p.L && p.en ? p.en : p.name; $('bzh').textContent = p.L && p.en && p.sub ? p.name : '';   // 移工：英文名最大、中文名在下面
+  /* 第 5 式（他 10/15 選）：紅色小標＝文件名（英＋中），名字最大，下面中文名・公司；簽名線下印名字、日期 */
+  $('brole').textContent = (zh ? (p.wn ? '警告單' : '訪視紀錄') + '・' + p.role : (p.wn ? 'WARNING LETTER · 警告單' : 'SERVICE RECORD · 訪視紀錄'))
+    + (RELAY ? (zh ? '・第 ' + (BI + 1) + '／' + BQ.length + ' 位' : ' · ' + (BI + 1) + ' / ' + BQ.length) : '');
+  $('bwho').textContent = p.L && p.en ? p.en : p.name;   // 移工：英文名最大
+  $('bzh').textContent = [p.L && p.en && p.sub ? p.name : '', p.k !== 'cu' && p.k.indexOf('wc:') ? S.cuName : ''].filter(Boolean).join(' · ');
+  $('bnm').textContent = p.L && p.en ? p.en : p.name; $('bdt').textContent = $('date').value;
   $('bsay').textContent = L.hint;
   $('b1').textContent = RELAY ? L.absent : L.cancel; $('b2').textContent = RELAY ? L.resign : L.clear;
   $('b3').firstChild.textContent = RELAY && !last ? L.next : L.done;
@@ -796,18 +804,21 @@ function readBox(p, L) {
   $('bread').hidden = p.k === 'lbr' || (!zh[0] && !zh[1]);
   if ($('bread').hidden) return;
   if (!t) translate(trKey()).then(function () { if (BQ[BI] === p && !$('board').hidden) readBox(p, L); });
-  $('bsum').textContent = L.proc; var box = $('btx'); box.innerHTML = '';
-  [[L.proc, (t || zh)[0]], [L.res, (t || zh)[1]]].forEach(function (r) { if (!r[1]) return; var e = el('p', r[1]); e.insertBefore(el('b', r[0]), e.firstChild); box.appendChild(e); });
+  var two = L !== TL['中'] && t;   // 移工：他的語言大字、中文正本小字附在下面（IEI 存的是中文）
+  rows([[lab2(L, 'proc'), (t || zh)[0], two ? zh[0] : ''], [lab2(L, 'res'), (t || zh)[1], two ? zh[1] : '']]);
+}
+function lab2(L, k) { return L === TL['中'] ? TL['中'][k] : L[k] + '\n' + TL['中'][k]; }   // 左欄：他的語言＋中文
+function rows(list) {   // [[左欄, 內容, 中文小字]]，內容空的那列不畫
+  var box = $('btx'); box.innerHTML = '';
+  list.forEach(function (r) { if (!r[1]) return; var d = el('div', null, { class: 'rw' }), c = el('span', r[1]); d.appendChild(el('span', r[0])); if (r[2] && r[2] !== r[1]) c.appendChild(el('em', r[2])); d.appendChild(c); box.appendChild(d); });
 }
 /* 警告單的格子：看的是警告單（第幾次、違反哪幾項、三次遣返），移工看他的語言 */
 function warnBox(p, L) {
   $('bread').hidden = mine(p.k);
   if ($('bread').hidden) return;
-  var nat = p.L && L !== TL['中'] ? p.wn.nat : '', box = $('btx'), other = $('wnO').value.trim();
-  $('bsum').textContent = L.warn + '・' + L.nth[+wnFq(p.wn.la00) - 1]; box.innerHTML = '';
-  var e = el('p'); e.appendChild(el('b', L.vio)); box.appendChild(e);
-  WN.it.slice().sort(function (a, b) { return a - b; }).forEach(function (n) { box.appendChild(el('p', '• ' + wnText(n, nat) + (n === 8 && other ? '：' + other : ''))); });
-  box.appendChild(el('p', L.three));
+  var nat = p.L && L !== TL['中'] ? p.wn.nat : '', Z = TL['中'], f = +wnFq(p.wn.la00) - 1, other = $('wnO').value.trim(), it = WN.it.slice().sort(function (a, b) { return a - b; });
+  function list(n) { return it.map(function (i) { return '• ' + wnText(i, n) + (i === 8 && other ? '：' + other : ''); }).join('\n'); }
+  rows([[lab2(L, 'warn'), L.nth[f], nat ? Z.nth[f] : ''], [lab2(L, 'vio'), list(nat), nat ? list('') : ''], ['⚠', L.three, nat ? Z.three : '']]);
 }
 function next() { if (++BI < BQ.length) page(); else closeBoard(); }
 function closeBoard() { $('board').hidden = true; document.body.style.overflow = ''; drawSigns(); }
