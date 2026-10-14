@@ -61,7 +61,9 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
 .pm small{display:block;font-size:14px;font-weight:400;color:var(--mute)}
 .pm .st{font-size:15px;font-weight:700;white-space:nowrap}
 .p.ok .st,.p.dry .st,.p.absent .st{color:var(--mute);font-weight:400}
-.qr{flex:none;width:56px;border:0;border-left:2px solid #fff;background:none;color:var(--ink);display:grid;place-items:center}
+.p.flash,.ql li.flash{animation:fl 1.6s ease-out}
+@keyframes fl{from{background:var(--line)}}
+@media (prefers-reduced-motion:reduce){.p.flash,.ql li.flash{animation:none}}
 .acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .board{position:fixed;inset:0;background:#fff;z-index:9;display:flex;flex-direction:column;touch-action:none;overscroll-behavior:none}
 .bhd{position:relative;padding:16px 16px 8px;border-bottom:2px solid var(--ink);display:grid;gap:4px}
@@ -69,8 +71,13 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
 .bhd .say{font-size:20px;font-weight:700}
 .bhd .x{position:absolute;top:8px;right:8px;width:44px;height:44px;border:0;background:none;font:700 22px/1 inherit;font-family:inherit;color:var(--ink)}
 #cv{flex:1;width:100%;display:block;background:#fff linear-gradient(var(--ink),var(--ink)) 24px 70%/calc(100% - 48px) 1px no-repeat}
-.qbody{flex:1;display:grid;place-content:center;justify-items:center;gap:16px;padding:16px}
-#qbox{padding:16px;background:#fff}
+.qbody{flex:1;overflow-y:auto;overscroll-behavior:contain;display:grid;align-content:start;justify-items:center;gap:16px;padding:16px}
+#qbox{padding:8px;background:#fff}
+#qurl{font-size:14px;min-height:44px;color:var(--mute)}
+.ql{list-style:none;margin:0;padding:0;width:100%;display:grid;gap:4px}
+.ql li{display:flex;justify-content:space-between;gap:12px;min-height:44px;align-items:center;padding:4px 12px;background:var(--tile);font-weight:700}
+.ql li span{white-space:nowrap}
+.ql li.ok span,.ql li.dry span{color:var(--mute);font-weight:400}
 .bft{display:grid;grid-template-columns:1fr 1fr 2fr;border-top:2px solid var(--ink);padding-bottom:env(safe-area-inset-bottom)}
 .bft button{min-height:56px;font:700 16px/1 inherit;font-family:inherit;border:0;background:#fff;color:var(--ink)}
 .bft button+button{border-left:1.5px solid var(--ink)}
@@ -124,7 +131,7 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
 </main>
 <section id="hub" hidden>
   <ul class="ppl" id="ppl"></ul>
-  <div class="acts"><button type="button" class="btn" id="qrAll">給移工掃 QR</button><button type="button" class="btn" id="reload">重新整理</button><button type="button" class="btn" id="done">完成</button></div>
+  <div class="acts"><button type="button" class="btn" id="qrAll">QR 給大家掃</button><button type="button" class="btn" id="reload">重新整理</button><button type="button" class="btn" id="done">完成</button></div>
   <div class="note" id="hubNote"></div>
 </section>
 <div class="board" id="board" hidden>
@@ -134,9 +141,9 @@ footer{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:0 0 env(sa
   <div class="bft"><button type="button" id="b1"></button><button type="button" id="b2"></button><button type="button" class="go" id="b3">簽好了<em>→</em></button></div>
 </div>
 <div class="board" id="qrm" hidden>
-  <div class="bhd"><span class="eye" id="qrole"></span><b id="qwho"></b><span class="say" id="qsay"></span><span class="eye">用自己的手機掃，在 IEI 的頁面簽名</span></div>
-  <div class="qbody"><div id="qbox"></div><div class="note">簽好後按「關閉」，這裡會重新讀一次誰簽了</div></div>
-  <div class="bft"><button type="button" id="q1">關閉</button><button type="button" class="go" id="q2">下一位<em>→</em></button></div>
+  <div class="bhd"><span class="eye">一個 QR 大家掃，用自己的手機簽</span><b id="qwho"></b><span class="eye">誰簽了下面會馬上打勾</span></div>
+  <div class="qbody"><div id="qbox"></div><input type="text" id="qurl" readonly aria-label="簽名連結"><ul class="ql" id="qppl"></ul></div>
+  <div class="bft" style="grid-template-columns:1fr"><button type="button" id="q1">關閉</button></div>
 </div>
 <footer><div id="msg" role="status"></div><button id="go" disabled>確認後送出<em>→</em></button></footer>
 
@@ -285,12 +292,11 @@ function fill(d) {
 }
 /* ---------- 簽名頁（?sign=<紀錄ID>，2026-10-14 他選甲乙丙合併）----------
    乙：名單，點一個人開全螢幕簽名板。甲：底部「接力簽」一人一頁走完沒簽的（不在＝跳過，留著沒簽）。
-   丙：QR 是 IEI 自己的簽名網址，移工用自己的手機掃、在 IEI 的頁面簽；這裡只顯示，關掉時重讀狀態。
+   丙：一個 QR 大家掃（公開頁 qsign.html，他 2026-10-14 要「像羽禾 App 那樣」）；簽名頁開著時每 4 秒問一次，誰簽了馬上打勾。
    翻譯格：他第一次手簽，後端存起來，之後打開這頁就自動帶入。 */
-var SIGN = qp('sign'), H = null, P = [], ST = {}, BQ = [], BI = 0, RELAY = false, QQ = [], QI = 0;
+var SIGN = qp('sign'), H = null, P = [], ST = {}, FL = {}, BQ = [], BI = 0, RELAY = false, POLL = false;
 var SAY = { '菲律賓': 'Please sign here.', '越南': 'Vui lòng ký tên tại đây.', '印尼': 'Silakan tanda tangan di sini.', '泰國': 'กรุณาเซ็นชื่อที่นี่' };
 var STX = { ok: '✓ 已簽', dry: '✓ 試跑沒上傳', todo: '未簽', absent: '不在', up: '上傳中…', fail: '沒傳上去，再簽一次' };
-var QR_ICON = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2M20 14v6h-6"/></svg>';
 function hubLoad() {
   $('bar').hidden = false;
   return api({ api: 'sign', d: SIGN }).then(function (j) {
@@ -309,22 +315,22 @@ function todo() { return P.filter(function (p) { return ST[p.k] === 'todo' || ST
 function hubDraw() {
   var ul = $('ppl'); ul.innerHTML = '';
   P.forEach(function (p) {
-    var li = el('li', null, { class: 'p ' + ST[p.k] }), b = el('button', null, { type: 'button', class: 'pm' }), nm = el('span', p.name, { class: 'nm' });
+    var li = el('li', null, { class: 'p ' + ST[p.k] + (FL[p.k] ? ' flash' : '') }), b = el('button', null, { type: 'button', class: 'pm' }), nm = el('span', p.name, { class: 'nm' });
     nm.appendChild(el('small', [p.role, p.sub].filter(Boolean).join('・')));
     b.appendChild(nm); b.appendChild(el('span', p.k === 'lbr' && ST.lbr === 'todo' && !H.lbrSaved ? '第一次請簽' : STX[ST[p.k]], { class: 'st' }));
     b.onclick = function () { board([p], false); };
     li.appendChild(b);
-    if (p.s.qr && ST[p.k] !== 'ok') {
-      var q = el('button', null, { type: 'button', class: 'qr', 'aria-label': p.name + ' 掃 QR 簽名' }); q.innerHTML = QR_ICON;
-      q.onclick = function () { qrOpen([p]); }; li.appendChild(q);
-    }
     ul.appendChild(li);
   });
   var n = todo().length;
   $('go').disabled = false; $('go').firstChild.textContent = n ? '接力簽（剩 ' + n + ' 位）' : '完成，留底傳到 LINE';
-  $('qrAll').hidden = !qrList().length;
+  var ql = $('qppl'); ql.innerHTML = '';   // QR 畫面下面那份即時名單（翻譯不在 QR 上簽）
+  P.forEach(function (p) {
+    if (p.k === 'lbr') return;
+    var li = el('li', p.name, { class: ST[p.k] + (FL[p.k] ? ' flash' : '') }); li.appendChild(el('span', STX[ST[p.k]])); ql.appendChild(li);
+  });
+  FL = {};
 }
-function qrList() { return P.filter(function (p) { return p.k.charAt(0) === 'w' && p.s.qr && ST[p.k] !== 'ok' && ST[p.k] !== 'dry'; }); }
 /* 簽名板（做法照 yuher-app/s.html：全螢幕、吃掉 touchmove、裁空白、最寬 600） */
 var cv = $('cv'), cx = cv.getContext('2d'), inked = false, down = false;
 function board(q, relay) { BQ = q; BI = 0; RELAY = relay; $('board').hidden = false; document.body.style.overflow = 'hidden'; page(); }
@@ -347,7 +353,7 @@ cv.onpointermove = function (e) { if (!down) return; e.preventDefault(); var p =
 cv.onpointerup = cv.onpointercancel = function () { down = false; };
 /* ⛔ LINE 內建瀏覽器可以往下拉掉：pointer 的 preventDefault 擋不住，要在 touch 事件上 passive:false 才擋得住（s.html 2026-10-08 踩過） */
 ['touchstart', 'touchmove'].forEach(function (k) { cv.addEventListener(k, function (e) { e.preventDefault(); }, { passive: false }); });
-document.addEventListener('touchmove', function (e) { if (!$('board').hidden || !$('qrm').hidden) e.preventDefault(); }, { passive: false });
+document.addEventListener('touchmove', function (e) { if (!$('board').hidden) e.preventDefault(); }, { passive: false });
 function crop() {   // 裁掉四周空白＋留一點邊，最寬 600（整張全螢幕存進去，簽名會小到看不見）
   var w = cv.width, h = cv.height, d = cx.getImageData(0, 0, w, h).data, x0 = w, y0 = h, x1 = -1, y1 = -1;
   for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 12) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
@@ -372,19 +378,25 @@ function save(p, png) {
     hubDraw();
   }).catch(function (e) { ST[p.k] = 'fail'; hubDraw(); say(p.name + '：' + e.message); });
 }
-/* QR：一次一位，「下一位」換人；關掉就重讀誰簽了 */
-function qrOpen(q) { QQ = q; QI = 0; $('qrm').hidden = false; qrPage(); }
-function qrPage() {
-  var p = QQ[QI];
-  $('qrole').textContent = p.role + (QQ.length > 1 ? '・第 ' + (QI + 1) + '／' + QQ.length + ' 位' : '');
-  $('qwho').textContent = p.name; $('qsay').textContent = p.say || '';
-  $('qbox').innerHTML = '';
-  new QRCode($('qbox'), { text: p.s.qr, width: 240, height: 240, correctLevel: QRCode.CorrectLevel.L });
-  $('q2').hidden = QI >= QQ.length - 1; $('qrm').querySelector('.bft').style.gridTemplateColumns = $('q2').hidden ? '1fr' : '1fr 2fr';
-}
-$('q1').onclick = function () { $('qrm').hidden = true; hubLoad(); };
-$('q2').onclick = function () { QI++; qrPage(); };
-$('qrAll').onclick = function () { qrOpen(qrList()); };
+/* 一個 QR：網址帶這張紀錄的簽章（後端做的），移工掃了到公開頁 qsign.html 自己選名字簽 */
+$('qrAll').onclick = function () {
+  $('qrm').hidden = false; $('qwho').textContent = H.cuName; $('qurl').value = H.qurl; $('qbox').innerHTML = '';
+  new QRCode($('qbox'), { text: H.qurl, width: 256, height: 256, correctLevel: QRCode.CorrectLevel.M });
+};
+$('q1').onclick = function () { $('qrm').hidden = true; };
+/* 即時更新：簽名頁看得到的時候每 4 秒問一次（後端只讀快取，不打 IEI）。上傳中不問，免得蓋掉「上傳中」 */
+setInterval(function () {
+  if (!H || POLL || $('hub').hidden || document.hidden || P.some(function (p) { return ST[p.k] === 'up'; })) return;
+  POLL = true;
+  api({ api: 'signPoll', d: SIGN }).then(function (j) {
+    var ch = false;
+    P.forEach(function (p) {
+      var v = j.on[p.k] === true ? 'ok' : j.on[p.k] === 'dry' ? 'dry' : '';
+      if (v && ST[p.k] !== v && ST[p.k] !== 'ok') { ST[p.k] = v; FL[p.k] = 1; ch = true; }
+    });
+    if (ch) hubDraw();
+  }).catch(function () {}).then(function () { POLL = false; });
+}, 4000);
 $('reload').onclick = hubLoad;
 /* 完成：替他送「簽名完成」→ 小禾用 reply 回留底卡（免費）。送不出去才請後端推播（吃每月額度）。 */
 function finish() {
