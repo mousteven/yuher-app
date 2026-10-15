@@ -84,6 +84,17 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .site{font-size:12px;font-weight:800;letter-spacing:.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;flex:none;background:var(--tint);color:var(--blue)}
 .site.nt{background:#E5F4EC;color:#0F7B4C}
 .where{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:#E5F4EC;color:var(--ink);font-size:14px}
+.vc{background:var(--card);border-radius:16px;display:flex;overflow:hidden;box-shadow:var(--sh)}
+.vc .vb{width:8px;flex:none;background:var(--blue)}.vc .vb.nt{background:#0F7B4C}
+.vc .vi{padding:12px 14px;flex:1;min-width:0;display:grid;gap:4px;text-align:left;background:none;border:0;font:inherit;color:inherit}
+.vc .vn{font-size:24px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.vc .vn small{font-size:13px;font-weight:700;color:var(--mute);margin-left:6px}
+.vc .vt{font-weight:800}.vc .vs{font-size:14px;color:var(--mute)}
+.vc .vm{width:48px;border:0;background:none;color:var(--mute);font-weight:900;font-size:22px;font-family:inherit}
+.vday{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:800}
+.vday button{width:44px;height:44px;border-radius:12px;border:0;background:var(--card);font-size:20px;font-weight:900;color:var(--ink);box-shadow:var(--sh)}
+.vpill{display:inline-block;font-size:12px;font-weight:800;line-height:1.5;padding:1px 8px;border-radius:999px;background:var(--soft);color:var(--mute)}
+.vpill.half{background:#FFF3D6;color:#8A5A00}
 .ld{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:var(--tint);color:var(--blue);font-weight:700;font-size:15px}
 .ld::before{content:"";width:14px;height:14px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:spin .8s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -212,6 +223,10 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
 </header>
 <main>
  <div class="bar" id="bar"><i></i></div>
+ <div id="vl" hidden style="display:grid;gap:12px">   <!-- IEI 訪視清單（他 10/16 選設計三） -->
+   <div class="vday"><button type="button" id="vPrev" aria-label="前一天">‹</button><span id="vDay"></span><button type="button" id="vNext" aria-label="後一天">›</button></div>
+   <div id="vL" style="display:grid;gap:10px"></div>
+ </div>
  <div id="form" hidden>
   <section class="card" id="tdF" hidden>   <!-- 交辦事項（他 10/15）：跟羽禾 App、小羽同一份，勾了寫回行程表 -->
     <div class="sh"><svg class="ic"><use href="#i-ok"/></svg>交辦事項<span class="sp"></span><span class="note" id="tdN"></span></div>
@@ -293,6 +308,10 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
     <button type="button" class="x" id="q1" aria-label="關閉"><svg class="ic s"><use href="#i-x"/></svg></button></div>
   <div class="qbody"><div id="qbox"></div><label class="fld"><svg class="ic"><use href="#i-link"/></svg><input type="text" id="qurl" readonly aria-label="簽名連結"></label><ul class="ql" id="qppl"></ul></div>
 </div>
+<div class="dim" id="vSheet" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="vsT">
+  <b id="vsT"></b><p id="vsN"></p>
+  <div class="btns" id="vsB"></div>
+</div></div>
 <div class="dim" id="sheet" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
   <b id="shT"></b><p id="shN"></p><p class="warn">送簽核以後，IEI 這張就鎖住，不能再補簽。</p>
   <div class="btns"><button type="button" class="soft" id="shNo">先不要</button><button type="button" class="go" id="shGo">仍要送簽核</button></div>
@@ -981,6 +1000,7 @@ $('go').onclick = function () {
       $('dryOut').textContent = j.form; $('dryOut').hidden = false; check(); return;
     }
     apply(j.state);
+    if (j.at) { X.locked = true; head(); drawSigns(); say('已送出並送簽核 ✓ IEI 編號 ' + j.svid + '（簽名都齊了，一次送完；IEI 鎖住了）'); finish(); return; }
     say('已送出 ✓ IEI 編號 ' + j.svid + (j.warns ? '，警告單 ' + j.warns + ' 張' : '') + (j.flushed ? '，' + j.flushed + ' 個簽名已補進去' : '') + (j.fail.length ? '。沒補成：' + j.fail.join('；') : ''));
     finish();
   }).catch(function (e) { say(e.message); check(); });
@@ -1008,8 +1028,59 @@ function finish() {
     .catch(function () { return api({ api: 'signDone', d: DRAFT }).then(function (j) { if (!j.pushed) say('留底卡之前傳過了（簽名人數沒變）'); }); })
     .catch(function (e) { say(e.message); });
 }
+/* ---------- IEI 訪視清單（?v=list，他 10/16 選設計三：卡片＋左邊色條，刪除收在「⋯」） ---------- */
+var VD = DAY || '';
+function vShift(n) { var t = new Date(VD + 'T12:00:00+08:00'); t.setDate(t.getDate() + n); vLoad(t.toISOString().slice(0, 10)); }
+function vLoad(day) {
+  $('vL').innerHTML = ''; $('vDay').textContent = '讀 IEI 清單…';
+  api({ api: 'visits', date: day }).then(function (j) { VD = j.day; vDraw(j.list); }).catch(function (e) { $('vDay').textContent = e.message; });
+}
+function vDraw(list) {
+  var t = new Date(VD + 'T12:00:00+08:00'), today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+  $('vDay').textContent = (VD === today ? '今天 ' : '') + (t.getMonth() + 1) + '/' + t.getDate() + '（' + '日一二三四五六'.charAt(t.getDay()) + '）・' + list.length + ' 筆';
+  var box = $('vL'); box.innerHTML = '';
+  if (!list.length) box.appendChild(el('div', '這天 IEI 上沒有你的訪視紀錄', { class: 'note', style: 'padding:12px 4px' }));
+  list.forEach(function (v) {
+    var nt = v.site === 'n', c = el('div', null, { class: 'vc' }), i = el('button', null, { type: 'button', class: 'vi' }), n = el('span', v.svid, { class: 'vn' });
+    n.appendChild(el('small', (nt ? '南投' : '台中') + ' IEI'));
+    var s = el('span', null, { class: 'vs' }); s.appendChild(document.createTextNode([v.nat, v.wk].filter(Boolean).join('・') + '　'));
+    s.appendChild(el('span', v.st || '—', { class: 'vpill' + (/新增|未|待/.test(v.st) ? ' half' : '') }   // IEI 的字：新增＝還沒送審核（琥珀），送審核＝送出了));
+    i.appendChild(n); i.appendChild(el('span', v.cu, { class: 'vt' })); i.appendChild(s);
+    i.onclick = function () { vMenu(v); };
+    var m = el('button', '⋯', { type: 'button', class: 'vm', 'aria-label': '更多' }); m.onclick = function () { vMenu(v); };
+    c.appendChild(el('span', null, { class: 'vb' + (nt ? ' nt' : '') })); c.appendChild(i); c.appendChild(m); box.appendChild(c);
+  });
+}
+function vBtn(t, cls, fn) { var b = el('button', t, { type: 'button', class: cls }); b.onclick = fn; return b; }
+function vMenu(v) {
+  var nt = v.site === 'n', where = (nt ? '南投' : '台中') + ' IEI ' + v.svid;
+  $('vsT').textContent = where; $('vsN').textContent = v.cu + (v.wk ? '・' + v.wk : '') + '・' + (v.st || '');
+  var b = $('vsB'); b.innerHTML = '';
+  b.appendChild(vBtn('刪除', 'soft', function () {
+    $('vsT').textContent = '刪掉' + where + '？';
+    $('vsN').textContent = v.cu + '・' + VD + '。刪了 IEI 上就沒有這一筆' + (v.d ? '；小禾的那張還在，可以改好再送一次。' : '。');
+    b.innerHTML = '';
+    b.appendChild(vBtn('先不要', 'soft', function () { $('vSheet').hidden = true; }));
+    b.appendChild(vBtn('刪除', 'go', function () {
+      b.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
+      api({ api: 'vdel', svid: v.svid, site: v.site, date: VD }).then(function () { $('vSheet').hidden = true; say('已刪除 ' + where); vLoad(VD); })
+        .catch(function (e) { $('vsN').textContent = e.message; b.querySelectorAll('button').forEach(function (x) { x.disabled = false; }); });
+    }));
+    b.lastChild.style.background = 'var(--red)';
+  }));
+  b.appendChild(v.d ? vBtn('打開小禾的這張', 'go', function () { location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&d=' + v.d; })
+                    : vBtn('關閉（這張是在 IEI 網頁上開的）', 'soft', function () { $('vSheet').hidden = true; }));
+  $('vSheet').hidden = false;
+}
+$('vSheet').onclick = function (e) { if (e.target === $('vSheet')) $('vSheet').hidden = true; };
+$('vPrev').onclick = function () { vShift(-1); }; $('vNext').onclick = function () { vShift(1); };
 liff.init({ liffId: LIFF_ID }).then(function () {
   if (!liff.isLoggedIn()) return liff.login();
+  if (qp('v') === 'list') {   // IEI 訪視清單
+    $('bar').hidden = true; $('vl').hidden = false; document.querySelector('footer').hidden = true;
+    $('ttl').textContent = 'IEI 訪視清單'; $('sub').textContent = '台中＋南投・點一筆打開或刪除';
+    return vLoad(VD);
+  }
   return api({ api: 'prep', d: DRAFT, t: TRIP, date: DAY }).then(function (j) {
     META = j; SITES = j.sites || 1; $('bar').hidden = true; $('form').hidden = false;
     $('date').value = j.day; seg('method', '1'); seg('labor', '1');
