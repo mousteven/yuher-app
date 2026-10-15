@@ -1035,7 +1035,7 @@ function vLoad(day) {
   $('vL').innerHTML = ''; $('vDay').textContent = '讀 IEI 清單…';
   api({ api: 'visits', date: day }).then(function (j) { VD = j.day; vDraw(j.list); }).catch(function (e) { $('vDay').textContent = e.message; });
 }
-function vDraw(list) {
+function vDraw(list) {   // 狀態標籤：IEI 寫「新增」＝還沒送審核（琥珀），「送審核」＝送出了
   var t = new Date(VD + 'T12:00:00+08:00'), today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
   $('vDay').textContent = (VD === today ? '今天 ' : '') + (t.getMonth() + 1) + '/' + t.getDate() + '（' + '日一二三四五六'.charAt(t.getDay()) + '）・' + list.length + ' 筆';
   var box = $('vL'); box.innerHTML = '';
@@ -1044,7 +1044,7 @@ function vDraw(list) {
     var nt = v.site === 'n', c = el('div', null, { class: 'vc' }), i = el('button', null, { type: 'button', class: 'vi' }), n = el('span', v.svid, { class: 'vn' });
     n.appendChild(el('small', (nt ? '南投' : '台中') + ' IEI'));
     var s = el('span', null, { class: 'vs' }); s.appendChild(document.createTextNode([v.nat, v.wk].filter(Boolean).join('・') + '　'));
-    s.appendChild(el('span', v.st || '—', { class: 'vpill' + (/新增|未|待/.test(v.st) ? ' half' : '') }   // IEI 的字：新增＝還沒送審核（琥珀），送審核＝送出了));
+    s.appendChild(el('span', v.st || '—', { class: 'vpill' + (/新增|未|待/.test(v.st) ? ' half' : '') }));
     i.appendChild(n); i.appendChild(el('span', v.cu, { class: 'vt' })); i.appendChild(s);
     i.onclick = function () { vMenu(v); };
     var m = el('button', '⋯', { type: 'button', class: 'vm', 'aria-label': '更多' }); m.onclick = function () { vMenu(v); };
