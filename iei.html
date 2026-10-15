@@ -81,6 +81,9 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 #tdF{border-left:4px solid var(--red)}
 #tdL label.on span{color:var(--mute);text-decoration:line-through}
 #tdL label.on{background:var(--soft)}
+.site{font-size:12px;font-weight:800;letter-spacing:.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;flex:none;background:var(--tint);color:var(--blue)}
+.site.nt{background:#E5F4EC;color:#0F7B4C}
+.where{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:#E5F4EC;color:var(--ink);font-size:14px}
 .ld{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:var(--tint);color:var(--blue);font-weight:700;font-size:15px}
 .ld::before{content:"";width:14px;height:14px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:spin .8s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -219,7 +222,7 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
     <div class="ld" id="ld" role="status" hidden></div>
     <div class="f" id="tripsF" hidden><div class="lab"><svg class="ic s"><use href="#i-route"/></svg>今天的行程</div><div class="chips scroll" id="trips"></div></div>
     <div class="f">
-      <label class="fld"><svg class="ic"><use href="#i-co"/></svg><input type="search" id="q" placeholder="打客戶名稱，打一個字就有提示" aria-label="打客戶名稱找" autocomplete="off"></label>
+      <label class="fld"><svg class="ic"><use href="#i-co"/></svg><input type="search" id="q" placeholder="打客戶名稱，打一個字就有提示" aria-label="打客戶名稱找" autocomplete="off"><span class="site" id="qSite" hidden></span></label>
       <div id="custNow" class="note"></div>
       <div class="list big" id="cands"></div>
     </div>
@@ -295,6 +298,7 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
   <div class="btns"><button type="button" class="soft" id="shNo">先不要</button><button type="button" class="go" id="shGo">仍要送簽核</button></div>
 </div></div>
 <footer><div><div id="msg" role="status"></div>
+  <div class="where" id="where" hidden><span class="site nt">南投</span><span>這家客戶在南投 IEI：送出、警告單、附件都會送到南投。</span></div>
   <button id="go" class="go" disabled><span id="goT">確認後送出</span><span class="n" id="goB" hidden><svg class="ic s"><use href="#i-sign"/></svg><span id="goN"></span></span><svg class="ic"><use href="#i-arrow"/></svg></button>
   <button type="button" class="link" id="only" hidden>只傳留底到 LINE，先不送簽核</button>
   <button type="button" class="link" id="keep" hidden>儲存草稿，先不送出</button></div></footer>
@@ -357,6 +361,7 @@ function seg(id, v) { var b = $(id); if (v != null) b.dataset.v = String(v); [].
 });
 function sides() { $('wkF').hidden = $('labor').dataset.v === '2'; drawWarn(); drawSigns(); check(); }
 function head() {
+  drawSite();
   $('ttl').textContent = S.cuName || S.client || '選一個客戶';
   $('sub').textContent = [$('date').value, S.trip && S.trip.slot, X && X.svid ? 'IEI ' + X.svid + (X.locked ? '・已送簽核' : '・已送出') : '',
     META && META.dry ? '試跑中：按送出也不會進 IEI' : ''].filter(Boolean).join('・') || '客戶訪視服務紀錄表';
@@ -373,18 +378,31 @@ function cands(list, q, wks) {
   var box = $('cands'); box.innerHTML = ''; wks = wks || [];
   if (!list.length && !wks.length) { $('custNow').textContent = S.client ? 'IEI 找不到「' + S.client + '」，請在上面打名稱找' : ''; return; }
   $('custNow').textContent = q ? '' : 'IEI 有 ' + list.length + ' 家像的，請點一家：';
-  function row(name, sub, fn) {
+  function row(name, sub, fn, cu) {
     var lab = el('label'), r = el('input', null, { type: 'radio', name: 'cu' }), t = hl(name, q);
-    t.appendChild(el('small', sub)); r.onchange = fn; lab.appendChild(r); lab.appendChild(t); box.appendChild(lab);
+    t.appendChild(el('small', sub)); r.onchange = fn; lab.appendChild(r); lab.appendChild(t);
+    if (SITES > 1) lab.appendChild(siteTag(cu));   // 兩個 IEI 都開時才標（他 10/15）
+    box.appendChild(lab);
   }
   if (wks.length) box.appendChild(el('div', '工人', { class: 'gh' }));
-  wks.forEach(function (w) { row(w.zh, (w.co || w.cu) + '・' + (w.nat || ''), function () { pickWorker(w); }); });
+  wks.forEach(function (w) { row(w.zh, (w.co || rawCu(w.cu)) + '・' + (w.nat || ''), function () { pickWorker(w); }, w.cu); });
   if (wks.length && list.length) box.appendChild(el('div', '工廠', { class: 'gh' }));
-  list.forEach(function (c) { row(c.name, c.cu00 + '・' + (c.addr || '沒有地址'), function () { pickCust(c); }); });
+  list.forEach(function (c) { row(c.name, rawCu(c.cu00) + '・' + (c.addr || '沒有地址'), function () { pickCust(c); }, c.cu00); });
 }
 function pickWorker(w) {
   var c = (CUST || []).filter(function (x) { return x.cu00 === w.cu; })[0] || { cu00: w.cu, name: w.co || w.cu };
   pickCust(c).then(function () { if (S.cu00 !== w.cu) return; S.picks[w.la] = 1; workers(S.workers, true); });
+}
+/* 台中／南投（他 10/15）：南投客戶代碼帶 n:，畫面上只顯示標籤 */
+var SITES = 1;
+function isNt(cu) { return /^n:/.test(cu || ''); }
+function rawCu(cu) { return String(cu || '').replace(/^n:/, ''); }
+function siteName(cu) { return isNt(cu) ? '南投' : '台中'; }
+function siteTag(cu) { return el('span', siteName(cu), { class: 'site' + (isNt(cu) ? ' nt' : '') }); }
+function drawSite() {
+  var t = $('qSite'), on = !!S.cu00 && SITES > 1;
+  t.hidden = !on; if (on) { t.textContent = siteName(S.cu00); t.className = 'site' + (isNt(S.cu00) ? ' nt' : ''); }
+  $('where').hidden = !on || !isNt(S.cu00) || SENT;
 }
 function load(t) { $('ld').textContent = t || ''; $('ld').hidden = !t; }   // 跟 IEI 要資料時，搜尋欄上方的藍色提示（他 10/15）
 function pickCust(c, keepPicks) {
@@ -392,7 +410,7 @@ function pickCust(c, keepPicks) {
   if (!$('addr').value && c.addr) $('addr').value = c.addr;
   $('cands').innerHTML = ''; $('custNow').textContent = ''; $('q').value = c.name;   // 他 10/14：選好的名稱就放在搜尋欄裡
   S.wkOpen = false; $('wkQ').value = '';
-  head(); load('讀 IEI 移工名單…');
+  head(); load('讀' + (SITES > 1 ? siteName(c.cu00) + ' ' : ' ') + 'IEI 移工名單…');
   return api({ api: 'iei', cu00: c.cu00, workers: S.trip ? S.trip.workers : [] }).then(function (j) { workers(j.workers, keepPicks); load(''); }).catch(function (e) { load(''); say(e.message); });
 }
 function workers(rows, keepPicks) {
@@ -732,7 +750,7 @@ function drawWarn() {
     lab.appendChild(c); lab.appendChild(t); ib.appendChild(lab);
   });
   $('wnOF').hidden = WN.it.indexOf(8) === -1;
-  if (ask.length && S.cuName) api({ api: 'warnN', cu: S.cuName, ws: ask.map(function (w) { return { la00: w.la00, zh: w.zh }; }) }).then(function (j) {
+  if (ask.length && S.cuName) api({ api: 'warnN', cu: S.cuName, cu00: S.cu00, ws: ask.map(function (w) { return { la00: w.la00, zh: w.zh }; }) }).then(function (j) {
     for (var k in j.n) { WN.n[k] = j.n[k]; if (!WN.hand[k]) WN.fq[k] = String(Math.min(3, j.n[k] + 1)); }   // 已經有 1 張 → 先選第二次
   }, function () { ask.forEach(function (w) { WN.n[w.la00] = '?'; }); }).then(drawWarn);
 }
@@ -945,7 +963,8 @@ function check() {
     : l !== '2' && !picked().length ? '至少勾一位移工' : l !== '2' && !S.nat ? 'IEI 一張只能一個國籍'
     : wnOn() && !wnWk().length ? '警告單至少開給一位移工' : wnOn() && !WN.it.length ? '警告單至少勾一項違規' : '';
   $('go').disabled = !!bad;
-  if (bad) goSet(bad); else goSet('送出到 IEI', String(nSigned()), '送出到 IEI（' + nSigned() + ' 個簽名）');
+  var dst = '送出到' + (SITES > 1 ? siteName(S.cu00) + ' ' : ' ') + 'IEI';   // 他 10/15：寫清楚送去哪一邊
+  if (bad) goSet(bad); else goSet(dst, String(nSigned()), dst + '（' + nSigned() + ' 個簽名）');
 }
 $('go').onclick = function () {
   if (slots().some(function (p) { return ST[p.k] === 'up'; })) return say('還有簽名在存，等一下再按');
@@ -992,7 +1011,7 @@ function finish() {
 liff.init({ liffId: LIFF_ID }).then(function () {
   if (!liff.isLoggedIn()) return liff.login();
   return api({ api: 'prep', d: DRAFT, t: TRIP, date: DAY }).then(function (j) {
-    META = j; $('bar').hidden = true; $('form').hidden = false;
+    META = j; SITES = j.sites || 1; $('bar').hidden = true; $('form').hidden = false;
     $('date').value = j.day; seg('method', '1'); seg('labor', '1');
     if (j.draft) { DRAFT = j.draft.id || DRAFT; $('tripsF').hidden = true;   // 從行程卡進來、後端找到存過的草稿＝接著改那一張（不另存新的）
       S.trip = j.trips.filter(function (t) { return t.id === j.draft.trip; })[0] || null; drawTodo(); apply(j.state); return fill(j.draft).then(function () { SAVED = JSON.stringify(Object.assign({}, draft(), { id: '' })); }); }
