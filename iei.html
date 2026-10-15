@@ -1064,7 +1064,7 @@ setInterval(function () {
    一張＝{ d 草稿, sigs {格子: PNG}, send 要送進 IEI }，照 存草稿 → 簽名 → 送出 的順序送，送成功一段刪一段。
    存 localStorage（一張連簽名約 50～300KB，5MB 放十幾張）。送成功就刪；15 天沒送出去也刪（＝伺服器暫存簽名、補簽期的期限）。 */
 var NEWID = 'D' + Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(6)), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('').slice(0, 11);
-var OBK = 'xh.ob', OBDAY = 15 * 864e5, OBQ = Promise.resolve(), OBN = 0;
+var OBK = 'xh.ob', OBDAY = 15 * 864e5, OBQ = Promise.resolve();
 function obAll() {
   var o = {}; try { o = JSON.parse(localStorage.getItem(OBK) || '{}') || {}; } catch (e) {}
   for (var k in o) if (Date.now() - o[k].at > OBDAY) delete o[k];
@@ -1081,7 +1081,6 @@ function obRun(id, live) {   // 送一張（一次只送一張，排隊）；回
   var p = OBQ.then(function () {
     var j = obAll()[id], out = { sig: {} }, go = Promise.resolve();
     if (!j) return out;
-    OBN++; obDraw();
     if (j.d && !(j.send && !Object.keys(j.sigs).length)) go = go.then(function () {   // 要送出又沒簽名要補：送出那一步自己會存（已經送進 IEI 的再存會被擋）
       var dv = j.dv;
       return api({ api: 'save', draft: j.d }).then(function (r) { out.save = r; obEdit(id, function (x) { if (x.dv === dv && !x.send) delete x.d; }); });
@@ -1096,11 +1095,9 @@ function obRun(id, live) {   // 送一張（一次只送一張，排隊）；回
       return api({ api: 'send', draft: obAll()[id].d }).then(function (r) { out.send = r; obEdit(id, function (x) { delete x.send; delete x.d; }); });
     });
     return go.then(function () {
-      OBN--; obDraw();
       if (!live) obDone(id, out);
       return out;
     }, function (e) {
-      OBN--; obDraw();
       if (!e.net) obEdit(id, function (x) { x.err = e.message; });   // ⛔3 內容錯：記下來、不再自動試，等他改
       throw e;
     });
@@ -1137,10 +1134,9 @@ function obDraw() {   // 每一頁最上面、捲動也黏著（他 10/16：放�
   var bad = ids.filter(function (k) { return o[k].err; }), ok = ids.length - bad.length, me = o[DRAFT || NEWID];
   if (ok) {
     var t = el('span');
-    if (OBN) t.appendChild(el('b', '正在送出手機裡的 ' + ok + ' 張…'));
-    else if (me && !me.err) { t.appendChild(el('b', '沒有訊號：這張已經存在手機裡')); t.appendChild(document.createTextNode('，有訊號會自動送出，不用再按' + (ok > 1 ? '（手機裡共 ' + ok + ' 張）' : ''))); }
+    if (me && !me.err) { t.appendChild(el('b', '沒有訊號：這張已經存在手機裡')); t.appendChild(document.createTextNode('，有訊號會自動送出，不用再按' + (ok > 1 ? '（手機裡共 ' + ok + ' 張）' : ''))); }
     else { t.appendChild(el('b', '手機裡還有 ' + ok + ' 張沒送出')); t.appendChild(document.createTextNode('・有訊號會自動送')); }
-    box.appendChild(obRow(false, t, OBN ? [] : [['現在送', function (b) { b.disabled = true; obFlush(); }]]));
+    box.appendChild(obRow(false, t, [['現在送', function (b) { b.disabled = true; obFlush(); }]]));   // 他 10/16：不要「正在送出…」那行；送成功靠 LINE 留底卡
   }
   bad.forEach(function (k) {   // 內容有問題的不會自動重試：寫出原因，讓他決定再試或丟掉
     box.appendChild(obRow(true, el('span', obLabel(o[k]) + ' 送不出去：' + o[k].err), [
