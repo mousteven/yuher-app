@@ -4,7 +4,7 @@
      → 預覽（移工語言，跟羽禾 App 同一套 Google 翻譯，＝送進 IEI 的那一份）→ 簽名格（也可一個 QR 大家掃）
      → 底部一顆「送出到 IEI（N 個簽名）」＝ Create ＋ 先簽好的簽名一起補進去。送出後同一頁繼續補簽（QR 14 天內有效），
      同一顆按鈕變「送簽核到 IEI」（他 2026-10-14 批准；送了 IEI 就鎖住，不能再補簽）。
-     樣式＝「20 品牌卡片」（他 2026-10-14 選，取代雲舞白／01 懸浮漸層）：淡藍灰底、白卡、大項深藍卡＋細項白卡疊在下面、羽禾藍實心主鈕。
+     樣式＝「版本五 淡藍標題卡」（他 2026-10-15 選，取代 10/14 的「20 品牌卡片」；覆蓋規則在 <style> 最後一段）：白底、淡藍大標題卡寫哪一家哪一天、細框卡片不加陰影、M3 外框分段鈕。
      移工簽名的格子與簽名板用他的語言（越／印／泰／英，固定字串，不是機器翻；qsign.html 共用的字 check.js 會比對）。
      頁面本身沒有任何資料，資料都是 LIFF 驗身分之後才跟後端拿。舊的 ?sign=<ID> 連結也開這一頁。
      ⛔ 後端網址寫死在下面（API），不從網址參數拿：不然有人做一個假連結，就能把他的 LINE 通行證送去別的地方。 -->
@@ -216,6 +216,47 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
 .sheet .btns button{min-height:54px;border-radius:16px;font-weight:700;font-size:16px;line-height:1.2;font-family:inherit}
 .sheet .soft{border:1.5px solid var(--line);box-shadow:none}
 .sheet .go{justify-content:center}
+/* ===== 版本五「淡藍標題卡」（他 10/15 從五種樣式選的：輕量 Material 3、卡片式扁平、大圓角、線性圖標、白底高留白） =====
+   疊在上面的舊樣式之上：白底；最上面淡藍大卡寫「哪一家、哪一天」；其他卡片只有細框、不加陰影；
+   分段按鈕＝M3 外框膠囊（選中淡藍底＋打勾）；膠囊圓角 8、外框；服務大項不再是深藍卡，跟細項併成一張「服務」卡。
+   紅色只留給警告（警告單、交辦、失敗字）。 */
+:root{--bg:#FFFFFF;--ink:#1A1F2B;--mute:#5B6474;--line:#D3DAE4;--hair:#E6EAF0;--tint:#EEF4FC;--tint2:#DCE8F8;--blued:#003F87;--soft:#F4F6F9;
+  --sh:none;--sh1:none;--arrow:#FFFFFF}
+body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-variant-numeric:tabular-nums}
+header{margin:16px auto 0;padding:20px;background:var(--tint);border-radius:28px;max-width:528px;width:calc(100% - 32px);align-items:flex-start}
+#ttl{font-size:24px;font-weight:700;letter-spacing:.01em}
+#sub{font-size:16px;font-weight:600;color:var(--ink)}
+.x{background:var(--card);border:1px solid var(--line)}
+.card{border:1px solid var(--line);border-radius:24px;box-shadow:none;padding:20px 16px}
+.sh{font-size:17px;font-weight:700}
+.lab{font-weight:600}
+.nb{background:var(--tint);color:var(--blue)}
+.card.dk{background:var(--card);color:var(--ink);border-radius:24px 24px 0 0;border-bottom:0;padding-bottom:4px}
+.dk .lab{color:var(--mute)}.dk .nb{background:var(--tint);color:var(--blue)}
+.card.att{border-radius:0 0 24px 24px;border-top:0;margin-top:-16px;padding-top:12px}
+.fld{border:1px solid var(--line);border-radius:16px;min-height:52px}
+.fld:focus-within{box-shadow:0 0 0 3px var(--tint2)}
+.seg{background:none;border:1px solid #8A93A3;border-radius:999px;padding:0;gap:0;overflow:hidden}
+.seg button{border-radius:0;font-size:15px;font-weight:600;color:var(--ink)}
+.seg button+button{border-left:1px solid #8A93A3}
+.seg button[aria-pressed=true]{background:var(--tint2);color:var(--blued);box-shadow:none}
+.seg button[aria-pressed=true]>svg{display:none}
+.seg button[aria-pressed=true]::before{content:"";width:16px;height:16px;flex:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23003F87' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E") center/contain no-repeat}
+.chips button,.dk .chips button{border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:500;font-size:15px;padding:0 14px}
+.chips button[aria-pressed=true],.dk .chips button[aria-pressed=true]{background:var(--tint2);border-color:transparent;color:var(--blued);font-weight:700}
+.chips button[aria-pressed=true]::before,.dk .chips button[aria-pressed=true]::before{content:"✓ "}
+.chips.ph button{border:1px solid var(--line);border-radius:8px}
+.chips.ph button[aria-pressed=true]{background:var(--tint2);border-color:transparent;color:var(--blued)}
+.chips .seg.opt{border-radius:999px}
+.list{border:1px solid var(--line);border-radius:16px}
+.tile{border:1px solid var(--line)}
+.pill,.soft{border:1px solid var(--line);background:var(--card)}
+.go{box-shadow:none;border-radius:16px}
+footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
+#msg{border:1px solid var(--line)}
+.vc,.vday button,.dchips button,.dit{border:1px solid var(--line)}
+.dit[aria-pressed=true]{border-color:transparent}
+.ld{border-radius:16px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.bar i{width:100%}}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
