@@ -90,6 +90,25 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .vc .vn{font-size:24px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
 .vc .vn small{font-size:13px;font-weight:700;color:var(--mute);margin-left:6px}
 .vc .vt{font-weight:800}.vc .vs{font-size:14px;color:var(--mute)}
+/* 整理草稿（?v=drafts，10/15）：白卡清單、勾選列淡紅、底部一顆紅色刪除 */
+#dl{padding-bottom:132px}
+.dchips{display:flex;flex-wrap:wrap;gap:8px}
+.dchips button{min-height:40px;border:0;border-radius:999px;padding:0 14px;font-weight:700;font-size:14px;font-family:inherit;background:var(--card);color:var(--ink)}
+.dchips button:active{background:var(--ink);color:#fff}
+.dgrp{font-size:14px;font-weight:700;display:flex;justify-content:space-between;margin-top:8px}.dgrp i{font-style:normal;font-weight:400;color:var(--mute)}
+.dit{display:grid;grid-template-columns:24px 48px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:52px;padding:10px 14px;border-radius:16px;background:var(--card);border:0;font:inherit;font-size:15px;color:inherit;text-align:left;width:100%}
+.dit .bx{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);background:#fff}
+.dit[aria-pressed=true]{background:#FDECEC}
+.dit[aria-pressed=true] .bx{border-color:var(--red);background:var(--red) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Cpath d='M3 7l3 3 5-6' fill='none' stroke='%23fff' stroke-width='2.2'/%3E%3C/svg%3E") center no-repeat}
+.dit .dd{color:var(--mute);font-size:14px;font-variant-numeric:tabular-nums}
+.dit .dn{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dit .ds{font-size:13px;color:var(--mute)}
+.dit.lock{grid-template-columns:48px minmax(0,1fr) auto;opacity:.6}
+.ddock{position:fixed;left:0;right:0;bottom:0;background:var(--card);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 12px rgba(11,27,51,.08);display:grid;gap:4px;z-index:5}
+.ddock .go{justify-content:center;background:var(--red);box-shadow:none;width:100%}
+.ddock .go:disabled{background:#C9D3E0}
+.ddock p{margin:0;text-align:center;font-size:13px;color:var(--mute);min-height:20px}
+.ddock p .link{min-height:0;padding:0 4px;font-size:14px;font-weight:700}
 .vc .vm{width:48px;border:0;background:none;color:var(--mute);font-weight:900;font-size:22px;font-family:inherit}
 .vday{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:800}
 .vday button{width:44px;height:44px;border-radius:12px;border:0;background:var(--card);font-size:20px;font-weight:900;color:var(--ink);box-shadow:var(--sh)}
@@ -226,6 +245,11 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
  <div id="vl" hidden style="display:grid;gap:12px">   <!-- IEI 訪視清單（他 10/16 選設計三） -->
    <div class="vday"><button type="button" id="vPrev" aria-label="前一天">‹</button><span id="vDay"></span><button type="button" id="vNext" aria-label="後一天">›</button></div>
    <div id="vL" style="display:grid;gap:10px"></div>
+ </div>
+ <div id="dl" hidden style="display:grid;gap:8px">   <!-- 整理草稿（他 10/15 看設計稿說照這個做） -->
+   <div class="dchips" id="dCh"></div>
+   <div id="dL" style="display:grid;gap:8px"></div>
+   <div class="ddock"><button type="button" class="go" id="dGo" disabled>勾要刪的草稿</button><p id="dMsg">只刪小禾裡的草稿，不會動到 IEI</p></div>
  </div>
  <div id="form" hidden>
   <section class="card" id="tdF" hidden>   <!-- 交辦事項（他 10/15）：跟羽禾 App、小羽同一份，勾了寫回行程表 -->
@@ -1079,8 +1103,59 @@ function vMenu(v) {
 }
 $('vSheet').onclick = function (e) { if (e.target === $('vSheet')) $('vSheet').hidden = true; };
 $('vPrev').onclick = function () { vShift(-1); }; $('vNext').onclick = function () { vShift(1); };
+/* ---------- 整理草稿（?v=drafts，他 10/15 看設計稿說「照這個部署」）：勾 → 一顆刪除 → 留「復原」。已送到 IEI 的灰掉，點了去 IEI 清單 ---------- */
+var DL = [], DSEL = {}, DUNDO = [], DMSG = '只刪小禾裡的草稿，不會動到 IEI';
+function dLoad() {
+  $('sub').textContent = '讀取中…';
+  return api({ api: 'drafts' }).then(function (j) { DL = j.list; DSEL = {}; dDraw(); }).catch(function (e) { $('sub').textContent = e.message; });
+}
+function dPick(fn) { DSEL = {}; DL.forEach(function (r) { if (!r.sent && fn(r)) DSEL[r.id] = 1; }); $('dMsg').textContent = DMSG; dDraw(); }
+function dDraw() {
+  var open = DL.filter(function (r) { return !r.sent; }), sent = DL.filter(function (r) { return r.sent; }), n = Object.keys(DSEL).length;
+  var today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10), last = {};
+  open.forEach(function (r) { last[r.date + r.name] = r.id; });   // 同一天同一家留最後一張，其他算重複
+  $('sub').textContent = open.length ? '還沒送出的草稿・' + open.length + ' 張' : '沒有還沒送出的草稿 ✓';
+  var ch = $('dCh'); ch.innerHTML = '';
+  [['全選', function () { return true; }], ['今天以前', function (r) { return r.date < today; }],
+   ['同一家重複的', function (r) { return last[r.date + r.name] !== r.id; }], ['全不選', function () { return false; }]].forEach(function (c) {
+    var b = el('button', c[0], { type: 'button' }); b.onclick = function () { dPick(c[1]); }; ch.appendChild(b);
+  });
+  ch.hidden = !open.length;
+  var box = $('dL'); box.innerHTML = '';
+  open.forEach(function (r) {
+    var b = el('button', null, { type: 'button', class: 'dit', 'aria-pressed': String(!!DSEL[r.id]) });
+    b.appendChild(el('span', null, { class: 'bx' })); b.appendChild(el('span', r.date.slice(5).replace('-', '/'), { class: 'dd' }));
+    b.appendChild(el('span', r.name, { class: 'dn' })); b.appendChild(el('span', r.fail ? '送失敗' : r.sig ? r.sig + ' 個簽名' : '沒簽', { class: 'ds' }));
+    b.onclick = function () { if (DSEL[r.id]) delete DSEL[r.id]; else DSEL[r.id] = 1; $('dMsg').textContent = DMSG; dDraw(); };
+    box.appendChild(b);
+  });
+  if (sent.length) {
+    var g = el('div', '已送到 IEI', { class: 'dgrp' }); g.appendChild(el('i', sent.length + ' 張・到 IEI 清單刪')); box.appendChild(g);
+    sent.forEach(function (r) {
+      var b = el('button', null, { type: 'button', class: 'dit lock' });
+      b.appendChild(el('span', r.date.slice(5).replace('-', '/'), { class: 'dd' })); b.appendChild(el('span', r.name, { class: 'dn' })); b.appendChild(el('span', 'IEI 清單 ›', { class: 'ds' }));
+      b.onclick = function () { location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&v=list&day=' + r.date; };
+      box.appendChild(b);
+    });
+  }
+  $('dGo').textContent = n ? '刪除 ' + n + ' 張草稿' : '勾要刪的草稿'; $('dGo').disabled = !n;
+}
+$('dGo').onclick = function () {   // 不問「確定嗎」：刪完留一顆復原（設計稿第 3 步）
+  var ids = Object.keys(DSEL); if (!ids.length) return;
+  $('dGo').disabled = true; $('dMsg').textContent = '刪除中…';
+  api({ api: 'ddel', ids: ids }).then(function (j) {
+    DUNDO = ids; dLoad();
+    var p = $('dMsg'), u = el('button', '復原', { type: 'button', class: 'link' }); p.textContent = '已刪除 ' + j.n + ' 張草稿　';
+    u.onclick = function () { u.disabled = true; api({ api: 'dundo', ids: DUNDO }).then(function (k) { DUNDO = []; p.textContent = '已復原 ' + k.n + ' 張'; dLoad(); }).catch(function (e) { p.textContent = e.message; }); };
+    p.appendChild(u);
+  }).catch(function (e) { $('dMsg').textContent = e.message; $('dGo').disabled = false; });
+};
 liff.init({ liffId: LIFF_ID }).then(function () {
   if (!liff.isLoggedIn()) return liff.login();
+  if (qp('v') === 'drafts') {   // 整理草稿
+    $('bar').hidden = true; $('dl').hidden = false; document.querySelector('footer').hidden = true; $('ttl').textContent = '整理草稿';
+    return dLoad();
+  }
   if (qp('v') === 'list') {   // IEI 訪視清單
     $('bar').hidden = true; $('vl').hidden = false; document.querySelector('footer').hidden = true;
     $('ttl').textContent = 'IEI 訪視清單'; $('sub').textContent = '台中＋南投・點一筆打開或刪除';
