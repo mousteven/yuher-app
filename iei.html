@@ -1094,8 +1094,8 @@ liff.init({ liffId: LIFF_ID }).then(function () {
     api({ api: 'custs' }).then(function (c) { setCust(c.list); }).catch(function () {});   // 背景跟 IEI 對最新的，存到手機
     if (j.wks) setWks(j.wks);
     api({ api: 'wks' }).then(function (c) { setWks(c.list); }).catch(function () {});
-    if (qp('cu')) { var pc = (CUST || []).filter(function (x) { return x.cu00 === qp('cu'); })[0] || { cu00: qp('cu'), name: qp('co') || qp('cu') };   // LINE 查工人／工廠點「開訪談表」（他 10/16）
-      if (qp('w')) pickWorker({ la: qp('w'), cu: qp('cu'), co: qp('co') }); else pickCust(pc); }
+    if (qp('cu')) qp('w') ? pickWorker({ la: qp('w'), cu: qp('cu'), co: qp('co') })   // LINE 查工人／工廠點「開訪談表」（他 10/16）
+      : pickCust((CUST || []).filter(function (x) { return x.cu00 === qp('cu'); })[0] || { cu00: qp('cu'), name: qp('co') || qp('cu') });
   });
 }).catch(function (e) {
   $('bar').hidden = true; $('ttl').textContent = '打不開';
