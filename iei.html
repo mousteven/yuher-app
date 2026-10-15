@@ -257,6 +257,9 @@ footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
 .vc,.vday button,.dchips button,.dit{border:1px solid var(--line)}
 .dit[aria-pressed=true]{border-color:transparent}
 .ld{border-radius:16px}
+.obq{display:grid;gap:8px;padding:12px 14px;border-radius:16px;background:var(--tint);color:var(--ink);font-size:15px}
+.obq .r{display:flex;align-items:center;gap:8px;justify-content:space-between}.obq b{font-weight:700}
+.obq .e{color:var(--red);font-size:14px}.obq button{min-height:44px;border:1px solid var(--line);border-radius:999px;padding:0 14px;background:var(--card);font:inherit;font-size:14px;font-weight:700;color:var(--blued);flex:none}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.bar i{width:100%}}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -282,6 +285,7 @@ footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
   <div><b id="ttl">讀取中…</b><span id="sub">客戶訪視服務紀錄表</span></div>
 </header>
 <main>
+ <div class="obq" id="ob" role="status" hidden></div>   <!-- 手機裡還沒送出的（離線暫存，10/16） -->
  <div class="bar" id="bar"><i></i></div>
  <div id="vl" hidden style="display:grid;gap:12px">   <!-- IEI 訪視清單（他 10/16 選設計三） -->
    <div class="vday"><button type="button" id="vPrev" aria-label="前一天">‹</button><span id="vDay"></span><button type="button" id="vNext" aria-label="後一天">›</button></div>
@@ -397,7 +401,7 @@ var LIFF_ID = qp('liff'), DRAFT = qp('d') || qp('sign'), TRIP = qp('t'), DAY = q
 var S = { items: [], auto: 0, autoP: '', autoA: '', pk: { d: {}, r: {} }, sl: {}, picks: {}, workers: [], vtEdited: false, trip: null, cu00: '', cuName: '', client: '', cat: -1, sub: -1, nat: '' };
 var META = null, X = null, ST = {}, FL = {}, SAVED = '', SENT = false, LANG = '中', TRC = {}, POLL = false, BQ = [], BI = 0, RELAY = false, trTimer = 0;
 var LC = { '菲律賓': 'EN', '越南': 'VI', '印尼': 'ID', '泰國': 'TH' };
-var STX = { ok: '✓ 已簽', held: '✓ 簽好了', dry: '✓ 試跑', todo: '點這裡簽', absent: '不在', up: '上傳中…', fail: '沒傳上去，再簽', auto: '自動沿用' };
+var STX = { ok: '✓ 已簽', held: '✓ 簽好了', local: '✓ 存在手機', dry: '✓ 試跑', todo: '點這裡簽', absent: '不在', up: '上傳中…', fail: '沒傳上去，再簽', auto: '自動沿用' };
 /* 移工簽名用他的語言（他 2026-10-14 批准）：固定寫好的字，不是機器翻。hint／clear／needSign／proc／res／signed 跟 qsign.html 的 T 一字不差（check.js 比對） */
 var NATL = { '菲律賓': '英', '越南': '越', '印尼': '印', '泰國': '泰' };
 var TL = {
@@ -435,7 +439,8 @@ function api(o, retry) {
     .catch(function (e) {
       if (!e || !e.bad) throw e;
       if (!retry && o.api !== 'send' && o.api !== 'submit') return new Promise(function (ok) { setTimeout(ok, 1500); }).then(function () { return api(o, true); });
-      throw new Error(/send|submit/.test(o.api) ? '伺服器沒有正常回應：先到 IEI 看有沒有進去，沒有再按一次（' + e.bad + '）' : '伺服器沒有正常回應，請再試一次（' + e.bad + '）');
+      var x = new Error(/send|submit/.test(o.api) ? '伺服器沒有正常回應：先到 IEI 看有沒有進去，沒有再按一次（' + e.bad + '）' : '伺服器沒有正常回應，請再試一次（' + e.bad + '）');
+      x.net = true; throw x;   // 離線暫存只重試這種；內容錯（j.ok === false）不重試
     })
     .then(function (j) { if (j.ok === false) throw new Error(j.err); return j; });
 }
@@ -847,7 +852,7 @@ function drawWarn() {
 /* ---------- 草稿 ---------- */
 function draft() {
   var p = picked(), l = $('labor').dataset.v, x = S.cat >= 0 && S.sub >= 0 ? META.cats[S.cat] : null;
-  return { id: DRAFT || '', trip: S.tripId || '', client: S.client, cuName: S.cuName, cu00: S.cu00, addr: $('addr').value.trim(),
+  return { id: DRAFT || NEWID, trip: S.tripId || '', client: S.client, cuName: S.cuName, cu00: S.cu00, addr: $('addr').value.trim(),
     date: $('date').value, vt: $('vt').value, nat: l === '2' ? '' : S.nat, method: $('method').dataset.v, labor: l,
     items: S.items.slice().sort(function (a, b) { return a - b; }), cat: x ? x.b : '', sub: x ? x.s[S.sub][0] : '',
     cuP: texts(0)[0], cuA: texts(0)[1], same: true, after: $('after').value.trim(),
@@ -864,7 +869,9 @@ function ensureDraft() {
   if (!S.cu00) return Promise.reject(new Error('先選 IEI 客戶'));
   var d = draft(), js = JSON.stringify(Object.assign({}, d, { id: '' }));
   if (DRAFT && js === SAVED) return Promise.resolve();
-  return api({ api: 'save', draft: d }).then(function (j) { DRAFT = j.id; SAVED = js; apply(j.state); });
+  obEdit(d.id, function (j) { j.d = d; j.dv = Date.now(); j.name = S.cuName; j.date = d.date; });
+  return obRun(d.id, true).then(function (r) { DRAFT = r.save ? r.save.id : d.id; SAVED = js; if (r.save) apply(r.save.state); },
+    function (e) { if (!e.net) throw e; DRAFT = d.id; SAVED = js; });   // 沒訊號：存在手機了，有訊號自動補
 }
 function fill(d) {
   S.client = d.client; S.tripId = d.trip || ''; S.cuName = d.cuName; S.items = d.items || []; S.vtEdited = true;
@@ -903,9 +910,9 @@ function locked() { return !!(X && X.locked); }
 function st(k) { return ST[k] || (mine(k) && lbrSaved() ? 'auto' : 'todo'); }
 function stText(p, s) {   // 移工的格子用他的語言；翻譯、雇主維持中文
   var L = p.L; if (!L) return STX[s];
-  return { ok: '✓ ' + L.signed, held: '✓ ' + L.signed, dry: '✓ ' + L.dry, todo: L.todo, absent: L.absent, up: L.up, fail: L.fail }[s];
+  return { ok: '✓ ' + L.signed, held: '✓ ' + L.signed, local: '✓ ' + L.signed, dry: '✓ ' + L.dry, todo: L.todo, absent: L.absent, up: L.up, fail: L.fail }[s];
 }
-function nSigned() { return slots().filter(function (p) { return /ok|held|dry|auto/.test(st(p.k)); }).length; }
+function nSigned() { return slots().filter(function (p) { return /ok|held|local|dry|auto/.test(st(p.k)); }).length; }
 function todo() { return slots().filter(function (p) { return /todo|fail/.test(st(p.k)); }); }
 function unsigned() { return slots().filter(function (p) { return !/ok|dry|auto/.test(st(p.k)); }); }   // 送簽核前要提醒的（還沒進 IEI 的都算）
 function drawSigns() {
@@ -1013,17 +1020,25 @@ $('b3').onclick = function () {
 $('bx').onclick = closeBoard;
 function save(p, png) {
   ST[p.k] = 'up'; drawSigns();
-  ensureDraft().then(function () { return api({ api: 'signPut', d: DRAFT, k: p.k, png: png }); }).then(function (j) {
+  ensureDraft().then(function () {
+    obEdit(DRAFT, function (j) { j.sigs[p.k] = png; });
+    return obRun(DRAFT, true);
+  }).then(function (r) {
+    var j = r.sig[p.k] || { v: 'held' };
     ST[p.k] = j.v === 'held' ? 'held' : j.dry ? 'dry' : 'ok';
-    if (p.k === 'lbr' && j.v === true) X.lbrSaved = true;
+    if (p.k === 'lbr' && j.v === true && X) X.lbrSaved = true;
     drawSigns();
-  }).catch(function (e) { ST[p.k] = 'fail'; drawSigns(); say(p.name + '：' + e.message); });
+  }).catch(function (e) {
+    if (e.net) { ST[p.k] = 'local'; drawSigns(); return; }   // 沒訊號：簽名存在手機，有訊號自動補
+    ST[p.k] = 'fail'; drawSigns(); say(p.name + '：' + e.message);
+  });
 }
 $('relay').onclick = function () { board(todo(), true); };
 /* 一個 QR：網址帶這張的簽章（後端做的），送出前就能用（簽名先暫存）。移工掃了到公開頁 qsign.html 自己選名字簽。QR 底一定純白 */
 $('qrAll').onclick = function () {
   say('準備 QR…');
   ensureDraft().then(function () {
+    if (obAll()[DRAFT]) return say('沒有訊號：QR 要有訊號才能用（工人的手機也要有網路）。可以先在這支手機上簽。');
     say(''); $('qrm').hidden = false; $('qwho').textContent = S.cuName; $('qurl').value = X.qurl; $('qbox').innerHTML = '';
     new QRCode($('qbox'), { text: X.qurl, width: 256, height: 256, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
   }).catch(function (e) { say(e.message); });
@@ -1037,6 +1052,82 @@ setInterval(function () {
     apply(Object.assign({}, X, { slots: Object.keys(j.on).map(function (k) { return { k: k, signed: j.on[k] }; }) }), true);
   }).catch(function () {}).then(function () { POLL = false; });
 }, 4000);
+/* ---------- 離線暫存（他 10/16：工廠收訊不好，先存手機、有訊號再送）----------
+   沿用小羽 outbox.js 三條：⛔1 先存手機再送（送到一半 LINE 被關掉，最壞是「還在手機裡」）；
+   ⛔2 同一張永遠同一個草稿編號（手機先編好 NEWID；後端認得，重送回上次結果，不會變兩張）；⛔3 內容錯不重試（記在那張上、顯示出來）。
+   跟小羽不一樣：小禾在 LINE 裡開，關掉就停，不能背景送 → 打開小禾（任何一頁）、手機恢復連線、頁面開著每 30 秒，各補一次。
+   一張＝{ d 草稿, sigs {格子: PNG}, send 要送進 IEI }，照 存草稿 → 簽名 → 送出 的順序送，送成功一段刪一段。
+   存 localStorage（一張連簽名約 50～300KB，5MB 放十幾張）。送成功就刪；15 天沒送出去也刪（＝伺服器暫存簽名、補簽期的期限）。 */
+var NEWID = 'D' + Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(6)), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('').slice(0, 11);
+var OBK = 'xh.ob', OBDAY = 15 * 864e5, OBQ = Promise.resolve();
+function obAll() {
+  var o = {}; try { o = JSON.parse(localStorage.getItem(OBK) || '{}') || {}; } catch (e) {}
+  for (var k in o) if (Date.now() - o[k].at > OBDAY) delete o[k];
+  return o;
+}
+function obEdit(id, f) {   // 改一張（沒有就建）；三段都送完了就整張拿掉
+  var o = obAll(), j = o[id] || { id: id, sigs: {}, at: Date.now() };
+  j.err = ''; f(j);
+  if (!j.d && !j.send && !Object.keys(j.sigs).length) delete o[id]; else o[id] = j;
+  try { localStorage.setItem(OBK, JSON.stringify(o)); } catch (e) { obDraw(); throw new Error('手機空間不夠，沒存進手機：請到有訊號的地方再按一次'); }
+  obDraw();
+}
+function obRun(id, live) {   // 送一張（一次只送一張，排隊）；回 { save, sig {格子: 回應}, send }
+  var p = OBQ.then(function () {
+    var j = obAll()[id], out = { sig: {} }, go = Promise.resolve();
+    if (!j) return out;
+    if (j.d && !(j.send && !Object.keys(j.sigs).length)) go = go.then(function () {   // 要送出又沒簽名要補：送出那一步自己會存（已經送進 IEI 的再存會被擋）
+      var dv = j.dv;
+      return api({ api: 'save', draft: j.d }).then(function (r) { out.save = r; obEdit(id, function (x) { if (x.dv === dv && !x.send) delete x.d; }); });
+    });
+    Object.keys(j.sigs).forEach(function (k) {
+      go = go.then(function () {
+        var png = j.sigs[k];
+        return api({ api: 'signPut', d: id, k: k, png: png }).then(function (r) { out.sig[k] = r; obEdit(id, function (x) { if (x.sigs[k] === png) delete x.sigs[k]; }); });
+      });
+    });
+    if (j.send) go = go.then(function () {
+      return api({ api: 'send', draft: obAll()[id].d }).then(function (r) { out.send = r; obEdit(id, function (x) { delete x.send; delete x.d; }); });
+    });
+    return go.then(function () {
+      if (!live && out.send && !out.send.dry) obSent(id, out.send);
+      return out;
+    }, function (e) {
+      if (!e.net) obEdit(id, function (x) { x.err = e.message; });   // ⛔3 內容錯：記下來、不再自動試，等他改
+      throw e;
+    });
+  });
+  OBQ = p.catch(function () {});
+  return p;
+}
+function obSent(id, j) {   // 背景補送成功的那張：留底卡照常傳；剛好是畫面上這張就更新畫面
+  finish(id);
+  if (id === (DRAFT || NEWID) && j.state) { DRAFT = id; apply(j.state); say('剛剛自動送出了 ✓ IEI 編號 ' + j.svid); check(); }
+}
+function obFlush() {
+  var o = obAll();
+  Object.keys(o).forEach(function (id) { if (!o[id].err) obRun(id).catch(function () {}); });
+  return OBQ;
+}
+// ── 離線暫存到這裡（check.js 從上面那行註解切到這行來測）──
+function obDraw() {   // 每一頁最上面：手機裡還有幾張沒送出（他 10/16：要一直看得到）
+  var o = obAll(), ids = Object.keys(o), box = $('ob'); box.innerHTML = ''; box.hidden = !ids.length;
+  if (!ids.length) return;
+  var bad = ids.filter(function (k) { return o[k].err; }), ok = ids.length - bad.length;
+  if (ok) {
+    var r = el('div', null, { class: 'r' }), t = el('span'), b = el('button', '現在送', { type: 'button' });
+    t.appendChild(el('b', '手機裡還有 ' + ok + ' 張沒送出')); t.appendChild(document.createTextNode('・有訊號會自動送'));
+    b.onclick = function () { b.disabled = true; b.textContent = '送出中…'; obFlush().then(obDraw); };
+    r.appendChild(t); r.appendChild(b); box.appendChild(r);
+  }
+  bad.forEach(function (k) {   // 內容有問題的不會自動重試：寫出原因，讓他決定再試或丟掉
+    var j = o[k], r = el('div', null, { class: 'r' }), t = el('span', null, { class: 'e' }), y = el('button', '再試', { type: 'button' }), n = el('button', '丟掉', { type: 'button' });
+    t.textContent = (j.date ? j.date.slice(5).replace('-', '/') + ' ' : '') + (j.name || '這張') + '送不出去：' + j.err;
+    y.onclick = function () { obEdit(k, function () {}); obRun(k).catch(function () {}); };
+    n.onclick = function () { obEdit(k, function (x) { delete x.d; delete x.send; x.sigs = {}; }); };
+    r.appendChild(t); var g = el('span', null, { class: 'r' }); g.appendChild(y); g.appendChild(n); r.appendChild(g); box.appendChild(r);
+  });
+}
 /* ---------- 送出：一顆按鈕＝存草稿＋Create＋先簽好的簽名一起補進 IEI；送出後同一顆變「送簽核到 IEI」 ---------- */
 function goSet(t, badge, aria) { $('goT').textContent = t; $('goN').textContent = badge || ''; $('goB').hidden = !badge; $('go').setAttribute('aria-label', aria || t); }
 function check() {
@@ -1064,7 +1155,11 @@ $('go').onclick = function () {
     $('sheet').hidden = false; return;
   }
   $('go').disabled = true; say('送出中…（存紀錄、補簽名，約 10～30 秒）'); $('dryOut').hidden = true;
-  api({ api: 'send', draft: draft() }).then(function (j) {
+  var d = draft();
+  try { obEdit(d.id, function (j) { j.d = d; j.dv = Date.now(); j.send = true; j.name = S.cuName; j.date = d.date; }); } catch (e) { say(e.message); check(); return; }
+  obRun(d.id, true).then(function (r) {
+    var j = r.send; if (!j) return;
+    DRAFT = d.id;
     if (j.dry) {
       DRAFT = j.id; say('試跑：沒有送出。下面是會送給 IEI 的內容，另外有 ' + j.held + ' 個簽名會一起補進去。');
       $('dryOut').textContent = j.form; $('dryOut').hidden = false; check(); return;
@@ -1073,15 +1168,18 @@ $('go').onclick = function () {
     if (j.at) { X.locked = true; head(); drawSigns(); say('已送出並送簽核 ✓ IEI 編號 ' + j.svid + '（簽名都齊了，一次送完；IEI 鎖住了）'); finish(); return; }
     say('已送出 ✓ IEI 編號 ' + j.svid + (j.warns ? '，警告單 ' + j.warns + ' 張' : '') + (j.flushed ? '，' + j.flushed + ' 個簽名已補進去' : '') + (j.fail.length ? '。沒補成：' + j.fail.join('；') : ''));
     finish();
-  }).catch(function (e) { say(e.message); check(); });
+  }).catch(function (e) {
+    if (e.net) { DRAFT = d.id; goSet('有訊號會自動送出'); say('沒有訊號：這張已經存在手機裡，有訊號會自動送出，不用再按。'); return; }
+    say(e.message); check();
+  });
 };
 $('shNo').onclick = function () { $('sheet').hidden = true; };
 $('shGo').onclick = submit;
-$('only').onclick = finish;
+$('only').onclick = function () { finish(); };
 $('keep').onclick = function () {   // 存進小禾（不進 IEI）；行程卡會變「草稿・還沒送出」，下次從卡片點進來就是這一張
   if (slots().some(function (p) { return ST[p.k] === 'up'; })) return say('還有簽名在存，等一下再按');
   say('儲存中…');
-  ensureDraft().then(function () { say('已儲存草稿 ✓ 還沒送出到 IEI。之後從行程卡「打開草稿」就是這一張。'); }).catch(function (e) { say(e.message); });
+  ensureDraft().then(function () { say(obAll()[DRAFT] ? '沒有訊號：先存在手機裡，有訊號會自動存進小禾。' : '已儲存草稿 ✓ 還沒送出到 IEI。之後從行程卡「打開草稿」就是這一張。'); }).catch(function (e) { say(e.message); });
 };
 /* 送簽核＝IEI 的 sendSite('2')。⛔ 送了就鎖住，不能再補簽。成功後順手傳留底（卡片會顯示「已送簽核」） */
 function submit() {
@@ -1093,9 +1191,10 @@ function submit() {
   }).catch(function (e) { say(e.message); check(); });
 }
 /* 留底卡：替他送「送出結果」→ 小禾用 reply 回（免費）。送不出去才請後端推播（吃每月額度）。頁面不關，可以繼續補簽 */
-function finish() {
-  liff.sendMessages([{ type: 'text', text: '送出結果 ' + DRAFT }])
-    .catch(function () { return api({ api: 'signDone', d: DRAFT }).then(function (j) { if (!j.pushed) say('留底卡之前傳過了（簽名人數沒變）'); }); })
+function finish(id) {
+  id = id || DRAFT;
+  liff.sendMessages([{ type: 'text', text: '送出結果 ' + id }])
+    .catch(function () { return api({ api: 'signDone', d: id }).then(function (j) { if (!j.pushed) say('留底卡之前傳過了（簽名人數沒變）'); }); })
     .catch(function (e) { say(e.message); });
 }
 /* ---------- IEI 訪視清單（?v=list，他 10/16 選設計三：卡片＋左邊色條，刪除收在「⋯」） ---------- */
@@ -1193,6 +1292,9 @@ $('dGo').onclick = function () {   // 不問「確定嗎」：刪完留一顆復
 };
 liff.init({ liffId: LIFF_ID }).then(function () {
   if (!liff.isLoggedIn()) return liff.login();
+  obDraw(); obFlush();   // 手機裡有上次沒送出去的，先補送（他 10/16：打開小禾就自動補）
+  window.addEventListener('online', obFlush);   // LINE 登入好了才開始自動補（沒登入時 api 會丟「不是連線問題」的錯，被當成內容錯就不再試了）
+  setInterval(function () { if (!document.hidden && Object.keys(obAll()).length) obFlush(); }, 30000);
   if (qp('v') === 'drafts') {   // 整理草稿
     $('bar').hidden = true; $('dl').hidden = false; document.querySelector('footer').hidden = true; $('ttl').textContent = '整理草稿';
     return dLoad();
