@@ -1,0 +1,2 @@
+Icons: Material Icons (Outlined) by Google, Apache License 2.0 — https://github.com/google/material-design-icons
+Recolored for 小禾 LINE cards.
