@@ -1255,12 +1255,12 @@ function vMenu(v) {
   var b = $('vsB'); b.innerHTML = '';
   b.appendChild(vBtn('刪除', 'soft', function () {
     $('vsT').textContent = '刪掉' + where + '？';
-    $('vsN').textContent = v.cu + '・' + VD + '。刪了 IEI 上就沒有這一筆' + (v.d ? '；小禾的那張還在，可以改好再送一次。' : '。');
+    $('vsN').textContent = v.cu + '・' + (v.day || VD) + '。刪了 IEI 上就沒有這一筆' + (v.d ? '；小禾的那張還在，可以改好再送一次。' : '。');
     b.innerHTML = '';
     b.appendChild(vBtn('先不要', 'soft', function () { $('vSheet').hidden = true; }));
     b.appendChild(vBtn('刪除', 'go', function () {
       b.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
-      api({ api: 'vdel', svid: v.svid, site: v.site, date: VD }).then(function () { $('vSheet').hidden = true; say('已刪除 ' + where); vLoad(VD); })
+      api({ api: 'vdel', svid: v.svid, site: v.site, date: v.day || VD }).then(function () { $('vSheet').hidden = true; say('已刪除 ' + where); v.after ? v.after() : vLoad(VD); })
         .catch(function (e) { $('vsN').textContent = e.message; b.querySelectorAll('button').forEach(function (x) { x.disabled = false; }); });
     }));
     b.lastChild.style.background = 'var(--red)';
@@ -1299,11 +1299,12 @@ function dDraw() {
     box.appendChild(b);
   });
   if (sent.length) {
-    var g = el('div', '已送到 IEI', { class: 'dgrp' }); g.appendChild(el('i', sent.length + ' 張・到 IEI 清單刪')); box.appendChild(g);
+    var g = el('div', '已送到 IEI', { class: 'dgrp' }); g.appendChild(el('i', sent.length + ' 張・點一張可以從 IEI 刪')); box.appendChild(g);
     sent.forEach(function (r) {
-      var b = el('button', null, { type: 'button', class: 'dit lock' });
-      b.appendChild(el('span', r.date.slice(5).replace('-', '/'), { class: 'dd' })); b.appendChild(el('span', r.name, { class: 'dn' })); b.appendChild(el('span', 'IEI 清單 ›', { class: 'ds' }));
-      b.onclick = function () { location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&v=list&day=' + r.date; };
+      var b = el('button', null, { type: 'button', class: 'dit lock', style: 'opacity:1' });   // 點得了（刪除／打開），不再灰掉
+      b.appendChild(el('span', r.date.slice(5).replace('-', '/'), { class: 'dd' })); b.appendChild(el('span', r.name, { class: 'dn' })); b.appendChild(el('span', 'IEI ' + r.svid + ' ›', { class: 'ds' }));
+      /* 他 10/16：已經在 IEI 的也要能從這裡刪 → 跟 IEI 清單同一個「刪除／打開」（刪之前先問一次；刪了 IEI 救不回來，小禾那張留著可以重送） */
+      b.onclick = function () { vMenu({ svid: r.svid, site: r.site, cu: r.name, st: '已送出', d: r.id, day: r.date, after: dLoad }); };
       box.appendChild(b);
     });
   }
