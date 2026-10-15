@@ -504,12 +504,17 @@ function localFind(q) {
 function find(ask) {
   var q = $('q').value.trim();
   clearTimeout(qTimer);
+  if (/[㄀-ㄯˇˊˋ˙]/.test(q)) return;   // 注音還在組字（ㄐㄧㄢˋ），等選好字再找（10/15：組字中途問了 IEI，回來把「劍」的結果蓋成找不到）
   if (!q) { $('cands').innerHTML = ''; $('custNow').textContent = ''; return; }
   if ((CUST || WKS) && !ask) { var hit = CUST ? localFind(q) : [], wh = wkFind(q); cands(hit, q, wh); if (hit.length || wh.length) return; }
   /* 沒有放大鏡了（他 10/14）：手機上找不到、或清單還沒下載好 → 停手 0.6 秒自動問 IEI（新客戶也找得到） */
   if (!ask) { $('custNow').textContent = '在 IEI 找…'; qTimer = setTimeout(function () { find(true); }, 600); return; }
   load('在 IEI 找…');
-  api({ api: 'iei', q: q }).then(function (j) { load(''); if (j.list) setCust(j.list); cands(j.cands, q); if (!j.cands.length) $('custNow').textContent = 'IEI 也找不到，換個字試試'; }).catch(function (e) { load(''); say(e.message); });
+  api({ api: 'iei', q: q }).then(function (j) {
+    load(''); if (j.list) setCust(j.list);
+    if ($('q').value.trim() !== q || S.cu00) return;   // 字已經改了／已選好：舊的回覆不要蓋掉現在的結果
+    var c = j.cands.length ? j.cands : (CUST ? localFind(q) : []), wh = wkFind(q);
+    cands(c, q, wh); if (!c.length && !wh.length) $('custNow').textContent = 'IEI 也找不到，換個字試試'; }).catch(function (e) { load(''); say(e.message); });
 }
 var qTimer = 0;
 $('q').oninput = function () {
