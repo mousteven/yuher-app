@@ -455,7 +455,9 @@ function say(t) { $('msg').textContent = t || ''; }
 function el(tag, txt, attrs) { var e = document.createElement(tag); if (txt != null) e.textContent = txt; for (var k in attrs || {}) e.setAttribute(k, attrs[k]); return e; }
 /* 10/15 他早上打開出現「The string did not match the expected pattern」＝iPhone 讀不懂回來的東西（不是 JSON：Google 的錯誤頁或連線中斷）。
    伺服器那幾筆都正常結束，所以是中間的問題：不是 JSON 就等 1.5 秒自動再試一次，還是不行才報，並帶回來的前幾個字（看得出是什麼頁） */
-function api(o, retry) {
+var LIFFP = null;   // LINE 登入（liff.init）；空白表先畫出來時，點下去的請求等它好了才送
+function api(o, retry) { return (LIFFP || Promise.resolve()).then(function () { return api0(o, retry); }); }
+function api0(o, retry) {
   o.at = liff.getAccessToken();
   return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(o) })   // text/plain：避開預檢
     .then(function (r) { return r.text().then(function (t) { try { return JSON.parse(t); } catch (e) { throw { bad: 'HTTP ' + r.status + '：' + t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) }; } }); },
@@ -1435,16 +1437,32 @@ if (/^(board|drafts|list)$/.test(qp('v') || '')) try {
     $('sub').textContent = BOLD + ' 的資料・更新中…'; BFIRST = Math.round(performance.now());
   }
 } catch (e) {}
+/* 空白訪談表先用手機存的那份畫出來（他 10/16：「點訪談要像總表一樣事先 loading 好，空白表為什麼要等 4 秒」）。
+   片語、服務項目、客戶、移工清單上次都拿過了；今天的行程背景再跟伺服器對。從草稿、行程卡、總表進來的照舊等伺服器（要先知道開哪一張） */
+var FAST = false;
+function prepBlank(j) {
+  META = j; SITES = j.sites || 1; $('bar').hidden = true; $('form').hidden = false;
+  $('date').value = j.day; seg('method', '1'); seg('labor', '1');
+  $('p').value = S.autoP = '巡迴服務-關心移工'; $('a').value = S.autoA = '移工表示工作上及生活都沒有問題。';   // 他定的預設
+  cats(); items(); head(); trips(j.trips); langs(); check();
+  if (j.custs) setCust(j.custs); if (j.wks) setWks(j.wks);   // 伺服器手上有就順便帶來
+  if (qp('cu')) qp('w') ? pickWorker({ la: qp('w'), cu: qp('cu'), co: qp('co') })   // LINE 查工人／工廠點「開訪談表」（他 10/16）
+    : pickCust((CUST || []).filter(function (x) { return x.cu00 === qp('cu'); })[0] || { cu00: qp('cu'), name: qp('co') || qp('cu') });
+}
+if (!DRAFT && !TRIP && !qp('v')) try {
+  var pc = JSON.parse(localStorage.getItem('xh.prep') || 'null'), pday = DAY || bToday();
+  if (pc && pc.cats) { if (pc.day !== pday) { pc.day = pday; pc.trips = []; } prepBlank(pc); FAST = true; }
+} catch (e) {}
 /* 卡住不要一直轉（他 10/16 截圖停在「讀取中…」）：標出卡在哪一步，20 秒還沒好就給「再試一次」 */
-if (!BOLD) $('sub').textContent = '連 LINE…';
+if (!BOLD && !FAST) $('sub').textContent = '連 LINE…';
 setTimeout(function () {
   if ($('bar').hidden) return;
   say('等了 20 秒還沒好（卡在「' + $('sub').textContent + '」）。按下面重新打開；一直這樣就截圖給 Claude。');
   $('go').disabled = false; goSet('再試一次'); $('go').onclick = function () { location.reload(); };
 }, 20000);
-liff.init({ liffId: LIFF_ID }).then(function () {
+(LIFFP = liff.init({ liffId: LIFF_ID })).then(function () {
   if (!liff.isLoggedIn()) return liff.login();
-  if (!BOLD) $('sub').textContent = '讀資料…';
+  if (!BOLD && !FAST) $('sub').textContent = '讀資料…';
   obDraw(); obFlush();   // 手機裡有上次沒送出去的，先補送（他 10/16：打開小禾就自動補）
   window.addEventListener('online', obFlush);   // LINE 登入好了才開始自動補（沒登入時 api 會丟「不是連線問題」的錯，被當成內容錯就不再試了）
   setInterval(function () { if (!document.hidden && Object.keys(obAll()).length) obFlush(); }, 30000);
@@ -1456,25 +1474,27 @@ liff.init({ liffId: LIFF_ID }).then(function () {
   return api({ api: 'prep', d: DRAFT, t: TRIP, date: DAY }).then(function (j) {
     var loc = DRAFT && obAll()[DRAFT];
     if (loc && loc.d) j.draft = loc.d;   // 手機裡那份比較新（還沒送上去的改動）；後台沒有這張時也靠它打開
-    META = j; SITES = j.sites || 1; $('bar').hidden = true; $('form').hidden = false;
-    $('date').value = j.day; seg('method', '1'); seg('labor', '1');
-    if (j.draft) { DRAFT = j.draft.id || DRAFT; $('tripsF').hidden = true;   // 從行程卡進來、後端找到存過的草稿＝接著改那一張（不另存新的）
+    if (j.draft) { META = j; SITES = j.sites || 1; $('bar').hidden = true; $('form').hidden = false;   // 空白表的畫法在 prepBlank（手機先畫好的不要重設他改過的日期）
+      $('date').value = j.day; seg('method', '1'); seg('labor', '1');
+      DRAFT = j.draft.id || DRAFT; $('tripsF').hidden = true;   // 從行程卡進來、後端找到存過的草稿＝接著改那一張（不另存新的）
       S.trip = j.trips.filter(function (t) { return t.id === j.draft.trip; })[0] || null; drawTodo(); apply(j.state); var did = DRAFT;
       api({ api: 'open', d: did }).then(function (o) { if (DRAFT === did) { apply(o.state); check(); } }).catch(function () {});   // 他 10/16：先開畫面，背景再跟 IEI 核對簽名
       return fill(j.draft).then(function () {
         SAVED = JSON.stringify(Object.assign({}, draft(), { id: '' }));
         if (loc) { Object.keys(loc.sigs).forEach(function (k) { ST[k] = 'local'; }); drawSigns(); check(); }   // 手機裡還沒傳的簽名
       }); }
-    $('p').value = S.autoP = '巡迴服務-關心移工'; $('a').value = S.autoA = '移工表示工作上及生活都沒有問題。';   // 他定的預設
-    cats(); items(); head(); trips(j.trips); langs(); check();
-    if (j.custs) setCust(j.custs);   // 伺服器手上有就順便帶來，不用再跑一趟
+    try { localStorage.setItem('xh.prep', JSON.stringify(Object.assign({}, j, { draft: null, state: null, custs: null, wks: null }))); } catch (e) {}   // 下次空白表先用這份畫
+    if (FAST) {   // 畫面已經用手機那份畫好了：只換掉有變的，不動他已經開始填的
+      var old = META; META = j; SITES = j.sites || 1;
+      if (!S.trip && JSON.stringify(old.trips) !== JSON.stringify(j.trips)) trips(j.trips);
+      if (S.cat < 0 && JSON.stringify(old.cats) !== JSON.stringify(j.cats)) cats();
+      head(); check(); if (j.custs) setCust(j.custs); if (j.wks) setWks(j.wks);
+    } else prepBlank(j);
     api({ api: 'custs' }).then(function (c) { setCust(c.list); }).catch(function () {});   // 背景跟 IEI 對最新的，存到手機
-    if (j.wks) setWks(j.wks);
     api({ api: 'wks' }).then(function (c) { setWks(c.list); }).catch(function () {});
-    if (qp('cu')) qp('w') ? pickWorker({ la: qp('w'), cu: qp('cu'), co: qp('co') })   // LINE 查工人／工廠點「開訪談表」（他 10/16）
-      : pickCust((CUST || []).filter(function (x) { return x.cu00 === qp('cu'); })[0] || { cu00: qp('cu'), name: qp('co') || qp('cu') });
   });
 }).catch(function (e) {
+  if (FAST && !$('form').hidden) return say('行程沒有更新到（' + String(e && e.message || e) + '），其他照常可以填');   // 空白表已經可以用：不要整頁變「打不開」
   $('bar').hidden = true; $('ttl').textContent = '打不開';
   var at = String(e && e.stack || '').split(String.fromCharCode(10))[0].replace(/^.*\//, '').slice(-40);   // 頁面自己出錯時帶行號，截圖給 Claude 就查得到
   say(String(e && e.message || e) + (at && !/伺服器|連不上/.test(e && e.message) ? '（' + at + '）' : ''));
