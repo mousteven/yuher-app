@@ -197,6 +197,21 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
 .pad .snm{left:24px}.pad .sdt{right:24px;font-variant-numeric:tabular-nums}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 .bft{display:grid;grid-template-columns:1fr 1fr 2fr;gap:8px;padding:0 16px calc(12px + env(safe-area-inset-bottom))}
+/* 簽名板一律橫的（他 10/16：客戶反應格子太小太窄。實測直拿是 343×324 的直長格，大家只寫得下一個大字，放進 IEI 的橫格只占 38%）。
+   手機直拿 → 整塊轉 90 度（.rot），請他把手機橫過來簽；本來就橫拿 → 不用轉。標題壓成一行，把高度留給簽名格 */
+#board.rot{inset:auto;top:0;left:100%;width:var(--bw);height:var(--bh);transform:rotate(90deg);transform-origin:0 0}
+#board .bhd{display:flex;align-items:baseline;gap:10px;padding:8px 64px 8px 16px;white-space:nowrap;overflow:hidden}
+#board .bhd b{font-size:20px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0}
+#board .bhd .zh,#board .bhd .eye{overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 4 auto}   /* 擠的時候先縮小標，名字最後才縮 */
+#board .bhd .x{top:4px}
+#board .pad{margin:8px 16px;min-height:120px}
+#board .bft{padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+#board .bft button{min-height:48px}
+/* 要給他看的內容（訪視紀錄、警告單）收成一行，點了展開蓋在簽名格上面，再點收起（不擠掉簽名格） */
+#board .read{position:relative;max-height:44px;overflow:hidden;border-bottom:1px solid var(--hair);cursor:pointer}
+#board .read::after{content:"▾";position:absolute;right:14px;top:10px;font-size:16px;color:var(--mute)}
+#board .read.open{position:absolute;left:0;right:0;max-height:70%;overflow-y:auto;z-index:3;box-shadow:var(--sh)}
+#board .read.open::after{content:"▴";position:sticky;float:right;margin-right:14px}
 .bft button{min-height:54px;border-radius:16px;font-weight:700;font-size:15px;line-height:1.2;font-family:inherit;padding:0 8px;text-align:center}
 .soft{border:0;background:var(--card);color:var(--ink);box-shadow:var(--sh1)}
 .bft .go{justify-content:space-between;padding:0 16px;text-align:left}
@@ -968,7 +983,8 @@ function page() {
   $('bsay').textContent = L.hint;
   $('b1').textContent = RELAY ? L.absent : L.cancel; $('b2').textContent = RELAY ? L.resign : L.clear;
   $('b3').firstChild.textContent = RELAY && !last ? L.next : L.done;
-  readBox(p, L);
+  readBox(p, L); $('bread').classList.remove('open'); $('bread').style.top = '';
+  bFit();
   var r = window.devicePixelRatio || 1;
   cv.width = cv.clientWidth * r; cv.height = cv.clientHeight * r;
   cx.setTransform(r, 0, 0, r, 0, 0); cx.lineWidth = 5; cx.lineCap = cx.lineJoin = 'round'; cx.strokeStyle = '#1B1C1E';
@@ -998,8 +1014,21 @@ function warnBox(p, L) {
   rows([[lab2(L, 'warn'), L.nth[f], nat ? Z.nth[f] : ''], [lab2(L, 'vio'), list(nat), nat ? list('') : ''], ['⚠', L.three, nat ? Z.three : '']]);
 }
 function next() { if (++BI < BQ.length) page(); else closeBoard(); }
+$('bread').onclick = function () { var o = this.classList.toggle('open'); this.style.top = o ? $('board').querySelector('.bhd').offsetHeight + 'px' : ''; };
+addEventListener('resize', function () {   // 簽到一半把手機轉過來：重新排版（畫的會清掉，重簽）
+  if ($('board').hidden) return;
+  var was = $('board').classList.contains('rot'); bFit();
+  if (was !== $('board').classList.contains('rot')) page();
+});
 function closeBoard() { $('board').hidden = true; document.body.style.overflow = ''; drawSigns(); }
-function pt(e) { var b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; }
+function bFit() {   // 簽名板一律橫的：直拿就整塊轉 90 度（寬高對調）
+  var b = $('board'), w = innerWidth, h = innerHeight, rot = h > w;
+  b.classList.toggle('rot', rot); b.style.setProperty('--bw', h + 'px'); b.style.setProperty('--bh', w + 'px');
+}
+function pt(e) {   // 轉過的板子：手指往下＝格子往右
+  var b = cv.getBoundingClientRect();
+  return $('board').classList.contains('rot') ? [e.clientY - b.top, b.right - e.clientX] : [e.clientX - b.left, e.clientY - b.top];
+}
 cv.onpointerdown = function (e) { e.preventDefault(); down = true; try { cv.setPointerCapture(e.pointerId); } catch (x) {} var p = pt(e); cx.beginPath(); cx.moveTo(p[0], p[1]); };
 cv.onpointermove = function (e) { if (!down) return; e.preventDefault(); var p = pt(e); cx.lineTo(p[0], p[1]); cx.stroke(); inked = true; };
 cv.onpointerup = cv.onpointercancel = function () { down = false; };
