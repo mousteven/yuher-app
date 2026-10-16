@@ -99,6 +99,7 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .btiles button[aria-pressed=true],.bweek button[aria-pressed=true]{background:var(--tint2);border-color:var(--blued);color:var(--blued)}
 .bhh{display:flex;justify-content:space-between;align-items:center;font-weight:700;gap:8px}
 .bhh button{min-height:44px;border:0;background:none;color:var(--blued);font-size:15px;font-weight:700;font-family:inherit;padding:0 4px}
+.bhh button:disabled{opacity:.4}
 .bnote{margin:0;font-size:14px;color:var(--ink);padding:10px 14px;border-radius:14px;background:var(--soft)}.bnote button{min-height:0;border:0;background:none;color:var(--blued);font:inherit;font-weight:700;padding:0 4px}
 .dgrp{font-size:14px;font-weight:700;color:var(--mute);display:flex;justify-content:space-between;margin-top:4px}.dgrp i{font-style:normal;font-weight:400}
 .brow{display:flex;gap:10px;align-items:center;min-height:56px;padding:8px 14px;border:1px solid var(--line);border-radius:16px;background:var(--card);font:inherit;color:inherit;text-align:left;width:100%}
@@ -1261,19 +1262,28 @@ var BST = { '0': ['新增', 'act', ''], '1': ['處理中', 'act', ''], '5': ['�
 function bInfo(r) { return BST[r.st] || ['狀態 ' + r.st, 'act', '']; }
 function bKey(r) { return r.id || r.site + r.svid; }
 function bMd(d) { return d.slice(5).replace('-', '/'); }
-var BT = null;   // 測速（他 10/16）：只量打開那一次
+var BT = null, BOLD = '', BFIRST = 0;   // BT 測速（他 10/16）；BOLD＝正在秀手機裡上次的總表（幾點的資料），這時不能選取、不能刪
+function bToday() { return new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); }
+function bOpen() {   // 切到總表畫面
+  $('bar').hidden = true; $('bd').hidden = false; document.querySelector('footer').hidden = true; $('ttl').textContent = '訪視總表';
+  if (qp('v') === 'list') { BS.mode = 'date'; BS.day = DAY || ''; }
+}
+function bShow(j) {
+  BL = j.list; BMON = j.month; BS.pick = {};
+  var s = $('bMon');
+  if (!s.options.length) for (var i = 0; i < 3; i++) { var t = new Date(Date.now() + 8 * 3600e3); t.setUTCDate(1); t.setUTCMonth(t.getUTCMonth() - i); var v = t.toISOString().slice(0, 7); s.appendChild(el('option', +v.slice(5) + ' 月', { value: v })); }
+  s.value = BMON; s.hidden = false; bDraw();
+}
 function bLoad(m) {
-  $('sub').textContent = '讀 IEI…';
+  if (!BOLD) $('sub').textContent = '讀 IEI…';
   var t0 = performance.now();
   return api({ api: 'board', month: m || BMON }).then(function (j) {
     if (BT) { BT.rt = Math.round(performance.now() - t0); BT.tm = j.tm; }
-    BL = j.list; BMON = j.month; BS.pick = {}; $('sub').textContent = '台中＋南投・照 IEI・' + j.at + ' 更新';
-    var s = $('bMon');
-    if (!s.options.length) for (var i = 0; i < 3; i++) { var t = new Date(Date.now() + 8 * 3600e3); t.setUTCDate(1); t.setUTCMonth(t.getUTCMonth() - i); var v = t.toISOString().slice(0, 7); s.appendChild(el('option', +v.slice(5) + ' 月', { value: v })); }
-    s.value = BMON; s.hidden = false; bDraw();
+    BOLD = ''; bShow(j); $('sub').textContent = '台中＋南投・照 IEI・' + j.at + ' 更新';
+    try { localStorage.setItem('xh.bdc', JSON.stringify({ month: j.month, list: j.list, at: j.at, day: bToday() })); } catch (e) {}   // 下次打開先秀這份（他 10/16）
     if (BT && BT.tm) { BT.show = Math.round(performance.now()); api({ api: 'perf', p: BT }).catch(function () {}); }
     BT = null;
-  }).catch(function (e) { $('sub').textContent = e.message; });
+  }).catch(function (e) { $('sub').textContent = (BOLD ? BOLD + ' 的資料・' : '') + e.message; });
 }
 $('bMon').onchange = function () { BS.day = ''; bLoad(this.value); };
 [].forEach.call($('bMode').children, function (b) { b.onclick = function () { BS.mode = b.dataset.m; BS.day = ''; BS.cu = ''; bDraw(); }; });
@@ -1290,7 +1300,7 @@ function bRow(r) {
     if (BS.sel) { if (on) delete BS.pick[bKey(r)]; else BS.pick[bKey(r)] = r; return bDraw(); }
     var doc = r.id || r.d;
     if (doc) location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&d=' + doc + '&day=' + r.date;
-    else vMenu({ svid: r.svid, site: r.site, cu: r.cu, st: inf[0], d: '', day: r.date, noDel: !canDel, after: function () { bLoad(); } });
+    else vMenu({ svid: r.svid, site: r.site, cu: r.cu, st: inf[0], d: '', day: r.date, noDel: !canDel || !!BOLD, after: function () { bLoad(); } });
   };
   return b;
 }
@@ -1306,7 +1316,7 @@ function bDraw() {
   try { localStorage.setItem('xh.bd', JSON.stringify({ mode: BS.mode })); } catch (e) {}
   [].forEach.call($('bMode').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.m === BS.mode)); });
   $('bTiles').hidden = BS.mode !== 'status'; $('bWeek').hidden = BS.mode !== 'date'; $('bFind').hidden = BS.mode !== 'client';
-  $('bd').classList.toggle('sel', BS.sel); $('bDock').hidden = !BS.sel; $('bSel').textContent = BS.sel ? '取消' : '選取';
+  $('bd').classList.toggle('sel', BS.sel); $('bDock').hidden = !BS.sel; $('bSel').textContent = BS.sel ? '取消' : '選取'; $('bSel').disabled = !!BOLD;
   dLocal();
   var cnt = { act: 0, wait: 0, done: 0 }, rows = BL.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; }), box = $('bL'), tl = $('bTiles');
   BL.forEach(function (r) { cnt[bInfo(r)[1]]++; });
@@ -1385,15 +1395,22 @@ $('bGo').onclick = function () {
   b.appendChild(vBtn('刪除', 'go', function () { $('vSheet').hidden = true; bDel(L); }));
   b.lastChild.style.background = 'var(--red)'; $('vSheet').hidden = false;
 };
+/* 打開先秀手機裡上次的總表（他 10/16：「一打開馬上看到東西」）。不等 LINE 登入，所以在 liff.init 前面 */
+if (/^(board|drafts|list)$/.test(qp('v') || '')) try {
+  var bc = JSON.parse(localStorage.getItem('xh.bdc') || 'null');
+  if (bc && bc.month === (DAY ? DAY.slice(0, 7) : bToday().slice(0, 7))) {
+    bOpen(); BOLD = (bc.day === bToday() ? '' : bMd(bc.day) + ' ') + bc.at; bShow(bc);
+    $('sub').textContent = BOLD + ' 的資料・更新中…'; BFIRST = Math.round(performance.now());
+  }
+} catch (e) {}
 liff.init({ liffId: LIFF_ID }).then(function () {
   if (!liff.isLoggedIn()) return liff.login();
   obDraw(); obFlush();   // 手機裡有上次沒送出去的，先補送（他 10/16：打開小禾就自動補）
   window.addEventListener('online', obFlush);   // LINE 登入好了才開始自動補（沒登入時 api 會丟「不是連線問題」的錯，被當成內容錯就不再試了）
   setInterval(function () { if (!document.hidden && Object.keys(obAll()).length) obFlush(); }, 30000);
   if (/^(board|drafts|list)$/.test(qp('v') || '')) {   // 訪視總表（舊的整理草稿、IEI 清單連結也到這裡）
-    $('bar').hidden = true; $('bd').hidden = false; document.querySelector('footer').hidden = true; $('ttl').textContent = '訪視總表';
-    if (qp('v') === 'list') { BS.mode = 'date'; BS.day = DAY || ''; }
-    BT = { liff: Math.round(performance.now()) };
+    if (!BOLD) bOpen();
+    BT = { liff: Math.round(performance.now()), first: BFIRST };
     return bLoad(DAY ? DAY.slice(0, 7) : '');
   }
   return api({ api: 'prep', d: DRAFT, t: TRIP, date: DAY }).then(function (j) {
