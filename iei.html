@@ -1097,7 +1097,7 @@ setInterval(function () {
    一張＝{ d 草稿, sigs {格子: PNG}, send 要送進 IEI }，照 存草稿 → 簽名 → 送出 的順序送，送成功一段刪一段。
    存 localStorage（一張連簽名約 50～300KB，5MB 放十幾張）。送成功就刪；15 天沒送出去也刪（＝伺服器暫存簽名、補簽期的期限）。 */
 var NEWID = 'D' + Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(6)), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('').slice(0, 11);
-var OBK = 'xh.ob', OBDAY = 15 * 864e5, OBQ = Promise.resolve();
+var OBK = 'xh.ob', OBDAY = 15 * 864e5, OBQ = Promise.resolve(), OBLIVE = {};   // OBLIVE：正在當場送的（他 10/16：Wi-Fi 滿格卻跳「沒有訊號」＝正常送出的那十幾秒也被當成沒訊號）
 function obAll() {
   var o = {}; try { o = JSON.parse(localStorage.getItem(OBK) || '{}') || {}; } catch (e) {}
   for (var k in o) if (Date.now() - o[k].at > OBDAY) delete o[k];
@@ -1111,6 +1111,7 @@ function obEdit(id, f) {   // 改一張（沒有就建）；三段都送完了�
   obDraw();
 }
 function obRun(id, live) {   // 送一張（一次只送一張，排隊）；回 { save, sig {格子: 回應}, send }
+  if (live) OBLIVE[id] = 1;
   var p = OBQ.then(function () {
     var j = obAll()[id], out = { sig: {} }, go = Promise.resolve();
     if (!j) return out;
@@ -1128,9 +1129,11 @@ function obRun(id, live) {   // 送一張（一次只送一張，排隊）；回
       return api({ api: 'send', draft: obAll()[id].d }).then(function (r) { out.send = r; obEdit(id, function (x) { delete x.send; delete x.d; }); });
     });
     return go.then(function () {
+      delete OBLIVE[id];
       if (!live) obDone(id, out);
       return out;
     }, function (e) {
+      delete OBLIVE[id];   // 真的斷線才輪到提示條出來（呼叫的人接著會 obDraw）
       if (!e.net) obEdit(id, function (x) { x.err = e.message; });   // ⛔3 內容錯：記下來、不再自動試，等他改
       throw e;
     });
@@ -1161,7 +1164,7 @@ function obRow(err, text, btns) {   // 一行：圖示＋字＋按鈕。還沒�
 }
 function obLabel(j) { return (j.date ? j.date.slice(5).replace('-', '/') + ' ' : '') + (j.name || '還沒選客戶'); }
 function obDraw() {   // 每一頁最上面、捲動也黏著（他 10/16：放上面、要醒目）
-  var o = obAll(), ids = Object.keys(o), box = $('ob'); box.innerHTML = ''; box.hidden = !ids.length;
+  var o = obAll(), ids = Object.keys(o).filter(function (k) { return !OBLIVE[k]; }), box = $('ob'); box.innerHTML = ''; box.hidden = !ids.length;   // 正在當場送的不列（還沒失敗，不是沒訊號）
   if (!$('bd').hidden) dLocal();
   if (!ids.length) return;
   var bad = ids.filter(function (k) { return o[k].err; }), ok = ids.length - bad.length, me = o[DRAFT || NEWID];
