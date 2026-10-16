@@ -1434,8 +1434,16 @@ if (/^(board|drafts|list)$/.test(qp('v') || '')) try {
     $('sub').textContent = BOLD + ' 的資料・更新中…'; BFIRST = Math.round(performance.now());
   }
 } catch (e) {}
+/* 卡住不要一直轉（他 10/16 截圖停在「讀取中…」）：標出卡在哪一步，20 秒還沒好就給「再試一次」 */
+if (!BOLD) $('sub').textContent = '連 LINE…';
+setTimeout(function () {
+  if ($('bar').hidden) return;
+  say('等了 20 秒還沒好（卡在「' + $('sub').textContent + '」）。按下面重新打開；一直這樣就截圖給 Claude。');
+  $('go').disabled = false; goSet('再試一次'); $('go').onclick = function () { location.reload(); };
+}, 20000);
 liff.init({ liffId: LIFF_ID }).then(function () {
   if (!liff.isLoggedIn()) return liff.login();
+  if (!BOLD) $('sub').textContent = '讀資料…';
   obDraw(); obFlush();   // 手機裡有上次沒送出去的，先補送（他 10/16：打開小禾就自動補）
   window.addEventListener('online', obFlush);   // LINE 登入好了才開始自動補（沒登入時 api 會丟「不是連線問題」的錯，被當成內容錯就不再試了）
   setInterval(function () { if (!document.hidden && Object.keys(obAll()).length) obFlush(); }, 30000);
