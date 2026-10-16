@@ -1261,13 +1261,18 @@ var BST = { '0': ['新增', 'act', ''], '1': ['處理中', 'act', ''], '5': ['�
 function bInfo(r) { return BST[r.st] || ['狀態 ' + r.st, 'act', '']; }
 function bKey(r) { return r.id || r.site + r.svid; }
 function bMd(d) { return d.slice(5).replace('-', '/'); }
+var BT = null;   // 測速（他 10/16）：只量打開那一次
 function bLoad(m) {
   $('sub').textContent = '讀 IEI…';
+  var t0 = performance.now();
   return api({ api: 'board', month: m || BMON }).then(function (j) {
+    if (BT) { BT.rt = Math.round(performance.now() - t0); BT.tm = j.tm; }
     BL = j.list; BMON = j.month; BS.pick = {}; $('sub').textContent = '台中＋南投・照 IEI・' + j.at + ' 更新';
     var s = $('bMon');
     if (!s.options.length) for (var i = 0; i < 3; i++) { var t = new Date(Date.now() + 8 * 3600e3); t.setUTCDate(1); t.setUTCMonth(t.getUTCMonth() - i); var v = t.toISOString().slice(0, 7); s.appendChild(el('option', +v.slice(5) + ' 月', { value: v })); }
     s.value = BMON; s.hidden = false; bDraw();
+    if (BT && BT.tm) { BT.show = Math.round(performance.now()); api({ api: 'perf', p: BT }).catch(function () {}); }
+    BT = null;
   }).catch(function (e) { $('sub').textContent = e.message; });
 }
 $('bMon').onchange = function () { BS.day = ''; bLoad(this.value); };
@@ -1388,6 +1393,7 @@ liff.init({ liffId: LIFF_ID }).then(function () {
   if (/^(board|drafts|list)$/.test(qp('v') || '')) {   // 訪視總表（舊的整理草稿、IEI 清單連結也到這裡）
     $('bar').hidden = true; $('bd').hidden = false; document.querySelector('footer').hidden = true; $('ttl').textContent = '訪視總表';
     if (qp('v') === 'list') { BS.mode = 'date'; BS.day = DAY || ''; }
+    BT = { liff: Math.round(performance.now()) };
     return bLoad(DAY ? DAY.slice(0, 7) : '');
   }
   return api({ api: 'prep', d: DRAFT, t: TRIP, date: DAY }).then(function (j) {
