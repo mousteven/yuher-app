@@ -84,35 +84,38 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .site{font-size:12px;font-weight:800;letter-spacing:.04em;padding:2px 8px;border-radius:999px;white-space:nowrap;flex:none;background:var(--tint);color:var(--blue)}
 .site.nt{background:#E5F4EC;color:#0F7B4C}
 .where{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:#E5F4EC;color:var(--ink);font-size:14px}
-.vc{background:var(--card);border-radius:16px;display:flex;overflow:hidden;box-shadow:var(--sh)}
-.vc .vb{width:8px;flex:none;background:var(--blue)}.vc .vb.nt{background:#0F7B4C}
-.vc .vi{padding:12px 14px;flex:1;min-width:0;display:grid;gap:4px;text-align:left;background:none;border:0;font:inherit;color:inherit}
-.vc .vn{font-size:24px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
-.vc .vn small{font-size:13px;font-weight:700;color:var(--mute);margin-left:6px}
-.vc .vt{font-weight:800}.vc .vs{font-size:14px;color:var(--mute)}
-/* 整理草稿（?v=drafts，10/15）：白卡清單、勾選列淡紅、底部一顆紅色刪除 */
-#dl{padding-bottom:132px}
-.dchips{display:flex;flex-wrap:wrap;gap:8px}
-.dchips button{min-height:40px;border:0;border-radius:999px;padding:0 14px;font-weight:700;font-size:14px;font-family:inherit;background:var(--card);color:var(--ink)}
-.dchips button:active{background:var(--ink);color:#fff}
-.dgrp{font-size:14px;font-weight:700;display:flex;justify-content:space-between;margin-top:8px}.dgrp i{font-style:normal;font-weight:400;color:var(--mute)}
-.dit{display:grid;grid-template-columns:24px 48px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:52px;padding:10px 14px;border-radius:16px;background:var(--card);border:0;font:inherit;font-size:15px;color:inherit;text-align:left;width:100%}
-.dit .bx{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);background:#fff}
-.dit[aria-pressed=true]{background:#FDECEC}
-.dit[aria-pressed=true] .bx{border-color:var(--red);background:var(--red) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Cpath d='M3 7l3 3 5-6' fill='none' stroke='%23fff' stroke-width='2.2'/%3E%3C/svg%3E") center no-repeat}
-.dit .dd{color:var(--mute);font-size:14px;font-variant-numeric:tabular-nums}
-.dit .dn{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dit .ds{font-size:13px;color:var(--mute)}
-.dit.lock{grid-template-columns:48px minmax(0,1fr) auto;opacity:.6}
-.ddock{position:fixed;left:0;right:0;bottom:0;background:var(--card);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 12px rgba(11,27,51,.08);display:grid;gap:4px;z-index:5}
-.ddock .go{justify-content:center;background:var(--red);box-shadow:none;width:100%}
-.ddock .go:disabled{background:#C9D3E0}
+/* 訪視總表（?v=board，他 10/16 選合併版）：上面切狀態／日期／客戶；細框白卡、選中淡藍打勾（版本五）；狀態不只靠顏色（標籤有字） */
+#bd{display:grid;gap:12px}#bd.sel{padding-bottom:140px}
+.bmon{min-height:44px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:700 15px inherit;font-family:inherit;flex:none;align-self:center}
+.bseg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #8C96A6;border-radius:999px;overflow:hidden}
+.bseg button{min-height:44px;border:0;background:var(--card);color:var(--ink);font-size:15px;font-weight:500;font-family:inherit}
+.bseg button+button{border-left:1px solid #8C96A6}
+.bseg button[aria-pressed=true]{background:var(--tint2);color:var(--blued);font-weight:700}.bseg button[aria-pressed=true]::before{content:"✓ "}
+.btiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.btiles button,.bweek button{border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-family:inherit;display:grid;place-content:center;text-align:center;padding:0}
+.btiles button{min-height:64px}.btiles b{font-size:22px;font-variant-numeric:tabular-nums;line-height:1.2}.btiles span{font-size:13px;font-weight:700}
+.bweek{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.bweek button{min-height:60px;border-radius:14px}.bweek small{font-size:12px;color:var(--mute)}.bweek b{font-size:16px;font-variant-numeric:tabular-nums}.bweek i{font-style:normal;font-size:12px;font-weight:700;color:var(--blued);min-height:16px}
+.btiles button[aria-pressed=true],.bweek button[aria-pressed=true]{background:var(--tint2);border-color:var(--blued);color:var(--blued)}
+.bhh{display:flex;justify-content:space-between;align-items:center;font-weight:700;gap:8px}
+.bhh button{min-height:44px;border:0;background:none;color:var(--blued);font-size:15px;font-weight:700;font-family:inherit;padding:0 4px}
+.bnote{margin:0;font-size:14px;color:var(--ink);padding:10px 14px;border-radius:14px;background:var(--soft)}.bnote button{min-height:0;border:0;background:none;color:var(--blued);font:inherit;font-weight:700;padding:0 4px}
+.dgrp{font-size:14px;font-weight:700;color:var(--mute);display:flex;justify-content:space-between;margin-top:4px}.dgrp i{font-style:normal;font-weight:400}
+.brow{display:flex;gap:10px;align-items:center;min-height:56px;padding:8px 14px;border:1px solid var(--line);border-radius:16px;background:var(--card);font:inherit;color:inherit;text-align:left;width:100%}
+.brow .bd{width:40px;flex:none;font-size:14px;color:var(--mute);font-variant-numeric:tabular-nums}
+.brow .bm{display:grid;min-width:0;flex:1}.brow .bn{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brow .bs{font-size:13px;color:var(--mute)}
+.bpill{font-size:13px;font-weight:700;padding:4px 10px;border-radius:8px;white-space:nowrap;background:var(--tint2);color:var(--blued)}
+.bpill.w{background:#FFF3D1;color:#4A3200}.bpill.g{background:#E3F2E6;color:#1E5631}.bpill.d{background:var(--soft);color:var(--mute)}.bpill.f{background:#FDECEC;color:#9C0010}
+.brow .bx{width:22px;height:22px;flex:none;box-sizing:border-box;border-radius:7px;border:2px solid var(--line);background:#fff}
+.brow[aria-pressed=true]{background:#FDECEC;border-color:var(--red)}
+.brow[aria-pressed=true] .bx{border-color:var(--red);background:var(--red) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Cpath d='M3 7l3 3 5-6' fill='none' stroke='%23fff' stroke-width='2.2'/%3E%3C/svg%3E") center no-repeat}
+.brow:disabled{opacity:.45}
+.bcard{display:grid;gap:6px;padding:12px 16px;border:1px solid var(--line);border-radius:20px;background:var(--card);font:inherit;color:inherit;text-align:left;width:100%}
+.bcard .t{display:flex;justify-content:space-between;gap:8px}.bcard .t b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.bcard .t span{font-size:13px;color:var(--mute);white-space:nowrap}
+.bcard .g{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ddock{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--hair);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:grid;gap:4px;z-index:5}
+.ddock .go{justify-content:center;background:var(--red);box-shadow:none;width:100%}.ddock .go:disabled{background:#C9D3E0}
 .ddock p{margin:0;text-align:center;font-size:13px;color:var(--mute);min-height:20px}
-.ddock p .link{min-height:0;padding:0 4px;font-size:14px;font-weight:700}
-.vc .vm{width:48px;border:0;background:none;color:var(--mute);font-weight:900;font-size:22px;font-family:inherit}
-.vday{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:800}
-.vday button{width:44px;height:44px;border-radius:12px;border:0;background:var(--card);font-size:20px;font-weight:900;color:var(--ink);box-shadow:var(--sh)}
-.vpill{display:inline-block;font-size:12px;font-weight:800;line-height:1.5;padding:1px 8px;border-radius:999px;background:var(--soft);color:var(--mute)}
 .vpill.half{background:#FFF3D6;color:#8A5A00}
 .ld{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:var(--tint);color:var(--blue);font-weight:700;font-size:15px}
 .ld::before{content:"";width:14px;height:14px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:spin .8s linear infinite;flex:none}
@@ -254,8 +257,6 @@ header{margin:16px auto 0;padding:20px;background:var(--tint);border-radius:28px
 .go{box-shadow:none;border-radius:16px}
 footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
 #msg{border:1px solid var(--line)}
-.vc,.vday button,.dchips button,.dit{border:1px solid var(--line)}
-.dit[aria-pressed=true]{border-color:transparent}
 .ld{border-radius:16px}
 .obq{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;display:grid;gap:8px}
 .obq .r{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;border:1.5px solid #B07A10;background:#FFF3D1;color:#4A3200;font-size:15px;line-height:1.5}
@@ -287,19 +288,21 @@ footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
 <header>
   <button type="button" class="x" id="close" aria-label="關閉"><svg class="ic s"><use href="#i-x"/></svg></button>
   <div><b id="ttl">讀取中…</b><span id="sub">客戶訪視服務紀錄表</span></div>
+  <select class="bmon" id="bMon" aria-label="月份" hidden></select>
 </header>
 <main>
  <div class="obq" id="ob" role="status" hidden></div>   <!-- 手機裡還沒送出的（離線暫存，10/16） -->
  <div class="bar" id="bar"><i></i></div>
- <div id="vl" hidden style="display:grid;gap:12px">   <!-- IEI 訪視清單（他 10/16 選設計三） -->
-   <div class="vday"><button type="button" id="vPrev" aria-label="前一天">‹</button><span id="vDay"></span><button type="button" id="vNext" aria-label="後一天">›</button></div>
-   <div id="vL" style="display:grid;gap:10px"></div>
- </div>
- <div id="dl" hidden style="display:grid;gap:8px">   <!-- 整理草稿（他 10/15 看設計稿說照這個做） -->
+ <div id="bd" hidden>   <!-- 訪視總表（他 10/16 選合併版；取代 IEI 清單、整理草稿） -->
+   <div class="bseg" id="bMode" role="group" aria-label="怎麼找"><button type="button" data-m="status">狀態</button><button type="button" data-m="date">日期</button><button type="button" data-m="client">客戶</button></div>
+   <div class="btiles" id="bTiles"></div>
+   <div class="bweek" id="bWeek" hidden></div>
+   <label class="fld" id="bFind" hidden><svg class="ic"><use href="#i-co"/></svg><input type="search" id="bQ" placeholder="打客戶名稱，打一個字就有提示" aria-label="搜尋客戶"></label>
    <div id="dLoc" style="display:grid;gap:8px" hidden></div>   <!-- 在這支手機裡・還沒送上去（離線暫存；後台看不到，只有這支手機列得出來） -->
-   <div class="dchips" id="dCh"></div>
-   <div id="dL" style="display:grid;gap:8px"></div>
-   <div class="ddock"><button type="button" class="go" id="dGo" disabled>勾要刪的草稿</button><p id="dMsg">只刪小禾裡的草稿，不會動到 IEI</p></div>
+   <p class="bnote" id="bNote" role="status" hidden></p>
+   <div class="bhh"><span id="bTtl"></span><button type="button" id="bSel">選取</button></div>
+   <div id="bL" style="display:grid;gap:8px"></div>
+   <div class="ddock" id="bDock" hidden><button type="button" class="go" id="bGo" disabled>勾要刪的</button><p>草稿刪了可以復原；IEI 上的刪了救不回來，會再問一次</p></div>
  </div>
  <div id="form" hidden>
   <section class="card" id="tdF" hidden>   <!-- 交辦事項（他 10/15）：跟羽禾 App、小羽同一份，勾了寫回行程表 -->
@@ -1116,7 +1119,7 @@ function obDone(id, out) {   // 背景補送成功：送進 IEI 的照常傳留�
     finish(id);
     if (id === (DRAFT || NEWID) && out.send.state) { DRAFT = id; apply(out.send.state); say('剛剛自動送出了 ✓ IEI 編號 ' + out.send.svid); check(); }
   }
-  if (!$('dl').hidden) dLoad();
+  if (!$('bd').hidden) bLoad();
 }
 function obIc(n) { var ns = 'http://www.w3.org/2000/svg', s = document.createElementNS(ns, 'svg'), u = document.createElementNS(ns, 'use'); s.setAttribute('class', 'ic'); u.setAttribute('href', '#i-' + n); s.appendChild(u); return s; }
 function obRow(err, text, btns) {   // 一行：圖示＋字＋按鈕。還沒送＝琥珀時鐘，送不出去＝紅色驚嘆號（狀態不只靠顏色）
@@ -1129,7 +1132,7 @@ function obRow(err, text, btns) {   // 一行：圖示＋字＋按鈕。還沒�
 function obLabel(j) { return (j.date ? j.date.slice(5).replace('-', '/') + ' ' : '') + (j.name || '還沒選客戶'); }
 function obDraw() {   // 每一頁最上面、捲動也黏著（他 10/16：放上面、要醒目）
   var o = obAll(), ids = Object.keys(o), box = $('ob'); box.innerHTML = ''; box.hidden = !ids.length;
-  if (!$('dl').hidden) dLocal();
+  if (!$('bd').hidden) dLocal();
   if (!ids.length) return;
   var bad = ids.filter(function (k) { return o[k].err; }), ok = ids.length - bad.length, me = o[DRAFT || NEWID];
   if (ok) {
@@ -1149,9 +1152,10 @@ function dLocal() {   // 整理草稿頁最上面：在這支手機裡、還沒�
   if (!ids.length) return;
   var g = el('div', '在這支手機裡・還沒送上去', { class: 'dgrp' }); g.appendChild(el('i', ids.length + ' 張・有訊號會自動送')); box.appendChild(g);
   ids.forEach(function (k) {
-    var j = o[k], b = el('button', null, { type: 'button', class: 'dit lock', style: 'opacity:1' });
-    b.appendChild(el('span', j.date ? j.date.slice(5).replace('-', '/') : '', { class: 'dd' })); b.appendChild(el('span', j.name || '還沒選客戶', { class: 'dn' }));
-    b.appendChild(el('span', j.err ? '送不出去 ›' : j.send ? '等訊號送出 ›' : '等訊號存 ›', { class: 'ds', style: j.err ? 'color:var(--red)' : '' }));
+    var j = o[k], b = el('button', null, { type: 'button', class: 'brow' }), m = el('span', null, { class: 'bm' });
+    b.appendChild(el('span', j.date ? j.date.slice(5).replace('-', '/') : '', { class: 'bd' }));
+    m.appendChild(el('span', j.name || '還沒選客戶', { class: 'bn' })); m.appendChild(el('span', '只在這支手機裡', { class: 'bs' })); b.appendChild(m);
+    b.appendChild(el('span', j.err ? '送不出去' : j.send ? '等訊號送出' : '等訊號存', { class: 'bpill ' + (j.err ? 'f' : 'w') }));
     b.onclick = function () { location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&d=' + k; };   // 打開：沒上傳過的用手機裡那份（見 prep）
     box.appendChild(b);
   });
@@ -1225,42 +1229,19 @@ function finish(id) {
     .catch(function () { return api({ api: 'signDone', d: id }).then(function (j) { if (!j.pushed) say('留底卡之前傳過了（簽名人數沒變）'); }); })
     .catch(function (e) { say(e.message); });
 }
-/* ---------- IEI 訪視清單（?v=list，他 10/16 選設計三：卡片＋左邊色條，刪除收在「⋯」） ---------- */
-var VD = DAY || '';
-function vShift(n) { var t = new Date(VD + 'T12:00:00+08:00'); t.setDate(t.getDate() + n); vLoad(t.toISOString().slice(0, 10)); }
-function vLoad(day) {
-  $('vL').innerHTML = ''; $('vDay').textContent = '讀 IEI 清單…';
-  api({ api: 'visits', date: day }).then(function (j) { VD = j.day; vDraw(j.list); }).catch(function (e) { $('vDay').textContent = e.message; });
-}
-function vDraw(list) {   // 狀態標籤：IEI 寫「新增」＝還沒送審核（琥珀），「送審核」＝送出了
-  var t = new Date(VD + 'T12:00:00+08:00'), today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
-  $('vDay').textContent = (VD === today ? '今天 ' : '') + (t.getMonth() + 1) + '/' + t.getDate() + '（' + '日一二三四五六'.charAt(t.getDay()) + '）・' + list.length + ' 筆';
-  var box = $('vL'); box.innerHTML = '';
-  if (!list.length) box.appendChild(el('div', '這天 IEI 上沒有你的訪視紀錄', { class: 'note', style: 'padding:12px 4px' }));
-  list.forEach(function (v) {
-    var nt = v.site === 'n', c = el('div', null, { class: 'vc' }), i = el('button', null, { type: 'button', class: 'vi' }), n = el('span', v.svid, { class: 'vn' });
-    n.appendChild(el('small', (nt ? '南投' : '台中') + ' IEI'));
-    var s = el('span', null, { class: 'vs' }); s.appendChild(document.createTextNode([v.nat, v.wk].filter(Boolean).join('・') + '　'));
-    s.appendChild(el('span', v.st || '—', { class: 'vpill' + (/新增|未|待/.test(v.st) ? ' half' : '') }));
-    i.appendChild(n); i.appendChild(el('span', v.cu, { class: 'vt' })); i.appendChild(s);
-    i.onclick = function () { vMenu(v); };
-    var m = el('button', '⋯', { type: 'button', class: 'vm', 'aria-label': '更多' }); m.onclick = function () { vMenu(v); };
-    c.appendChild(el('span', null, { class: 'vb' + (nt ? ' nt' : '') })); c.appendChild(i); c.appendChild(m); box.appendChild(c);
-  });
-}
 function vBtn(t, cls, fn) { var b = el('button', t, { type: 'button', class: cls }); b.onclick = fn; return b; }
 function vMenu(v) {
   var nt = v.site === 'n', where = (nt ? '南投' : '台中') + ' IEI ' + v.svid;
   $('vsT').textContent = where; $('vsN').textContent = v.cu + (v.wk ? '・' + v.wk : '') + '・' + (v.st || '');
   var b = $('vsB'); b.innerHTML = '';
-  b.appendChild(vBtn('刪除', 'soft', function () {
+  if (!v.noDel) b.appendChild(vBtn('刪除', 'soft', function () {
     $('vsT').textContent = '刪掉' + where + '？';
-    $('vsN').textContent = v.cu + '・' + (v.day || VD) + '。刪了 IEI 上就沒有這一筆' + (v.d ? '；小禾的那張還在，可以改好再送一次。' : '。');
+    $('vsN').textContent = v.cu + '・' + v.day + '。刪了 IEI 上就沒有這一筆' + (v.d ? '；小禾的那張還在，可以改好再送一次。' : '。');
     b.innerHTML = '';
     b.appendChild(vBtn('先不要', 'soft', function () { $('vSheet').hidden = true; }));
     b.appendChild(vBtn('刪除', 'go', function () {
       b.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
-      api({ api: 'vdel', svid: v.svid, site: v.site, date: v.day || VD }).then(function () { $('vSheet').hidden = true; say('已刪除 ' + where); v.after ? v.after() : vLoad(VD); })
+      api({ api: 'vdel', svid: v.svid, site: v.site, date: v.day }).then(function () { $('vSheet').hidden = true; v.after(); })
         .catch(function (e) { $('vsN').textContent = e.message; b.querySelectorAll('button').forEach(function (x) { x.disabled = false; }); });
     }));
     b.lastChild.style.background = 'var(--red)';
@@ -1270,69 +1251,144 @@ function vMenu(v) {
   $('vSheet').hidden = false;
 }
 $('vSheet').onclick = function (e) { if (e.target === $('vSheet')) $('vSheet').hidden = true; };
-$('vPrev').onclick = function () { vShift(-1); }; $('vNext').onclick = function () { vShift(1); };
-/* ---------- 整理草稿（?v=drafts，他 10/15 看設計稿說「照這個部署」）：勾 → 一顆刪除 → 留「復原」。已送到 IEI 的灰掉，點了去 IEI 清單 ---------- */
-var DL = [], DSEL = {}, DUNDO = [], DMSG = '只刪小禾裡的草稿，不會動到 IEI';
-function dLoad() {
-  $('sub').textContent = '讀取中…';
-  return api({ api: 'drafts' }).then(function (j) { DL = j.list; DSEL = {}; dDraw(); }).catch(function (e) { $('sub').textContent = e.message; });
+/* ---------- 訪視總表（?v=board，他 10/16 選合併版：狀態／日期／客戶一頁切；取代 IEI 清單和整理草稿）----------
+   狀態以 IEI 為準（後端 board＝IEI 月曆一次一個月＋小禾還沒進 IEI 的）。0 新增、1 處理中、5 業務排的空白單、小禾草稿／送失敗 → 要我動手；
+   2 送審核 → 等主管；3、4 → 完成（IEI 沒有「退回」）。勾選刪除只開放「要我動手」的：草稿＝小禾丟棄（可復原），IEI 上的＝IEI 刪除（救不回來，先問）。 */
+var BL = [], BMON = '', BS = { mode: 'status', tab: 'act', day: '', cu: '', q: '', sel: false, pick: {} }, BUNDO = [];
+try { BS.mode = JSON.parse(localStorage.getItem('xh.bd') || '{}').mode || 'status'; } catch (e) {}
+var BST = { '0': ['新增', 'act', ''], '1': ['處理中', 'act', ''], '5': ['空白單', 'act', ''], '2': ['等主管', 'wait', 'w'], '3': ['完成', 'done', 'g'], '4': ['完成', 'done', 'g'],
+            draft: ['草稿', 'act', 'd'], fail: ['送失敗', 'act', 'f'] };
+function bInfo(r) { return BST[r.st] || ['狀態 ' + r.st, 'act', '']; }
+function bKey(r) { return r.id || r.site + r.svid; }
+function bMd(d) { return d.slice(5).replace('-', '/'); }
+function bLoad(m) {
+  $('sub').textContent = '讀 IEI…';
+  return api({ api: 'board', month: m || BMON }).then(function (j) {
+    BL = j.list; BMON = j.month; BS.pick = {}; $('sub').textContent = '台中＋南投・照 IEI・' + j.at + ' 更新';
+    var s = $('bMon');
+    if (!s.options.length) for (var i = 0; i < 3; i++) { var t = new Date(Date.now() + 8 * 3600e3); t.setUTCDate(1); t.setUTCMonth(t.getUTCMonth() - i); var v = t.toISOString().slice(0, 7); s.appendChild(el('option', +v.slice(5) + ' 月', { value: v })); }
+    s.value = BMON; s.hidden = false; bDraw();
+  }).catch(function (e) { $('sub').textContent = e.message; });
 }
-function dPick(fn) { DSEL = {}; DL.forEach(function (r) { if (!r.sent && fn(r)) DSEL[r.id] = 1; }); $('dMsg').textContent = DMSG; dDraw(); }
-function dDraw() {
-  var open = DL.filter(function (r) { return !r.sent; }), sent = DL.filter(function (r) { return r.sent; }), n = Object.keys(DSEL).length;
-  var today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10), last = {};
-  open.forEach(function (r) { last[r.date + r.name] = r.id; });   // 同一天同一家留最後一張，其他算重複
-  $('sub').textContent = open.length ? '還沒送出的草稿・' + open.length + ' 張' : '沒有還沒送出的草稿 ✓';
+$('bMon').onchange = function () { BS.day = ''; bLoad(this.value); };
+[].forEach.call($('bMode').children, function (b) { b.onclick = function () { BS.mode = b.dataset.m; BS.day = ''; BS.cu = ''; bDraw(); }; });
+$('bQ').oninput = function () { BS.q = this.value.trim(); bDraw(); };
+$('bSel').onclick = function () { BS.sel = !BS.sel; BS.pick = {}; bDraw(); };
+function bRow(r) {
+  var inf = bInfo(r), canDel = inf[1] === 'act', on = !!BS.pick[bKey(r)], b = el('button', null, { type: 'button', class: 'brow' }), m = el('span', null, { class: 'bm' });
+  if (BS.sel) { b.setAttribute('aria-pressed', String(on)); b.disabled = !canDel; b.appendChild(el('span', null, { class: 'bx' })); }
+  b.appendChild(el('span', bMd(r.date), { class: 'bd' }));
+  m.appendChild(el('span', r.cu + (r.site === 'n' ? '・南投' : ''), { class: 'bn' }));
+  m.appendChild(el('span', [r.n ? r.n + ' 人' : '', r.svid ? 'IEI ' + r.svid : '小禾' + (r.sub ? '・' + r.sub : '')].filter(Boolean).join('・'), { class: 'bs' }));
+  b.appendChild(m); b.appendChild(el('span', inf[0], { class: 'bpill ' + inf[2] }));
+  b.onclick = function () {
+    if (BS.sel) { if (on) delete BS.pick[bKey(r)]; else BS.pick[bKey(r)] = r; return bDraw(); }
+    var doc = r.id || r.d;
+    if (doc) location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&d=' + doc + '&day=' + r.date;
+    else vMenu({ svid: r.svid, site: r.site, cu: r.cu, st: inf[0], d: '', day: r.date, noDel: !canDel, after: function () { bLoad(); } });
+  };
+  return b;
+}
+function bGroups(rows, key, title) {   // 照 key 分組（照出現順序），每組一個小標
+  var box = $('bL'), seen = {}, keys = [];   // keys 照出現順序（物件的數字鍵會自己排到前面，像 '5'）
+  rows.forEach(function (r) { var k = key(r); if (!seen[k]) { seen[k] = []; keys.push(k); } seen[k].push(r); });
+  keys.forEach(function (k) {
+    var g = el('div', title(k, seen[k]), { class: 'dgrp' }); g.appendChild(el('i', seen[k].length + ' 張')); box.appendChild(g);
+    seen[k].forEach(function (r) { box.appendChild(bRow(r)); });
+  });
+}
+function bDraw() {
+  try { localStorage.setItem('xh.bd', JSON.stringify({ mode: BS.mode })); } catch (e) {}
+  [].forEach.call($('bMode').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.m === BS.mode)); });
+  $('bTiles').hidden = BS.mode !== 'status'; $('bWeek').hidden = BS.mode !== 'date'; $('bFind').hidden = BS.mode !== 'client';
+  $('bd').classList.toggle('sel', BS.sel); $('bDock').hidden = !BS.sel; $('bSel').textContent = BS.sel ? '取消' : '選取';
   dLocal();
-  var ch = $('dCh'); ch.innerHTML = '';
-  [['全選', function () { return true; }], ['今天以前', function (r) { return r.date < today; }],
-   ['同一家重複的', function (r) { return last[r.date + r.name] !== r.id; }], ['全不選', function () { return false; }]].forEach(function (c) {
-    var b = el('button', c[0], { type: 'button' }); b.onclick = function () { dPick(c[1]); }; ch.appendChild(b);
+  var cnt = { act: 0, wait: 0, done: 0 }, rows = BL.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; }), box = $('bL'), tl = $('bTiles');
+  BL.forEach(function (r) { cnt[bInfo(r)[1]]++; });
+  tl.innerHTML = '';
+  [['act', '要我動手'], ['wait', '等主管'], ['done', '完成']].forEach(function (t) {
+    var b = el('button', null, { type: 'button', 'aria-pressed': String(BS.tab === t[0]) }); b.appendChild(el('b', String(cnt[t[0]]))); b.appendChild(el('span', t[1]));
+    b.onclick = function () { BS.tab = t[0]; bDraw(); }; tl.appendChild(b);
   });
-  ch.hidden = !open.length;
-  var box = $('dL'); box.innerHTML = '';
-  open.forEach(function (r) {
-    var b = el('button', null, { type: 'button', class: 'dit', 'aria-pressed': String(!!DSEL[r.id]) });
-    b.appendChild(el('span', null, { class: 'bx' })); b.appendChild(el('span', r.date.slice(5).replace('-', '/'), { class: 'dd' }));
-    b.appendChild(el('span', r.name, { class: 'dn' })); b.appendChild(el('span', r.fail ? '送失敗' : r.sig ? r.sig + ' 個簽名' : '沒簽', { class: 'ds' }));
-    b.onclick = function () { if (DSEL[r.id]) delete DSEL[r.id]; else DSEL[r.id] = 1; $('dMsg').textContent = DMSG; dDraw(); };
-    box.appendChild(b);
-  });
-  if (sent.length) {
-    var g = el('div', '已送到 IEI', { class: 'dgrp' }); g.appendChild(el('i', sent.length + ' 張・點一張可以從 IEI 刪')); box.appendChild(g);
-    sent.forEach(function (r) {
-      var b = el('button', null, { type: 'button', class: 'dit lock', style: 'opacity:1' });   // 點得了（刪除／打開），不再灰掉
-      b.appendChild(el('span', r.date.slice(5).replace('-', '/'), { class: 'dd' })); b.appendChild(el('span', r.name, { class: 'dn' })); b.appendChild(el('span', 'IEI ' + r.svid + ' ›', { class: 'ds' }));
-      /* 他 10/16：已經在 IEI 的也要能從這裡刪 → 跟 IEI 清單同一個「刪除／打開」（刪之前先問一次；刪了 IEI 救不回來，小禾那張留著可以重送） */
-      b.onclick = function () { vMenu({ svid: r.svid, site: r.site, cu: r.name, st: '已送出', d: r.id, day: r.date, after: dLoad }); };
-      box.appendChild(b);
+  box.innerHTML = '';
+  if (BS.mode === 'status') {
+    rows = rows.filter(function (r) { return bInfo(r)[1] === BS.tab; });
+    $('bTtl').textContent = { act: '要我動手', wait: '等主管', done: '完成' }[BS.tab] + '・' + rows.length + ' 張';
+    var order = { draft: 0, fail: 0, '5': 1 };
+    rows.sort(function (a, b) { return (order[a.st] == null ? 2 : order[a.st]) - (order[b.st] == null ? 2 : order[b.st]); });
+    bGroups(rows, function (r) { return r.id ? 'x' : r.st === '5' ? '5' : bInfo(r)[1]; }, function (k) {
+      return { x: '小禾草稿・還沒送 IEI', '5': '業務排好、內容空白', act: '在 IEI・還沒送審核', wait: '送審核了，等主管批示', done: '完成' }[k]; });
+  } else if (BS.mode === 'date') {
+    bWeek();
+    if (BS.day) rows = rows.filter(function (r) { return r.date === BS.day; });
+    $('bTtl').textContent = (BS.day ? bMd(BS.day) : +BMON.slice(5) + ' 月') + '・' + rows.length + ' 張';
+    bGroups(rows, function (r) { return r.date; }, function (k) { var t = new Date(k + 'T12:00:00+08:00'); return bMd(k) + '（' + '日一二三四五六'.charAt(t.getDay()) + '）'; });
+  } else if (BS.cu) {
+    rows = rows.filter(function (r) { return r.cu + r.site === BS.cu; });
+    $('bTtl').textContent = (rows[0] ? rows[0].cu : '') + '・' + rows.length + ' 張';
+    var back = el('button', '‹ 全部客戶', { type: 'button', class: 'brow', style: 'min-height:44px;color:var(--blued);font-weight:700' }); back.onclick = function () { BS.cu = ''; bDraw(); }; box.appendChild(back);
+    rows.forEach(function (r) { box.appendChild(bRow(r)); });
+  } else {
+    var cs = {}, list = [];
+    rows.forEach(function (r) { if (BS.q && r.cu.indexOf(BS.q) === -1) return; var k = r.cu + r.site; if (!cs[k]) list.push(cs[k] = { k: k, cu: r.cu, site: r.site, rs: [] }); cs[k].rs.push(r); });
+    list.sort(function (a, b) { var f = function (c) { return c.rs.filter(function (r) { return bInfo(r)[1] === 'act'; }).length; }; return f(b) - f(a); });   // 要我動手多的排前面
+    $('bTtl').textContent = +BMON.slice(5) + ' 月・' + list.length + ' 家';
+    list.forEach(function (c) {
+      var b = el('button', null, { type: 'button', class: 'bcard' }), t = el('span', null, { class: 't' }), g = el('span', null, { class: 'g' }), by = {};
+      t.appendChild(el('b', c.cu + (c.site === 'n' ? '・南投' : ''))); t.appendChild(el('span', c.rs.length + ' 張 ›'));
+      c.rs.forEach(function (r) { var i = bInfo(r); by[i[0]] = by[i[0]] || [0, i[2]]; by[i[0]][0]++; });
+      Object.keys(by).forEach(function (k) { g.appendChild(el('span', k + ' ' + by[k][0], { class: 'bpill ' + by[k][1] })); });
+      b.appendChild(t); b.appendChild(g); b.onclick = function () { BS.cu = c.k; bDraw(); }; box.appendChild(b);
     });
   }
-  $('dGo').textContent = n ? '刪除 ' + n + ' 張草稿' : '勾要刪的草稿'; $('dGo').disabled = !n;
+  if (!box.children.length) box.appendChild(el('p', '這裡沒有', { class: 'note', style: 'padding:8px 4px' }));
+  var n = Object.keys(BS.pick).length, ie = Object.keys(BS.pick).filter(function (k) { return BS.pick[k].svid; }).length;
+  $('bGo').disabled = !n; $('bGo').textContent = n ? '刪除 ' + n + ' 張' + (ie ? '（含 IEI 上 ' + ie + ' 筆）' : '') : '勾要刪的（要我動手的才能刪）';
 }
-$('dGo').onclick = function () {   // 不問「確定嗎」：刪完留一顆復原（設計稿第 3 步）
-  var ids = Object.keys(DSEL); if (!ids.length) return;
-  $('dGo').disabled = true; $('dMsg').textContent = '刪除中…';
-  api({ api: 'ddel', ids: ids }).then(function (j) {
-    DUNDO = ids; dLoad();
-    var p = $('dMsg'), u = el('button', '復原', { type: 'button', class: 'link' }); p.textContent = '已刪除 ' + j.n + ' 張草稿　';
-    u.onclick = function () { u.disabled = true; api({ api: 'dundo', ids: DUNDO }).then(function (k) { DUNDO = []; p.textContent = '已復原 ' + k.n + ' 張'; dLoad(); }).catch(function (e) { p.textContent = e.message; }); };
-    p.appendChild(u);
-  }).catch(function (e) { $('dMsg').textContent = e.message; $('dGo').disabled = false; });
+function bWeek() {   // 這個月的某一週：今天那週（看過去的月份＝最後一週）。點一天只看那天，再點一次取消
+  var wk = $('bWeek'), today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10), base = today.slice(0, 7) === BMON ? today : BMON + '-28', t = new Date(base + 'T12:00:00+08:00');
+  t.setDate(t.getDate() - (t.getDay() + 6) % 7); wk.innerHTML = '';
+  for (var i = 0; i < 7; i++) {
+    var d = new Date(t.getTime() + i * 864e5 + 8 * 3600e3).toISOString().slice(0, 10), n = BL.filter(function (r) { return r.date === d; }).length;
+    var b = el('button', null, { type: 'button', 'aria-pressed': String(BS.day === d), 'aria-label': bMd(d) + ' ' + n + ' 張' });
+    b.appendChild(el('small', '一二三四五六日'.charAt(i))); b.appendChild(el('b', String(+d.slice(8)))); b.appendChild(el('i', n ? String(n) : ''));
+    b.onclick = (function (d) { return function () { BS.day = BS.day === d ? '' : d; bDraw(); }; })(d); wk.appendChild(b);
+  }
+}
+function bNote(t, undo) {   // 刪完的訊息（草稿有「復原」）
+  var p = $('bNote'); p.hidden = false; p.textContent = t;
+  if (undo.length) { var u = el('button', '復原草稿', { type: 'button' }); u.onclick = function () { u.disabled = true; api({ api: 'dundo', ids: undo }).then(function (k) { p.textContent = '已復原 ' + k.n + ' 張草稿'; bLoad(); }).catch(function (e) { p.textContent = e.message; }); }; p.appendChild(u); }
+}
+function bDel(L) {
+  var dr = L.filter(function (r) { return r.id; }), ie = L.filter(function (r) { return r.svid; }), fail = [], ids = dr.map(function (r) { return r.id; });
+  $('bGo').disabled = true; $('bGo').textContent = '刪除中…';
+  var p = dr.length ? api({ api: 'ddel', ids: ids }) : Promise.resolve();
+  ie.forEach(function (r) { p = p.then(function () { return api({ api: 'vdel', svid: r.svid, site: r.site, date: r.date }).catch(function (e) { fail.push('IEI ' + r.svid + '：' + e.message); }); }); });
+  p.then(function () {
+    BS.sel = false; bLoad();
+    bNote('已刪除 ' + (L.length - fail.length) + ' 張' + (fail.length ? '。沒刪成：' + fail.join('；') : '') + '　', ids);
+  }).catch(function (e) { bNote(e.message, []); bDraw(); });
+}
+$('bGo').onclick = function () {
+  var L = Object.keys(BS.pick).map(function (k) { return BS.pick[k]; }), ie = L.filter(function (r) { return r.svid; });
+  if (!L.length) return;
+  if (!ie.length) return bDel(L);   // 只有草稿：不問，刪完留「復原」
+  $('vsT').textContent = '刪掉 IEI 上 ' + ie.length + ' 筆？';
+  $('vsN').textContent = ie.map(function (r) { return bMd(r.date) + ' ' + r.cu + '（IEI ' + r.svid + '）'; }).join('、') + '。IEI 上刪了救不回來' + (L.length > ie.length ? '；另外 ' + (L.length - ie.length) + ' 張小禾草稿可以復原。' : '。');
+  var b = $('vsB'); b.innerHTML = '';
+  b.appendChild(vBtn('先不要', 'soft', function () { $('vSheet').hidden = true; }));
+  b.appendChild(vBtn('刪除', 'go', function () { $('vSheet').hidden = true; bDel(L); }));
+  b.lastChild.style.background = 'var(--red)'; $('vSheet').hidden = false;
 };
 liff.init({ liffId: LIFF_ID }).then(function () {
   if (!liff.isLoggedIn()) return liff.login();
   obDraw(); obFlush();   // 手機裡有上次沒送出去的，先補送（他 10/16：打開小禾就自動補）
   window.addEventListener('online', obFlush);   // LINE 登入好了才開始自動補（沒登入時 api 會丟「不是連線問題」的錯，被當成內容錯就不再試了）
   setInterval(function () { if (!document.hidden && Object.keys(obAll()).length) obFlush(); }, 30000);
-  if (qp('v') === 'drafts') {   // 整理草稿
-    $('bar').hidden = true; $('dl').hidden = false; document.querySelector('footer').hidden = true; $('ttl').textContent = '整理草稿';
-    return dLoad();
-  }
-  if (qp('v') === 'list') {   // IEI 訪視清單
-    $('bar').hidden = true; $('vl').hidden = false; document.querySelector('footer').hidden = true;
-    $('ttl').textContent = 'IEI 訪視清單'; $('sub').textContent = '台中＋南投・點一筆打開或刪除';
-    return vLoad(VD);
+  if (/^(board|drafts|list)$/.test(qp('v') || '')) {   // 訪視總表（舊的整理草稿、IEI 清單連結也到這裡）
+    $('bar').hidden = true; $('bd').hidden = false; document.querySelector('footer').hidden = true; $('ttl').textContent = '訪視總表';
+    if (qp('v') === 'list') { BS.mode = 'date'; BS.day = DAY || ''; }
+    return bLoad(DAY ? DAY.slice(0, 7) : '');
   }
   return api({ api: 'prep', d: DRAFT, t: TRIP, date: DAY }).then(function (j) {
     var loc = DRAFT && obAll()[DRAFT];
