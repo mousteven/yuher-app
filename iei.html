@@ -111,6 +111,11 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .brow[aria-pressed=true]{background:#FDECEC;border-color:var(--red)}
 .brow[aria-pressed=true] .bx{border-color:var(--red);background:var(--red) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Cpath d='M3 7l3 3 5-6' fill='none' stroke='%23fff' stroke-width='2.2'/%3E%3C/svg%3E") center no-repeat}
 .brow:disabled{opacity:.45}
+/* 往左滑露出刪除（他 10/19：測試完的單想直接滑掉）。只有「要我動手」的滑得動；滑開以後要再點那顆紅的，不會滑一下就刪掉 */
+.bsw{position:relative;overflow:hidden;border-radius:16px}
+.bsw .brow{position:relative;z-index:1;transition:transform .18s ease-out}
+.bsw .bdel{position:absolute;top:0;right:0;bottom:0;width:88px;border:0;border-radius:0 16px 16px 0;background:var(--red);color:#fff;font:inherit;font-weight:700;font-size:15px}
+.bsw.open .brow{transform:translateX(-88px)}
 .bcard{display:grid;gap:6px;padding:12px 16px;border:1px solid var(--line);border-radius:20px;background:var(--card);font:inherit;color:inherit;text-align:left;width:100%}
 .bcard .t{display:flex;justify-content:space-between;gap:8px}.bcard .t b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.bcard .t span{font-size:13px;color:var(--mute);white-space:nowrap}
 .bcard .g{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -1269,6 +1274,7 @@ function vMenu(v) {
   var nt = v.site === 'n', where = (nt ? '南投' : '台中') + ' IEI ' + v.svid;
   $('vsT').textContent = where; $('vsN').textContent = v.cu + (v.wk ? '・' + v.wk : '') + '・' + (v.st || '');
   var b = $('vsB'); b.innerHTML = '';
+  if (v.canSub) b.appendChild(vBtn('送審核', 'go', function () { vSub(v, false); }));
   if (!v.noDel) b.appendChild(vBtn('刪除', 'soft', function () {
     $('vsT').textContent = '刪掉' + where + '？';
     $('vsN').textContent = v.cu + '・' + v.day + '。刪了 IEI 上就沒有這一筆' + (v.d ? '；小禾的那張還在，可以改好再送一次。' : '。');
@@ -1281,9 +1287,36 @@ function vMenu(v) {
     }));
     b.lastChild.style.background = 'var(--red)';
   }));
-  b.appendChild(v.d ? vBtn('打開小禾的這張', 'go', function () { location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&d=' + v.d; })
-                    : vBtn('關閉（這張是在 IEI 網頁上開的）', 'soft', function () { $('vSheet').hidden = true; }));
+  b.appendChild(v.d ? vBtn('打開小禾的這張', v.canSub ? 'soft' : 'go', function () { location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&d=' + v.d; })
+                    : vBtn(v.canSub ? '關閉' : '關閉（這張是在 IEI 網頁上開的）', 'soft', function () { $('vSheet').hidden = true; }));
   $('vSheet').hidden = false;
+}
+/* 從總表直接送審核（他 10/19）。⛔ 送了 IEI 就鎖住，所以一定要確認一次：
+   小禾開的那張由後端回「誰沒簽」；在 IEI 網頁上開的，小禾讀不到簽名，只能講明再送。 */
+function vClose(t, n) {
+  $('vsT').textContent = t; $('vsN').textContent = n;
+  var b = $('vsB'); b.innerHTML = '';
+  b.appendChild(vBtn('關閉', 'soft', function () { $('vSheet').hidden = true; }));
+}
+function vSub(v, force) {
+  var b = $('vsB');
+  b.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
+  $('vsT').textContent = '送審核中…'; $('vsN').textContent = v.cu + '・IEI ' + v.svid;
+  api({ api: 'vsub', svid: v.svid, site: v.site, date: v.day, force: force }).then(function (j) {
+    if (j.need) return vAsk(v, '還有 ' + j.need.length + ' 人沒簽', j.need.join('、') + '。');
+    if (j.mine === false) return vAsk(v, '這張不是小禾開的', '小禾讀不到它的內容和簽名，只能照 IEI 編號送審核。');
+    if (j.dry) return vClose('試跑：沒有送審核', j.form);
+    $('vSheet').hidden = true;
+    bNote('已送審核 ✓ ' + v.cu + '（IEI ' + v.svid + '）・IEI 鎖住了，不能再補簽　', []);
+    v.after();
+  }).catch(function (e) { vClose('沒送成', /unknown api/.test(e.message) ? '伺服器那邊還沒更新到這個版本，等一下再按。' : e.message); });
+}
+function vAsk(v, t, n) {
+  $('vsT').textContent = t; $('vsN').textContent = n + '送審核以後 IEI 這張就鎖住，不能再補簽。';
+  var b = $('vsB'); b.innerHTML = '';
+  b.appendChild(vBtn('先不要', 'soft', function () { $('vSheet').hidden = true; }));
+  if (v.d) b.appendChild(vBtn('先去補簽', 'soft', function () { location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&d=' + v.d + '&day=' + v.day; }));
+  b.appendChild(vBtn('仍要送審核', 'go', function () { vSub(v, true); }));
 }
 $('vSheet').onclick = function (e) { if (e.target === $('vSheet')) $('vSheet').hidden = true; };
 /* ---------- 訪視總表（?v=board，他 10/16 選合併版：狀態／日期／客戶一頁切；取代 IEI 清單和整理草稿）----------
@@ -1291,7 +1324,7 @@ $('vSheet').onclick = function (e) { if (e.target === $('vSheet')) $('vSheet').h
    2 送審核 → 等主管；3、4 → 完成（IEI 沒有「退回」）。勾選刪除只開放「要我動手」的：草稿＝小禾丟棄（可復原），IEI 上的＝IEI 刪除（救不回來，先問）。 */
 var BL = [], BMON = '', BS = { mode: 'status', tab: 'act', day: '', cu: '', q: '', sel: false, pick: {} }, BUNDO = [];
 try { BS.mode = JSON.parse(localStorage.getItem('xh.bd') || '{}').mode || 'status'; } catch (e) {}
-var BST = { '0': ['新增', 'act', ''], '1': ['處理中', 'act', ''], '5': ['空白單', 'act', ''], '2': ['等主管', 'wait', 'w'], '3': ['完成', 'done', 'g'], '4': ['完成', 'done', 'g'],
+var BST = { '0': ['新增', 'act', ''], '1': ['處理中', 'act', ''], '5': ['空白單', 'act', ''], '2': ['已送審', 'wait', 'w'], '3': ['完成', 'done', 'g'], '4': ['完成', 'done', 'g'],
             draft: ['草稿', 'act', 'd'], fail: ['送失敗', 'act', 'f'] };
 function bInfo(r) { return BST[r.st] || ['狀態 ' + r.st, 'act', '']; }
 function bKey(r) { return r.id || r.site + r.svid; }
@@ -1323,6 +1356,37 @@ $('bMon').onchange = function () { BS.day = ''; bLoad(this.value); };
 [].forEach.call($('bMode').children, function (b) { b.onclick = function () { BS.mode = b.dataset.m; BS.day = ''; BS.cu = ''; bDraw(); }; });
 $('bQ').oninput = function () { BS.q = this.value.trim(); bDraw(); };
 $('bSel').onclick = function () { BS.sel = !BS.sel; BS.pick = {}; bDraw(); };
+/* 往左滑露出刪除（他 10/19）。滑開只是露出來，要再點紅的那顆才刪——IEI 上的刪了救不回來，滑一下就刪太危險。
+   一次只開一張；選取模式、秀手機裡舊資料的時候不給滑。 */
+var SWW = 88, SWOPEN = null;
+function swSet(w, on) {
+  if (on && SWOPEN && SWOPEN !== w) swSet(SWOPEN, false);
+  var b = w.firstChild;
+  b.style.transition = ''; b.style.transform = '';
+  w.classList.toggle('open', on);
+  SWOPEN = on ? w : (SWOPEN === w ? null : SWOPEN);
+}
+function swipe(w, del) {
+  var b = w.firstChild, x0 = 0, y0 = 0, dx = 0, drag = false;
+  w.addEventListener('touchstart', function (e) {
+    if (BS.sel) return;
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; drag = false; b.style.transition = 'none'; delete w.dataset.moved;
+  }, { passive: true });
+  w.addEventListener('touchmove', function (e) {
+    if (BS.sel) return;
+    var t = e.touches[0], ax = t.clientX - x0, ay = t.clientY - y0;
+    if (!drag && (Math.abs(ax) < 8 || Math.abs(ax) <= Math.abs(ay))) return;   // 直的捲動不要被攔走
+    drag = true; e.preventDefault();
+    dx = Math.max(-SWW, Math.min(0, ax + (w.classList.contains('open') ? -SWW : 0)));
+    b.style.transform = 'translateX(' + dx + 'px)';
+  }, { passive: false });
+  w.addEventListener('touchend', function () {
+    if (!drag) return;
+    w.dataset.moved = '1';   // 這一下是滑的，不是點的（下次碰到螢幕才清掉，不用計時器）
+    swSet(w, dx < -SWW / 2);
+  });
+  w.appendChild(vBtn('刪除', 'bdel', function () { swSet(w, false); del(); }));
+}
 function bRow(r) {
   var inf = bInfo(r), canDel = inf[1] === 'act', on = !!BS.pick[bKey(r)], b = el('button', null, { type: 'button', class: 'brow' }), m = el('span', null, { class: 'bm' });
   if (BS.sel) { b.setAttribute('aria-pressed', String(on)); b.disabled = !canDel; b.appendChild(el('span', null, { class: 'bx' })); }
@@ -1330,13 +1394,21 @@ function bRow(r) {
   m.appendChild(el('span', r.cu + (r.site === 'n' ? '・南投' : ''), { class: 'bn' }));
   m.appendChild(el('span', [r.n ? r.n + ' 人' : '', r.svid ? 'IEI ' + r.svid : '小禾' + (r.sub ? '・' + r.sub : '')].filter(Boolean).join('・'), { class: 'bs' }));
   b.appendChild(m); b.appendChild(el('span', inf[0], { class: 'bpill ' + inf[2] }));
+  var w = el('div', null, { class: 'bsw' });
+  w.appendChild(b);
+  if (canDel && !BS.sel && !BOLD) swipe(w, function () { bAsk([r]); });
   b.onclick = function () {
     if (BS.sel) { if (on) delete BS.pick[bKey(r)]; else BS.pick[bKey(r)] = r; return bDraw(); }
+    if (w.dataset.moved) return;                       // 剛剛是在滑，不是在點
+    if (w.classList.contains('open')) return swSet(w, false);   // 滑開著先收回來
     var doc = r.id || r.d;
+    // 在 IEI、還沒送審核（0 新增／1 處理中）→ 先給選單：送審核／打開／刪除（他 10/19 要能從總表直接送審）
+    if (r.svid && /^[01]$/.test(String(r.st)))
+      return vMenu({ svid: r.svid, site: r.site, cu: r.cu, st: inf[0], d: r.d || '', day: r.date, canSub: !BOLD, noDel: !canDel || !!BOLD, after: function () { bLoad(); } });
     if (doc) location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&d=' + doc + '&day=' + r.date;
     else vMenu({ svid: r.svid, site: r.site, cu: r.cu, st: inf[0], d: '', day: r.date, noDel: !canDel || !!BOLD, after: function () { bLoad(); } });
   };
-  return b;
+  return w;
 }
 function bGroups(rows, key, title) {   // 照 key 分組（照出現順序），每組一個小標
   var box = $('bL'), seen = {}, keys = [];   // keys 照出現順序（物件的數字鍵會自己排到前面，像 '5'）
@@ -1355,18 +1427,18 @@ function bDraw() {
   var cnt = { act: 0, wait: 0, done: 0 }, rows = BL.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; }), box = $('bL'), tl = $('bTiles');
   BL.forEach(function (r) { cnt[bInfo(r)[1]]++; });
   tl.innerHTML = '';
-  [['act', '要我動手'], ['wait', '等主管'], ['done', '完成']].forEach(function (t) {
+  [['act', '要我動手'], ['wait', '已送審'], ['done', '完成']].forEach(function (t) {
     var b = el('button', null, { type: 'button', 'aria-pressed': String(BS.tab === t[0]) }); b.appendChild(el('b', String(cnt[t[0]]))); b.appendChild(el('span', t[1]));
     b.onclick = function () { BS.tab = t[0]; bDraw(); }; tl.appendChild(b);
   });
-  box.innerHTML = '';
+  box.innerHTML = ''; SWOPEN = null;   // 重畫了，剛剛滑開的那一張已經不在
   if (BS.mode === 'status') {
     rows = rows.filter(function (r) { return bInfo(r)[1] === BS.tab; });
-    $('bTtl').textContent = { act: '要我動手', wait: '等主管', done: '完成' }[BS.tab] + '・' + rows.length + ' 張';
+    $('bTtl').textContent = { act: '要我動手', wait: '已送審', done: '完成' }[BS.tab] + '・' + rows.length + ' 張';
     var order = { draft: 0, fail: 0, '5': 1 };
     rows.sort(function (a, b) { return (order[a.st] == null ? 2 : order[a.st]) - (order[b.st] == null ? 2 : order[b.st]); });
     bGroups(rows, function (r) { return r.id ? 'x' : r.st === '5' ? '5' : bInfo(r)[1]; }, function (k) {
-      return { x: '小禾草稿・還沒送 IEI', '5': '業務排好、內容空白', act: '在 IEI・還沒送審核', wait: '送審核了，等主管批示', done: '完成' }[k]; });
+      return { x: '小禾草稿・還沒送 IEI', '5': '業務排好、內容空白', act: '在 IEI・還沒送審核', wait: '已送審，等主管批示', done: '完成' }[k]; });
   } else if (BS.mode === 'date') {
     bWeek();
     if (BS.day) rows = rows.filter(function (r) { return r.date === BS.day; });
@@ -1418,8 +1490,9 @@ function bDel(L) {
     bNote('已刪除 ' + (L.length - fail.length) + ' 張' + (fail.length ? '。沒刪成：' + fail.join('；') : '') + '　', ids);
   }).catch(function (e) { bNote(e.message, []); bDraw(); });
 }
-$('bGo').onclick = function () {
-  var L = Object.keys(BS.pick).map(function (k) { return BS.pick[k]; }), ie = L.filter(function (r) { return r.svid; });
+/* 要刪的（勾選的，或左滑那一張）：只有草稿就直接刪、留「復原」；碰到 IEI 上的一定再問一次（刪了救不回來） */
+function bAsk(L) {
+  var ie = L.filter(function (r) { return r.svid; });
   if (!L.length) return;
   if (!ie.length) return bDel(L);   // 只有草稿：不問，刪完留「復原」
   $('vsT').textContent = '刪掉 IEI 上 ' + ie.length + ' 筆？';
@@ -1428,7 +1501,8 @@ $('bGo').onclick = function () {
   b.appendChild(vBtn('先不要', 'soft', function () { $('vSheet').hidden = true; }));
   b.appendChild(vBtn('刪除', 'go', function () { $('vSheet').hidden = true; bDel(L); }));
   b.lastChild.style.background = 'var(--red)'; $('vSheet').hidden = false;
-};
+}
+$('bGo').onclick = function () { bAsk(Object.keys(BS.pick).map(function (k) { return BS.pick[k]; })); };
 /* 打開先秀手機裡上次的總表（他 10/16：「一打開馬上看到東西」）。不等 LINE 登入，所以在 liff.init 前面 */
 if (/^(board|drafts|list)$/.test(qp('v') || '')) try {
   var bc = JSON.parse(localStorage.getItem('xh.bdc') || 'null');
