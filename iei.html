@@ -244,6 +244,12 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
 .sheet .btns button{min-height:54px;border-radius:16px;font-weight:700;font-size:16px;line-height:1.2;font-family:inherit}
 .sheet .soft{border:1.5px solid var(--line);box-shadow:none}
 .sheet .go{justify-content:center}
+/* 刪 IEI 上那一筆要先跳出來擋住（他 10/19：「IEI 那邊沒辦法復原，刪除就增加一個彈跳視窗來做確認」）。
+   置中、不從底下滑出來——底部那種剛好長在左滑露出的紅色刪除同一個位置，手指停在那邊連點兩下就過去了。
+   兩顆按鈕一樣寬（別的地方是 1fr 2fr）：不可逆的那顆不給它比較好按。 */
+.dim.ask{align-items:center;padding:0 16px}
+.dim.ask .sheet{border-radius:20px;padding:24px 20px;animation:pop .22s var(--ease) both}
+.dim.ask .btns{grid-template-columns:1fr 1fr}
 /* ===== 版本五「淡藍標題卡」（他 10/15 從五種樣式選的：輕量 Material 3、卡片式扁平、大圓角、線性圖標、白底高留白） =====
    疊在上面的舊樣式之上：白底；最上面淡藍大卡寫「哪一家、哪一天」；其他卡片只有細框、不加陰影；
    分段按鈕＝M3 外框膠囊（選中淡藍底＋打勾）；膠囊圓角 8、外框；服務大項不再是深藍卡，跟細項併成一張「服務」卡。
@@ -1273,6 +1279,8 @@ function finish(id) {
     .catch(function () { return api({ api: 'signDone', d: id }).then(function (j) { if (!j.pushed) say('留底卡之前傳過了（簽名人數沒變）'); }); })
     .catch(function (e) { say(e.message); });
 }
+/* 開選單／確認視窗。ask＝不可逆的那種，置中擋住整個畫面 */
+function vOpen(ask) { $('vSheet').classList.toggle('ask', !!ask); $('vSheet').hidden = false; }
 function vBtn(t, cls, fn) { var b = el('button', t, { type: 'button', class: cls }); b.onclick = fn; return b; }
 function vMenu(v) {
   var nt = v.site === 'n', where = (nt ? '南投' : '台中') + ' IEI ' + v.svid;
@@ -1290,10 +1298,11 @@ function vMenu(v) {
         .catch(function (e) { $('vsN').textContent = e.message; b.querySelectorAll('button').forEach(function (x) { x.disabled = false; }); });
     }));
     b.lastChild.style.background = 'var(--red)';
+    vOpen(true);
   }));
   b.appendChild(v.d ? vBtn('打開小禾的這張', v.canSub ? 'soft' : 'go', function () { location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&d=' + v.d; })
                     : vBtn(v.canSub ? '關閉' : '關閉（這張是在 IEI 網頁上開的）', 'soft', function () { $('vSheet').hidden = true; }));
-  $('vSheet').hidden = false;
+  vOpen(false);
 }
 /* 從總表直接送審核（他 10/19）。⛔ 送了 IEI 就鎖住，所以一定要確認一次：
    小禾開的那張由後端回「誰沒簽」；在 IEI 網頁上開的，小禾讀不到簽名，只能講明再送。 */
@@ -1521,7 +1530,7 @@ function bAsk(L) {
   var b = $('vsB'); b.innerHTML = '';
   b.appendChild(vBtn('先不要', 'soft', function () { $('vSheet').hidden = true; }));
   b.appendChild(vBtn('刪除', 'go', function () { $('vSheet').hidden = true; bDel(L); }));
-  b.lastChild.style.background = 'var(--red)'; $('vSheet').hidden = false;
+  b.lastChild.style.background = 'var(--red)'; vOpen(true);
 }
 $('bGo').onclick = function () { bAsk(Object.keys(BS.pick).map(function (k) { return BS.pick[k]; })); };
 /* 打開先秀手機裡上次的總表（他 10/16：「一打開馬上看到東西」）。不等 LINE 登入，所以在 liff.init 前面 */
