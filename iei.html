@@ -100,7 +100,11 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .bhh{display:flex;justify-content:space-between;align-items:center;font-weight:700;gap:8px}
 .bhh button{min-height:44px;border:0;background:none;color:var(--blued);font-size:15px;font-weight:700;font-family:inherit;padding:0 4px}
 .bhh button:disabled{opacity:.4}
-.bnote{margin:0;font-size:14px;color:var(--ink);padding:10px 14px;border-radius:14px;background:var(--soft)}.bnote button{min-height:0;border:0;background:none;color:var(--blued);font:inherit;font-weight:700;padding:0 4px}
+/* 刪完／送完的訊息（他 10/19：刪了要有完成訊息＋復原）。釘在畫面最下面——他是在清單中間滑的，訊息長在列表最上面他根本看不到。復原跟刪除同一塊，手指不用移動 */
+.bnote{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:12;margin:0;display:flex;align-items:center;gap:10px;font-size:15px;color:#fff;padding:12px 12px 12px 16px;border-radius:14px;background:var(--navy);box-shadow:0 10px 30px rgba(11,27,51,.3);animation:tup .2s ease-out both}
+.bnote i{flex:1;min-width:0;font-style:normal}
+.bnote button{flex:none;min-height:44px;padding:0 14px;border:0;border-radius:10px;background:#fff;color:var(--navy);font:inherit;font-weight:700}
+@keyframes tup{from{opacity:0;transform:translateY(14px)}}
 .dgrp{font-size:14px;font-weight:700;color:var(--mute);display:flex;justify-content:space-between;margin-top:4px}.dgrp i{font-style:normal;font-weight:400}
 .brow{display:flex;gap:10px;align-items:center;min-height:56px;padding:8px 14px;border:1px solid var(--line);border-radius:16px;background:var(--card);font:inherit;color:inherit;text-align:left;width:100%}
 .brow .bd{width:40px;flex:none;font-size:14px;color:var(--mute);font-variant-numeric:tabular-nums}
@@ -1476,9 +1480,23 @@ function bWeek() {   // 這個月的某一週：今天那週（看過去的月�
     b.onclick = (function (d) { return function () { BS.day = BS.day === d ? '' : d; bDraw(); }; })(d); wk.appendChild(b);
   }
 }
-function bNote(t, undo) {   // 刪完的訊息（草稿有「復原」）
-  var p = $('bNote'); p.hidden = false; p.textContent = t;
-  if (undo.length) { var u = el('button', '復原草稿', { type: 'button' }); u.onclick = function () { u.disabled = true; api({ api: 'dundo', ids: undo }).then(function (k) { p.textContent = '已復原 ' + k.n + ' 張草稿'; bLoad(); }).catch(function (e) { p.textContent = e.message; }); }; p.appendChild(u); }
+var BNT = 0;
+/* 刪完／送完的訊息：從畫面下面浮出來，草稿多一顆「復原」。
+   自己會消失（有復原的留久一點，手指要有時間反應）；下一則訊息蓋掉上一則。 */
+function bNote(t, undo) {
+  var p = $('bNote');
+  p.hidden = false; p.textContent = '';
+  p.appendChild(el('i', t));
+  clearTimeout(BNT);
+  BNT = setTimeout(function () { p.hidden = true; }, undo.length ? 12000 : 6000);
+  if (!undo.length) return;
+  var u = el('button', '復原', { type: 'button' });
+  u.onclick = function () {
+    u.disabled = true; clearTimeout(BNT);
+    api({ api: 'dundo', ids: undo }).then(function (k) { bNote('已復原 ' + k.n + ' 張草稿', []); bLoad(); })
+      .catch(function (e) { bNote(e.message, []); });
+  };
+  p.appendChild(u);
 }
 function bDel(L) {
   var dr = L.filter(function (r) { return r.id; }), ie = L.filter(function (r) { return r.svid; }), fail = [], ids = dr.map(function (r) { return r.id; });
@@ -1487,7 +1505,10 @@ function bDel(L) {
   ie.forEach(function (r) { p = p.then(function () { return api({ api: 'vdel', svid: r.svid, site: r.site, date: r.date }).catch(function (e) { fail.push('IEI ' + r.svid + '：' + e.message); }); }); });
   p.then(function () {
     BS.sel = false; bLoad();
-    bNote('已刪除 ' + (L.length - fail.length) + ' 張' + (fail.length ? '。沒刪成：' + fail.join('；') : '') + '　', ids);
+    var done = L.length - fail.length, nie = ie.length - fail.length;
+    bNote('已刪除 ' + done + ' 張'
+      + (nie ? '（IEI 上的 ' + nie + ' 筆也刪掉了，救不回來）' : '')
+      + (fail.length ? '。沒刪成：' + fail.join('；') : ''), ids);
   }).catch(function (e) { bNote(e.message, []); bDraw(); });
 }
 /* 要刪的（勾選的，或左滑那一張）：只有草稿就直接刪、留「復原」；碰到 IEI 上的一定再問一次（刪了救不回來） */
