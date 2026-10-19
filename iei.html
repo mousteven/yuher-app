@@ -412,7 +412,7 @@ footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
     <pre id="dryOut" hidden></pre>
   </section>
 
-  <section class="card" id="filesC" hidden>
+  <section class="card" id="filesC">
     <div class="sh"><svg class="ic"><use href="#i-clip"/></svg><span id="filesH">附件</span></div>
     <ul class="files" id="files"></ul>
     <div class="sacts"><button type="button" class="pill" id="fAdd"><svg class="ic"><use href="#i-up"/></svg>上傳文件</button></div>
@@ -1012,8 +1012,9 @@ function filesDraw() {
     ul.appendChild(li);
   });
   $('filesH').textContent = '附件' + (FILES.length ? '　' + FILES.length : '');
-  $('fAdd').hidden = locked();
-  $('filesN').textContent = locked() ? '已送簽核，IEI 鎖住了，附件要直接在 IEI 上加。'
+  $('fAdd').hidden = locked() || !(X && X.svid);
+  $('filesN').textContent = !(X && X.svid) ? '附件要掛在 IEI 的那張訪視單上，所以這張送出、拿到 IEI 編號之後才能傳。'
+    : locked() ? '已送簽核，IEI 鎖住了，附件要直接在 IEI 上加。'
     : FILES.length ? '這些是 IEI 上現在掛著的。在 IEI 刪掉的，這裡也會跟著不見。'
     : '切結書、自白書這類紙本，拍照或選檔案傳上去，就掛在 IEI 這張訪視單上。';
 }
@@ -1073,8 +1074,9 @@ $('fIn').onchange = function () {
 function apply(s, live) {   // live：輪詢來的，改變的格子閃一下
   if (!s) return;
   X = s; SENT = !!s.svid;
-  $('filesC').hidden = !s.svid;
-  if (s.svid && FSV !== s.svid) { FSV = s.svid; filesLoad(); } else if (s.svid) filesDraw();   // 編號沒變就不要每次輪詢都去打 IEI
+  /* 附件區一直看得到（他 10/19：「我怎麼在訪視單裡面沒有看到你放在哪邊？」）——
+     還沒送出的時候只是傳不了，上面會寫原因；看不見比傳不了更糟，他會以為沒做。 */
+  if (s.svid && FSV !== s.svid) { FSV = s.svid; filesLoad(); } else filesDraw();   // 編號沒變就不要每次輪詢都去打 IEI
   s.slots.forEach(function (x) {
     var v = x.signed === true ? 'ok' : x.signed === 'held' ? 'held' : x.signed === 'dry' ? 'dry' : '';
     if (v) { if (live && ST[x.k] !== v && ST[x.k] !== 'ok') FL[x.k] = 1; ST[x.k] = v; }
@@ -1225,8 +1227,16 @@ function obEdit(id, f) {   // 改一張（沒有就建）；三段都送完了�
   try { localStorage.setItem(OBK, JSON.stringify(o)); } catch (e) { obDraw(); throw new Error('手機空間不夠，沒存進手機：請到有訊號的地方再按一次'); }
   obDraw();
 }
+/* 正在當場送的有幾件（他 10/19：簽完名上面就跳「沒有訊號」）。
+   順序是「先存手機（obEdit 會重畫，提示條就是那時候冒出來的）→ 才開始送」，所以標記完一定要再重畫一次，
+   不然提示條會一路掛到上傳結束。用數的不用是非：接力簽連簽三個人，第一個送完不能把另外兩個的標記一起清掉。 */
+function obLive(id, n) {
+  OBLIVE[id] = (OBLIVE[id] || 0) + n;
+  if (OBLIVE[id] <= 0) delete OBLIVE[id];
+  obDraw();
+}
 function obRun(id, live) {   // 送一張（一次只送一張，排隊）；回 { save, sig {格子: 回應}, send }
-  if (live) OBLIVE[id] = 1;
+  if (live) obLive(id, 1);
   var p = OBQ.then(function () {
     var j = obAll()[id], out = { sig: {} }, go = Promise.resolve();
     if (!j) return out;
@@ -1244,11 +1254,11 @@ function obRun(id, live) {   // 送一張（一次只送一張，排隊）；回
       return api({ api: 'send', draft: obAll()[id].d }).then(function (r) { out.send = r; obEdit(id, function (x) { delete x.send; delete x.d; }); });
     });
     return go.then(function () {
-      delete OBLIVE[id];
+      obLive(id, live ? -1 : 0);
       if (!live) obDone(id, out);
       return out;
     }, function (e) {
-      delete OBLIVE[id];   // 真的斷線才輪到提示條出來（呼叫的人接著會 obDraw）
+      obLive(id, live ? -1 : 0);   // 真的斷線，這時候提示條才該出來
       if (!e.net) obEdit(id, function (x) { x.err = e.message; });   // ⛔3 內容錯：記下來、不再自動試，等他改
       throw e;
     });
