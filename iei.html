@@ -492,12 +492,16 @@ function el(tag, txt, attrs) { var e = document.createElement(tag); if (txt != n
 /* 10/15 他早上打開出現「The string did not match the expected pattern」＝iPhone 讀不懂回來的東西（不是 JSON：Google 的錯誤頁或連線中斷）。
    伺服器那幾筆都正常結束，所以是中間的問題：不是 JSON 就等 1.5 秒自動再試一次，還是不行才報，並帶回來的前幾個字（看得出是什麼頁） */
 /* 表單測速（10/22 他要「先量」）：開頁 → LINE 登入好 → prep 回來 →（行程卡）對好客戶 → 可以填。每次打開送一列到「表單測速」 */
-var FT = null;
+var FT = {};
+/* 手機先畫用的（說明在下面「手機先畫」那段）；放這裡是因為空白表先畫時就會用到 */
+var FXK = ['sh', 'items', 'lfa', 'cats', 'ph', 'proc', 'ans', 'warn', 'warnL'], FX = null, DR = {}, PRE = {}, PF = '', PFD = '', PFC = '', PEND = false, TI = {};
+try { FX = JSON.parse(localStorage.getItem('xh.fx') || 'null'); DR = JSON.parse(localStorage.getItem('xh.dr') || '{}') || {}; PRE = JSON.parse(localStorage.getItem('xh.pre') || '{}') || {}; } catch (e) {}
+var LIFFOK = null;   // 手機先畫時 LINE 還沒登入：那時候叫的 api 先排隊，登入好才送
 function ftDone(k) { if (!FT || FT.sent) return; FT.sent = 1; FT.k = FT.k || k; FT.ready = Math.round(performance.now()); api({ api: 'perf', p: FT }).catch(function () {}); }
 var LIFFP = null;   // LINE 登入（liff.init）；空白表先畫出來時，點下去的請求等它好了才送
 function api(o, retry) { return (LIFFP || Promise.resolve()).then(function () { return api0(o, retry); }); }
 function api0(o, retry) {
-  o.at = liff.getAccessToken();
+  o.at = liff.getAccessToken(); try { o.st = localStorage.getItem('xh.st') || ''; } catch (e) {}   // 小禾的通行證（10/22）：伺服器不用每次問 LINE
   return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(o) })   // text/plain：避開預檢
     .then(function (r) { return r.text().then(function (t) { try { return JSON.parse(t); } catch (e) { throw { bad: 'HTTP ' + r.status + '：' + t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) }; } }); },
           function () { throw { bad: '連不上（訊號不穩？）' }; })
@@ -507,7 +511,7 @@ function api0(o, retry) {
       var x = new Error(/send|submit/.test(o.api) ? '伺服器沒有正常回應：先到 IEI 看有沒有進去，沒有再按一次（' + e.bad + '）' : '伺服器沒有正常回應，請再試一次（' + e.bad + '）');
       x.net = true; throw x;   // 離線暫存只重試這種；內容錯（j.ok === false）不重試
     })
-    .then(function (j) { if (j.ok === false) throw new Error(j.err); return j; });
+    .then(function (j) { if (j.st) try { localStorage.setItem('xh.st', j.st); } catch (e) {} if (j.ok === false) throw new Error(j.err); return j; });
 }
 function seg(id, v) { var b = $(id); if (v != null) b.dataset.v = String(v); [].forEach.call(b.children, function (x) { x.setAttribute('aria-pressed', String(x.dataset.v === b.dataset.v)); }); }
 ['method', 'labor', 'natE'].forEach(function (id) {
@@ -874,7 +878,7 @@ function useTrip(t) {
   if (hit) pickSub(hit[0], hit[1], true); else { S.cat = -1; cats(); items(); }   // 照行程／交辦事項先選好細項，句子換成那個細項的第一句（他 10/15：草稿先填好）
   head(); $('wk').innerHTML = ''; load('在 IEI 對客戶…');
   var ti = performance.now(); if (FT && !FT.sent) FT.t0 = 1;
-  api({ api: 'iei', client: t.client, workers: t.workers }).then(function (j) {
+  (TI[t.id] ? Promise.resolve(TI[t.id]) : api({ api: 'iei', client: t.client, workers: t.workers })).then(function (j) {
     load(''); if (FT && !FT.sent) { FT.iei = Math.round(performance.now() - ti); ftDone('trip'); }
     if (j.cu00) { S.cu00 = j.cu00; S.cuName = j.cust ? j.cust.name : t.client; $('q').value = S.cuName; $('custNow').textContent = ''; $('cands').innerHTML = '';
       if (!$('addr').value && j.cust) $('addr').value = j.cust.addr; head(); workers(j.workers); }
@@ -942,12 +946,13 @@ function draft() {
 }
 /* 簽名或開 QR 之前先存一份（QR 網址要有草稿編號）；內容沒變就不重存 */
 function ensureDraft() {
+  if (PEND) return Promise.reject(new Error('跟伺服器確認中，等一下再按'));   // 手機先畫的：還不知道這站有沒有別張草稿
   if (SENT) return Promise.resolve();
   if (!S.cu00) return Promise.reject(new Error('先選 IEI 客戶'));
   var d = draft(), js = JSON.stringify(Object.assign({}, d, { id: '' }));
   if (DRAFT && js === SAVED) return Promise.resolve();
   obEdit(d.id, function (j) { j.d = d; j.dv = Date.now(); j.name = S.cuName; j.date = d.date; });
-  return obRun(d.id, true).then(function (r) { DRAFT = r.save ? r.save.id : d.id; SAVED = js; if (r.save) apply(r.save.state); },
+  return obRun(d.id, true).then(function (r) { DRAFT = r.save ? r.save.id : d.id; SAVED = js; if (r.save) { apply(r.save.state); drPut(DRAFT, d, r.save.state); } },
     function (e) { if (!e.net) throw e; DRAFT = d.id; SAVED = js; });   // 沒訊號：存在手機了，有訊號自動補
 }
 function fill(d) {
@@ -1342,6 +1347,7 @@ function dLocal() {   // 整理草稿頁最上面：在這支手機裡、還沒�
 /* ---------- 送出：一顆按鈕＝存草稿＋Create＋先簽好的簽名一起補進 IEI；送出後同一顆變「送簽核到 IEI」 ---------- */
 function goSet(t, badge, aria) { $('goT').textContent = t; $('goN').textContent = badge || ''; $('goB').hidden = !badge; $('go').setAttribute('aria-label', aria || t); }
 function check() {
+  if (PEND) { $('only').hidden = true; $('keep').hidden = true; $('go').disabled = true; goSet('跟伺服器確認中…'); return; }   // 10/22 手機先畫：確認這站有沒有別張草稿、送出了沒，才能送
   $('only').hidden = !SENT; $('keep').hidden = SENT || !S.cu00;   // 他 10/15：草稿先存、微調完再送
   if (SENT && !REJ) {   // 被退回的照沒送出的檢查（內容要改好才送）
     var n = nSigned() + '／' + slots().length + ' 已簽';
@@ -1376,7 +1382,7 @@ $('go').onclick = function () {
       DRAFT = j.id; say('試跑：沒有送出。下面是會送給 IEI 的內容，另外有 ' + j.held + ' 個簽名會一起補進去。');
       $('dryOut').textContent = j.form; $('dryOut').hidden = false; check(); return;
     }
-    apply(j.state);
+    apply(j.state); drPut(d.id, d, j.state);
     if (j.at) { X.locked = true; head(); drawSigns(); say('已送出並送簽核 ✓ IEI 編號 ' + j.svid + '（簽名都齊了，一次送完；IEI 鎖住了）'); finish(); return; }
     say('已送出 ✓ IEI 編號 ' + j.svid + (j.warns ? '，警告單 ' + j.warns + ' 張' : '') + (j.flushed ? '，' + j.flushed + ' 個簽名已補進去' : '') + (j.fail.length ? '。沒補成：' + j.fail.join('；') : ''));
     finish();
@@ -1679,6 +1685,7 @@ function prepBlank(j) {
   META = j; SITES = j.sites || 1; $('bar').hidden = true; $('form').hidden = false;
   $('date').value = j.day; seg('method', '1'); seg('labor', '1');
   $('p').value = S.autoP = '巡迴服務-關心移工'; $('a').value = S.autoA = '移工表示工作上及生活都沒有問題。';   // 他定的預設
+  if (j.ti) TI[j.ti.id] = j.ti;   // prep 順便對好的（10/22）
   cats(); items(); head(); trips(j.trips); langs(); check();
   if (j.custs) setCust(j.custs); if (j.wks) setWks(j.wks);   // 伺服器手上有就順便帶來
   if (qp('cu')) qp('w') ? pickWorker({ la: qp('w'), cu: qp('cu'), co: qp('co') })   // LINE 查工人／工廠點「開訪談表」（他 10/16）
@@ -1688,41 +1695,97 @@ if (!DRAFT && !TRIP && !qp('v')) try {
   var pc = JSON.parse(localStorage.getItem('xh.prep') || 'null'), pday = DAY || bToday();
   if (pc && pc.cats) { if (pc.day !== pday) { pc.day = pday; pc.trips = []; } prepBlank(pc); FAST = true; }
 } catch (e) {}
+/* ---------- 手機先畫（他 10/22 批准「打開要快」）：草稿、行程卡也像空白表一樣，先用手機存的畫出來，伺服器在背景確認 ----------
+   xh.fx 片語等固定的（伺服器同一版就不重傳）；xh.dr 最近 20 張草稿＋狀態；xh.pre 今天＋明天每一站（寫過的草稿、對好的客戶和移工，30 分鐘內才用）。
+   ⛔ 確認前（PEND）送出、存草稿、簽名都不給按：可能這站已經有別張草稿，或已經送出了。 */
+function fxMerge(j) {
+  if (j.items) { FX = {}; FXK.forEach(function (k) { FX[k] = j[k]; }); try { localStorage.setItem('xh.fx', JSON.stringify(FX)); } catch (e) {} }
+  else if (FX) FXK.forEach(function (k) { if (k !== 'sh') j[k] = FX[k]; });
+  return j;
+}
+function drPut(id, d, st) {
+  if (!id) return;
+  var o = DR[id] || {}; if (d) o.d = d; if (st) o.state = st; o.t = Date.now(); DR[id] = o;
+  Object.keys(DR).sort(function (a, b) { return DR[b].t - DR[a].t; }).slice(20).forEach(function (k) { delete DR[k]; });
+  try { localStorage.setItem('xh.dr', JSON.stringify(DR)); } catch (e) {}
+}
+function preLoad() {   // 背景先備今天＋明天（5 分鐘內抓過就不抓）
+  if (Date.now() - (PRE.at || 0) < 300e3) return;
+  api({ api: 'pre' }).then(function (j) {
+    PRE = { at: j.at, days: j.days, ti: j.ti }; try { localStorage.setItem('xh.pre', JSON.stringify(PRE)); } catch (e) {}
+    Object.keys(j.dr || {}).forEach(function (k) { drPut(k, j.dr[k].d, j.dr[k].state); });
+  }).catch(function () {});
+}
+function openDraft(j, loc) {
+  META = j; SITES = j.sites || 1; $('bar').hidden = true; $('form').hidden = false;   // 空白表的畫法在 prepBlank（手機先畫好的不要重設他改過的日期）
+  $('date').value = j.day; seg('method', '1'); seg('labor', '1');
+  DRAFT = j.draft.id || DRAFT; $('tripsF').hidden = true;   // 從行程卡進來、後端找到存過的草稿＝接著改那一張（不另存新的）
+  S.trip = (j.trips || []).filter(function (t) { return t.id === j.draft.trip; })[0] || null; drawTodo(); apply(j.state);
+  return fill(j.draft).then(function () {
+    SAVED = JSON.stringify(Object.assign({}, draft(), { id: '' }));
+    if (loc) { Object.keys(loc.sigs).forEach(function (k) { ST[k] = 'local'; }); drawSigns(); }   // 手機裡還沒傳的簽名
+    check();
+  });
+}
+function openBg() {   // 他 10/16：先開畫面，背景再跟 IEI 核對簽名
+  var did = DRAFT;
+  api({ api: 'open', d: did }).then(function (o) { if (DRAFT === did) { apply(o.state); drPut(did, null, o.state); check(); } }).catch(function () {});
+}
+if (!qp('v') && (DRAFT || TRIP)) try {
+  LIFFP = new Promise(function (ok) { LIFFOK = ok; });
+  var pc0 = JSON.parse(localStorage.getItem('xh.prep') || 'null'), pday0 = DAY || bToday();
+  if (pc0 && pc0.cats && FX) {
+    var base = Object.assign({}, pc0, FX, { custs: null, wks: null, ti: null }), pdays = PRE.days || {};
+    var dk = DRAFT || Object.keys(DR).filter(function (k) { return DR[k].d && DR[k].d.trip === TRIP; })[0] || '';
+    var loc0 = dk && obAll()[dk], dd = (loc0 && loc0.d) || (DR[dk] && DR[dk].d);
+    if (dd) {
+      PF = 'draft'; PEND = true; PFD = JSON.stringify(DR[dk] && DR[dk].d || null); DRAFT = dk;
+      openDraft(Object.assign(base, { day: dd.date, draft: dd, state: DR[dk] ? DR[dk].state || null : null, trips: pdays[dd.date] || [] }), loc0).then(function () { ftDone('draft*'); });
+    } else if (TRIP && PRE.ti && PRE.ti[TRIP] && Date.now() - PRE.at < 1800e3 && (pdays[pday0] || []).some(function (t) { return t.id === TRIP; })) {
+      PF = 'trip'; PEND = true; TI = PRE.ti; PFC = PRE.ti[TRIP].cu00 || '';
+      prepBlank(Object.assign(base, { day: pday0, trips: pdays[pday0] }));
+      ftDone('trip*');
+    }
+  }
+} catch (e) { PF = ''; PEND = false; }
 /* 卡住不要一直轉（他 10/16 截圖停在「讀取中…」）：標出卡在哪一步，20 秒還沒好就給「再試一次」 */
-if (!BOLD && !FAST) $('sub').textContent = '連 LINE…';
+if (!BOLD && !FAST && !PF) $('sub').textContent = '連 LINE…';
 setTimeout(function () {
   if ($('bar').hidden) return;
   say('等了 20 秒還沒好（卡在「' + $('sub').textContent + '」）。按下面重新打開；一直這樣就截圖給 Claude。');
   $('go').disabled = false; goSet('再試一次'); $('go').onclick = function () { location.reload(); };
 }, 20000);
-(LIFFP = liff.init({ liffId: LIFF_ID })).then(function () {
+(LIFFP = liff.init({ liffId: LIFF_ID }).then(function (r) { if (LIFFOK) LIFFOK(); return r; })).then(function () {
   if (!liff.isLoggedIn()) return liff.login();
-  if (!BOLD && !FAST) $('sub').textContent = '讀資料…';
+  if (!BOLD && !FAST && !PF) $('sub').textContent = '讀資料…';
   obDraw(); obFlush();   // 手機裡有上次沒送出去的，先補送（他 10/16：打開小禾就自動補）
   window.addEventListener('online', obFlush);   // LINE 登入好了才開始自動補（沒登入時 api 會丟「不是連線問題」的錯，被當成內容錯就不再試了）
   setInterval(function () { if (!document.hidden && Object.keys(obAll()).length) obFlush(); }, 30000);
   if (/^(board|drafts|list)$/.test(qp('v') || '')) {   // 訪視總表（舊的整理草稿、IEI 清單連結也到這裡）
     if (!BOLD) bOpen();
     BT = { liff: Math.round(performance.now()), first: BFIRST };
-    return bLoad(DAY ? DAY.slice(0, 7) : '');
+    return bLoad(DAY ? DAY.slice(0, 7) : '').then(preLoad);   // 打開總表也順便先備今天＋明天
   }
-  FT = { liff: Math.round(performance.now()), fast: FAST ? 1 : 0 };
-  return api({ api: 'prep', d: DRAFT, t: TRIP, date: DAY }).then(function (j) {
-    FT.prep = Math.round(performance.now()) - FT.liff; FT.sv = j.sv || 0;
+  FT.liff = Math.round(performance.now()); FT.fast = FAST || PF ? 1 : 0;
+  return api({ api: 'prep', d: DRAFT, t: TRIP, date: DAY, have: CUST && WKS ? 1 : 0, sh: FX ? FX.sh : '' }).then(function (j) {
+    FT.prep = Math.round(performance.now()) - FT.liff; FT.sv = j.sv || 0; FT.tm = j.tm;
+    j = fxMerge(j);
     var loc = DRAFT && obAll()[DRAFT];
     if (loc && loc.d) j.draft = loc.d;   // 手機裡那份比較新（還沒送上去的改動）；後台沒有這張時也靠它打開
-    if (j.draft) { META = j; SITES = j.sites || 1; $('bar').hidden = true; $('form').hidden = false;   // 空白表的畫法在 prepBlank（手機先畫好的不要重設他改過的日期）
-      $('date').value = j.day; seg('method', '1'); seg('labor', '1');
-      DRAFT = j.draft.id || DRAFT; $('tripsF').hidden = true;   // 從行程卡進來、後端找到存過的草稿＝接著改那一張（不另存新的）
-      S.trip = j.trips.filter(function (t) { return t.id === j.draft.trip; })[0] || null; drawTodo(); apply(j.state); var did = DRAFT;
-      api({ api: 'open', d: did }).then(function (o) { if (DRAFT === did) { apply(o.state); check(); } }).catch(function () {});   // 他 10/16：先開畫面，背景再跟 IEI 核對簽名
-      return fill(j.draft).then(function () {
-        SAVED = JSON.stringify(Object.assign({}, draft(), { id: '' }));
-        if (loc) { Object.keys(loc.sigs).forEach(function (k) { ST[k] = 'local'; }); drawSigns(); check(); }   // 手機裡還沒傳的簽名
-        ftDone('draft');
-      }); }
-    try { localStorage.setItem('xh.prep', JSON.stringify(Object.assign({}, j, { draft: null, state: null, custs: null, wks: null }))); } catch (e) {}   // 下次空白表先用這份畫
-    if (FAST) {   // 畫面已經用手機那份畫好了：只換掉有變的，不動他已經開始填的
+    if (j.draft && !loc) drPut(j.draft.id, j.draft, j.state);
+    var pf = PF; PF = ''; PEND = false; preLoad();
+    if (j.draft && pf === 'draft' && DRAFT === j.draft.id) {   // 手機已經先畫好這一張：換成伺服器的狀態；內容有變、他還沒動過才重填
+      META = j; SITES = j.sites || 1; apply(j.state); openBg();
+      var mine = JSON.stringify(Object.assign({}, draft(), { id: '' })) !== SAVED;
+      return (!mine && JSON.stringify(j.draft) !== PFD ? fill(j.draft).then(function () { SAVED = JSON.stringify(Object.assign({}, draft(), { id: '' })); }) : Promise.resolve()).then(check);
+    }
+    if (j.draft) return openDraft(j, loc).then(function () { openBg(); ftDone('draft'); });   // 沒先畫，或伺服器說這站是別張
+    try { localStorage.setItem('xh.prep', JSON.stringify(Object.assign({}, j, { draft: null, state: null, custs: null, wks: null, ti: null, tm: null }))); } catch (e) {}   // 下次空白表先用這份畫
+    if (pf === 'trip') {   // 行程卡手機先畫好了：伺服器對到別家（他還沒自己改客戶）才換
+      META = j; SITES = j.sites || 1;
+      if (j.ti && j.ti.cu00 && j.ti.cu00 !== S.cu00 && S.cu00 === PFC && S.trip) { TI[j.ti.id] = j.ti; useTrip(S.trip); }
+      check();
+    } else if (FAST) {   // 畫面已經用手機那份畫好了：只換掉有變的，不動他已經開始填的
       var old = META; META = j; SITES = j.sites || 1;
       if (!S.trip && JSON.stringify(old.trips) !== JSON.stringify(j.trips)) trips(j.trips);
       if (S.cat < 0 && JSON.stringify(old.cats) !== JSON.stringify(j.cats)) cats();
@@ -1733,6 +1796,7 @@ setTimeout(function () {
     api({ api: 'wks' }).then(function (c) { setWks(c.list); }).catch(function () {});
   });
 }).catch(function (e) {
+  if (PEND && !$('form').hidden) { goSet('跟伺服器確認不到'); return say('跟伺服器確認不到（' + String(e && e.message || e) + '），先不能送出；有訊號時重新打開'); }   // 手機先畫的：沒確認不給送
   if (FAST && !$('form').hidden) return say('行程沒有更新到（' + String(e && e.message || e) + '），其他照常可以填');   // 空白表已經可以用：不要整頁變「打不開」
   $('bar').hidden = true; $('ttl').textContent = '打不開';
   var at = String(e && e.stack || '').split(String.fromCharCode(10))[0].replace(/^.*\//, '').slice(-40);   // 頁面自己出錯時帶行號，截圖給 Claude 就查得到
