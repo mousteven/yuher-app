@@ -491,6 +491,9 @@ function say(t) { $('msg').textContent = t || ''; }
 function el(tag, txt, attrs) { var e = document.createElement(tag); if (txt != null) e.textContent = txt; for (var k in attrs || {}) e.setAttribute(k, attrs[k]); return e; }
 /* 10/15 他早上打開出現「The string did not match the expected pattern」＝iPhone 讀不懂回來的東西（不是 JSON：Google 的錯誤頁或連線中斷）。
    伺服器那幾筆都正常結束，所以是中間的問題：不是 JSON 就等 1.5 秒自動再試一次，還是不行才報，並帶回來的前幾個字（看得出是什麼頁） */
+/* 表單測速（10/22 他要「先量」）：開頁 → LINE 登入好 → prep 回來 →（行程卡）對好客戶 → 可以填。每次打開送一列到「表單測速」 */
+var FT = null;
+function ftDone(k) { if (!FT || FT.sent) return; FT.sent = 1; FT.k = FT.k || k; FT.ready = Math.round(performance.now()); api({ api: 'perf', p: FT }).catch(function () {}); }
 var LIFFP = null;   // LINE 登入（liff.init）；空白表先畫出來時，點下去的請求等它好了才送
 function api(o, retry) { return (LIFFP || Promise.resolve()).then(function () { return api0(o, retry); }); }
 function api0(o, retry) {
@@ -870,8 +873,9 @@ function useTrip(t) {
   var hit = findSub(t.big, t.sub);
   if (hit) pickSub(hit[0], hit[1], true); else { S.cat = -1; cats(); items(); }   // 照行程／交辦事項先選好細項，句子換成那個細項的第一句（他 10/15：草稿先填好）
   head(); $('wk').innerHTML = ''; load('在 IEI 對客戶…');
+  var ti = performance.now(); if (FT && !FT.sent) FT.t0 = 1;
   api({ api: 'iei', client: t.client, workers: t.workers }).then(function (j) {
-    load('');
+    load(''); if (FT && !FT.sent) { FT.iei = Math.round(performance.now() - ti); ftDone('trip'); }
     if (j.cu00) { S.cu00 = j.cu00; S.cuName = j.cust ? j.cust.name : t.client; $('q').value = S.cuName; $('custNow').textContent = ''; $('cands').innerHTML = '';
       if (!$('addr').value && j.cust) $('addr').value = j.cust.addr; head(); workers(j.workers); }
     else cands(j.cands);
@@ -1702,7 +1706,9 @@ setTimeout(function () {
     BT = { liff: Math.round(performance.now()), first: BFIRST };
     return bLoad(DAY ? DAY.slice(0, 7) : '');
   }
+  FT = { liff: Math.round(performance.now()), fast: FAST ? 1 : 0 };
   return api({ api: 'prep', d: DRAFT, t: TRIP, date: DAY }).then(function (j) {
+    FT.prep = Math.round(performance.now()) - FT.liff; FT.sv = j.sv || 0;
     var loc = DRAFT && obAll()[DRAFT];
     if (loc && loc.d) j.draft = loc.d;   // 手機裡那份比較新（還沒送上去的改動）；後台沒有這張時也靠它打開
     if (j.draft) { META = j; SITES = j.sites || 1; $('bar').hidden = true; $('form').hidden = false;   // 空白表的畫法在 prepBlank（手機先畫好的不要重設他改過的日期）
@@ -1713,6 +1719,7 @@ setTimeout(function () {
       return fill(j.draft).then(function () {
         SAVED = JSON.stringify(Object.assign({}, draft(), { id: '' }));
         if (loc) { Object.keys(loc.sigs).forEach(function (k) { ST[k] = 'local'; }); drawSigns(); check(); }   // 手機裡還沒傳的簽名
+        ftDone('draft');
       }); }
     try { localStorage.setItem('xh.prep', JSON.stringify(Object.assign({}, j, { draft: null, state: null, custs: null, wks: null }))); } catch (e) {}   // 下次空白表先用這份畫
     if (FAST) {   // 畫面已經用手機那份畫好了：只換掉有變的，不動他已經開始填的
@@ -1721,6 +1728,7 @@ setTimeout(function () {
       if (S.cat < 0 && JSON.stringify(old.cats) !== JSON.stringify(j.cats)) cats();
       head(); check(); if (j.custs) setCust(j.custs); if (j.wks) setWks(j.wks);
     } else prepBlank(j);
+    if (!FT.t0) ftDone(qp('cu') ? 'find' : 'blank');   // 行程卡那條等對好客戶才算（useTrip）
     api({ api: 'custs' }).then(function (c) { setCust(c.list); }).catch(function () {});   // 背景跟 IEI 對最新的，存到手機
     api({ api: 'wks' }).then(function (c) { setWks(c.list); }).catch(function () {});
   });
