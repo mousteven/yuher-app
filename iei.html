@@ -308,6 +308,25 @@ footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
 .obq .r.e{border-color:#D9545C;background:#FDECEC;color:#9C0010}.obq .r.e .ic{stroke:var(--red)}
 .obq .acts{display:flex;gap:6px;flex:none}.obq button{min-height:44px;border:1px solid var(--line);border-radius:999px;padding:0 14px;background:var(--card);font:inherit;font-size:14px;font-weight:700;color:var(--blued);flex:none}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.bar i{width:100%}}
+/* 同事加入（他 10/22 選 E：大字極簡）。白底、大標、底線輸入框、深色膠囊送出鈕 */
+.jn{background:#FFFFFF;max-width:560px;margin:0 auto;padding:32px 24px 24px;min-height:100vh;box-sizing:border-box;display:flex;flex-direction:column;gap:32px}
+.jn .jb{align-self:flex-start;background:var(--tint);color:var(--blue);border-radius:8px;padding:4px 12px;font-size:14px;font-weight:700}
+.jn h1{margin:0;font-size:34px;line-height:1.25;font-weight:700;color:var(--ink)}
+.jn .jfs{display:flex;flex-direction:column;gap:24px}
+.jn .jf{display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:700;color:var(--mute)}
+.jn .jf input,.jn .jf select{height:52px;border:0;border-bottom:2px solid var(--line);border-radius:0;padding:0;font-family:inherit;font-size:22px;font-weight:500;color:var(--ink);background:transparent;outline:none;-webkit-appearance:none;appearance:none}
+.jn .jf input:focus,.jn .jf select:focus{border-bottom-color:var(--blue)}
+.jn .jf select{padding-right:32px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%234A5565' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 4px center/20px no-repeat}
+.jn .jc{display:flex;align-items:flex-start;gap:12px;min-height:44px;font-size:16px;line-height:1.6;color:var(--ink)}
+.jn .jc input{width:22px;height:22px;accent-color:var(--blue);margin:3px 0 0;flex:none}
+.jn .jst{display:flex;flex-direction:column;gap:16px}.jn .jst>b{font-size:14px;color:var(--mute)}
+.jn .jst div{display:flex;gap:16px;align-items:flex-start;font-size:16px;line-height:1.6}
+.jn .jst i{font-style:normal;width:28px;height:28px;border-radius:50%;background:var(--tint);color:var(--blue);font-size:14px;font-weight:700;display:grid;place-items:center;flex:none}
+.jn .jst div:first-of-type i{background:var(--blue);color:#fff}
+.jn .jgo{height:60px;border:0;border-radius:30px;background:var(--navy);color:#fff;font-family:inherit;font-size:18px;font-weight:700;width:100%}
+.jn .jgo:disabled{background:var(--soft);color:var(--mute)}
+.jn .jmsg{margin:0;font-size:15px;line-height:1.5;color:var(--red);font-weight:700}.jn .jmsg:empty{display:none}
+.jn .jok{display:flex;flex-direction:column;gap:12px}.jn .jok p{margin:0;font-size:17px;line-height:1.6;color:var(--mute)}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
@@ -430,6 +449,30 @@ footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
   </section>
  </div>
 </main>
+<section class="jn" id="join" hidden>   <!-- 同事加入（?v=join&inv=，他 10/22 選 E） -->
+  <span class="jb">佑彬邀請你</span>
+  <h1>開通你的<br>小禾</h1>
+  <div class="jfs" id="jForm">
+    <label class="jf">翻譯人員<select id="jName"><option value="" selected disabled>讀名單中…</option></select></label>
+    <label class="jf">IEI 帳號（手機號碼）<input id="jTid" type="tel" inputmode="numeric" autocomplete="username" placeholder="09xx xxx xxx"></label>
+    <label class="jf">IEI 密碼<input id="jTpw" type="password" autocomplete="current-password" placeholder="••••••"></label>
+    <label class="jc"><input id="jSame" type="checkbox" checked>南投 IEI 也是這一組</label>
+    <div class="jfs" id="jN" hidden>
+      <label class="jf">南投 IEI 帳號<input id="jNid" type="tel" inputmode="numeric" placeholder="09xx xxx xxx"></label>
+      <label class="jf">南投 IEI 密碼<input id="jNpw" type="password" placeholder="••••••"></label>
+    </div>
+    <div class="jst"><b>送出以後</b>
+      <div><i>1</i><span>小禾先試登入 IEI，確認帳密對</span></div>
+      <div><i>2</i><span>佑彬按開通</span></div>
+      <div><i>3</i><span>LINE 通知你，第一次送單時簽一次名</span></div>
+    </div>
+    <label class="jc"><input id="jAgree" type="checkbox">我同意小禾保存我的 IEI 帳密和簽名，只用來替我送訪視紀錄表。密碼佑彬也看不到。</label>
+    <p class="jmsg" id="jMsg" role="alert"></p>
+    <button type="button" class="jgo" id="jGo">送出</button>
+  </div>
+  <div class="jok" id="jDone" hidden><h2 id="jDT" style="margin:0;font-size:26px"></h2><p id="jDS"></p>
+    <button type="button" class="jgo" id="jClose">關閉</button></div>
+</section>
 <div class="board" id="board" hidden>
   <div class="bhd"><span class="eye" id="brole"></span><b id="bwho"></b><span class="zh" id="bzh"></span>
     <button type="button" class="x" id="bx" aria-label="結束"><svg class="ic s"><use href="#i-x"/></svg></button></div>
@@ -1715,6 +1758,40 @@ if (!DRAFT && !TRIP && !qp('v')) try {
   var pc = JSON.parse(localStorage.getItem('xh.prep') || 'null'), pday = DAY || bToday();
   if (pc && pc.cats) { if (pc.day !== pday) { pc.day = pday; pc.trips = []; } prepBlank(pc); FAST = true; }
 } catch (e) {}
+/* ---------- 同事加入（他 10/22 選 E）：佑彬打「邀請」拿的連結 → 這一頁。帳密只送到小禾後端（試登入成功才存），頁面不留 ---------- */
+var JOIN = qp('v') === 'join';
+if (JOIN) { $('bar').hidden = true; document.querySelector('main').hidden = true; document.querySelector('header').hidden = true; document.querySelector('footer').hidden = true; $('join').hidden = false; }
+function jDone(t, s) { $('jForm').hidden = true; $('jDone').hidden = false; $('jDT').textContent = t; $('jDS').textContent = s; }
+function joinOpen() {
+  $('jSame').onchange = function () { $('jN').hidden = $('jSame').checked; };
+  $('jClose').onclick = function () { try { liff.closeWindow(); } catch (e) { history.back(); } };
+  api({ api: 'joinInfo', inv: qp('inv') }).then(function (j) {
+    if (j.status === 'active') return jDone('你已經開通了', '回到 LINE 打「訪談」就能開始填。');
+    if (j.status === 'pending') {   // 送過了：先說在等，要改帳密可以重填
+      jDone('已經送出，等佑彬開通', '開通後小禾會在 LINE 通知你。');
+      $('jClose').textContent = '帳密打錯了，重新填'; $('jClose').onclick = function () { $('jDone').hidden = true; $('jForm').hidden = false; };
+    }
+    var sel = $('jName'); sel.innerHTML = ''; sel.appendChild(el('option', '選你的名字', { value: '', selected: '', disabled: '' }));
+    ['台中', '南投'].forEach(function (o) {
+      var g = el('optgroup', null, { label: o });
+      j.names.forEach(function (x) { if (x.o === o) g.appendChild(el('option', x.n, { value: x.n })); });
+      if (g.children.length) sel.appendChild(g);
+    });
+    if (j.name) sel.value = j.name;
+  }).catch(function (e) { $('jMsg').textContent = e.message; $('jGo').disabled = true; });
+  $('jGo').onclick = function () {
+    var same = $('jSame').checked, o = { api: 'join', inv: qp('inv'), name: $('jName').value, tid: $('jTid').value.trim(), tpw: $('jTpw').value, same: same,
+              nid: same ? '' : $('jNid').value.trim(), npw: same ? '' : $('jNpw').value, agree: $('jAgree').checked };
+    var bad = !o.name ? '請選你的名字' : !o.tid || !o.tpw ? '請填 IEI 帳號和密碼' : !same && (!o.nid || !o.npw) ? '請填南投的帳號和密碼' : !o.agree ? '要勾同意才能送出' : '';
+    if (bad) { $('jMsg').textContent = bad; return; }
+    $('jMsg').textContent = ''; $('jGo').disabled = true; $('jGo').textContent = '試登入 IEI 中…（約 20 秒）';
+    api(o).then(function (j) {
+      $('jTpw').value = ''; $('jNpw').value = '';
+      if (j.status === 'active') jDone('帳密更新好了', '回到 LINE 打「訪談」就能開始填。');
+      else jDone('送出了！', '佑彬開通後，小禾會在 LINE 通知你。第一次送單時會請你簽一次名。');
+    }).catch(function (e) { $('jMsg').textContent = e.message; $('jGo').disabled = false; $('jGo').textContent = '送出'; });
+  };
+}
 /* ---------- 手機先畫（他 10/22 批准「打開要快」）：草稿、行程卡也像空白表一樣，先用手機存的畫出來，伺服器在背景確認 ----------
    xh.fx 片語等固定的（伺服器同一版就不重傳）；xh.dr 最近 20 張草稿＋狀態；xh.pre 今天＋明天每一站（寫過的草稿、對好的客戶和移工，30 分鐘內才用）。
    ⛔ 確認前（PEND）送出、存草稿、簽名都不給按：可能這站已經有別張草稿，或已經送出了。 */
@@ -1751,7 +1828,7 @@ function openBg() {   // 他 10/16：先開畫面，背景再跟 IEI 核對簽�
   var did = DRAFT;
   api({ api: 'open', d: did }).then(function (o) { if (DRAFT === did) { apply(o.state); drPut(did, null, o.state); check(); } }).catch(function () {});
 }
-if (!qp('v') && (DRAFT || TRIP)) try {
+if (!qp('v') && !JOIN && (DRAFT || TRIP)) try {
   LIFFP = new Promise(function (ok) { LIFFOK = ok; });
   var pc0 = JSON.parse(localStorage.getItem('xh.prep') || 'null'), pday0 = DAY || bToday();
   if (pc0 && pc0.cats && FX) {
@@ -1781,6 +1858,7 @@ setTimeout(function () {
   obDraw(); obFlush();   // 手機裡有上次沒送出去的，先補送（他 10/16：打開小禾就自動補）
   window.addEventListener('online', obFlush);   // LINE 登入好了才開始自動補（沒登入時 api 會丟「不是連線問題」的錯，被當成內容錯就不再試了）
   setInterval(function () { if (!document.hidden && Object.keys(obAll()).length) obFlush(); }, 30000);
+  if (JOIN) return joinOpen();
   if (/^(board|drafts|list)$/.test(qp('v') || '')) {   // 訪視總表（舊的整理草稿、IEI 清單連結也到這裡）
     if (!BOLD) bOpen();
     BT = { liff: Math.round(performance.now()), first: BFIRST };
