@@ -296,6 +296,11 @@ header{margin:16px auto 0;padding:20px;background:var(--tint);border-radius:28px
 .go{box-shadow:none;border-radius:16px}
 footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
 #msg{border:1px solid var(--line)}
+/* 送出結果醒目版（他 10/22：「動作提示文字能不能做醒目一點」、看到「已送出」以為已經送簽核）：左色條＋圖示＋粗標題＋說明，狀態不只靠顏色 */
+#msg.k{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border:0;border-left:4px solid var(--mc);background:var(--mbg)}
+#msg.ok{--mc:#0F7B3E;--mbg:#E8F5EC}#msg.wait{--mc:#B45309;--mbg:#FFF4E5}
+#msg .mi{flex:none;width:24px;height:24px;border-radius:50%;background:var(--mc);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:800;line-height:1;margin-top:2px}
+#msg .mt{font-size:16px;font-weight:700;line-height:1.4}#msg .ms{font-size:15px;line-height:1.5;color:var(--mute);margin-top:4px}
 .ld{border-radius:16px}
 .obq{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;display:grid;gap:8px}
 .obq .r{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;border:1.5px solid #B07A10;background:#FFF3D1;color:#4A3200;font-size:15px;line-height:1.5}
@@ -487,7 +492,13 @@ var TL = {
           warn: '警告單', nth: ['第一次警告', '第二次警告', '第三次警告'], vio: '違反事項', three: '收到警告書三次，將遣送回國。' }
 };
 function $(id) { return document.getElementById(id); }
-function say(t) { $('msg').textContent = t || ''; }
+function say(t) { $('msg').className = ''; $('msg').textContent = t || ''; }
+function sayK(k, title, sub) {   // k：ok 完成（綠＋✓）／wait 還有下一步（琥珀＋!）
+  var m = $('msg'), d = el('div'); m.className = 'k ' + k; m.innerHTML = '';
+  m.appendChild(el('span', k === 'ok' ? '✓' : '!', { class: 'mi', 'aria-hidden': 'true' }));
+  d.appendChild(el('div', title, { class: 'mt' })); if (sub) d.appendChild(el('div', sub, { class: 'ms' }));
+  m.appendChild(d);
+}
 function el(tag, txt, attrs) { var e = document.createElement(tag); if (txt != null) e.textContent = txt; for (var k in attrs || {}) e.setAttribute(k, attrs[k]); return e; }
 /* 10/15 他早上打開出現「The string did not match the expected pattern」＝iPhone 讀不懂回來的東西（不是 JSON：Google 的錯誤頁或連線中斷）。
    伺服器那幾筆都正常結束，所以是中間的問題：不是 JSON 就等 1.5 秒自動再試一次，還是不行才報，並帶回來的前幾個字（看得出是什麼頁） */
@@ -1383,8 +1394,11 @@ $('go').onclick = function () {
       $('dryOut').textContent = j.form; $('dryOut').hidden = false; check(); return;
     }
     apply(j.state); drPut(d.id, d, j.state);
-    if (j.at) { X.locked = true; head(); drawSigns(); say('已送出並送簽核 ✓ IEI 編號 ' + j.svid + '（簽名都齊了，一次送完；IEI 鎖住了）'); finish(); return; }
-    say('已送出 ✓ IEI 編號 ' + j.svid + (j.warns ? '，警告單 ' + j.warns + ' 張' : '') + (j.flushed ? '，' + j.flushed + ' 個簽名已補進去' : '') + (j.fail.length ? '。沒補成：' + j.fail.join('；') : ''));
+    if (j.at) { X.locked = true; head(); drawSigns(); sayK('ok', '已送簽核・IEI 編號 ' + j.svid, '簽名都齊了，一次送完，等主管批示。IEI 這張已經鎖住。'); finish(); return; }
+    var left = unsigned();   // 「已送出」不是送簽核（他 10/22 看錯）：寫清楚還差誰、下一步按哪裡
+    sayK('wait', '已存進 IEI（編號 ' + j.svid + '）・還沒送簽核',
+      (left.length ? '還差 ' + left.length + ' 人簽名：' + left.map(function (p) { return p.name; }).join('、') + '。等他簽好再按下面「送簽核」；不等了也可以現在送。' : '簽名都到齊了，按下面「送簽核」交給主管。')
+      + (j.warns ? '警告單 ' + j.warns + ' 張已開。' : '') + (j.fail.length ? '沒補成的簽名：' + j.fail.join('；') : ''));
     finish();
   }).catch(function (e) {
     if (e.net) { DRAFT = d.id; goSet('有訊號會自動送出'); say(''); obDraw(); scrollTo({ top: 0, behavior: 'smooth' }); return; }   // 他 10/16：提示放最上面
@@ -1406,7 +1420,7 @@ function submit() {
   api({ api: 'submit', d: DRAFT, draft: rej ? draft() : undefined }).then(function (j) {
     if (j.dry) { say('試跑：沒有送簽核。下面是會送給 IEI 的內容。'); $('dryOut').textContent = j.form; $('dryOut').hidden = false; check(); return; }
     X.rej = ''; X.locked = true; apply(X); check();
-    say(rej ? '已改好重送 ✓ IEI 編號 ' + j.svid + '（等主管批示）' : '已送簽核 ✓ IEI 編號 ' + j.svid + '（IEI 鎖住了，不能再補簽）'); finish();
+    sayK('ok', (rej ? '已改好重送・IEI 編號 ' : '已送簽核・IEI 編號 ') + j.svid, rej ? '等主管批示。' : '等主管批示。IEI 這張已經鎖住，不能再補簽。'); finish();
   }).catch(function (e) { say(e.message); check(); });
 }
 /* 留底卡：替他送「送出結果」→ 小禾用 reply 回（免費）。送不出去才請後端推播（吃每月額度）。頁面不關，可以繼續補簽 */
