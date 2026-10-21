@@ -565,7 +565,12 @@ function api0(o, retry) {
       var x = new Error(/send|submit/.test(o.api) ? '伺服器沒有正常回應：先到 IEI 看有沒有進去，沒有再按一次（' + e.bad + '）' : '伺服器沒有正常回應，請再試一次（' + e.bad + '）');
       x.net = true; throw x;   // 離線暫存只重試這種；內容錯（j.ok === false）不重試
     })
-    .then(function (j) { if (j.st) try { localStorage.setItem('xh.st', j.st); } catch (e) {} if (j.ok === false) throw new Error(j.err); return j; });
+    .then(function (j) {
+      if (j.st) try { localStorage.setItem('xh.st', j.st); } catch (e) {}
+      if (j.ok === false) throw new Error(j.err);
+      if (j.role === 'mgr' && !MGR) { location.replace(location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&v=mgr'); throw new Error('換到主管看板…'); }   // 主管不填訪談表（10/22）
+      return j;
+    });
 }
 function seg(id, v) { var b = $(id); if (v != null) b.dataset.v = String(v); [].forEach.call(b.children, function (x) { x.setAttribute('aria-pressed', String(x.dataset.v === b.dataset.v)); }); }
 ['method', 'labor', 'natE'].forEach(function (id) {
@@ -1759,20 +1764,36 @@ if (!DRAFT && !TRIP && !qp('v')) try {
   if (pc && pc.cats) { if (pc.day !== pday) { pc.day = pday; pc.trips = []; } prepBlank(pc); FAST = true; }
 } catch (e) {}
 /* ---------- 同事加入（他 10/22 選 E）：佑彬打「邀請」拿的連結 → 這一頁。帳密只送到小禾後端（試登入成功才存），頁面不留 ---------- */
-var JOIN = qp('v') === 'join';
+var JOIN = qp('v') === 'join', MGR = qp('v') === 'mgr', MGR_V = '20261022a';
+if (MGR) { $('bar').hidden = true; document.querySelector('main').hidden = true; document.querySelector('header').hidden = true; document.querySelector('footer').hidden = true; }
+function mgrOpen() {   // 主管看板（他 10/22）：web/mgr.js
+  var s = document.createElement('script'); s.src = 'mgr.js?b=' + MGR_V;
+  s.onload = function () { window.xhMgrStart(); };
+  s.onerror = function () { document.body.appendChild(el('p', '主管看板載不進來，請關掉重開。', { style: 'padding:24px;font-weight:700;color:#9C0010' })); };
+  document.head.appendChild(s);
+}
 if (JOIN) { $('bar').hidden = true; document.querySelector('main').hidden = true; document.querySelector('header').hidden = true; document.querySelector('footer').hidden = true; $('join').hidden = false; }
+var JROLE = 'tr';
 function jDone(t, s) { $('jForm').hidden = true; $('jDone').hidden = false; $('jDT').textContent = t; $('jDS').textContent = s; }
 function joinOpen() {
   $('jSame').onchange = function () { $('jN').hidden = $('jSame').checked; };
   $('jClose').onclick = function () { try { liff.closeWindow(); } catch (e) { history.back(); } };
   api({ api: 'joinInfo', inv: qp('inv') }).then(function (j) {
-    if (j.status === 'active') return jDone('你已經開通了', '回到 LINE 打「訪談」就能開始填。');
+    JROLE = j.as || 'tr';   // 不叫 role：api0 看到 role:'mgr' 會把頁面換到主管看板
+    if (JROLE === 'mgr') {   // 主管看板（10/22）：選職稱、同意，送出等開通；不用 IEI 帳密
+      $('jName').parentNode.firstChild.textContent = '職稱';
+      [$('jTid'), $('jTpw'), $('jSame')].forEach(function (x) { x.parentNode.hidden = true; }); $('jN').hidden = true;
+      document.querySelector('#join h1').innerHTML = '開通你的<br>主管看板';
+      var st = document.querySelectorAll('#join .jst span'); st[0].textContent = '佑彬按開通'; st[1].textContent = 'LINE 通知你'; st[2].textContent = '在 LINE 跟小禾打任何字，就會出現「打開主管看板」';
+      $('jAgree').parentNode.lastChild.textContent = '我知道主管看板會看到翻譯的行程、交辦和訪視紀錄進度，只用在工作上。';
+    }
+    if (j.status === 'active') return jDone('你已經開通了', JROLE === 'mgr' ? '回到 LINE 跟小禾打任何字，就會出現「打開主管看板」。' : '回到 LINE 打「訪談」就能開始填。');
     if (j.status === 'pending') {   // 送過了：先說在等，要改帳密可以重填
       jDone('已經送出，等佑彬開通', '開通後小禾會在 LINE 通知你。');
       $('jClose').textContent = '帳密打錯了，重新填'; $('jClose').onclick = function () { $('jDone').hidden = true; $('jForm').hidden = false; };
     }
-    var sel = $('jName'); sel.innerHTML = ''; sel.appendChild(el('option', '選你的名字', { value: '', selected: '', disabled: '' }));
-    ['台中', '南投'].forEach(function (o) {
+    var sel = $('jName'); sel.innerHTML = ''; sel.appendChild(el('option', JROLE === 'mgr' ? '選你的職稱' : '選你的名字', { value: '', selected: '', disabled: '' }));
+    (JROLE === 'mgr' ? ['主管'] : ['台中', '南投']).forEach(function (o) {
       var g = el('optgroup', null, { label: o });
       j.names.forEach(function (x) { if (x.o === o) g.appendChild(el('option', x.n, { value: x.n })); });
       if (g.children.length) sel.appendChild(g);
@@ -1782,13 +1803,13 @@ function joinOpen() {
   $('jGo').onclick = function () {
     var same = $('jSame').checked, o = { api: 'join', inv: qp('inv'), name: $('jName').value, tid: $('jTid').value.trim(), tpw: $('jTpw').value, same: same,
               nid: same ? '' : $('jNid').value.trim(), npw: same ? '' : $('jNpw').value, agree: $('jAgree').checked };
-    var bad = !o.name ? '請選你的名字' : !o.tid || !o.tpw ? '請填 IEI 帳號和密碼' : !same && (!o.nid || !o.npw) ? '請填南投的帳號和密碼' : !o.agree ? '要勾同意才能送出' : '';
+    var mg = JROLE === 'mgr', bad = !o.name ? (mg ? '請選你的職稱' : '請選你的名字') : !mg && (!o.tid || !o.tpw) ? '請填 IEI 帳號和密碼' : !mg && !same && (!o.nid || !o.npw) ? '請填南投的帳號和密碼' : !o.agree ? '要勾同意才能送出' : '';
     if (bad) { $('jMsg').textContent = bad; return; }
-    $('jMsg').textContent = ''; $('jGo').disabled = true; $('jGo').textContent = '試登入 IEI 中…（約 20 秒）';
+    $('jMsg').textContent = ''; $('jGo').disabled = true; $('jGo').textContent = mg ? '送出中…' : '試登入 IEI 中…（約 20 秒）';
     api(o).then(function (j) {
       $('jTpw').value = ''; $('jNpw').value = '';
-      if (j.status === 'active') jDone('帳密更新好了', '回到 LINE 打「訪談」就能開始填。');
-      else jDone('送出了！', '佑彬開通後，小禾會在 LINE 通知你。第一次送單時會請你簽一次名。');
+      if (j.status === 'active') jDone(mg ? '已經開通了' : '帳密更新好了', mg ? '回到 LINE 跟小禾打任何字就能打開主管看板。' : '回到 LINE 打「訪談」就能開始填。');
+      else jDone('送出了！', mg ? '佑彬開通後，小禾會在 LINE 通知你。' : '佑彬開通後，小禾會在 LINE 通知你。第一次送單時會請你簽一次名。');
     }).catch(function (e) { $('jMsg').textContent = e.message; $('jGo').disabled = false; $('jGo').textContent = '送出'; });
   };
 }
@@ -1828,7 +1849,7 @@ function openBg() {   // 他 10/16：先開畫面，背景再跟 IEI 核對簽�
   var did = DRAFT;
   api({ api: 'open', d: did }).then(function (o) { if (DRAFT === did) { apply(o.state); drPut(did, null, o.state); check(); } }).catch(function () {});
 }
-if (!qp('v') && !JOIN && (DRAFT || TRIP)) try {
+if (!qp('v') && !JOIN && !MGR && (DRAFT || TRIP)) try {
   LIFFP = new Promise(function (ok) { LIFFOK = ok; });
   var pc0 = JSON.parse(localStorage.getItem('xh.prep') || 'null'), pday0 = DAY || bToday();
   if (pc0 && pc0.cats && FX) {
@@ -1859,6 +1880,7 @@ setTimeout(function () {
   window.addEventListener('online', obFlush);   // LINE 登入好了才開始自動補（沒登入時 api 會丟「不是連線問題」的錯，被當成內容錯就不再試了）
   setInterval(function () { if (!document.hidden && Object.keys(obAll()).length) obFlush(); }, 30000);
   if (JOIN) return joinOpen();
+  if (MGR) return mgrOpen();
   if (/^(board|drafts|list)$/.test(qp('v') || '')) {   // 訪視總表（舊的整理草稿、IEI 清單連結也到這裡）
     if (!BOLD) bOpen();
     BT = { liff: Math.round(performance.now()), first: BFIRST };
