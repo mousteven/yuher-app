@@ -1357,7 +1357,9 @@ function dLocal() {   // 整理草稿頁最上面：在這支手機裡、還沒�
 }
 /* ---------- 送出：一顆按鈕＝存草稿＋Create＋先簽好的簽名一起補進 IEI；送出後同一顆變「送簽核到 IEI」 ---------- */
 function goSet(t, badge, aria) { $('goT').textContent = t; $('goN').textContent = badge || ''; $('goB').hidden = !badge; $('go').setAttribute('aria-label', aria || t); }
+var BUSY = '';   // 送出／送簽核進行中（他 10/22 截圖：「送簽核中…」按鈕還能按——每 4 秒的簽名輪詢重畫按鈕時又打開了）
 function check() {
+  if (BUSY) { $('only').hidden = true; $('keep').hidden = true; $('go').disabled = true; goSet(BUSY); return; }
   if (PEND) { $('only').hidden = true; $('keep').hidden = true; $('go').disabled = true; goSet('跟伺服器確認中…'); return; }   // 10/22 手機先畫：確認這站有沒有別張草稿、送出了沒，才能送
   $('only').hidden = !SENT; $('keep').hidden = SENT || !S.cu00;   // 他 10/15：草稿先存、微調完再送
   if (SENT && !REJ) {   // 被退回的照沒送出的檢查（內容要改好才送）
@@ -1383,11 +1385,12 @@ $('go').onclick = function () {
     $('shT').textContent = '還有 ' + left.length + ' 人沒簽'; $('shN').textContent = left.map(function (p) { return p.name; }).join('、');
     $('sheet').hidden = false; return;
   }
-  $('go').disabled = true; say('送出中…（存紀錄、補簽名，約 10～30 秒）'); $('dryOut').hidden = true;
+  BUSY = '送出中…'; check(); say('送出中…（存紀錄、補簽名，約 10～30 秒）'); $('dryOut').hidden = true;
   var d = draft();
-  try { obEdit(d.id, function (j) { j.d = d; j.dv = Date.now(); j.send = true; j.name = S.cuName; j.date = d.date; }); } catch (e) { say(e.message); check(); return; }
+  try { obEdit(d.id, function (j) { j.d = d; j.dv = Date.now(); j.send = true; j.name = S.cuName; j.date = d.date; }); } catch (e) { BUSY = ''; say(e.message); check(); return; }
   obRun(d.id, true).then(function (r) {
-    var j = r.send; if (!j) return;
+    BUSY = '';
+    var j = r.send; if (!j) return check();
     DRAFT = d.id;
     if (j.dry) {
       DRAFT = j.id; say('試跑：沒有送出。下面是會送給 IEI 的內容，另外有 ' + j.held + ' 個簽名會一起補進去。');
@@ -1401,6 +1404,7 @@ $('go').onclick = function () {
       + (j.warns ? '警告單 ' + j.warns + ' 張已開。' : '') + (j.fail.length ? '沒補成的簽名：' + j.fail.join('；') : ''));
     finish();
   }).catch(function (e) {
+    BUSY = '';
     if (e.net) { DRAFT = d.id; goSet('有訊號會自動送出'); say(''); obDraw(); scrollTo({ top: 0, behavior: 'smooth' }); return; }   // 他 10/16：提示放最上面
     say(e.message); check();
   });
@@ -1415,13 +1419,15 @@ $('keep').onclick = function () {   // 存進小禾（不進 IEI）；行程卡�
 };
 /* 送簽核＝IEI 的 sendSite('2')。⛔ 送了就鎖住，不能再補簽。成功後順手傳留底（卡片會顯示「已送簽核」） */
 function submit() {
-  $('sheet').hidden = true; $('go').disabled = true; say('送簽核中…'); $('dryOut').hidden = true;
   var rej = !!REJ;   // 主管退回（他 10/21）：後端先存改好的內容、改掉 IEI 那張，再送審
+  $('sheet').hidden = true; BUSY = rej ? '重送中…' : '送簽核中…'; check(); $('dryOut').hidden = true;
+  sayK('wait', BUSY, '正在送進 IEI，約 10～30 秒，畫面先不要關。');
   api({ api: 'submit', d: DRAFT, draft: rej ? draft() : undefined }).then(function (j) {
+    BUSY = '';
     if (j.dry) { say('試跑：沒有送簽核。下面是會送給 IEI 的內容。'); $('dryOut').textContent = j.form; $('dryOut').hidden = false; check(); return; }
     X.rej = ''; X.locked = true; apply(X); check();
     sayK('ok', (rej ? '已改好重送・IEI 編號 ' : '已送簽核・IEI 編號 ') + j.svid, rej ? '等主管批示。' : '等主管批示。IEI 這張已經鎖住，不能再補簽。'); finish();
-  }).catch(function (e) { say(e.message); check(); });
+  }).catch(function (e) { BUSY = ''; say(e.message); check(); });
 }
 /* 留底卡：替他送「送出結果」→ 小禾用 reply 回（免費）。送不出去才請後端推播（吃每月額度）。頁面不關，可以繼續補簽 */
 function finish(id) {
