@@ -174,6 +174,19 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .sg.w{color:var(--red)}
 .tile.wt{border-color:#F3B7BB}
 .tile.flash{animation:fl 1.6s ease-out}
+/* 代理人（他 10/22 選乙）：翻譯格整列寬，裡面打勾「我是代理人」→ 下拉選代替誰 → 他的 IEI 數位簽章；沒設＝紅虛線＋橘色提醒 */
+.tile.lbr{grid-column:1/-1;justify-content:flex-start;gap:12px}
+.tile.lbr .lh{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tile.lbr .agc{display:flex;align-items:center;gap:8px;min-height:44px;font-size:15px;font-weight:700;color:var(--blued);flex:none}
+.tile.lbr .agc input{width:22px;height:22px;margin:0;accent-color:var(--blue)}
+.tile.lbr .ls{font:inherit;font-size:14px;font-weight:700;color:var(--blue);background:none;border:0;padding:0;min-height:44px;text-align:left}
+.tile.lbr.ok .ls,.tile.lbr.held .ls,.tile.lbr.dry .ls,.tile.lbr.auto .ls{color:var(--mute);font-weight:500}
+.tile.lbr select{height:48px;border:1px solid var(--line);border-radius:12px;padding:0 12px;font:inherit;font-size:16px;color:var(--ink);background:var(--soft)}
+.tile.lbr .agi{display:block;width:100%;max-height:72px;object-fit:contain;background:#fff;border-radius:8px}
+.tile.lbr.agno{border:1.5px dashed #D9545C;background:var(--card)}
+.tile.lbr .agw{border-left:4px solid #B45309;background:#FFF4E5;border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:8px;font-size:15px;line-height:1.6;color:var(--mute)}
+.tile.lbr .agw b{font-size:16px;color:var(--ink);-webkit-line-clamp:unset}
+.tile.lbr .agw button{min-height:44px;border:1px solid var(--line);border-radius:999px;background:var(--card);font:inherit;font-size:15px;font-weight:700;color:var(--blued)}
 @keyframes fl{from{background:var(--tint)}}
 pre{white-space:pre-wrap;word-break:break-all;font-size:13px;background:var(--soft);border-radius:14px;padding:12px;margin:0}
 footer{position:fixed;left:0;right:0;bottom:0;padding:24px 16px calc(4px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 72%,rgba(238,242,246,0));z-index:5}
@@ -509,7 +522,7 @@ var LIFF_ID = qp('liff'), DRAFT = qp('d') || qp('sign'), TRIP = qp('t'), DAY = q
 var S = { items: [], auto: 0, autoP: '', autoA: '', pk: { d: {}, r: {} }, sl: {}, picks: {}, workers: [], vtEdited: false, trip: null, cu00: '', cuName: '', client: '', cat: -1, sub: -1, nat: '' };
 var META = null, X = null, ST = {}, FL = {}, SAVED = '', SENT = false, REJ = '', LANG = '中', TRC = {}, POLL = false, BQ = [], BI = 0, RELAY = false, trTimer = 0;
 var LC = { '菲律賓': 'EN', '越南': 'VI', '印尼': 'ID', '泰國': 'TH' };
-var STX = { ok: '✓ 已簽', held: '✓ 簽好了', local: '✓ 存在手機', dry: '✓ 試跑', todo: '點這裡簽', absent: '不在', up: '上傳中…', fail: '沒傳上去，再簽', auto: '自動沿用' };
+var STX = { ok: '✓ 已簽', held: '✓ 簽好了', local: '✓ 存在手機', dry: '✓ 試跑', todo: '點這裡簽', absent: '不在', up: '上傳中…', fail: '沒傳上去，再簽', auto: '自動沿用', agno: '沒有數位簽章', wait: '讀取中…' };
 /* 移工簽名用他的語言（他 2026-10-14 批准）：固定寫好的字，不是機器翻。hint／clear／needSign／proc／res／signed 跟 qsign.html 的 T 一字不差（check.js 比對） */
 var NATL = { '菲律賓': '英', '越南': '越', '印尼': '印', '泰國': '泰' };
 var TL = {
@@ -996,7 +1009,7 @@ function draft() {
     date: $('date').value, vt: $('vt').value, nat: l === '2' ? natE() : S.nat, method: $('method').dataset.v, labor: l,
     items: S.items.slice().sort(function (a, b) { return a - b; }), cat: x ? x.b : '', sub: x ? x.s[S.sub][0] : '',
     cuP: texts(0)[0], cuA: texts(0)[1], same: true, after: $('after').value.trim(),
-    pk: S.pk, sl: S.sl, px: $('p').value.trim(), ax: $('a').value.trim(),   // 片語＋補充欄位＋自己打的；cuP／cuA 是組好的中文（送進 IEI 的）
+    pk: S.pk, sl: S.sl, px: $('p').value.trim(), ax: $('a').value.trim(), ag: S.ag || '',   // ag：代理哪位翻譯（IEI 全名）   // 片語＋補充欄位＋自己打的；cuP／cuA 是組好的中文（送進 IEI 的）
     la00: l === '2' ? [] : p.map(function (w) { return w.la00; }), names: l === '2' ? [] : p.map(function (w) { return w.zh || w.en; }),
     wk: l === '2' ? [] : p.map(function (w) { return { la00: w.la00, en: w.en, zh: w.zh }; }),
     wl: S.workers.map(function (w) { return { la00: w.la00, en: w.en, zh: w.zh, nat: w.nat, la21: w.la21 }; }),   // 這家整份移工名單：打開草稿不用等 IEI
@@ -1016,6 +1029,7 @@ function ensureDraft() {
 }
 function fill(d) {
   S.client = d.client; S.tripId = d.trip || ''; S.cuName = d.cuName; S.items = d.items || []; S.vtEdited = true;
+  S.ag = d.ag || ''; if (S.ag && d.cu00) { S.cu00 = d.cu00; agLoad(false); }
   $('addr').value = d.addr || ''; $('date').value = d.date; $('vt').value = d.vt || '';
   seg('method', d.method); seg('labor', d.labor);
   $('natE').dataset.cu = d.cu00 || ''; seg('natE', d.labor === '2' ? d.nat || '' : '');
@@ -1049,7 +1063,10 @@ function slots() {
 function mine(k) { return k === 'lbr' || k.indexOf('wb:') === 0; }   // 用他存好的簽名的格子
 function lbrSaved() { return X ? X.lbrSaved : META.lbrSaved; }
 function locked() { return !!(X && X.locked); }
-function st(k) { return ST[k] || (mine(k) && lbrSaved() ? 'auto' : 'todo'); }
+function st(k) {
+  if (k === 'lbr' && S.ag && !ST[k]) return AG.img[S.ag] ? 'auto' : AG.img[S.ag] === '' ? 'agno' : 'wait';   // 代理：看那位有沒有數位簽章（不算「點這裡簽」，接力簽不會叫到這格）
+  return ST[k] || (mine(k) && lbrSaved() ? 'auto' : 'todo');
+}
 function stText(p, s) {   // 移工的格子用他的語言；翻譯、雇主維持中文
   var L = p.L; if (!L) return STX[s];
   return { ok: '✓ ' + L.signed, held: '✓ ' + L.signed, local: '✓ ' + L.signed, dry: '✓ ' + L.dry, todo: L.todo, absent: L.absent, up: L.up, fail: L.fail }[s];
@@ -1062,7 +1079,9 @@ function drawSigns() {
   all.forEach(function (p) {
     var g = p.g || (hasG ? '訪談紀錄表' : '');   // 有警告單才分組
     if (g && g !== g0) { box.appendChild(el('div', g, { class: 'sg' + (p.g ? ' w' : '') })); g0 = g; }
-    var s = st(p.k), b = el('button', null, { type: 'button', class: 'tile ' + s + (p.g ? ' wt' : '') + (FL[p.k] ? ' flash' : '') });
+    var s = st(p.k);
+    if (p.k === 'lbr') { box.appendChild(agTile(p, s)); return; }
+    var b = el('button', null, { type: 'button', class: 'tile ' + s + (p.g ? ' wt' : '') + (FL[p.k] ? ' flash' : '') });
     b.appendChild(el('b', p.name)); if (p.sub) b.appendChild(el('i', p.sub)); b.appendChild(el('small', stText(p, s)));
     b.onclick = function () { if (locked()) return say('已送簽核，IEI 鎖住了，不能再補簽'); board([p], false); };
     box.appendChild(b);
@@ -1073,6 +1092,53 @@ function drawSigns() {
   $('sacts').hidden = locked();
   $('signNote').textContent = locked() ? '已送簽核，IEI 鎖住了，不能再補簽。' : SENT ? '沒簽的人 14 天內可以補簽（點格子或用 QR）。' : !lbrSaved() ? '你的簽名第一次要簽一次，之後每張自動帶入。' : '沒簽完也能送出，沒簽的人送出後可以補簽。';
   check();
+}
+/* ---------- 代理人（他 10/22 選乙）：翻譯格裡打勾「我是代理人」→ 下拉選代替哪位翻譯 → 翻譯簽名用他的 IEI 數位簽章；他沒設就提醒 ----------
+   名單＝這一邊 IEI 的人員（台中南投代碼不同，後端用全名對），預設＝IEI 自己算的這家翻譯（GetDefaultTLbr）。送出後不能改（IEI 上已經記了指派／代理）。 */
+var AG = { list: null, img: {}, busy: '' };   // img[全名]：data URI＝有、''＝沒設、沒有這個鍵＝還沒讀
+function agLoad(on) {
+  if (!S.cu00) { S.ag = ''; drawSigns(); return say('先選 IEI 客戶'); }
+  AG.busy = '讀取翻譯名單…'; drawSigns();
+  api({ api: 'agl', cu00: S.cu00, la00: picked().map(function (w) { return w.la00; }) }).then(function (j) {
+    AG.list = j.list; AG.busy = '';
+    if (on && !S.ag) S.ag = j.def || (j.list[0] || {}).n || '';
+    agSig(S.ag);
+  }).catch(function (e) { AG.busy = ''; say('讀不到 IEI 的翻譯名單：' + e.message); drawSigns(); });
+}
+function agSig(n, fresh) {
+  if (!n || (!fresh && AG.img[n] !== undefined)) return drawSigns();
+  AG.busy = '讀取 ' + n + ' 的數位簽章…'; drawSigns();
+  api({ api: 'agsig', cu00: S.cu00, n: n, fresh: !!fresh }).then(function (j) { AG.img[n] = j.img; AG.busy = ''; drawSigns(); },
+    function (e) { AG.busy = ''; say('讀不到 ' + n + ' 的數位簽章：' + e.message); drawSigns(); });
+}
+function agTile(p, s) {
+  var fixed = SENT || locked(), w = el('div', null, { class: 'tile lbr ' + s + (FL.lbr ? ' flash' : '') }), h = el('div', null, { class: 'lh' });
+  var lb = el('label', null, { class: 'agc' }), cb = el('input', null, { type: 'checkbox' });
+  cb.checked = !!S.ag; cb.disabled = fixed;
+  cb.onchange = function () { if (cb.checked) agLoad(true); else { S.ag = ''; drawSigns(); } };
+  lb.appendChild(cb); lb.appendChild(document.createTextNode('我是代理人'));
+  h.appendChild(el('b', S.ag ? '翻譯' : p.name)); if (S.ag || !fixed) h.appendChild(lb); w.appendChild(h);
+  if (!S.ag) {
+    var bt = el('button', stText(p, s), { type: 'button', class: 'ls' });
+    bt.onclick = function () { if (locked()) return say('已送簽核，IEI 鎖住了，不能再補簽'); board([p], false); };
+    w.appendChild(bt); return w;
+  }
+  var sel = el('select', null, { 'aria-label': '代替哪一位翻譯' }); sel.disabled = fixed;
+  (AG.list || [{ n: S.ag, k: '' }]).forEach(function (o) { var op = el('option', '代替：' + (o.k ? o.k + '・' : '') + o.n, { value: o.n }); if (o.n === S.ag) op.selected = true; sel.appendChild(op); });
+  sel.onchange = function () { S.ag = sel.value; agSig(S.ag); };
+  w.appendChild(sel);
+  var im = AG.img[S.ag];
+  if (AG.busy) w.appendChild(el('small', AG.busy));
+  else if (im) { w.appendChild(el('img', null, { src: im, alt: S.ag + ' 的數位簽章', class: 'agi' })); w.appendChild(el('small', (s === 'ok' ? '✓ 已簽進 IEI・' : '') + S.ag + '・IEI 數位簽章')); }
+  else if (s === 'ok') w.appendChild(el('small', '✓ 已簽進 IEI・' + S.ag));
+  else if (im === '') {
+    var nk = (AG.list || []).filter(function (o) { return o.n === S.ag; })[0], who = nk && nk.k || S.ag, bx = el('div', null, { class: 'agw' }), rb = el('button', '他設好了，重新讀取', { type: 'button' });
+    bx.appendChild(el('b', who + '還沒設數位簽章'));
+    bx.appendChild(el('span', '請他到 IEI 簽一次名，按「把目前的簽名設為我的數位簽章」。單子可以先送出，簽章設好後回來重新讀取就會補上。'));
+    rb.onclick = function () { agSig(S.ag, true); }; bx.appendChild(rb);
+    w.appendChild(el('small', '讀不到 ' + S.ag + ' 的數位簽章', { style: 'color:var(--red)' })); w.appendChild(bx);
+  }
+  return w;
 }
 /* ---------- 附件（他 10/19：「IEI 有一個上傳文件，我的小禾那邊也要做一模一樣的，不只拍照、不同格式的檔案都可以上傳；
    如果 IEI 那邊有刪除檔案，小禾這邊再讀取的時候發現檔案沒的話也一樣就沒有了」） ----------
