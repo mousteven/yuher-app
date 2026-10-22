@@ -112,6 +112,11 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .bpill{font-size:13px;font-weight:700;padding:4px 10px;border-radius:8px;white-space:nowrap;background:var(--tint2);color:var(--blued)}
 .bpill.w{background:#FFF3D1;color:#4A3200}.bpill.g{background:#E3F2E6;color:#1E5631}.bpill.d{background:var(--soft);color:var(--mute)}.bpill.f{background:#FDECEC;color:#9C0010}.bpill.o{background:#FFE4CC;color:#7A3300}
 .rej{background:#FFF1E5;color:#7A3300;border-radius:12px;padding:12px 16px;font-size:16px;font-weight:700;margin:0 0 12px}   /* 主管退回（10/21） */
+/* 這家以前被退回過（10/22）：是提醒不是警告，所以比 .rej 輕——不加粗、底色更淡。
+   畫面上的紅／橘一次只能有一個主角，這張表的主角是「這張被退回了」那一條 */
+.rejp{background:#F3F5F8;color:#4A5565;border-left:3px solid #E0A96D;border-radius:0 10px 10px 0;
+  padding:10px 14px;font-size:14px;line-height:1.6;margin:0 0 12px}
+.rejp b{color:#7A3300}
 .brow .bx{width:22px;height:22px;flex:none;box-sizing:border-box;border-radius:7px;border:2px solid var(--line);background:#fff}
 .brow[aria-pressed=true]{background:#FDECEC;border-color:var(--red)}
 .brow[aria-pressed=true] .bx{border-color:var(--red);background:var(--red) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Cpath d='M3 7l3 3 5-6' fill='none' stroke='%23fff' stroke-width='2.2'/%3E%3C/svg%3E") center no-repeat}
@@ -400,6 +405,7 @@ footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
     <div class="list" id="tdL"></div>
   </section>
   <div id="rejNote" class="rej" role="status" hidden></div>   <!-- 主管退回的原因（他 10/21） -->
+  <div id="rejPast" class="rejp" role="status" hidden></div>   <!-- 這家以前被退回過什麼（他 10/22） -->
   <div id="edit">
    <section class="card">
     <div class="ld" id="ld" role="status" hidden></div>
@@ -1237,6 +1243,23 @@ function apply(s, live) {   // live：輪詢來的，改變的格子閃一下
   if (!s) return;
   X = s; SENT = !!s.svid; REJ = s.rej || '';
   $('rejNote').hidden = !REJ; $('rejNote').textContent = REJ ? '主管退回這張：' + REJ.replace(/^主管退回：/, '') + '。改好按最下面「改好重送到 IEI」。' : '';
+  /* 這家以前被退回過的原因（他 10/22）。只在這張自己還沒被退回時出現，不跟上面那條搶。
+     用 textContent 一段一段塞，不用 innerHTML —— 原因是主管在 IEI 打的字，不經過我們的手 */
+  var rp = $('rejPast'), past = (s.rejPast || []);
+  rp.hidden = !past.length;
+  if (past.length) {
+    rp.textContent = '';
+    var h = document.createElement('div');
+    h.textContent = '這家以前被主管退回過，送出前看一眼：';
+    rp.appendChild(h);
+    past.forEach(function (p) {
+      var d = document.createElement('div'), b = document.createElement('b');
+      b.textContent = p.why;
+      d.appendChild(b);
+      d.appendChild(document.createTextNode(p.date ? '（' + p.date + '）' : ''));
+      rp.appendChild(d);
+    });
+  }
   /* 附件區一直看得到（他 10/19：「我怎麼在訪視單裡面沒有看到你放在哪邊？」）——
      還沒送出的時候只是傳不了，上面會寫原因；看不見比傳不了更糟，他會以為沒做。 */
   if (s.svid && FSV !== s.svid) { FSV = s.svid; filesLoad(); } else filesDraw();   // 編號沒變就不要每次輪詢都去打 IEI
