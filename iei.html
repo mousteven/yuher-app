@@ -121,6 +121,18 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .bsw .brow{position:relative;z-index:1;transition:transform .18s ease-out}
 .bsw .bdel{position:absolute;top:0;right:0;bottom:0;width:88px;border:0;border-radius:0 16px 16px 0;background:var(--red);color:#fff;font:inherit;font-weight:700;font-size:15px}
 .bsw.open .brow{transform:translateX(-88px)}
+/* 總表卡片第三種（他 10/22 選）：多一行「移工・服務項目」，⌄ 展開看移工、服務項目、處理經過、代理、IEI 編號＋打開這張 */
+.brow .bs{font-size:14px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brow .br{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
+.brow .bchev{width:44px;height:32px;display:grid;place-items:center;margin-right:-10px}
+.brow .bchev svg{width:20px;height:20px;stroke:var(--mute);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s}
+.bcd.bxo .brow{border-color:var(--blue);border-radius:16px 16px 0 0}.bcd.bxo .bchev svg{transform:rotate(180deg);stroke:var(--blue)}
+.bcd.bxo .bsw{border-radius:16px 16px 0 0}
+.bmore{border:1px solid var(--blue);border-top:0;border-radius:0 0 16px 16px;padding:0 14px 14px;display:grid;gap:12px;background:var(--card)}
+.bmore dl{margin:0;background:var(--soft);border-radius:14px;padding:12px;display:grid;grid-template-columns:72px minmax(0,1fr);gap:8px 12px;font-size:15px;line-height:1.5}
+.bmore dt{font-size:14px;color:var(--mute)}.bmore dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.bmore dd.cl{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bmore .bgo{min-height:44px;border:0;border-radius:14px;background:var(--blue);color:#fff;font:inherit;font-size:16px;font-weight:700}
 .bcard{display:grid;gap:6px;padding:12px 16px;border:1px solid var(--line);border-radius:20px;background:var(--card);font:inherit;color:inherit;text-align:left;width:100%}
 .bcard .t{display:flex;justify-content:space-between;gap:8px}.bcard .t b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.bcard .t span{font-size:13px;color:var(--mute);white-space:nowrap}
 .bcard .g{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -1676,10 +1688,20 @@ function bRow(r) {
   if (BS.sel) { b.setAttribute('aria-pressed', String(on)); b.disabled = !canDel; b.appendChild(el('span', null, { class: 'bx' })); }
   b.appendChild(el('span', bMd(r.date), { class: 'bd' }));
   m.appendChild(el('span', r.cu + (r.site === 'n' ? '・南投' : ''), { class: 'bn' }));
-  m.appendChild(el('span', [r.n ? r.n + ' 人' : '', r.svid ? 'IEI ' + r.svid : '小禾' + (r.sub ? '・' + r.sub : ''), r.st === '5' ? '退回：' + (r.why || '沒寫原因') : ''].filter(Boolean).join('・'), { class: 'bs' }));
-  b.appendChild(m); b.appendChild(el('span', inf[0], { class: 'bpill ' + inf[2] }));
+  m.appendChild(el('span', bSum(r), { class: 'bs' }));
+  b.appendChild(m);
+  var rc = el('span', null, { class: 'br' }), card = el('div', null, { class: 'bcd' + (BS.x === bKey(r) ? ' bxo' : '') });
+  rc.appendChild(el('span', inf[0], { class: 'bpill ' + inf[2] }));
+  if (!BS.sel) {   // 按鈕裡不能再放按鈕：⌄ 用 span，點了不觸發打開
+    var cv = el('span', null, { class: 'bchev', role: 'button', 'aria-label': '展開' });
+    cv.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+    cv.onclick = function (ev) { ev.stopPropagation(); BS.x = BS.x === bKey(r) ? '' : bKey(r); bDraw(); };
+    rc.appendChild(cv);
+  }
+  b.appendChild(rc);
   var w = el('div', null, { class: 'bsw' });
-  w.appendChild(b);
+  w.appendChild(b); card.appendChild(w);
+  if (BS.x === bKey(r) && !BS.sel) card.appendChild(bMore(r, function () { b.onclick(); }));
   if (canDel && !BS.sel && !BOLD) swipe(w, function () { bAsk([r]); });
   b.onclick = function () {
     if (BS.sel) { if (on) delete BS.pick[bKey(r)]; else BS.pick[bKey(r)] = r; return bDraw(); }
@@ -1692,7 +1714,29 @@ function bRow(r) {
     if (doc) location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&d=' + doc + '&day=' + r.date;
     else vMenu({ svid: r.svid, site: r.site, cu: r.cu, st: inf[0], d: '', day: r.date, noDel: !canDel || !!BOLD, after: function () { bLoad(); } });
   };
-  return w;
+  return card;
+}
+function bWho(r, all) {   // 移工：前兩位＋「等 N 人」；伺服器沒給名字（清單還沒在快取）就只寫人數
+  var w = r.wn || [];
+  if (!w.length) return r.n ? r.n + ' 人' : '';
+  return all ? w.join('、') + (r.n > w.length ? ' 等 ' + r.n + ' 人' : '') : w.slice(0, 2).join('、') + (r.n > 2 ? ' 等 ' + r.n + ' 人' : '');
+}
+function bSum(r) {
+  var it = (r.itn || []).join('、') || r.sub || '';
+  return [bWho(r), it, r.st === '5' ? '退回：' + (r.why || '沒寫原因') : ''].filter(Boolean).join('・') || (r.svid ? 'IEI ' + r.svid : '小禾');
+}
+function bMore(r, open) {
+  var box = el('div', null, { class: 'bmore' }), dl = el('dl');
+  function row(k, v, cl) { if (!v) return; dl.appendChild(el('dt', k)); dl.appendChild(el('dd', v, cl ? { class: 'cl' } : {})); }
+  row('移工', bWho(r, true));
+  row('服務項目', (r.itn || []).join('、') || r.sub);
+  row('處理經過', r.pr, true);
+  if (r.st === '5') row('主管退回', (r.why || '沒寫原因') + (r.by ? '（' + r.by + '）' : ''));
+  if (r.agn) row('翻譯', r.agn + '代理' + (r.tln ? '（指派：' + r.tln + '）' : ''));
+  row('IEI', r.svid ? r.svid + (r.vt ? '・第 ' + r.vt + ' 次訪視' : '') : '還沒送進 IEI（小禾草稿）');
+  box.appendChild(dl);
+  var go = el('button', '打開這張', { type: 'button', class: 'bgo' }); go.onclick = open; box.appendChild(go);
+  return box;
 }
 function bGroups(rows, key, title) {   // 照 key 分組（照出現順序），每組一個小標
   var box = $('bL'), seen = {}, keys = [];   // keys 照出現順序（物件的數字鍵會自己排到前面，像 '5'）
