@@ -61,7 +61,7 @@
   ].join('');
 
   var CH = 60;                                  // 一次畫幾列（565 人全畫手機會卡）
-  var J = null, NAT = null, SORT = 'gap', SHOW = CH, OPEN = null;
+  var J = null, NAT = null, SORT = 'gap', SHOW = CH, OPEN = null, MYCO = true;
   var root, body, el, api, LIFF_ID, MINE = '';
 
   function host() {
@@ -93,8 +93,11 @@
     return h;
   }
 
+  function pick() {
+    return (J.rows || []).filter(function (r) { return (!MYCO || r.mine) && (!NAT || r.nat === NAT); });
+  }
   function rows() {
-    var list = (J.rows || []).filter(function (r) { return !NAT || r.nat === NAT; });
+    var list = pick();
     if (SORT === 'gap') list = list.slice().sort(function (a, b) {
       var ga = a.judged ? (a.cell.indexOf('miss') !== -1 ? 0 : (a.gaps || []).length ? 1 : 2) : 3;
       var gb = b.judged ? (b.cell.indexOf('miss') !== -1 ? 0 : (b.gaps || []).length ? 1 : 2) : 3;
@@ -170,7 +173,7 @@
     if (!J) { body.appendChild(mkEl('div', '讀評鑑名單…（第一次要跟 IEI 要整年的月曆，約 10 秒）', { 'class': 'hint' })); return; }
     if (J.err) { body.appendChild(mkEl('div', J.err, { 'class': 'er' })); return; }
 
-    var all = (J.rows || []).filter(function (r) { return !NAT || r.nat === NAT; });
+    var all = pick();
     var nMiss = 0, nNow = 0, nUn = 0;
     all.forEach(function (r) {
       if (!r.judged) { nUn++; return; }
@@ -207,12 +210,29 @@
         '別的國籍是別的翻譯負責，你的 IEI 帳號看不到他們填的紀錄，所以那邊會整片灰。按上面的籤可以切。', { 'class': 'note' }));
     }
 
+    var scope = mkEl('div', null, { 'class': 'seg' });
+    var myN = (J.rows || []).filter(function (r) { return r.mine; }).length;
+    [[true, '我的工廠 ' + myN], [false, '全公司 ' + (J.rows || []).length]].forEach(function (x) {
+      var b = mkEl('button', x[1], { 'class': MYCO === x[0] ? 'on' : '', type: 'button' });
+      b.onclick = function () { MYCO = x[0]; SHOW = CH; OPEN = null; draw(); };
+      scope.appendChild(b);
+    });
+    body.appendChild(scope);
+    if (MYCO) body.appendChild(mkEl('div', '「我的工廠」＝你真的跑過的 ' + (J.myCo || 0) +
+      ' 家（IEI 月曆＋行程表＋小禾送出＋服務紀錄，四個來源的聯集）。' +
+      '名冊是全公司 309 家，裡面大半不是你服務的。⚠ IEI 只有兩個月、行程表只有一個月，' +
+      '所以這是下限——跑得少的工廠還沒出現，覺得少了就按「全公司」看。', { 'class': 'note' }));
+
     var nats = [];
     all.forEach(function (r) { if (r.nat && nats.indexOf(r.nat) === -1) nats.push(r.nat); });
     nats.sort();
     var ch = mkEl('div', null, { 'class': 'chips' });
-    [['', '全部 ' + all.length]].concat(nats.map(function (n) {
-      return [n, n + ' ' + all.filter(function (r) { return r.nat === n; }).length];
+    var inScope = (J.rows || []).filter(function (r) { return !MYCO || r.mine; });
+    nats = [];
+    inScope.forEach(function (r) { if (r.nat && nats.indexOf(r.nat) === -1) nats.push(r.nat); });
+    nats.sort();
+    [['', '全部 ' + inScope.length]].concat(nats.map(function (n) {
+      return [n, n + ' ' + inScope.filter(function (r) { return r.nat === n; }).length];
     })).forEach(function (x) {
       var b = mkEl('button', x[1], { 'class': 'chip' + (NAT === x[0] ? ' on' : ''), type: 'button' });
       b.onclick = function () { NAT = x[0]; SHOW = CH; OPEN = null; draw(); };
@@ -278,7 +298,7 @@
       J = j;
       if (NAT === null) {           // 第一次：預設篩成「你有紀錄的那個國籍」（翻譯按國籍分，別人的工人你看不到紀錄）
         var c = {};
-        (j.rows || []).forEach(function (r) { if (r.cell.indexOf('ok') !== -1) c[r.nat] = (c[r.nat] || 0) + 1; });
+        (j.rows || []).forEach(function (r) { if (r.mine && r.cell.indexOf('ok') !== -1) c[r.nat] = (c[r.nat] || 0) + 1; });
         var best = '', n = 0;
         for (var k in c) if (c[k] > n) { n = c[k]; best = k; }
         NAT = n >= 3 ? best : '';
