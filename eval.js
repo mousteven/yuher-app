@@ -39,7 +39,7 @@
     '#ev .w{min-width:0;padding-right:6px}',
     '#ev .w b{display:block;font-size:14px;font-weight:700;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '#ev .w span{display:block;font-size:11px;color:var(--mute);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '#ev .c{aspect-ratio:1;border-radius:5px;display:grid;place-items:center;font-size:10px;font-weight:700;line-height:1;color:transparent}',
+    '#ev .c{position:relative;aspect-ratio:1;border-radius:5px;display:grid;place-items:center;font-size:10px;font-weight:700;line-height:1;color:transparent}',
     '#ev .c.free{background:#EDF0F5}',
     '#ev .c.ok{background:var(--tint);color:var(--blue)}',
     '#ev .c.due{background:#fff;box-shadow:inset 0 0 0 1.5px var(--blue);color:var(--blue)}',
@@ -57,7 +57,35 @@
     '#ev .opt span{display:block;font-size:12px;color:var(--mute)}',
     '#ev .opt .cv{margin-left:auto;color:var(--blue);font-size:18px;font-weight:800}',
     '#ev .hint{padding:28px 8px;text-align:center;color:var(--mute);font-size:15px;line-height:1.9}',
-    '#ev .er{background:#FFF4F4;color:#9C0010;border-radius:14px;padding:14px 16px;font-size:14px;font-weight:600;line-height:1.7}'
+    '#ev .er{background:#FFF4F4;color:#9C0010;border-radius:14px;padding:14px 16px;font-size:14px;font-weight:600;line-height:1.7}',
+    /* 來源列（他 2026-10-23「南投iei 的 沒有」）：哪一邊讀到幾筆、哪一邊讀不到，攤在最上面 */
+    '#ev .src{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;font-weight:700;color:var(--mute);background:#fff;border-radius:12px;padding:9px 12px}',
+    '#ev .src i{font-style:normal;display:inline-flex;align-items:center;gap:5px}',
+    '#ev .src i::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--blue)}',
+    '#ev .src i.bad{color:#9C0010}#ev .src i.bad::before{background:#E30613}',
+    /* 三個類別的顏色（避開紅色——紅色留給「逾期」）。
+       ⛔ 對比要量在**膠囊自己的淡底上**，不是量在白底上：承接原本的 #0F7B6C 在白底 5.16、
+          在淡綠底只有 4.38，守則要 ≥4.5 → 改深成 #0D6E60（5.22）。入境 5.81、續聘 5.06。 */
+    '#ev .k-in{--kc:#0057B8;--kcbg:#E3EDF9}',
+    '#ev .k-re{--kc:#6B4FBB;--kcbg:#EDE8FA}',
+    '#ev .k-tk{--kc:#0D6E60;--kcbg:#E0F0EC}',
+    /* 丁：名字下面的膠囊，寫「續聘 5月」 */
+    '#ev .tag{display:inline-block;font-size:10px;font-weight:800;border-radius:5px;padding:1px 5px;margin-right:4px;color:var(--kc);background:var(--kcbg)}',
+    /* 丁：月份尺釘在白卡底部（拇指構得到，捲到哪都看得見） */
+    '#ev .foot{position:sticky;bottom:0;z-index:8;background:#fff;box-shadow:0 -2px 0 var(--hair);margin:0 -16px -16px;padding:5px 16px 8px}',
+    '#ev .foot .mh{padding:0}',
+    /* 戊：起算月那一格做記號（●入境 ○續聘 ◆承接）。
+       ⛔ 放右下角、外面包一圈白：格子中間已經有 ✓／缺／！，疊上去會看不清。 */
+    '#ev .c.start::after,#ev .lg .kd{content:"";width:7px;height:7px;background:var(--kc);box-shadow:0 0 0 1.5px #fff}',
+    '#ev .c.start::after{position:absolute;right:-2px;bottom:-2px}',
+    '#ev .k-in .c.start::after,#ev .c.start.k-in::after,#ev .k-in .kd{border-radius:50%}',
+    '#ev .c.start.k-re::after,#ev .k-re .kd{border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #fff,inset 0 0 0 2px var(--kc)}',
+    '#ev .c.start.k-tk::after,#ev .k-tk .kd{transform:rotate(45deg);border-radius:1px}',
+    /* 戊：這個月整欄打亮。⛔ 位置用 CSS calc 算，不要用 JS 量寬度——量到 0 就飛出畫面 */
+    '#ev .card.ev{position:relative;--nw:104px;--gp:3px;--cw:calc((100% - 32px - var(--nw) - 12*var(--gp)) / 12)}',
+    '#ev .card.ev>.nowcol{position:absolute;top:0;bottom:0;z-index:0;pointer-events:none;background:var(--tint);opacity:.5;border-radius:7px;width:var(--cw);left:calc(16px + var(--nw) + var(--gp) + (var(--n) - 1) * (var(--cw) + var(--gp)))}',
+    '#ev .card.ev>.r,#ev .card.ev>.dt,#ev .card.ev>.hint{position:relative;z-index:1}',
+    '#ev .mo{margin-left:4px;border:0;background:none;padding:0;color:var(--blue);font:700 12px inherit;text-decoration:underline}'
   ].join('');
 
   var CH = 60;                                  // 一次畫幾列（565 人全畫手機會卡）
@@ -85,6 +113,26 @@
   }
 
   var TXT = { ok: '✓', miss: '缺', due: '！', free: '', na: '', nodata: '' };
+  /* 入境／續聘／承接三類（他 2026-10-23「入境、續約、承接 視覺上要做區分」）。
+     膠囊寫字（丁）＋起算月那一格做記號（戊）。⛔ 不可以只靠顏色。 */
+  var KIND = { '入境': 'k-in', '續聘': 'k-re', '承接': 'k-tk' };
+  var SITEN = { t: '台中', n: '南投' };
+  function kcls(k) { return KIND[k] || 'k-in'; }
+
+  /* 字少一半（他 2026-10-23「文字的補充說明再減掉40%」）：平常只留短的，長的收進「說明」 */
+  function shortNote(short, long, cls) {
+    var n = mkEl('div', null, { 'class': cls || 'note' });
+    n.appendChild(document.createTextNode(short));
+    if (long) {
+      var b = mkEl('button', '說明', { 'class': 'mo', type: 'button' });
+      var more = mkEl('div', long, { 'class': 'note' });
+      more.hidden = true;
+      b.onclick = function () { more.hidden = !more.hidden; b.textContent = more.hidden ? '說明' : '收起來'; };
+      n.appendChild(b);
+      n.appendChild(more);
+    }
+    return n;
+  }
 
   function monthHead() {
     var h = mkEl('div', null, { 'class': 'mh' });
@@ -114,9 +162,16 @@
     var b = mkEl('button', null, { 'class': 'r', type: 'button' });
     var w = mkEl('span', null, { 'class': 'w' });
     w.appendChild(mkEl('b', r.name || r.orig || '（沒有名字）'));
-    w.appendChild(mkEl('span', [r.nat, r.client].filter(String).join('・')));
+    var sp = mkEl('span');
+    sp.appendChild(mkEl('b', r.kind + ' ' + r.start + '月', { 'class': 'tag ' + kcls(r.kind) }));
+    sp.appendChild(document.createTextNode([r.nat, r.client].filter(String).join('・')));
+    w.appendChild(sp);
     b.appendChild(w);
-    r.cell.forEach(function (s) { b.appendChild(mkEl('span', TXT[s] || '', { 'class': 'c ' + s })); });
+    r.cell.forEach(function (s, i) {
+      var cl = 'c ' + s;
+      if (i + 1 === r.start) cl += ' start ' + kcls(r.kind);      // 戊：起算月那一格
+      b.appendChild(mkEl('span', TXT[s] || '', { 'class': cl }));
+    });
     b.onclick = function () { OPEN = (OPEN === r ? null : r); draw(); };
     return b;
   }
@@ -181,6 +236,22 @@
       else if ((r.gaps || []).indexOf(J.nowM) !== -1) nNow++;
     });
 
+    /* ⛔ 來源列先畫（他 2026-10-23「南投iei 的 沒有」）：
+       南投其實有 6 筆，是小禾讀不到卻一個字都沒講。哪一邊沒讀到就在這裡紅字寫出來。 */
+    var sv = mkEl('div', null, { 'class': 'src' });
+    (J.sites || []).forEach(function (x) {
+      var nm = SITEN[x.site] || x.site;
+      if (x.err) sv.appendChild(mkEl('i', 'IEI ' + nm + ' 讀不到', { 'class': 'bad' }));
+      else if ((x.miss || []).length) sv.appendChild(mkEl('i', 'IEI ' + nm + ' ' + x.n + '（' + x.miss.length + ' 個月讀不到）', { 'class': 'bad' }));
+      else sv.appendChild(mkEl('i', 'IEI ' + nm + ' ' + x.n));
+    });
+    sv.appendChild(mkEl('i', '行程表＋服務紀錄 ' + ((J.src && J.src.svc) || 0)));
+    sv.appendChild(mkEl('i', '小禾送出 ' + ((J.src && J.src.xh) || 0)));
+    if (J.nt && J.nt.err) sv.appendChild(mkEl('i', '南投名單：' + J.nt.err, { 'class': 'bad' }));
+    else if (J.nt) sv.appendChild(mkEl('i', '南投 IEI 名單 ' + J.nt.got + '／' + J.nt.ask +
+      (J.nt.cut ? '（還有 ' + J.nt.cut + ' 位沒問）' : ''), J.nt.cut || (J.nt.ask && !J.nt.got) ? { 'class': 'bad' } : {}));
+    body.appendChild(sv);
+
     var sum = mkEl('div', null, { 'class': 'sum' });
     [[all.length, J.year + ' 年列入'], [nMiss, '已經逾期'], [nNow, '這個月該去']].forEach(function (x, i) {
       var d = mkEl('div', null, i === 1 && x[0] ? { 'class': 'hot' } : {});
@@ -194,21 +265,15 @@
     if ((J.blind || []).length) {
       var w = mkEl('div', null, { 'class': 'warn' });
       w.appendChild(mkEl('b', J.blind.join('、') + ' 月沒有任何紀錄'));
-      w.appendChild(mkEl('div', 'IEI 是 ' + (J.first || 9) + ' 月才開始用的，那之前的紀錄不在系統裡。' +
-        '所以那幾格畫成灰斜線，不算缺件、不會列進上面的數字；每兩個月那條鏈也從 ' + (J.first || 9) + ' 月開始算。'));
+      w.appendChild(shortNote('IEI 是 ' + (J.first || 9) + ' 月才開始用，之前的紀錄不在系統裡，那幾格不算缺件、不列進數字。',
+        '每兩個月那條鏈也從 ' + (J.first || 9) + ' 月開始算，不是從入境月算——不然起算月落在查不到的月份，' +
+        '整個人會看起來「沒問題」，那比全紅更糟。'));
       body.appendChild(w);
     }
-    if (nUn) {
-      var u = mkEl('div', null, { 'class': 'note' });
-      u.appendChild(mkEl('b', '其中 ' + nUn + ' 人判斷不了'));
-      u.appendChild(document.createTextNode('：名冊上有這個人，但對不到 IEI 的工人代碼，' +
-        '所以「查不到紀錄」不代表真的沒訪視。他們整列是灰斜線，也不算進上面的數字。'));
-      body.appendChild(u);
-    }
-    if (MINE && NAT === MINE) {
-      body.appendChild(mkEl('div', '預設只看 ' + MINE + '：你在 IEI 的紀錄幾乎都是這個國籍（翻譯是按國籍分的）。' +
-        '別的國籍是別的翻譯負責，你的 IEI 帳號看不到他們填的紀錄，所以那邊會整片灰。按上面的籤可以切。', { 'class': 'note' }));
-    }
+    if (nUn) body.appendChild(shortNote(nUn + ' 人對不到 IEI 的工人代碼，查不到不代表沒訪視，所以不算缺件。',
+      '名冊上的客戶名或中文名跟 IEI 不一樣就對不起來。他們整列灰斜線，也不算進上面的數字。'));
+    if (MINE && NAT === MINE) body.appendChild(shortNote('預設只看 ' + MINE + '：翻譯按國籍分，別人的工人你的帳號看不到紀錄，那邊會整片灰。',
+      '按上面的籤可以切到別的國籍或全部。'));
 
     var scope = mkEl('div', null, { 'class': 'seg' });
     var myN = (J.rows || []).filter(function (r) { return r.mine; }).length;
@@ -218,10 +283,9 @@
       scope.appendChild(b);
     });
     body.appendChild(scope);
-    if (MYCO) body.appendChild(mkEl('div', '「我的工廠」＝你真的跑過的 ' + (J.myCo || 0) +
-      ' 家（IEI 月曆＋行程表＋小禾送出＋服務紀錄，四個來源的聯集）。' +
-      '名冊是全公司 309 家，裡面大半不是你服務的。⚠ IEI 只有兩個月、行程表只有一個月，' +
-      '所以這是下限——跑得少的工廠還沒出現，覺得少了就按「全公司」看。', { 'class': 'note' }));
+    if (MYCO) body.appendChild(shortNote('「我的工廠」＝你真的跑過的 ' + (J.myCo || 0) + ' 家；名冊是全公司 309 家。這是下限，覺得少了按「全公司」。',
+      'IEI／平台都沒有「負責翻譯」這一欄，所以是用 IEI 月曆＋行程表＋小禾送出＋服務紀錄四個來源回推。' +
+      'IEI 只有兩個月、行程表只有一個月，跑得少的工廠還沒出現。'));
 
     var nats = [];
     all.forEach(function (r) { if (r.nat && nats.indexOf(r.nat) === -1) nats.push(r.nat); });
@@ -257,15 +321,28 @@
       s.appendChild(i); s.appendChild(mkEl('span', x[1]));
       lg.appendChild(s);
     });
+    ['入境', '續聘', '承接'].forEach(function (k) {      // 三類：形狀＋顏色，不只靠顏色
+      var s = mkEl('span', null, { 'class': kcls(k) });    // 形狀跟格子裡的記號同一套 CSS，不在這裡重寫
+      s.appendChild(mkEl('i', null, { 'class': 'kd' }));
+      s.appendChild(mkEl('span', k));
+      lg.appendChild(s);
+    });
     body.appendChild(lg);
 
-    var list = rows(), card = mkEl('div', null, { 'class': 'card' });
-    card.appendChild(monthHead());
+    var list = rows(), card = mkEl('div', null, { 'class': 'card ev' });
+    if (J.nowM >= 1 && J.nowM <= 12) {                    // 戊：這個月整欄打亮
+      var hl = mkEl('div', null, { 'class': 'nowcol' });
+      hl.style.setProperty('--n', J.nowM);
+      card.appendChild(hl);
+    }
     if (!list.length) card.appendChild(mkEl('div', '這個國籍今年沒有要列入的人。', { 'class': 'hint' }));
     list.slice(0, SHOW).forEach(function (r) {
       card.appendChild(rowEl(r));
       if (OPEN === r) card.appendChild(detail(r));
     });
+    var foot = mkEl('div', null, { 'class': 'foot' });    // 丁：月份尺釘在卡片底部
+    foot.appendChild(monthHead());
+    card.appendChild(foot);
     body.appendChild(card);
 
     if (list.length > SHOW) {
@@ -274,8 +351,8 @@
       body.appendChild(more);
     }
 
-    body.appendChild(mkEl('div', '規則：當年度入境或續聘的人，起算月當月要有一張到場紀錄，' +
-      '之後相鄰兩筆的月份間隔不可以超過 2。續聘的人另外在續聘月前 2～4 個月要有一筆簽續聘文件。電聯不算。', { 'class': 'note' }));
+    body.appendChild(shortNote('規則：起算月當月要有一張到場紀錄，之後相鄰兩筆不超過 2 個月。續聘另外要前 2～4 個月的文件。電聯不算。',
+      '台中的人從平台名冊來（有入境日、許可生效日）；南投的人名冊上沒有，從 IEI「移工資料」撈（入境日、聘僱日、承接）。'));
   }
 
   window.xhEvalStart = function () {
