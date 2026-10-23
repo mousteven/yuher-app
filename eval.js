@@ -32,14 +32,20 @@
     '#ev .warn{background:#FFF4F4;border-radius:16px;padding:14px 16px;font-size:14px;line-height:1.8;color:#7A1016}',
     '#ev .warn b{color:#9C0010}',
     '#ev .note{font-size:13px;color:var(--mute);line-height:1.8}',
-    '#ev .mh{display:grid;grid-template-columns:104px repeat(12,1fr);gap:3px;font-size:10px;color:var(--mute);font-weight:700;text-align:center;padding:0 0 4px}',
-    '#ev .mh i{font-style:normal}#ev .mh i.now{color:#C00012}',
-    '#ev .r{display:grid;grid-template-columns:104px repeat(12,1fr);gap:3px;align-items:center;width:100%;border:0;background:none;padding:6px 0;text-align:left;font:inherit;color:inherit;border-top:1px solid var(--hair)}',
+    /* 乙案（他 10/23 選）：名字＋公司一行、膠囊靠右；12 格吃滿整行，每一格自己寫幾月，不要月份尺 */
+    '#ev .r{display:flex;flex-direction:column;gap:8px;width:100%;border:0;background:none;padding:12px 0;text-align:left;font:inherit;color:inherit;border-top:1px solid var(--hair)}',
     '#ev .r:first-of-type{border-top:0}#ev .r:active{background:#F3F5F8}',
-    '#ev .w{min-width:0;padding-right:6px}',
-    '#ev .w b{display:block;font-size:14px;font-weight:700;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '#ev .w span{display:block;font-size:11px;color:var(--mute);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '#ev .c{position:relative;aspect-ratio:1;border-radius:5px;display:grid;place-items:center;font-size:10px;font-weight:700;line-height:1;color:transparent}',
+    '#ev .w{display:flex;align-items:center;gap:8px;min-width:0}',
+    '#ev .w .nm{display:flex;align-items:baseline;gap:8px;flex:1;min-width:0}',
+    '#ev .w b{flex:none;font-size:16px;font-weight:700;line-height:1.35}',
+    '#ev .w .co{min-width:0;font-size:14px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '#ev .cells{display:grid;grid-template-columns:repeat(12,1fr);gap:4px}',
+    '#ev .c{position:relative;height:30px;border-radius:5px;display:grid;place-items:center;font-size:11px;font-weight:700;line-height:1;color:var(--mute)}',
+    '#ev .c.na{color:#8A94A3}',
+    '#ev .c.now{outline:2px solid var(--ink);outline-offset:1px}',
+    '#ev .cells .c.ok::after{content:"✓";position:absolute;right:2px;bottom:1px;font-size:9px}',
+    '#ev .cells .c.miss::after{content:"缺";position:absolute;right:2px;bottom:1px;font-size:8px}',
+    '#ev .cells .c.due::after{content:"！";position:absolute;right:1px;bottom:1px;font-size:8px}',
     '#ev .c.free{background:#EDF0F5}',
     '#ev .c.ok{background:var(--tint);color:var(--blue)}',
     '#ev .c.due{background:#fff;box-shadow:inset 0 0 0 1.5px var(--blue);color:var(--blue)}',
@@ -71,20 +77,15 @@
     '#ev .k-tk{--kc:#0D6E60;--kcbg:#E0F0EC}',
     /* 丁：名字下面的膠囊，寫「續聘 5月」 */
     '#ev .tag{display:inline-block;font-size:10px;font-weight:800;border-radius:5px;padding:1px 5px;margin-right:4px;color:var(--kc);background:var(--kcbg)}',
-    /* 丁：月份尺釘在白卡底部（拇指構得到，捲到哪都看得見） */
-    '#ev .foot{position:sticky;bottom:0;z-index:8;background:#fff;box-shadow:0 -2px 0 var(--hair);margin:0 -16px -16px;padding:5px 16px 8px}',
-    '#ev .foot .mh{padding:0}',
-    /* 戊：起算月那一格做記號（●入境 ○續聘 ◆承接）。
-       ⛔ 放右下角、外面包一圈白：格子中間已經有 ✓／缺／！，疊上去會看不清。 */
-    '#ev .c.start::after,#ev .lg .kd{content:"";width:7px;height:7px;background:var(--kc);box-shadow:0 0 0 1.5px #fff}',
-    '#ev .c.start::after{position:absolute;right:-2px;bottom:-2px}',
-    '#ev .k-in .c.start::after,#ev .c.start.k-in::after,#ev .k-in .kd{border-radius:50%}',
-    '#ev .c.start.k-re::after,#ev .k-re .kd{border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #fff,inset 0 0 0 2px var(--kc)}',
-    '#ev .c.start.k-tk::after,#ev .k-tk .kd{transform:rotate(45deg);border-radius:1px}',
-    /* 戊：這個月整欄打亮。⛔ 位置用 CSS calc 算，不要用 JS 量寬度——量到 0 就飛出畫面 */
-    '#ev .card.ev{position:relative;--nw:104px;--gp:3px;--cw:calc((100% - 32px - var(--nw) - 12*var(--gp)) / 12)}',
-    '#ev .card.ev>.nowcol{position:absolute;top:0;bottom:0;z-index:0;pointer-events:none;background:var(--tint);opacity:.5;border-radius:7px;width:var(--cw);left:calc(16px + var(--nw) + var(--gp) + (var(--n) - 1) * (var(--cw) + var(--gp)))}',
-    '#ev .card.ev>.r,#ev .card.ev>.dt,#ev .card.ev>.hint{position:relative;z-index:1}',
+    /* ⛔ 他 10/23 圈出來：記號掛在格子外面看不出是哪一格。放進格子裡面左上角，外框換成那一類的顏色 */
+    '#ev .mk{position:absolute;left:2px;top:2px;width:6px;height:6px;background:var(--kc)}',
+    '#ev .lg .kd{width:8px;height:8px;background:var(--kc)}',
+    '#ev .c.start{box-shadow:inset 0 0 0 1.5px var(--kc)}',
+    '#ev .c.start.k-in .mk,#ev .k-in .kd{border-radius:50%}',
+    '#ev .c.start.k-re .mk,#ev .k-re .kd{border-radius:50%;background:transparent;box-shadow:inset 0 0 0 1.5px var(--kc)}',
+    '#ev .c.start.k-tk .mk,#ev .k-tk .kd{transform:rotate(45deg) scale(.85)}',
+    '#ev .old{background:var(--tint);color:var(--blue);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:700}',
+    '#ev .old.bad{background:#FFF4F4;color:#9C0010}',
     '#ev .mo{margin-left:4px;border:0;background:none;padding:0;color:var(--blue);font:700 12px inherit;text-decoration:underline}',
     /* 名單正在跟 IEI 重建（一天一次，約半分鐘）：講清楚，下面先給上次的 */
     '#ev .prog{background:#fff;border-radius:16px;padding:12px 16px;font-size:13px;line-height:1.7;color:var(--mute)}',
@@ -93,6 +94,7 @@
 
   var CH = 60;                                  // 一次畫幾列（565 人全畫手機會卡）
   var J = null, NAT = null, SORT = 'gap', SHOW = CH, OPEN = null;
+  var OLD = 0, OLDERR = '';   // 畫面上是手機存的上一次名單：存的時間（毫秒）；0＝已經是最新的
   var FILL = { on: false, done: false, err: '' };   // 今天還沒建過名單 → 背景跟 IEI 重建一次（只叫一次）
   var root, body, el, api, LIFF_ID, MINE = '';
 
@@ -138,12 +140,6 @@
     return n;
   }
 
-  function monthHead() {
-    var h = mkEl('div', null, { 'class': 'mh' });
-    h.appendChild(mkEl('i'));
-    for (var m = 1; m <= 12; m++) h.appendChild(mkEl('i', String(m), m === J.nowM ? { 'class': 'now' } : {}));
-    return h;
-  }
 
   function pick() {
     return (J.rows || []).filter(function (r) { return !NAT || r.nat === NAT; });
@@ -162,20 +158,27 @@
     return list;
   }
 
+  /* 乙案（他 10/23 選）：
+     第一行＝名字＋公司（他圖一：公司要在名字旁邊），膠囊靠右；
+     第二行＝12 格，每一格寫它是幾月（他圖三：不要再對底下的月份尺）；
+     起算月那一格外框換顏色、記號在格子裡面左上角（他圖二：不可以掛在格子外面）。 */
   function rowEl(r) {
     var b = mkEl('button', null, { 'class': 'r', type: 'button' });
-    var w = mkEl('span', null, { 'class': 'w' });
-    w.appendChild(mkEl('b', r.name || r.orig || '（沒有名字）'));
-    var sp = mkEl('span');
-    sp.appendChild(mkEl('b', r.kind + ' ' + r.start + '月', { 'class': 'tag ' + kcls(r.kind) }));
-    sp.appendChild(document.createTextNode([r.nat, r.client].filter(String).join('・')));
-    w.appendChild(sp);
+    var w = mkEl('span', null, { 'class': 'w' }), nm = mkEl('span', null, { 'class': 'nm' });
+    nm.appendChild(mkEl('b', r.name || r.orig || '（沒有名字）'));
+    nm.appendChild(mkEl('span', [r.client, r.nat].filter(String).join('・'), { 'class': 'co' }));
+    w.appendChild(nm);
+    w.appendChild(mkEl('span', r.kind + ' ' + r.start + '月', { 'class': 'tag ' + kcls(r.kind) }));
     b.appendChild(w);
+    var cs = mkEl('span', null, { 'class': 'cells' });
     r.cell.forEach(function (s, i) {
-      var cl = 'c ' + s;
-      if (i + 1 === r.start) cl += ' start ' + kcls(r.kind);      // 戊：起算月那一格
-      b.appendChild(mkEl('span', TXT[s] || '', { 'class': cl }));
+      var m = i + 1, cl = 'c ' + s + (m === J.nowM ? ' now' : '');
+      if (m === r.start) cl += ' start ' + kcls(r.kind);
+      var c = mkEl('span', String(m), { 'class': cl });
+      if (m === r.start) c.appendChild(mkEl('i', null, { 'class': 'mk' }));
+      cs.appendChild(c);
     });
+    b.appendChild(cs);
     b.onclick = function () { OPEN = (OPEN === r ? null : r); draw(); };
     return b;
   }
@@ -240,6 +243,8 @@
       else if ((r.gaps || []).indexOf(J.nowM) !== -1) nNow++;
     });
 
+    if (OLD) body.appendChild(mkEl('div', (OLDERR || '正在更新…') + '　下面是上次 ' + when(OLD) + ' 的名單',
+      { 'class': 'old' + (OLDERR ? ' bad' : '') }));
     /* ⛔ 來源列先畫（他 2026-10-23「南投iei 的 沒有」）：
        南投其實有 6 筆，是小禾讀不到卻一個字都沒講。哪一邊沒讀到就在這裡紅字寫出來。 */
     var sv = mkEl('div', null, { 'class': 'src' });
@@ -337,21 +342,13 @@
     });
     body.appendChild(lg);
 
-    var list = rows(), card = mkEl('div', null, { 'class': 'card ev' });
-    if (J.nowM >= 1 && J.nowM <= 12) {                    // 戊：這個月整欄打亮
-      var hl = mkEl('div', null, { 'class': 'nowcol' });
-      hl.style.setProperty('--n', J.nowM);
-      card.appendChild(hl);
-    }
+    var list = rows(), card = mkEl('div', null, { 'class': 'card' });
     if (!list.length) card.appendChild(mkEl('div',
       FILL.on ? '名單正在建，等一下就會出現。' : '這個國籍今年沒有要列入的人。', { 'class': 'hint' }));
     list.slice(0, SHOW).forEach(function (r) {
       card.appendChild(rowEl(r));
       if (OPEN === r) card.appendChild(detail(r));
     });
-    var foot = mkEl('div', null, { 'class': 'foot' });    // 丁：月份尺釘在卡片底部
-    foot.appendChild(monthHead());
-    card.appendChild(foot);
     body.appendChild(card);
 
     if (list.length > SHOW) {
@@ -361,8 +358,8 @@
     }
 
     body.appendChild(shortNote('規則：起算月當月要有一張到場紀錄，之後相鄰兩筆不超過 2 個月。續聘另外要前 2～4 個月的文件。電聯不算。',
-      '名單台中南投都從 IEI「移工資料」撈：入境＝聘僱日和入境日同一天、承接＝「承接」那欄有日期、' +
-      '續聘＝聘僱日跟入境日不同但沒有承接日。IEI 沒有「續聘轉換日」這一欄，續聘只能這樣推。'));
+      '名單台中南投都從 IEI 撈：入境＝今年入境、聘僱日和入境日同一天；承接＝今年接手、聘僱日跟入境日不同；' +
+      '續聘＝合約今年到期（IEI 續聘後聘僱日不會變，所以只能這樣推，還沒跟你確認過）。'));
   }
 
   /* 第一次：預設篩成「你有紀錄的那個國籍」（翻譯按國籍分，別人的工人你看不到紀錄）。
@@ -395,6 +392,14 @@
     }).catch(function (e) { FILL.on = false; FILL.err = String((e && e.message) || e); draw(); });
   }
 
+  /* ⛔ 他 10/23 說要再快：量過一次打開 31.8 秒，其中 27 秒是「登入 IEI」（台中有一頁就 16 秒），
+     只為了讀這個月那 0.7 秒的月曆。登入的慢是 IEI 那邊的，我們砍不掉。
+     所以照總表的做法：手機存上一次的名單，打開先畫它（標「上次 幾點」），新的回來再換掉。
+     ⚠ 存的是名字＋工廠＋每月狀態，跟 xh.wk（全公司移工名單）同一個等級，不存護照、居留證、電話。 */
+  var LS = 'xh.ev';
+  function lsGet() { try { var o = JSON.parse(localStorage.getItem(LS) || 'null'); return o && o.j && o.j.rows ? o : null; } catch (e) { return null; } }
+  function lsPut(j) { try { localStorage.setItem(LS, JSON.stringify({ at: Date.now(), j: j })); } catch (e) {} }
+
   window.xhEvalStart = function () {
     el = window.el; api = window.api; LIFF_ID = window.LIFF_ID;
     root = host();
@@ -410,13 +415,20 @@
     body = mkEl('div', null, { 'class': 'body' });
     wrap.appendChild(body);
     root.appendChild(wrap);
+    var old = lsGet();
+    if (old) { J = old.j; OLD = old.at; pickNat(J); }
     draw();
     api({ api: 'eval' }).then(function (j) {
-      J = j;
+      J = j; OLD = 0;
+      if (j.ok) lsPut(j);
       pickNat(j);
       draw();
       fill();
     })
-      .catch(function (e) { J = { err: '讀不到：' + (e && e.message || e), rows: [] }; draw(); });
+      .catch(function (e) {
+        /* 手機有舊的就留著舊的，只在上面講一聲；沒有才整頁報錯 */
+        if (OLD) { OLDERR = '更新失敗：' + (e && e.message || e); draw(); }
+        else { J = { err: '讀不到：' + (e && e.message || e), rows: [] }; draw(); }
+      });
   };
 })();
