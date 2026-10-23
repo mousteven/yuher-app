@@ -1897,12 +1897,19 @@ if (!DRAFT && !TRIP && !qp('v')) try {
   if (pc && pc.cats) { if (pc.day !== pday) { pc.day = pday; pc.trips = []; } prepBlank(pc); FAST = true; }
 } catch (e) {}
 /* ---------- 同事加入（他 10/22 選 E）：佑彬打「邀請」拿的連結 → 這一頁。帳密只送到小禾後端（試登入成功才存），頁面不留 ---------- */
-var JOIN = qp('v') === 'join', MGR = qp('v') === 'mgr', MGR_V = '20261022b', FIND = qp('v') === 'find';
+var JOIN = qp('v') === 'join', MGR = qp('v') === 'mgr', MGR_V = '20261023a', FIND = qp('v') === 'find', EVAL = qp('v') === 'eval';
 if (FIND) { $('bar').hidden = true; document.querySelector('main').hidden = true; document.querySelector('header').hidden = true; document.querySelector('footer').hidden = true; }
 function findOpen() {   // 查詢頁（他 10/22：像羽禾 App 的放大鏡搜尋）：web/find.js
   var s = document.createElement('script'); s.src = 'find.js?b=' + MGR_V;
   s.onload = function () { window.xhFindStart(); };
   s.onerror = function () { document.body.appendChild(el('p', '查詢頁載不進來，請關掉重開。', { style: 'padding:24px;font-weight:700;color:#9C0010' })); };
+  document.head.appendChild(s);
+}
+if (EVAL) { $('bar').hidden = true; document.querySelector('main').hidden = true; document.querySelector('header').hidden = true; document.querySelector('footer').hidden = true; }
+function evalOpen() {   // 評鑑補件（他 10/23 選甲案「全年總表」）：web/eval.js
+  var s = document.createElement('script'); s.src = 'eval.js?b=' + MGR_V;
+  s.onload = function () { window.xhEvalStart(); };
+  s.onerror = function () { document.body.appendChild(el('p', '評鑑頁載不進來，請關掉重開。', { style: 'padding:24px;font-weight:700;color:#9C0010' })); };
   document.head.appendChild(s);
 }
 if (MGR) { $('bar').hidden = true; document.querySelector('main').hidden = true; document.querySelector('header').hidden = true; document.querySelector('footer').hidden = true; }
@@ -2022,6 +2029,7 @@ setTimeout(function () {
   if (JOIN) return joinOpen();
   if (MGR) return mgrOpen();
   if (FIND) return findOpen();
+  if (EVAL) return evalOpen();
   if (/^(board|drafts|list)$/.test(qp('v') || '')) {   // 訪視總表（舊的整理草稿、IEI 清單連結也到這裡）
     if (!BOLD) bOpen();
     BT = { liff: Math.round(performance.now()), first: BFIRST };
