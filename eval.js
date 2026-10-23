@@ -90,6 +90,7 @@
 
   var CH = 60;                                  // 一次畫幾列（565 人全畫手機會卡）
   var J = null, NAT = null, SORT = 'gap', SHOW = CH, OPEN = null;
+  var FILL = { on: false, done: 0, stop: false, err: '' };   // 名單還在跟 IEI 補的進度
   var root, body, el, api, LIFF_ID, MINE = '';
 
   function host() {
@@ -225,8 +226,7 @@
 
   function draw() {
     body.innerHTML = '';
-    if (!J) { body.appendChild(mkEl('div', '讀評鑑名單…\n第一次要跟 IEI 一位一位問基本資料，可能要一兩分鐘。' +
-      '問過的會存起來，之後打開就快了。', { 'class': 'hint' })); return; }
+    if (!J) { body.appendChild(mkEl('div', '讀評鑑名單…', { 'class': 'hint' })); return; }
     if (J.err) { body.appendChild(mkEl('div', J.err, { 'class': 'er' })); return; }
 
     var all = pick();
@@ -250,9 +250,27 @@
     sv.appendChild(mkEl('i', '小禾送出 ' + ((J.src && J.src.xh) || 0)));
     var pp = J.ppl || {};
     sv.appendChild(mkEl('i', '名單：IEI 移工資料　台中 ' + (pp.t || 0) + '・南投 ' + (pp.n || 0) + ' 位在職'));
-    if (pp.left) sv.appendChild(mkEl('i', '還有 ' + pp.left + ' 位沒問到（再開一次就補上）', { 'class': 'bad' }));
     (pp.err || []).forEach(function (e) { sv.appendChild(mkEl('i', e, { 'class': 'bad' })); });
     body.appendChild(sv);
+
+    /* ⛔ 名單還在補的時候，一定要先講，而且要看得到進度（他 10/23 盯著空白轉了五分鐘） */
+    var pp0 = J.ppl || {}, tot = (pp0.t || 0) + (pp0.n || 0);
+    if (FILL.err || FILL.stop || pp0.left) {
+      var pg = mkEl('div', null, { 'class': 'prog' + (FILL.err || FILL.stop ? ' bad' : '') });
+      var doneN = tot - (pp0.left || 0);
+      pg.appendChild(mkEl('b', FILL.err ? '名單補到一半停住了'
+        : FILL.stop ? '名單還沒補完，先停下來'
+        : '正在跟 IEI 建名單　' + doneN + '／' + tot + ' 位'));
+      var bar = mkEl('div', null, { 'class': 'bar' });
+      var i2 = mkEl('i');
+      i2.style.width = (tot ? Math.round(doneN / tot * 100) : 0) + '%';
+      bar.appendChild(i2);
+      pg.appendChild(bar);
+      pg.appendChild(mkEl('span', FILL.err ? FILL.err + '（關掉重開會從停住的地方繼續）'
+        : FILL.stop ? '這一趟一位都問不到，先停住不再重試。下面是已經建好的部分；關掉重開會從這裡繼續。'
+        : 'IEI 要一位一位問，第一次比較久。下面已經建好的可以先看，建好的會存起來，下次打開就不用再問了。'));
+      body.appendChild(pg);
+    }
 
     var sum = mkEl('div', null, { 'class': 'sum' });
     [[all.length, J.year + ' 年列入'], [nMiss, '已經逾期'], [nNow, '這個月該去']].forEach(function (x, i) {
@@ -331,7 +349,8 @@
       hl.style.setProperty('--n', J.nowM);
       card.appendChild(hl);
     }
-    if (!list.length) card.appendChild(mkEl('div', '這個國籍今年沒有要列入的人。', { 'class': 'hint' }));
+    if (!list.length) card.appendChild(mkEl('div',
+      (J.ppl && J.ppl.left) ? '名單還在建，等一下就會出現。' : '這個國籍今年沒有要列入的人。', { 'class': 'hint' }));
     list.slice(0, SHOW).forEach(function (r) {
       card.appendChild(rowEl(r));
       if (OPEN === r) card.appendChild(detail(r));
@@ -352,6 +371,41 @@
       '續聘＝聘僱日跟入境日不同但沒有承接日。IEI 沒有「續聘轉換日」這一欄，續聘只能這樣推。'));
   }
 
+  /* 第一次：預設篩成「你有紀錄的那個國籍」（翻譯按國籍分，別人的工人你看不到紀錄）。
+     ⛔ 名單還在補的時候不要定案——空名單會害它停在「全部」。 */
+  function pickNat(j) {
+    if (NAT !== null || !(j.rows || []).length) return;
+    var c = {};
+    j.rows.forEach(function (r) { if (r.cell.indexOf('ok') !== -1) c[r.nat] = (c[r.nat] || 0) + 1; });
+    var best = '', n = 0;
+    for (var k in c) if (c[k] > n) { n = c[k]; best = k; }
+    NAT = n >= 3 ? best : '';
+    MINE = NAT;
+  }
+
+  /* 名單不夠就一小批一小批補。
+     ⛔ 2026-10-23 他在手機上等了五分鐘還在轉——第一次要跟 IEI 問幾百位，
+        以前全塞在同一個請求裡。現在打開先畫存好的，剩下的分趟補，每一趟都重畫，
+        他看得到數字在動，而且中途就有東西可以看。 */
+  function fill() {
+    if (!J || !J.ppl || !J.ppl.left || FILL.stop) return;
+    FILL.on = true;
+    draw();
+    api({ api: 'evalfill' }).then(function (j) {
+      J = j;
+      FILL.done += (j.ppl && j.ppl.got) || 0;
+      pickNat(j);
+      /* 一趟下來一個都沒問到就停：再問下去只是把同一個錯誤重複幾十次 */
+      if (!(j.ppl && j.ppl.got)) { FILL.on = false; FILL.stop = true; draw(); return; }
+      FILL.on = false;
+      draw();
+      fill();
+    }).catch(function (e) {
+      FILL.on = false; FILL.stop = true; FILL.err = String((e && e.message) || e);
+      draw();
+    });
+  }
+
   window.xhEvalStart = function () {
     el = window.el; api = window.api; LIFF_ID = window.LIFF_ID;
     root = host();
@@ -370,15 +424,9 @@
     draw();
     api({ api: 'eval' }).then(function (j) {
       J = j;
-      if (NAT === null) {           // 第一次：預設篩成「你有紀錄的那個國籍」（翻譯按國籍分，別人的工人你看不到紀錄）
-        var c = {};
-        (j.rows || []).forEach(function (r) { if (r.mine && r.cell.indexOf('ok') !== -1) c[r.nat] = (c[r.nat] || 0) + 1; });
-        var best = '', n = 0;
-        for (var k in c) if (c[k] > n) { n = c[k]; best = k; }
-        NAT = n >= 3 ? best : '';
-        MINE = NAT;
-      }
+      pickNat(j);
       draw();
+      fill();
     })
       .catch(function (e) { J = { err: '讀不到：' + (e && e.message || e), rows: [] }; draw(); });
   };

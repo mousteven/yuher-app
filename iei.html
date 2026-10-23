@@ -1897,7 +1897,7 @@ if (!DRAFT && !TRIP && !qp('v')) try {
   if (pc && pc.cats) { if (pc.day !== pday) { pc.day = pday; pc.trips = []; } prepBlank(pc); FAST = true; }
 } catch (e) {}
 /* ---------- 同事加入（他 10/22 選 E）：佑彬打「邀請」拿的連結 → 這一頁。帳密只送到小禾後端（試登入成功才存），頁面不留 ---------- */
-var JOIN = qp('v') === 'join', MGR = qp('v') === 'mgr', MGR_V = '20261023c', FIND = qp('v') === 'find', EVAL = qp('v') === 'eval';
+var JOIN = qp('v') === 'join', MGR = qp('v') === 'mgr', MGR_V = '20261023d', FIND = qp('v') === 'find', EVAL = qp('v') === 'eval';
 if (FIND) { $('bar').hidden = true; document.querySelector('main').hidden = true; document.querySelector('header').hidden = true; document.querySelector('footer').hidden = true; }
 function findOpen() {   // 查詢頁（他 10/22：像羽禾 App 的放大鏡搜尋）：web/find.js
   var s = document.createElement('script'); s.src = 'find.js?b=' + MGR_V;
