@@ -85,12 +85,15 @@
     '#ev .card.ev{position:relative;--nw:104px;--gp:3px;--cw:calc((100% - 32px - var(--nw) - 12*var(--gp)) / 12)}',
     '#ev .card.ev>.nowcol{position:absolute;top:0;bottom:0;z-index:0;pointer-events:none;background:var(--tint);opacity:.5;border-radius:7px;width:var(--cw);left:calc(16px + var(--nw) + var(--gp) + (var(--n) - 1) * (var(--cw) + var(--gp)))}',
     '#ev .card.ev>.r,#ev .card.ev>.dt,#ev .card.ev>.hint{position:relative;z-index:1}',
-    '#ev .mo{margin-left:4px;border:0;background:none;padding:0;color:var(--blue);font:700 12px inherit;text-decoration:underline}'
+    '#ev .mo{margin-left:4px;border:0;background:none;padding:0;color:var(--blue);font:700 12px inherit;text-decoration:underline}',
+    /* 名單正在跟 IEI 重建（一天一次，約半分鐘）：講清楚，下面先給上次的 */
+    '#ev .prog{background:#fff;border-radius:16px;padding:12px 16px;font-size:13px;line-height:1.7;color:var(--mute)}',
+    '#ev .prog b{display:block;color:var(--ink);font-size:14px}#ev .prog.bad{background:#FFF4F4;color:#7A1016}#ev .prog.bad b{color:#9C0010}'
   ].join('');
 
   var CH = 60;                                  // 一次畫幾列（565 人全畫手機會卡）
   var J = null, NAT = null, SORT = 'gap', SHOW = CH, OPEN = null;
-  var FILL = { on: false, done: 0, stop: false, err: '' };   // 名單還在跟 IEI 補的進度
+  var FILL = { on: false, done: false, err: '' };   // 今天還沒建過名單 → 背景跟 IEI 重建一次（只叫一次）
   var root, body, el, api, LIFF_ID, MINE = '';
 
   function host() {
@@ -249,26 +252,17 @@
     sv.appendChild(mkEl('i', '行程表＋服務紀錄 ' + ((J.src && J.src.svc) || 0)));
     sv.appendChild(mkEl('i', '小禾送出 ' + ((J.src && J.src.xh) || 0)));
     var pp = J.ppl || {};
-    sv.appendChild(mkEl('i', '名單：IEI 移工資料　台中 ' + (pp.t || 0) + '・南投 ' + (pp.n || 0) + ' 位在職'));
+    sv.appendChild(mkEl('i', '名單：IEI　台中 ' + (pp.t || 0) + '・南投 ' + (pp.n || 0) + ' 位在管' + (pp.at ? '・建於 ' + when(pp.at) : ''),
+      pp.at ? {} : { 'class': 'bad' }));
     (pp.err || []).forEach(function (e) { sv.appendChild(mkEl('i', e, { 'class': 'bad' })); });
     body.appendChild(sv);
 
-    /* ⛔ 名單還在補的時候，一定要先講，而且要看得到進度（他 10/23 盯著空白轉了五分鐘） */
-    var pp0 = J.ppl || {}, tot = (pp0.t || 0) + (pp0.n || 0);
-    if (FILL.err || FILL.stop || pp0.left) {
-      var pg = mkEl('div', null, { 'class': 'prog' + (FILL.err || FILL.stop ? ' bad' : '') });
-      var doneN = tot - (pp0.left || 0);
-      pg.appendChild(mkEl('b', FILL.err ? '名單補到一半停住了'
-        : FILL.stop ? '名單還沒補完，先停下來'
-        : '正在跟 IEI 建名單　' + doneN + '／' + tot + ' 位'));
-      var bar = mkEl('div', null, { 'class': 'bar' });
-      var i2 = mkEl('i');
-      i2.style.width = (tot ? Math.round(doneN / tot * 100) : 0) + '%';
-      bar.appendChild(i2);
-      pg.appendChild(bar);
-      pg.appendChild(mkEl('span', FILL.err ? FILL.err + '（關掉重開會從停住的地方繼續）'
-        : FILL.stop ? '這一趟一位都問不到，先停住不再重試。下面是已經建好的部分；關掉重開會從這裡繼續。'
-        : 'IEI 要一位一位問，第一次比較久。下面已經建好的可以先看，建好的會存起來，下次打開就不用再問了。'));
+    /* ⛔ 名單在重建的時候一定要先講（他 10/23 盯著空白轉了五分鐘）。一天只重建一次，下面先給上次的 */
+    if (FILL.on || FILL.err) {
+      var pg = mkEl('div', null, { 'class': 'prog' + (FILL.err ? ' bad' : '') });
+      pg.appendChild(mkEl('b', FILL.err ? '名單重建失敗' : '正在跟 IEI 重建今天的名單…'));
+      pg.appendChild(document.createTextNode(FILL.err ? FILL.err + '（' + (pp.at ? '下面是上次建好的；' : '') + '關掉重開會再試一次）'
+        : pp.at ? '約半分鐘。下面先顯示上次（' + when(pp.at) + '）建好的，建好會自動換新。' : '第一次要建，約半分鐘，建好會自動出現。'));
       body.appendChild(pg);
     }
 
@@ -350,7 +344,7 @@
       card.appendChild(hl);
     }
     if (!list.length) card.appendChild(mkEl('div',
-      (J.ppl && J.ppl.left) ? '名單還在建，等一下就會出現。' : '這個國籍今年沒有要列入的人。', { 'class': 'hint' }));
+      FILL.on ? '名單正在建，等一下就會出現。' : '這個國籍今年沒有要列入的人。', { 'class': 'hint' }));
     list.slice(0, SHOW).forEach(function (r) {
       card.appendChild(rowEl(r));
       if (OPEN === r) card.appendChild(detail(r));
@@ -383,27 +377,22 @@
     MINE = NAT;
   }
 
-  /* 名單不夠就一小批一小批補。
-     ⛔ 2026-10-23 他在手機上等了五分鐘還在轉——第一次要跟 IEI 問幾百位，
-        以前全塞在同一個請求裡。現在打開先畫存好的，剩下的分趟補，每一趟都重畫，
-        他看得到數字在動，而且中途就有東西可以看。 */
+  function when(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? '' : (d.getMonth() + 1) + '/' + d.getDate() + ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+  /* 今天還沒建過名單 → 背景跟 IEI 整張重建一次（10/23 改法：打開只讀存好的表，不等 IEI；
+     重建是一天一次、一次叫完，不再分趟）。失敗只講一次，不重試。 */
   function fill() {
-    if (!J || !J.ppl || !J.ppl.left || FILL.stop) return;
-    FILL.on = true;
+    if (!J || !J.ppl || !J.ppl.stale || FILL.done) return;
+    FILL.on = FILL.done = true;
     draw();
     api({ api: 'evalfill' }).then(function (j) {
-      J = j;
-      FILL.done += (j.ppl && j.ppl.got) || 0;
-      pickNat(j);
-      /* 一趟下來一個都沒問到就停：再問下去只是把同一個錯誤重複幾十次 */
-      if (!(j.ppl && j.ppl.got)) { FILL.on = false; FILL.stop = true; draw(); return; }
       FILL.on = false;
+      if (!(j.ppl && j.ppl.built)) FILL.err = ((j.ppl && j.ppl.err) || []).join('；') || '一位都沒建起來';
+      else { J = j; pickNat(j); }
       draw();
-      fill();
-    }).catch(function (e) {
-      FILL.on = false; FILL.stop = true; FILL.err = String((e && e.message) || e);
-      draw();
-    });
+    }).catch(function (e) { FILL.on = false; FILL.err = String((e && e.message) || e); draw(); });
   }
 
   window.xhEvalStart = function () {
