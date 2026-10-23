@@ -56,7 +56,7 @@
     '#ev .opt b{display:block;font-size:15px;font-weight:700}',
     '#ev .opt span{display:block;font-size:12px;color:var(--mute)}',
     '#ev .opt .cv{margin-left:auto;color:var(--blue);font-size:18px;font-weight:800}',
-    '#ev .hint{padding:28px 8px;text-align:center;color:var(--mute);font-size:15px;line-height:1.9}',
+    '#ev .hint{padding:28px 8px;text-align:center;color:var(--mute);font-size:15px;line-height:1.9;white-space:pre-line}',
     '#ev .er{background:#FFF4F4;color:#9C0010;border-radius:14px;padding:14px 16px;font-size:14px;font-weight:600;line-height:1.7}',
     /* 來源列（他 2026-10-23「南投iei 的 沒有」）：哪一邊讀到幾筆、哪一邊讀不到，攤在最上面 */
     '#ev .src{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;font-weight:700;color:var(--mute);background:#fff;border-radius:12px;padding:9px 12px}',
@@ -89,7 +89,7 @@
   ].join('');
 
   var CH = 60;                                  // 一次畫幾列（565 人全畫手機會卡）
-  var J = null, NAT = null, SORT = 'gap', SHOW = CH, OPEN = null, MYCO = true;
+  var J = null, NAT = null, SORT = 'gap', SHOW = CH, OPEN = null;
   var root, body, el, api, LIFF_ID, MINE = '';
 
   function host() {
@@ -142,7 +142,7 @@
   }
 
   function pick() {
-    return (J.rows || []).filter(function (r) { return (!MYCO || r.mine) && (!NAT || r.nat === NAT); });
+    return (J.rows || []).filter(function (r) { return !NAT || r.nat === NAT; });
   }
   function rows() {
     var list = pick();
@@ -225,7 +225,8 @@
 
   function draw() {
     body.innerHTML = '';
-    if (!J) { body.appendChild(mkEl('div', '讀評鑑名單…（第一次要跟 IEI 要整年的月曆，約 10 秒）', { 'class': 'hint' })); return; }
+    if (!J) { body.appendChild(mkEl('div', '讀評鑑名單…\n第一次要跟 IEI 一位一位問基本資料，可能要一兩分鐘。' +
+      '問過的會存起來，之後打開就快了。', { 'class': 'hint' })); return; }
     if (J.err) { body.appendChild(mkEl('div', J.err, { 'class': 'er' })); return; }
 
     var all = pick();
@@ -247,9 +248,10 @@
     });
     sv.appendChild(mkEl('i', '行程表＋服務紀錄 ' + ((J.src && J.src.svc) || 0)));
     sv.appendChild(mkEl('i', '小禾送出 ' + ((J.src && J.src.xh) || 0)));
-    if (J.nt && J.nt.err) sv.appendChild(mkEl('i', '南投名單：' + J.nt.err, { 'class': 'bad' }));
-    else if (J.nt) sv.appendChild(mkEl('i', '南投 IEI 名單 ' + J.nt.got + '／' + J.nt.ask +
-      (J.nt.cut ? '（還有 ' + J.nt.cut + ' 位沒問）' : ''), J.nt.cut || (J.nt.ask && !J.nt.got) ? { 'class': 'bad' } : {}));
+    var pp = J.ppl || {};
+    sv.appendChild(mkEl('i', '名單：IEI 移工資料　台中 ' + (pp.t || 0) + '・南投 ' + (pp.n || 0) + ' 位在職'));
+    if (pp.left) sv.appendChild(mkEl('i', '還有 ' + pp.left + ' 位沒問到（再開一次就補上）', { 'class': 'bad' }));
+    (pp.err || []).forEach(function (e) { sv.appendChild(mkEl('i', e, { 'class': 'bad' })); });
     body.appendChild(sv);
 
     var sum = mkEl('div', null, { 'class': 'sum' });
@@ -275,23 +277,17 @@
     if (MINE && NAT === MINE) body.appendChild(shortNote('預設只看 ' + MINE + '：翻譯按國籍分，別人的工人你的帳號看不到紀錄，那邊會整片灰。',
       '按上面的籤可以切到別的國籍或全部。'));
 
-    var scope = mkEl('div', null, { 'class': 'seg' });
-    var myN = (J.rows || []).filter(function (r) { return r.mine; }).length;
-    [[true, '我的工廠 ' + myN], [false, '全公司 ' + (J.rows || []).length]].forEach(function (x) {
-      var b = mkEl('button', x[1], { 'class': MYCO === x[0] ? 'on' : '', type: 'button' });
-      b.onclick = function () { MYCO = x[0]; SHOW = CH; OPEN = null; draw(); };
-      scope.appendChild(b);
-    });
-    body.appendChild(scope);
-    if (MYCO) body.appendChild(shortNote('「我的工廠」＝你真的跑過的 ' + (J.myCo || 0) + ' 家；名冊是全公司 309 家。這是下限，覺得少了按「全公司」。',
-      'IEI／平台都沒有「負責翻譯」這一欄，所以是用 IEI 月曆＋行程表＋小禾送出＋服務紀錄四個來源回推。' +
-      'IEI 只有兩個月、行程表只有一個月，跑得少的工廠還沒出現。'));
+    /* ⛔ 2026-10-23 他說「停止使用9/21 的名冊」：名單整個改成 IEI，而 IEI 要一位一位問，
+       所以範圍就是「他的工廠」。「全公司」那個切換拿掉了——兩邊會是同一批人，留著只會讓他以為漏人。 */
+    body.appendChild(shortNote('這 ' + (J.myCo || 0) + ' 家是你真的跑過的工廠（台中＋南投）。這是下限，跑得少的工廠還沒出現。',
+      'IEI 沒有「負責翻譯」這一欄，所以是用 IEI 月曆＋行程表＋小禾送出＋服務紀錄四個來源回推你跑過哪幾家。' +
+      'IEI 月曆只有兩個月、行程表只有一個月，所以漏掉的一定是跑得少的那幾家。'));
 
     var nats = [];
     all.forEach(function (r) { if (r.nat && nats.indexOf(r.nat) === -1) nats.push(r.nat); });
     nats.sort();
     var ch = mkEl('div', null, { 'class': 'chips' });
-    var inScope = (J.rows || []).filter(function (r) { return !MYCO || r.mine; });
+    var inScope = (J.rows || []);
     nats = [];
     inScope.forEach(function (r) { if (r.nat && nats.indexOf(r.nat) === -1) nats.push(r.nat); });
     nats.sort();
@@ -352,7 +348,8 @@
     }
 
     body.appendChild(shortNote('規則：起算月當月要有一張到場紀錄，之後相鄰兩筆不超過 2 個月。續聘另外要前 2～4 個月的文件。電聯不算。',
-      '台中的人從平台名冊來（有入境日、許可生效日）；南投的人名冊上沒有，從 IEI「移工資料」撈（入境日、聘僱日、承接）。'));
+      '名單台中南投都從 IEI「移工資料」撈：入境＝聘僱日和入境日同一天、承接＝「承接」那欄有日期、' +
+      '續聘＝聘僱日跟入境日不同但沒有承接日。IEI 沒有「續聘轉換日」這一欄，續聘只能這樣推。'));
   }
 
   window.xhEvalStart = function () {
