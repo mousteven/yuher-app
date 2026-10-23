@@ -61,8 +61,8 @@
   ].join('');
 
   var CH = 60;                                  // 一次畫幾列（565 人全畫手機會卡）
-  var J = null, NAT = '', SORT = 'gap', SHOW = CH, OPEN = null;
-  var root, body, el, api, LIFF_ID;
+  var J = null, NAT = null, SORT = 'gap', SHOW = CH, OPEN = null;
+  var root, body, el, api, LIFF_ID, MINE = '';
 
   function host() {
     var h = document.createElement('div');
@@ -95,6 +95,11 @@
 
   function rows() {
     var list = (J.rows || []).filter(function (r) { return !NAT || r.nat === NAT; });
+    if (SORT === 'gap') list = list.slice().sort(function (a, b) {
+      var ga = a.judged ? (a.cell.indexOf('miss') !== -1 ? 0 : (a.gaps || []).length ? 1 : 2) : 3;
+      var gb = b.judged ? (b.cell.indexOf('miss') !== -1 ? 0 : (b.gaps || []).length ? 1 : 2) : 3;
+      return ga - gb || (a.client || '').localeCompare(b.client || '');
+    });
     if (SORT === 'client') list = list.slice().sort(function (a, b) {
       return (a.client || '').localeCompare(b.client || '') || (a.name || '').localeCompare(b.name || '');
     });
@@ -120,6 +125,12 @@
     d.appendChild(mkEl('h3', r.name || r.orig));
     d.appendChild(mkEl('div', [r.client, r.nat, r.kind + ' ' + r.start + ' 月', r.status].filter(String).join('・'), { 'class': 'sub' }));
 
+    if (!r.judged) {
+      d.appendChild(mkEl('div', '這個人對不到 IEI 的工人代碼（名冊上的客戶名或中文名跟 IEI 不一樣），' +
+        '所以我查不到他的訪視紀錄——這不代表他真的沒被訪視，我不會把他算成缺件。' +
+        '要補的話請到訪談表自己搜尋這個人。', { 'class': 'note' }));
+      return d;
+    }
     var gaps = (r.gaps || []).slice();
     if (!gaps.length && !(r.re && r.re.state !== 'ok')) {
       d.appendChild(mkEl('div', '這一年到目前為止沒有缺口。', { 'class': 'note' }));
@@ -159,9 +170,10 @@
     if (!J) { body.appendChild(mkEl('div', '讀評鑑名單…（第一次要跟 IEI 要整年的月曆，約 10 秒）', { 'class': 'hint' })); return; }
     if (J.err) { body.appendChild(mkEl('div', J.err, { 'class': 'er' })); return; }
 
-    var all = J.rows || [];
-    var nMiss = 0, nNow = 0;
+    var all = (J.rows || []).filter(function (r) { return !NAT || r.nat === NAT; });
+    var nMiss = 0, nNow = 0, nUn = 0;
     all.forEach(function (r) {
+      if (!r.judged) { nUn++; return; }
       if (r.cell.indexOf('miss') !== -1 || (r.re && r.re.state === 'miss')) nMiss++;
       else if ((r.gaps || []).indexOf(J.nowM) !== -1) nNow++;
     });
@@ -178,10 +190,21 @@
     /* ⛔ 查不到的月份一定要講出來，不可以讓他以為那幾格是他的缺口 */
     if ((J.blind || []).length) {
       var w = mkEl('div', null, { 'class': 'warn' });
-      w.appendChild(mkEl('b', J.blind.join('、') + ' 月查不到任何紀錄'));
-      w.appendChild(mkEl('div', '這幾個月在 IEI 月曆和平台服務紀錄裡都是零筆——不是你沒去，是紀錄不在這兩個系統裡。' +
-        '所以那幾格畫成灰斜線，不算缺件、不會列進上面的數字。'));
+      w.appendChild(mkEl('b', J.blind.join('、') + ' 月沒有任何紀錄'));
+      w.appendChild(mkEl('div', 'IEI 是 ' + (J.first || 9) + ' 月才開始用的，那之前的紀錄不在系統裡。' +
+        '所以那幾格畫成灰斜線，不算缺件、不會列進上面的數字；每兩個月那條鏈也從 ' + (J.first || 9) + ' 月開始算。'));
       body.appendChild(w);
+    }
+    if (nUn) {
+      var u = mkEl('div', null, { 'class': 'note' });
+      u.appendChild(mkEl('b', '其中 ' + nUn + ' 人判斷不了'));
+      u.appendChild(document.createTextNode('：名冊上有這個人，但對不到 IEI 的工人代碼，' +
+        '所以「查不到紀錄」不代表真的沒訪視。他們整列是灰斜線，也不算進上面的數字。'));
+      body.appendChild(u);
+    }
+    if (MINE && NAT === MINE) {
+      body.appendChild(mkEl('div', '預設只看 ' + MINE + '：你在 IEI 的紀錄幾乎都是這個國籍（翻譯是按國籍分的）。' +
+        '別的國籍是別的翻譯負責，你的 IEI 帳號看不到他們填的紀錄，所以那邊會整片灰。按上面的籤可以切。', { 'class': 'note' }));
     }
 
     var nats = [];
@@ -206,7 +229,7 @@
     body.appendChild(seg);
 
     var lg = mkEl('div', null, { 'class': 'lg' });
-    [['ok', '有紀錄'], ['due', '該去'], ['miss', '已逾期'], ['nodata', '查不到'], ['free', '不用去']].forEach(function (x) {
+    [['ok', '有紀錄'], ['due', '該去'], ['miss', '已逾期'], ['nodata', '查不到／判斷不了'], ['free', '不用去']].forEach(function (x) {
       var s = mkEl('span');
       var i = mkEl('i', TXT[x[0]] || '', {});
       i.className = 'c ' + x[0];
@@ -251,7 +274,18 @@
     wrap.appendChild(body);
     root.appendChild(wrap);
     draw();
-    api({ api: 'eval' }).then(function (j) { J = j; draw(); })
+    api({ api: 'eval' }).then(function (j) {
+      J = j;
+      if (NAT === null) {           // 第一次：預設篩成「你有紀錄的那個國籍」（翻譯按國籍分，別人的工人你看不到紀錄）
+        var c = {};
+        (j.rows || []).forEach(function (r) { if (r.cell.indexOf('ok') !== -1) c[r.nat] = (c[r.nat] || 0) + 1; });
+        var best = '', n = 0;
+        for (var k in c) if (c[k] > n) { n = c[k]; best = k; }
+        NAT = n >= 3 ? best : '';
+        MINE = NAT;
+      }
+      draw();
+    })
       .catch(function (e) { J = { err: '讀不到：' + (e && e.message || e), rows: [] }; draw(); });
   };
 })();
