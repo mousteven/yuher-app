@@ -668,12 +668,15 @@ function pickCust(c, keepPicks) {
   S.cu00 = c.cu00; S.cuName = c.name;
   if (!$('addr').value && c.addr) $('addr').value = c.addr;
   $('cands').innerHTML = ''; $('custNow').textContent = ''; $('q').value = c.name;   // 他 10/14：選好的名稱就放在搜尋欄裡
-  S.wkOpen = false; $('wkQ').value = '';
+  S.wkOpen = false; S.goneIn = false; $('wkQ').value = '';
   head(); load('讀' + (SITES > 1 ? siteName(c.cu00) + ' ' : ' ') + 'IEI 移工名單…');
   return api({ api: 'iei', cu00: c.cu00, workers: S.trip ? S.trip.workers : [] }).then(function (j) { workers(j.workers, keepPicks); load(''); }).catch(function (e) { load(''); say(e.message); });
 }
 function workers(rows, keepPicks) {
-  S.workers = rows; if (!keepPicks) { S.picks = {}; rows.forEach(function (w) { if (w.pick) S.picks[w.la00] = 1; }); }
+  var has = {}; rows.forEach(function (w) { has[w.la00] = 1; });
+  S.workers = rows.concat(S.workers.filter(function (w) { return w.gone && S.picks[w.la00] && !has[w.la00]; }));   // 勾了的非聘僱中，在職清單沒有他，不能被洗掉
+  S.goneIn = false;   // 換成 IEI 在職清單了：非聘僱中只留勾了的，按鈕要再出來
+  if (!keepPicks) { S.picks = {}; rows.forEach(function (w) { if (w.pick) S.picks[w.la00] = 1; }); }
   drawWk();
   allBtn(); natVt(); drawSigns(); check();
 }
@@ -690,23 +693,35 @@ function drawWk() {
   list.forEach(function (w) {
     var lab = el('label'), c = el('input', null, { type: 'checkbox' }), t = el('span', w.zh || w.en);
     c.checked = !!S.picks[w.la00];
-    t.appendChild(el('small', [w.zh ? w.en : '', w.nat, w.la21 ? '接管 ' + w.la21 : ''].filter(Boolean).join('・')));
+    t.appendChild(el('small', [w.gone ? '非聘僱中' : '', w.zh ? w.en : '', w.nat, w.la21 ? '接管 ' + w.la21 : ''].filter(Boolean).join('・')));
     c.onchange = function () { if (c.checked) S.picks[w.la00] = 1; else delete S.picks[w.la00]; allBtn(); natVt(); drawSigns(); check(); };
     lab.appendChild(c); lab.appendChild(t); box.appendChild(lab);
   });
   if (!q && list.length < rows.length) { var m = el('button', '看全部 ' + rows.length + ' 位 ›', { type: 'button', class: 'more' }); m.onclick = function () { S.wkOpen = true; drawWk(); }; box.appendChild(m); }
+  if (S.cu00 && !S.goneIn) { var g = el('button', '＋ 加非聘僱中的移工（離職、逃逸）', { type: 'button', class: 'more' }); g.onclick = goneLoad; box.appendChild(g); }
+}
+/* IEI 10/28 的「選移工（非聘僱中）」：按了才去抓（一家可能幾十位舊人），接在在職的後面，用上面的搜尋格找名字 */
+function goneLoad() {
+  var cu = S.cu00; load('讀 IEI 非聘僱中的移工…');
+  api({ api: 'iei', cu00: cu, gone: 1 }).then(function (j) {
+    load(''); if (S.cu00 !== cu) return;
+    var has = {}; S.workers.forEach(function (w) { has[w.la00] = 1; });
+    S.goneIn = true; S.workers = S.workers.concat(j.workers.filter(function (w) { return !has[w.la00]; }));
+    drawWk(); allBtn(); if (!j.workers.length) say('IEI 這家沒有非聘僱中的移工'); else $('wkQ').focus();
+  }).catch(function (e) { load(''); say(e.message); });
 }
 $('wkQ').oninput = drawWk;
 /* 全選／全不選（他 10/14 要）：勾的人有變就跟著換字 */
 function allBtn() {
-  var b = $('wkAll'), n = S.workers.length; b.hidden = n < 2; b.textContent = picked().length === n ? '全不選' : '全選';
+  var b = $('wkAll'), n = S.workers.length, e = live(); b.hidden = e.length < 2; b.textContent = e.every(function (w) { return S.picks[w.la00]; }) ? '全不選' : '全選';
   $('wkN').textContent = n ? '移工（勾了 ' + picked().length + '／' + n + ' 位）' : '移工（行程上的人已勾好）';
 }
 $('wkAll').onclick = function () {
-  var on = picked().length !== S.workers.length; S.picks = {};
-  if (on) S.workers.forEach(function (w) { S.picks[w.la00] = 1; });
+  var on = !live().every(function (w) { return S.picks[w.la00]; });
+  live().forEach(function (w) { if (on) S.picks[w.la00] = 1; else delete S.picks[w.la00]; });   // 勾了的非聘僱中不動
   drawWk(); allBtn(); natVt(); drawSigns(); check();
 };
+function live() { return S.workers.filter(function (w) { return !w.gone; }); }   // 全選只選在職的
 function picked() { return S.workers.filter(function (w) { return S.picks[w.la00]; }); }
 /* 國籍＝勾的人的國籍（IEI 一張只能一個）。第幾次＝IEI 自己的算法：接管日到服務日每 60 天一次，1～6，取最小。 */
 function natVt() {
@@ -763,7 +778,7 @@ $('q').oninput = function () {
 };
 $('q').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); find(); $('q').blur(); } };
 function unpick() {
-  S.cu00 = ''; S.cuName = ''; S.workers = []; S.picks = {}; S.wkOpen = false; $('wkQ').value = '';
+  S.cu00 = ''; S.cuName = ''; S.workers = []; S.picks = {}; S.wkOpen = false; S.goneIn = false; $('wkQ').value = '';
   drawWk(); allBtn(); natVt(); head(); drawSigns();
 }
 /* ---------- 服務：App 的大項／細項 → IEI 服務項目（自動對好，可改） ---------- */
@@ -1030,7 +1045,7 @@ function draft() {
     pk: S.pk, sl: S.sl, px: $('p').value.trim(), ax: $('a').value.trim(), ag: S.ag || '',   // ag：代理哪位翻譯（IEI 全名）   // 片語＋補充欄位＋自己打的；cuP／cuA 是組好的中文（送進 IEI 的）
     la00: l === '2' ? [] : p.map(function (w) { return w.la00; }), names: l === '2' ? [] : p.map(function (w) { return w.zh || w.en; }),
     wk: l === '2' ? [] : p.map(function (w) { return { la00: w.la00, en: w.en, zh: w.zh }; }),
-    wl: S.workers.map(function (w) { return { la00: w.la00, en: w.en, zh: w.zh, nat: w.nat, la21: w.la21 }; }),   // 這家整份移工名單：打開草稿不用等 IEI
+    wl: S.workers.map(function (w) { return { la00: w.la00, en: w.en, zh: w.zh, nat: w.nat, la21: w.la21, gone: w.gone }; }),   // 這家整份移工名單：打開草稿不用等 IEI
     warn: wnOn() ? { la: wnWk().map(function (w) { return w.la00; }), fq: wnWk().reduce(function (o, w) { o[w.la00] = wnFq(w.la00); return o; }, {}),
                      it: WN.it.slice().sort(function (a, b) { return a - b; }), other: $('wnO').value.trim() } : null };
 }
