@@ -923,9 +923,10 @@ function phCompose(ph, pk, sl, L, fp, fa, fam) {   // fam：雇主是個人 → 
 /* ↑↑ 組句 ↑↑ */
 var PH_L = { '菲律賓': 1, '越南': 2, '印尼': 3, '泰國': 4 };
 /* 只有他自己打的那段（框框）要機器翻；片語的譯文已經在 META.ph */
-function trKey() { return S.nat + '|' + $('p').value.trim() + '|' + $('a').value.trim(); }
+function recN() { return $('labor').dataset.v === '2' ? 0 : picked().length; }   // 後端 xhRecN_ 同一個算法（人數決定單複數，也是快取鍵）
+function trKey() { return S.nat + '|' + recN() + '|' + $('p').value.trim() + '|' + $('a').value.trim(); }
 function translate(k) {   // 譯文進 TRC；預覽和移工的簽名板共用這一份
-  return api({ api: 'tr', nat: S.nat, texts: [$('p').value.trim(), $('a').value.trim()] }).then(function (j) { TRC[k] = j.out; }).catch(function () { TRC[k] = ['', '']; });
+  return api({ api: 'tr', nat: S.nat, n: recN(), texts: [$('p').value.trim(), $('a').value.trim()] }).then(function (j) { TRC[k] = j.out; }).catch(function () { TRC[k] = ['', '']; });
 }
 /* L 語言的 [處理經過, 處理結果]＝片語組句＋自己打的（翻好的；翻譯失敗用中文，跟後端一樣）。自己打的還沒翻回來 → null */
 function texts(L) {
