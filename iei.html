@@ -528,6 +528,7 @@ footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
   <div class="where" id="where" hidden><span class="site nt">南投</span><span>這家客戶在南投 IEI：送出、警告單、附件都會送到南投。</span></div>
   <button id="go" class="go" disabled><span id="goT">確認後送出</span><span class="n" id="goB" hidden><svg class="ic s"><use href="#i-sign"/></svg><span id="goN"></span></span><svg class="ic"><use href="#i-arrow"/></svg></button>
   <button type="button" class="link" id="only" hidden>只傳留底到 LINE，先不送簽核</button>
+  <button type="button" class="link" id="wd" hidden>撤回送審</button>
   <button type="button" class="link" id="keep" hidden>儲存草稿，先不送出</button></div></footer>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -622,7 +623,7 @@ function natE() {
 function head() {
   drawSite();
   $('ttl').textContent = S.cuName || S.client || '選一個客戶';
-  $('sub').textContent = [$('date').value, S.trip && S.trip.slot, X && X.svid ? 'IEI ' + X.svid + (X.locked ? '・已送簽核' : X.rej ? '・被主管退回' : '・已送出') : '',
+  $('sub').textContent = [$('date').value, S.trip && S.trip.slot, X && X.svid ? 'IEI ' + X.svid + (X.locked ? '・已送簽核' : X.rej ? (/^自己撤回/.test(X.rej) ? '・已撤回' : '・被主管退回') : '・已送出') : '',
     META && META.dry ? '試跑中：按送出也不會進 IEI' : ''].filter(Boolean).join('・') || '客戶訪視服務紀錄表';
 }
 $('close').onclick = function () { try { liff.closeWindow(); } catch (e) { history.back(); } };
@@ -1257,7 +1258,7 @@ $('fIn').onchange = function () {
 function apply(s, live) {   // live：輪詢來的，改變的格子閃一下
   if (!s) return;
   X = s; SENT = !!s.svid; REJ = s.rej || '';
-  $('rejNote').hidden = !REJ; $('rejNote').textContent = REJ ? '主管退回這張：' + REJ.replace(/^主管退回：/, '') + '。改好按最下面「改好重送到 IEI」。' : '';
+  $('rejNote').hidden = !REJ; $('rejNote').textContent = /^自己撤回/.test(REJ) ? '你撤回了這張。改好按最下面「改好重送到 IEI」。' : REJ ? '主管退回這張：' + REJ.replace(/^主管退回：/, '') + '。改好按最下面「改好重送到 IEI」。' : '';
   /* 這家以前被退回過的原因（他 10/22）。只在這張自己還沒被退回時出現，不跟上面那條搶。
      用 textContent 一段一段塞，不用 innerHTML —— 原因是主管在 IEI 打的字，不經過我們的手 */
   var rp = $('rejPast'), past = (s.rejPast || []);
@@ -1356,6 +1357,7 @@ document.addEventListener('touchmove', function (e) { if (!$('board').hidden && 
 function crop() {   // 裁掉四周空白＋留一點邊，最寬 600（整張全螢幕存進去，簽名會小到看不見）
   var w = cv.width, h = cv.height, d = cx.getImageData(0, 0, w, h).data, x0 = w, y0 = h, x1 = -1, y1 = -1;
   for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 12) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 - x0 < w * 0.2 && y1 - y0 < h * 0.25) return '';   // ⛔ 10/30 誤畫一橫「一」被當成他的簽名：太小的不收，請他重簽
   var pad = Math.round(Math.min(w, h) * 0.04); x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
   /* 寬最多 600、高最多 300；簽得又大又密的還是可能超過後端上限（5 萬字），就一直縮到放得下（10/14 工人簽大字被擋過） */
   var w0 = x1 - x0 + 1, h0 = y1 - y0 + 1, k = Math.min(1, 600 / w0, 300 / h0), o = document.createElement('canvas'), u;
@@ -1371,7 +1373,9 @@ $('b2').onclick = function () { cx.clearRect(0, 0, cv.width, cv.height); inked =
 $('b3').onclick = function () {
   var L = BQ[BI].L;
   if (!inked) { alert(L ? L.needSign : RELAY ? '還沒簽。人不在就按「不在」。' : '還沒簽'); return; }
-  save(BQ[BI], crop()); next();   // 上傳在背景跑，不用等，直接換下一位
+  var u = crop();
+  if (!u) { alert(L ? L.needSign : '簽名太小了，請簽大一點'); return; }
+  save(BQ[BI], u); next();   // 上傳在背景跑，不用等，直接換下一位
 };
 $('bx').onclick = closeBoard;
 function save(p, png) {
@@ -1523,12 +1527,14 @@ function dLocal() {   // 整理草稿頁最上面：在這支手機裡、還沒�
 function goSet(t, badge, aria) { $('goT').textContent = t; $('goN').textContent = badge || ''; $('goB').hidden = !badge; $('go').setAttribute('aria-label', aria || t); }
 var BUSY = '';   // 送出／送簽核進行中（他 10/22 截圖：「送簽核中…」按鈕還能按——每 4 秒的簽名輪詢重畫按鈕時又打開了）
 function check() {
+  $('wd').hidden = true;
   if (BUSY) { $('only').hidden = true; $('keep').hidden = true; $('go').disabled = true; goSet(BUSY); return; }
   if (PEND) { $('only').hidden = true; $('keep').hidden = true; $('go').disabled = true; goSet('跟伺服器確認中…'); return; }   // 10/22 手機先畫：確認這站有沒有別張草稿、送出了沒，才能送
   $('only').hidden = !SENT; $('keep').hidden = SENT || !S.cu00;   // 他 10/15：草稿先存、微調完再送
   if (SENT && !REJ) {   // 被退回的照沒送出的檢查（內容要改好才送）
     var n = nSigned() + '／' + slots().length + ' 已簽';
     $('go').disabled = locked();
+    $('wd').hidden = !locked();   // 他 10/30：送審按錯了可以撤回（主管還沒批才撤得回）
     if (locked()) goSet('已送簽核 ✓'); else goSet('送簽核到 IEI', n, '送簽核到 IEI（' + n + '）');
     $('only').textContent = locked() ? '再傳一次留底到 LINE' : '只傳留底到 LINE，先不送簽核';
     return;
@@ -1574,6 +1580,18 @@ $('go').onclick = function () {
   });
 };
 $('shNo').onclick = function () { $('sheet').hidden = true; };
+$('wd').onclick = function () {   // 按兩次才撤（不用 confirm()）；撤回後走「被退回」那條：改內容、重簽、按「改好重送到 IEI」
+  var b = this;
+  if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = '確定撤回？再按一次'; return; }
+  delete b.dataset.sure; b.textContent = '撤回送審';
+  BUSY = '撤回中…'; check(); sayK('wait', BUSY, '正在請 IEI 撤回，約 10 秒，畫面先不要關。');
+  api({ api: 'withdraw', d: DRAFT }).then(function (j) {
+    BUSY = '';
+    if (j.dry) { say('試跑：沒有撤回。下面是會送給 IEI 的內容。'); $('dryOut').textContent = j.form; $('dryOut').hidden = false; check(); return; }
+    apply(j.state); check();
+    sayK('ok', '已撤回・IEI 這張回到處理中', '可以改內容、點自己的格子重簽。改好按最下面「改好重送到 IEI」。');
+  }).catch(function (e) { BUSY = ''; say(e.message); check(); });
+};
 $('shGo').onclick = submit;
 $('only').onclick = function () { finish(); };
 $('keep').onclick = function () {   // 存進小禾（不進 IEI）；行程卡會變「草稿・還沒送出」，下次從卡片點進來就是這一張
