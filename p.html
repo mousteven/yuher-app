@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#F4F7FB">
 <style>
 /* 招募夥伴送件的外殼：把 Apps Script 頁面整個嵌進來，手機上沒有 Google 的橫幅、可以加到主畫面。
-   門是頁面裡的羽禾登入碼（只認佑彬），這一層只是包裝。 */
+   門在頁面裡（羽禾登入碼，或 Mickey 給的一次性連結），這一層只是包裝。 */
 html,body{margin:0;height:100%;background:#F4F7FB}
 iframe{border:0;width:100%;height:100%;display:block}
 </style>
@@ -19,8 +19,12 @@ iframe{border:0;width:100%;height:100%;display:block}
 <iframe title="Partner resumes" src="https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec?page=partners"></iframe>
 <script>
 // Mickey 的 Backend 按鈕給的一次性登入連結（?m=）轉交給裡面的頁面，並從網址列拿掉
-var m = new URLSearchParams(location.search).get('m');
-if (m) { document.querySelector('iframe').src += '&m=' + encodeURIComponent(m); history.replaceState(null, '', location.pathname); }
+// id＝Mickey 通知裡點進來，直接打開那個人
+var q = new URLSearchParams(location.search), m = q.get('m'), id = q.get('id');
+if (m || id) {
+  document.querySelector('iframe').src += (m ? '&m=' + encodeURIComponent(m) : '') + (id ? '&id=' + encodeURIComponent(id) : '');
+  history.replaceState(null, '', location.pathname);
+}
 </script>
 </body>
 </html>
