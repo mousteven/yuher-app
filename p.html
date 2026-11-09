@@ -4,27 +4,29 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Partner resumes</title>
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Partners">
 <meta name="theme-color" content="#F4F7FB">
 <style>
-/* 招募夥伴送件的外殼：把 Apps Script 頁面整個嵌進來，手機上沒有 Google 的橫幅、可以加到主畫面。
-   門在頁面裡（羽禾登入碼，或 Mickey 給的一次性連結），這一層只是包裝。 */
+/* 招募夥伴後台的外殼（11/09：拿掉羽禾圖示；新網址要開新的公開網站，等他同意）。
+   登入記在這一層：裡面那層是 Google 的網域，iPhone（尤其 LINE 裡）不讓它長期記東西，所以每天都要重登。 */
 html,body{margin:0;height:100%;background:#F4F7FB}
 iframe{border:0;width:100%;height:100%;display:block}
 </style>
 </head>
 <body>
-<iframe title="Partner resumes" src="https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec?page=partners"></iframe>
+<iframe title="Partner resumes"></iframe>
 <script>
-// Mickey 的 Backend 按鈕給的一次性登入連結（?m=）轉交給裡面的頁面，並從網址列拿掉
-// id＝Mickey 通知裡點進來，直接打開那個人
-var q = new URLSearchParams(location.search), m = q.get('m'), id = q.get('id');
-if (m || id) {
-  document.querySelector('iframe').src += (m ? '&m=' + encodeURIComponent(m) : '') + (id ? '&id=' + encodeURIComponent(id) : '');
-  history.replaceState(null, '', location.pathname);
-}
+// m＝Mickey 的一次性登入連結；id＝通知裡點進來直接打開那個人；tk＝這支手機記住的通行證
+var q = new URLSearchParams(location.search), m = q.get('m'), id = q.get('id'), tk = '';
+try { tk = localStorage.getItem('ptn.tk') || ''; } catch (e) {}
+document.querySelector('iframe').src = 'https://script.google.com/macros/s/AKfycbycLQO2yrDYoKEl0DwIC07-Ll8nuLCxrIUhawIrBH1aWbIyislfe9VsonWBW8zYbdudSA/exec?page=partners' +
+  (m ? '&m=' + encodeURIComponent(m) : '') + (id ? '&id=' + encodeURIComponent(id) : '') + (tk ? '&tk=' + encodeURIComponent(tk) : '');
+if (m || id) history.replaceState(null, '', location.pathname);
+addEventListener('message', function (e) {
+  if (!/\.googleusercontent\.com$/.test(e.origin) || !e.data || typeof e.data.ptnTk !== 'string') return;
+  try { e.data.ptnTk ? localStorage.setItem('ptn.tk', e.data.ptnTk) : localStorage.removeItem('ptn.tk'); } catch (x) {}
+});
 </script>
 </body>
 </html>
