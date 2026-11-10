@@ -244,7 +244,7 @@ footer>div{max-width:528px;margin:0 auto;display:grid}
 .pad .snm,.pad .sdt{position:absolute;top:calc(70% + 8px);font-size:14px;color:var(--mute);pointer-events:none;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pad .snm{left:24px}.pad .sdt{right:24px;font-variant-numeric:tabular-nums}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
-.bft{display:grid;grid-template-columns:1fr 1fr 2fr;gap:8px;padding:0 16px calc(12px + env(safe-area-inset-bottom))}
+.bft{display:grid;grid-template-columns:48px 1fr 1fr 2fr;gap:8px;padding:0 16px calc(12px + env(safe-area-inset-bottom))}
 /* 簽名板一律橫的（他 10/16：客戶反應格子太小太窄。實測直拿是 343×324 的直長格，大家只寫得下一個大字，放進 IEI 的橫格只占 38%）。
    手機直拿 → 整塊轉 90 度（.rot），請他把手機橫過來簽；本來就橫拿 → 不用轉。標題壓成一行，把高度留給簽名格 */
 #board.rot{inset:auto;top:0;left:100%;width:var(--bw);height:var(--bh);transform:rotate(90deg);transform-origin:0 0}
@@ -360,6 +360,7 @@ footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
 .jn .jok{display:flex;flex-direction:column;gap:12px}.jn .jok p{margin:0;font-size:17px;line-height:1.6;color:var(--mute)}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-cam" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
   <symbol id="i-co" viewBox="0 0 24 24"><path d="M4 20V8l6-4v16M10 20h10V10l-10-2M14 13h2M14 16h2M6.5 11h1M6.5 14h1"/></symbol>
   <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
@@ -511,7 +512,7 @@ footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
     <button type="button" class="x" id="bx" aria-label="結束"><svg class="ic s"><use href="#i-x"/></svg></button></div>
   <div class="read" id="bread"><div id="btx"></div></div>
   <div class="pad"><span class="hint" id="bsay"></span><span class="snm" id="bnm"></span><span class="sdt" id="bdt"></span><canvas id="cv"></canvas></div>
-  <div class="bft"><button type="button" class="soft" id="b1"></button><button type="button" class="soft" id="b2"></button><button type="button" class="go" id="b3"><span></span><svg class="ic"><use href="#i-arrow"/></svg></button></div>
+  <div class="bft"><button type="button" class="soft" id="bph" aria-label="拍紙本上的簽名"><svg class="ic"><use href="#i-cam"/></svg></button><input type="file" id="bphIn" accept="image/*" hidden><button type="button" class="soft" id="b1"></button><button type="button" class="soft" id="b2"></button><button type="button" class="go" id="b3"><span></span><svg class="ic"><use href="#i-arrow"/></svg></button></div>
 </div>
 <div class="board" id="qrm" hidden>
   <div class="bhd"><span class="eye">一個 QR 大家掃，用自己的手機簽（14 天內有效）</span><b id="qwho"></b><span class="zh">誰簽了下面會馬上打勾</span>
@@ -1340,7 +1341,7 @@ function page() {
   var r = window.devicePixelRatio || 1;
   cv.width = cv.clientWidth * r; cv.height = cv.clientHeight * r;
   cx.setTransform(r, 0, 0, r, 0, 0); cx.lineWidth = 5; cx.lineCap = cx.lineJoin = 'round'; cx.strokeStyle = '#1B1C1E';
-  inked = false;
+  inked = false; PH = null;
 }
 /* 簽名前先看處理經過／結果：移工看預覽那一份譯文（＝送進 IEI 的），雇主看中文，翻譯自己不用看 */
 function readBox(p, L) {
@@ -1381,8 +1382,8 @@ function pt(e) {   // 轉過的板子：手指往下＝格子往右
   var b = cv.getBoundingClientRect();
   return $('board').classList.contains('rot') ? [e.clientY - b.top, b.right - e.clientX] : [e.clientX - b.left, e.clientY - b.top];
 }
-cv.onpointerdown = function (e) { e.preventDefault(); down = true; try { cv.setPointerCapture(e.pointerId); } catch (x) {} var p = pt(e); cx.beginPath(); cx.moveTo(p[0], p[1]); };
-cv.onpointermove = function (e) { if (!down) return; e.preventDefault(); var p = pt(e); cx.lineTo(p[0], p[1]); cx.stroke(); inked = true; };
+cv.onpointerdown = function (e) { e.preventDefault(); down = true; if (PH) { var q = pt(e); PH.r = [q[0], q[1], q[0], q[1]]; phDraw(); try { cv.setPointerCapture(e.pointerId); } catch (x) {} return; } try { cv.setPointerCapture(e.pointerId); } catch (x) {} var p = pt(e); cx.beginPath(); cx.moveTo(p[0], p[1]); };
+cv.onpointermove = function (e) { if (!down) return; e.preventDefault(); if (PH) { var q = pt(e); PH.r[2] = q[0]; PH.r[3] = q[1]; phDraw(); return; } var p = pt(e); cx.lineTo(p[0], p[1]); cx.stroke(); inked = true; };
 cv.onpointerup = cv.onpointercancel = function () { down = false; };
 /* ⛔ LINE 內建瀏覽器可以往下拉掉：pointer 的 preventDefault 擋不住，要在 touch 事件上 passive:false 才擋得住（s.html 2026-10-08 踩過）。處理經過那塊要能捲，放行 */
 ['touchstart', 'touchmove'].forEach(function (k) { cv.addEventListener(k, function (e) { e.preventDefault(); }, { passive: false }); });
@@ -1402,9 +1403,73 @@ function crop() {   // 裁掉四周空白＋留一點邊，最寬 600（整張�
   return u;
 }
 $('b1').onclick = function () { if (RELAY) { ST[BQ[BI].k] = 'absent'; next(); } else closeBoard(); };
-$('b2').onclick = function () { cx.clearRect(0, 0, cv.width, cv.height); inked = false; };
+$('b2').onclick = function () { cx.clearRect(0, 0, cv.width, cv.height); inked = false; if (PH) phEnd(); };
+/* ---------- 拍紙本上的簽名 → 電子簽名（他 11/10：「拍實體服務表的簽名照，上傳到雇主簽名欄或移工簽名欄，幫我變成電子簽名」） ----------
+   拍照或選照片 → 照片鋪在簽名格上，手指框出簽名那一塊（不框就用整張）→ 按「轉成簽名」：
+   框裡的字跡留下（深色）、紙的底色變透明（大津法自動找深淺分界），畫回簽名格 → 他看過可以再按完成，跟手簽走同一條路上傳。
+   ⚠ 框太大會把表格線、印的字一起收進來，要框緊一點。 */
+var PH = null;   // { img, fit: [x, y, w, h], r: [x0, y0, x1, y1] }
+function phEnd() { var L = BQ[BI].L || TL['中']; PH = null; $('bsay').textContent = L.hint; $('b3').firstChild.textContent = RELAY && BI < BQ.length - 1 ? L.next : L.done; }
+function phDraw() {
+  var w = cv.clientWidth, h = cv.clientHeight, f = PH.fit, r = PH.r;
+  cx.clearRect(0, 0, w, h); cx.drawImage(PH.img, f[0], f[1], f[2], f[3]);
+  if (r) { cx.save(); cx.strokeStyle = '#0057B8'; cx.lineWidth = 3; cx.setLineDash([8, 6]);
+    cx.strokeRect(Math.min(r[0], r[2]), Math.min(r[1], r[3]), Math.abs(r[2] - r[0]), Math.abs(r[3] - r[1])); cx.restore(); }
+}
+$('bph').onclick = function () { $('bphIn').click(); };
+$('bphIn').onchange = function () {
+  var file = (this.files || [])[0]; this.value = '';
+  if (!file) return;
+  var img = new Image(), url = URL.createObjectURL(file);
+  img.onload = function () {
+    URL.revokeObjectURL(url);
+    var w = cv.clientWidth, h = cv.clientHeight, k = Math.min(w / img.width, h / img.height);
+    PH = { img: img, fit: [(w - img.width * k) / 2, (h - img.height * k) / 2, img.width * k, img.height * k], r: null };
+    inked = false; phDraw();
+    $('bsay').textContent = '用手指框出簽名（框緊一點），再按「轉成簽名」';
+    $('b3').firstChild.textContent = '轉成簽名';
+  };
+  img.onerror = function () { URL.revokeObjectURL(url); say('這張照片打不開，換一張試試'); };
+  img.src = url;
+};
+function phInk() {   // 框裡的照片 → 透明底的深色字跡，畫回簽名格
+  var f = PH.fit, r = PH.r && Math.abs(PH.r[2] - PH.r[0]) > 12 && Math.abs(PH.r[3] - PH.r[1]) > 12 ? PH.r : [f[0], f[1], f[0] + f[2], f[1] + f[3]];
+  var x0 = Math.max(f[0], Math.min(r[0], r[2])), y0 = Math.max(f[1], Math.min(r[1], r[3])), x1 = Math.min(f[0] + f[2], Math.max(r[0], r[2])), y1 = Math.min(f[1] + f[3], Math.max(r[1], r[3]));
+  var s = PH.img.width / f[2], sx = (x0 - f[0]) * s, sy = (y0 - f[1]) * s, sw = (x1 - x0) * s, sh = (y1 - y0) * s;
+  if (sw < 4 || sh < 4) return false;
+  var k = Math.min(1, 1200 / Math.max(sw, sh)), o = document.createElement('canvas'); o.width = Math.round(sw * k); o.height = Math.round(sh * k);
+  var oc = o.getContext('2d'); oc.drawImage(PH.img, sx, sy, sw, sh, 0, 0, o.width, o.height);
+  var id = oc.getImageData(0, 0, o.width, o.height), d = id.data, n = d.length / 4, hist = new Array(256).fill(0), L = new Uint8Array(n);
+  for (var i = 0; i < n; i++) { L[i] = Math.round(0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]); hist[L[i]]++; }
+  var t = otsu(hist, n);
+  for (i = 0; i < n; i++) {   // 比分界深的是字跡：越深越不透明；其他全透明
+    var a = L[i] < t ? Math.min(255, Math.round((t - L[i]) / Math.max(1, t) * 255 * 2.2)) : 0;
+    d[i * 4] = 27; d[i * 4 + 1] = 28; d[i * 4 + 2] = 30; d[i * 4 + 3] = a;
+  }
+  oc.putImageData(id, 0, 0);
+  var w = cv.clientWidth, h = cv.clientHeight, q = Math.min(w * 0.9 / o.width, h * 0.8 / o.height);
+  cx.clearRect(0, 0, w, h); cx.drawImage(o, (w - o.width * q) / 2, (h - o.height * q) / 2, o.width * q, o.height * q);
+  return true;
+}
+function otsu(hist, n) {   // 大津法：把直方圖分成「紙」和「墨」兩群，回分界的亮度
+  var sum = 0, sb = 0, wb = 0, best = 0, t = 128;
+  for (var i = 0; i < 256; i++) sum += i * hist[i];
+  for (i = 0; i < 256; i++) {
+    wb += hist[i]; if (!wb) continue;
+    var wf = n - wb; if (!wf) break;
+    sb += i * hist[i];
+    var mb = sb / wb, mf = (sum - sb) / wf, v = wb * wf * (mb - mf) * (mb - mf);
+    if (v > best) { best = v; t = i; }
+  }
+  return t;
+}
 $('b3').onclick = function () {
   var L = BQ[BI].L;
+  if (PH) {   // 拍照模式：這一下是「轉成簽名」，轉完給他看，再按一次才是完成
+    if (!phInk()) { alert('框得太小了，重框一次'); return; }
+    phEnd(); inked = true; $('bsay').textContent = '這樣可以就按完成；不行按「' + $('b2').textContent + '」重來';
+    return;
+  }
   if (!inked) { alert(L ? L.needSign : RELAY ? '還沒簽。人不在就按「不在」。' : '還沒簽'); return; }
   var u = crop();
   if (!u) { alert(L ? L.needSign : '簽名太小了，請簽大一點'); return; }
