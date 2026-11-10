@@ -1354,7 +1354,7 @@ function page() {
   var r = window.devicePixelRatio || 1;
   cv.width = cv.clientWidth * r; cv.height = cv.clientHeight * r;
   cx.setTransform(r, 0, 0, r, 0, 0); cx.lineWidth = 5; cx.lineCap = cx.lineJoin = 'round'; cx.strokeStyle = '#1B1C1E';
-  inked = false; PH = null;
+  inked = false; PH = null; ER = null;
 }
 /* 簽名前先看處理經過／結果：移工看預覽那一份譯文（＝送進 IEI 的），雇主看中文，翻譯自己不用看 */
 function readBox(p, L) {
@@ -1395,7 +1395,7 @@ function pt(e) {   // 轉過的板子：手指往下＝格子往右
   var b = cv.getBoundingClientRect();
   return $('board').classList.contains('rot') ? [e.clientY - b.top, b.right - e.clientX] : [e.clientX - b.left, e.clientY - b.top];
 }
-cv.onpointerdown = function (e) { e.preventDefault(); down = true; if (PH) { var q = pt(e); PH.r = [q[0], q[1], q[0], q[1]]; phDraw(); try { cv.setPointerCapture(e.pointerId); } catch (x) {} return; } try { cv.setPointerCapture(e.pointerId); } catch (x) {} var p = pt(e); cx.beginPath(); cx.moveTo(p[0], p[1]); };
+cv.onpointerdown = function (e) { e.preventDefault(); if (ER) { phErase(pt(e)); return; } down = true; if (PH) { var q = pt(e); PH.r = [q[0], q[1], q[0], q[1]]; phDraw(); try { cv.setPointerCapture(e.pointerId); } catch (x) {} return; } try { cv.setPointerCapture(e.pointerId); } catch (x) {} var p = pt(e); cx.beginPath(); cx.moveTo(p[0], p[1]); };
 cv.onpointermove = function (e) { if (!down) return; e.preventDefault(); if (PH) { var q = pt(e); PH.r[2] = q[0]; PH.r[3] = q[1]; phDraw(); return; } var p = pt(e); cx.lineTo(p[0], p[1]); cx.stroke(); inked = true; };
 cv.onpointerup = cv.onpointercancel = function () { down = false; };
 /* ⛔ LINE 內建瀏覽器可以往下拉掉：pointer 的 preventDefault 擋不住，要在 touch 事件上 passive:false 才擋得住（s.html 2026-10-08 踩過）。處理經過那塊要能捲，放行 */
@@ -1416,10 +1416,10 @@ function crop() {   // 裁掉四周空白＋留一點邊，最寬 600（整張�
   return u;
 }
 $('b1').onclick = function () { if (RELAY) { ST[BQ[BI].k] = 'absent'; next(); } else closeBoard(); };
-$('b2').onclick = function () { cx.clearRect(0, 0, cv.width, cv.height); inked = false; if (PH) phEnd(); };
+$('b2').onclick = function () { cx.clearRect(0, 0, cv.width, cv.height); inked = false; ER = null; if (PH) phEnd(); };
 /* ---------- 拍紙本上的簽名 → 電子簽名（他 11/10：「拍實體服務表的簽名照，上傳到雇主簽名欄或移工簽名欄，幫我變成電子簽名」） ----------
    拍照或選照片 → 照片鋪在簽名格上，手指框出簽名那一塊（不框就用整張）→ 按「轉成簽名」：
-   框裡跟附近的紙比、深的當字跡；擦掉表格長線和印的小字（只留大筆畫）；細化成中心線，再用手簽同一支筆（5px）照手簽的大小重畫 → 他看過可以再按完成，跟手簽走同一條路上傳。
+   框裡跟附近的紙比、深的當字跡；擦掉表格長線和印的小字（只留大筆畫）；淡的筆畫順著墨收回來；不重畫，直接用原稿的墨（深淺粗細照原樣）換成黑墨 → 邊邊有雜痕他點一下刪掉 → 再按完成，跟手簽走同一條路上傳。
    ⚠ 框太大會把表格線、印的字一起收進來，要框緊一點。 */
 var PH = null;   // { img, fit: [x, y, w, h], r: [x0, y0, x1, y1] }
 function phEnd() { var L = BQ[BI].L || TL['中']; PH = null; $('bsay').textContent = L.hint; $('b3').firstChild.textContent = RELAY && BI < BQ.length - 1 ? L.next : L.done; }
@@ -1438,99 +1438,93 @@ $('bphIn').onchange = function () {
     URL.revokeObjectURL(url);
     var w = cv.clientWidth, h = cv.clientHeight, k = Math.min(w / img.width, h / img.height);
     PH = { img: img, fit: [(w - img.width * k) / 2, (h - img.height * k) / 2, img.width * k, img.height * k], r: null };
-    inked = false; phDraw();
+    inked = false; ER = null; phDraw();
     $('bsay').textContent = '用手指框出簽名（框緊一點），再按「轉成簽名」';
     $('b3').firstChild.textContent = '轉成簽名';
   };
   img.onerror = function () { URL.revokeObjectURL(url); say('這張照片打不開，換一張試試'); };
   img.src = url;
 };
-function phInk() {   // 框裡的照片 → 只留簽名、照原本的筆勢重畫（他 11/10：表格去掉、細一點、斷的補上、要有簽名的手感）
+function phInk() {   // 框裡的照片 → 只留簽名，用照片裡「真的墨跡」當簽名（他 11/11：重畫的不像手寫、淡的那段變空白——改成不重畫，深淺粗細全照原稿）
   var f = PH.fit, r = PH.r && Math.abs(PH.r[2] - PH.r[0]) > 12 && Math.abs(PH.r[3] - PH.r[1]) > 12 ? PH.r : [f[0], f[1], f[0] + f[2], f[1] + f[3]];
   var x0 = Math.max(f[0], Math.min(r[0], r[2])), y0 = Math.max(f[1], Math.min(r[1], r[3])), x1 = Math.min(f[0] + f[2], Math.max(r[0], r[2])), y1 = Math.min(f[1] + f[3], Math.max(r[1], r[3]));
   var s = PH.img.width / f[2], sw = (x1 - x0) * s, sh = (y1 - y0) * s;
   if (sw < 4 || sh < 4) return false;
-  var k = Math.min(1, 700 / Math.max(sw, sh)), W = Math.max(1, Math.round(sw * k)), H = Math.max(1, Math.round(sh * k)), o = document.createElement('canvas'); o.width = W; o.height = H;
-  var oc = o.getContext('2d'); oc.drawImage(PH.img, (x0 - f[0]) * s, (y0 - f[1]) * s, sw, sh, 0, 0, W, H);
-  var B = phBin(oc.getImageData(0, 0, W, H).data, W, H), DK = B.dk;
-  phKeep(B, W, H, phLines(B, W, H));
-  phClose(B, W, H);   // 粗的地方、交叉的地方先補實，細化才不會裂成兩三條平行線（Sonnet 審：中間那圈變成一團）
-  var T = phDT(B, W, H);   // 每一點離紙多遠＝原本墨水的粗細（筆壓）
-  phThin(B, W, H); phSpur(B, W, H, T); phSpur(B, W, H, T);   // 剪掉細化留下的小毛刺（尾巴多一個勾）
-  var gaps = phBridge(B, W, H), lines = phTrace(B, W, H, T);
-  function dk(x, y) { var v = 0; for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) { var a = x + dx, b = y + dy; if (a >= 0 && b >= 0 && a < W && b < H && DK[b * W + a] > v) v = DK[b * W + a]; } return v; }
-  lines.forEach(function (l) { l.forEach(function (p) { p[3] = dk(p[0], p[1]); }); });
-  /* 照筆順定方向（他 11/10 要「照筆順寫會更像」）：橫的由左往右、豎撇捺由上往下。方向定了，起筆（露鋒，短收細）和收筆（出鋒，長收細）才會在對的那一頭 */
-  lines.forEach(function (l, i) {
-    var a = l[0], b = l[l.length - 1], dx = b[0] - a[0], dy = b[1] - a[1];
-    if (Math.abs(dx) > Math.abs(dy) * 1.2 ? dx < 0 : dy < 0) { var r = l.slice().reverse(); r.s = l.e; r.e = l.s; lines[i] = r; }
-  });
-  gaps.forEach(function (g) { lines.push([[g[0], g[1], 0, 0], [g[2], g[3], 0, 0]]); });   // 補的那段沒有墨水可量：用中間值（0＝中間值）
-  var bx0 = W, by0 = H, bx1 = -1, by1 = -1, ws = [];
-  lines.forEach(function (l) { l.forEach(function (p) { if (p[0] < bx0) bx0 = p[0]; if (p[0] > bx1) bx1 = p[0]; if (p[1] < by0) by0 = p[1]; if (p[1] > by1) by1 = p[1]; if (p[2]) ws.push(p[2]); }); });
-  if (bx1 < 0) return false;
+  function grab(cap) { var k = Math.min(1, cap / Math.max(sw, sh)), o = document.createElement('canvas'); o.width = Math.max(1, Math.round(sw * k)); o.height = Math.max(1, Math.round(sh * k));
+    var oc = o.getContext('2d'); oc.drawImage(PH.img, (x0 - f[0]) * s, (y0 - f[1]) * s, sw, sh, 0, 0, o.width, o.height); return [oc.getImageData(0, 0, o.width, o.height).data, o.width, o.height]; }
+  var g = grab(700), W = g[1], H = g[2], n = W * H, B = phBin(g[0], W, H), DK = B.dk, i, x, y, dx, dy;
+  var B0 = B.slice(), Z = phLines(B, W, H);
+  /* 不收的地方 X：①表格線那一條帶子（簽名壓過線的那段也拿掉，下面補斷口會接回來，不然會留一坨線＋筆的黑塊）
+     ②一整片深色（色塊、陰影、彩色底圖）：筆畫是細的，附近一大半都是深的就不是筆畫 */
+  var X = new Uint8Array(n), I = new Int32Array((W + 1) * (H + 1)), bands = [];
+  Z.lines.forEach(function (l) { var A = l.h ? W : H, Cn = l.h ? H : W, c = 0, a;
+    for (a = 0; a < A; a++) { var m = l.k * a + l.b; for (var t = Math.ceil(m - 8); t <= m + 8; t++) if (t >= 0 && t < Cn && Z[l.h ? t * W + a : a * W + t]) c++; }
+    var th = c / A / 2 + 1.5; bands.push([l, th]);
+    for (a = 0; a < A; a++) { m = l.k * a + l.b; for (t = Math.ceil(m - th); t <= m + th; t++) if (t >= 0 && t < Cn) X[l.h ? t * W + a : a * W + t] = 1; } });
+  var XB = X.slice();   // 只有表格線的帶子（補斷口用）
+  for (y = 0; y < H; y++) for (x = 0, sum = 0; x < W; x++) { var sum; sum += B0[y * W + x] ? 1 : 0; I[(y + 1) * (W + 1) + x + 1] = I[y * (W + 1) + x + 1] + sum; }
+  var T0 = phDT(B, W, H), tw = []; for (i = 0; i < n; i++) if (T0[i] > 1) tw.push(T0[i]);
+  tw.sort(function (a, b) { return b - a; });
+  var RB = Math.max(7, Math.round(3 * (tw[Math.floor(tw.length * 0.1)] || 2)));   // 窗子＝筆寬的好幾倍
+  for (y = 0; y < H; y++) for (x = 0; x < W; x++) { var a0 = Math.max(0, x - RB), b0 = Math.max(0, y - RB), c0 = Math.min(W, x + RB + 1), e0 = Math.min(H, y + RB + 1);
+    if ((I[e0 * (W + 1) + c0] - I[b0 * (W + 1) + c0] - I[e0 * (W + 1) + a0] + I[b0 * (W + 1) + a0]) > 0.6 * (c0 - a0) * (e0 - b0)) X[y * W + x] = 1; }
+  for (i = 0; i < n; i++) if (X[i]) B[i] = 0;
+  phKeep(B, W, H, Z);   // 找出「確定是簽名」的筆畫（印的字、別格的字都去掉）
+  /* 從確定的筆畫順著墨往外長，淡到只比紙暗一點點的也收（原子筆斷水、輕輕帶過那段）；最多長 6%，不長進 X */
+  var M = new Uint8Array(n), dist = new Uint16Array(n), Q = [], D = Math.max(6, Math.round(Math.max(W, H) * 0.06));
+  for (i = 0; i < n; i++) if (B[i]) { M[i] = 1; Q.push(i); }
+  for (var h0 = 0; h0 < Q.length; h0++) { var p = Q[h0], px = p % W, py = (p - px) / W; if (dist[p] >= D) continue;
+    for (dy = -1; dy <= 1; dy++) for (dx = -1; dx <= 1; dx++) { x = px + dx; y = py + dy; var q = y * W + x;
+      if (x >= 0 && y >= 0 && x < W && y < H && !M[q] && DK[q] >= 0.06 && !X[q]) { M[q] = 1; dist[q] = dist[p] + 1; Q.push(q); } } }
+  bands.forEach(function (bd) {   // 簽名穿過表格線的那一截：線的上下兩邊都有筆畫，中間就接起來（照原稿的墨，不是另外畫）
+    var l = bd[0], th = Math.ceil(bd[1]), A = l.h ? W : H, Cn = l.h ? H : W;
+    function on(a, t) { for (var e = a - 2; e <= a + 2; e++) if (e >= 0 && e < A && t >= 0 && t < Cn && M[l.h ? t * W + e : e * W + t]) return true; return false; }
+    for (var a = 0; a < A; a++) { var m = Math.round(l.k * a + l.b);
+      if (on(a, m - th - 1) && on(a, m + th + 1)) for (var t = m - th; t <= m + th; t++) if (t >= 0 && t < Cn) M[l.h ? t * W + a : a * W + t] = 1; } });
+  var C = M.slice(); phClose(C, W, H); var T = phDT(C, W, H); phThin(C, W, H); phSpur(C, W, H, T); phSpur(C, W, H, T);
+  var gaps = phBridge(C, W, H).filter(function (e) {   // 補斷口只補「中間有一點點墨」的（筆斷水）或穿過表格線的；中間是白紙的不補（兩個字之間會多一條線）
+    var k = 0, s = 0, N = Math.max(2, Math.round(Math.hypot(e[2] - e[0], e[3] - e[1])));
+    for (var t = 1; t < N; t++) { var j = Math.round(e[1] + (e[3] - e[1]) * t / N) * W + Math.round(e[0] + (e[2] - e[0]) * t / N); if (XB[j]) return true; if (!M[j]) { s += DK[j]; k++; } }   // 只量缺口那段（筆畫上的不算）
+    return k > 0 && s / k >= 0.07; }), ws = [];
+  for (i = 0; i < n; i++) if (C[i] && T[i]) ws.push(T[i]);
   ws.sort(function (a, b) { return a - b; });
-  var med = ws[ws.length >> 1] || 1, ds = [];
-  lines.forEach(function (l) { l.forEach(function (p) { if (p[3]) ds.push(p[3]); }); });
-  ds.sort(function (a, b) { return a - b; });
-  var dref = ds[Math.floor(ds.length * 0.7)] || 1;
-  lines.forEach(function (l) {   // 收不收細照原稿那一頭：墨比中間值細（出鋒、輕輕帶出去）才收；粗的（停筆、頓筆）不收（Sonnet 審）
-    function end(a) { var t = 0, c = 0; a.forEach(function (p) { if (p[2]) { t += p[2]; c++; } }); return c ? t / c : med; }
-    if (l.length > 3) { l.s = l.s && end(l.slice(0, 4)) < med * 0.9; l.e = l.e && end(l.slice(-4)) < med * 0.9; }
-  });   // 七成的筆畫算「全黑」，比它淡的照比例畫淡（最淡五成：原子筆輕輕帶過不會淡到像鉛筆，11/10 Sonnet 審＋他要深淺照原稿的折衷）
-  /* 大小照一般人在格子裡簽的（寬最多 75%、高最多 65%）；筆寬中間值 3.2px（他 11/10 要比手簽 5px 細），粗細照原本墨水的起伏（0.55～1.5 倍） */
-  var w = cv.clientWidth, h = cv.clientHeight, q = Math.min(w * 0.75 / (bx1 - bx0 + 1), h * 0.65 / (by1 - by0 + 1)), ox = (w - (bx1 - bx0 + 1) * q) / 2 - bx0 * q, oy = (h - (by1 - by0 + 1) * q) / 2 - by0 * q;
-  cx.clearRect(0, 0, w, h); cx.save(); cx.lineCap = cx.lineJoin = 'round';
-  var segs = [];
-  lines.forEach(function (l) { phPen(phSmooth(l.map(function (p) { return [ox + p[0] * q, oy + p[1] * q, 3.2 * Math.max(0.85, Math.min(1.2, 0.7 + 0.3 * (p[2] || med) / med)), Math.max(0.5, Math.min(1, (p[3] || dref) / dref))]; })), l.s, l.e, segs); });
-  /* 淡的先畫、深的後畫（交叉時深的蓋上去）；淡＝顏色往白混，不用半透明（半透明疊在接頭會一顆一顆） */
-  segs.sort(function (a, b) { return a[5] - b[5]; }).forEach(function (g) {
-    var v = function (c) { return Math.round(c + (236 - c) * (1 - g[5])); };
-    cx.strokeStyle = cx.fillStyle = 'rgb(' + v(27) + ',' + v(28) + ',' + v(30) + ')'; cx.lineWidth = g[4] * (0.8 + 0.2 * g[5]);   // 淡的也細一點
-    cx.beginPath(); if (g[6]) cx.arc(g[0], g[1], g[4] / 2, 0, 7), cx.fill(); else { cx.moveTo(g[0], g[1]); cx.lineTo(g[2], g[3]); cx.stroke(); }
-  });
-  cx.restore();
+  var R = new Uint8Array(n);   // 邊緣多留一格，筆畫邊才是柔的（跟原稿一樣），不會被切成鋸齒
+  for (y = 0; y < H; y++) for (x = 0; x < W; x++) if (M[y * W + x]) for (dy = -1; dy <= 1; dy++) for (dx = -1; dx <= 1; dx++) { var a = x + dx, b = y + dy; if (a >= 0 && b >= 0 && a < W && b < H) R[b * W + a] = 1; }
+  var lab = new Int32Array(n), nl = 0, st = [];   // 一塊一塊編號：他點一下就能刪掉不要的那塊
+  for (i = 0; i < n; i++) if (R[i] && !lab[i]) { lab[i] = ++nl; st.push(i);
+    while (st.length) { p = st.pop(); px = p % W; py = (p - px) / W;
+      for (dy = -1; dy <= 1; dy++) for (dx = -1; dx <= 1; dx++) { x = px + dx; y = py + dy; q = y * W + x; if (x >= 0 && y >= 0 && x < W && y < H && R[q] && !lab[q]) { lab[q] = nl; st.push(q); } } } }
+  if (!nl) return false;
+  var hg = grab(1400), Wh = hg[1], Hh = hg[2], DH = phBin(hg[0], Wh, Hh).dk, sc = Wh / W, ks = [];   // 墨的深淺用高解析度量，放大才不會糊
+  for (i = 0; i < n; i++) if (B[i]) ks.push(DK[i]);
+  ks.sort(function (a, b) { return a - b; });
+  var hi = Math.max(0.15, ks[Math.floor(ks.length * 0.6)] || 0.3), A = new Float32Array(Wh * Hh), L = new Int32Array(Wh * Hh);   // 六成的墨算「全黑」，比它淡的照比例淡
+  for (y = 0; y < Hh; y++) for (x = 0; x < Wh; x++) { var j = y * Wh + x, l0 = lab[Math.min(H - 1, Math.floor(y / sc)) * W + Math.min(W - 1, Math.floor(x / sc))];
+    if (!l0) continue; L[j] = l0; A[j] = Math.pow(Math.max(0, Math.min(1, (DH[j] - 0.03) / (hi - 0.03))), 0.8); }
+  ER = { W: Wh, H: Hh, A: A, L: L, lab: lab, lw: W, off: {}, gaps: gaps.map(function (e) { return [e[0] * sc, e[1] * sc, e[2] * sc, e[3] * sc, lab[e[1] * W + e[0]], lab[e[3] * W + e[2]]]; }), pw: Math.max(1.5, 2 * (ws[ws.length >> 1] || 1) * sc) };
+  var bx0 = Wh, by0 = Hh, bx1 = -1, by1 = -1;
+  for (y = 0; y < Hh; y++) for (x = 0; x < Wh; x++) if (A[y * Wh + x] > 0.15) { if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
+  if (bx1 < 0) return false;
+  /* 大小照一般人在格子裡簽的（寬最多 75%、高最多 65%）；粗細就是原稿的粗細，跟著一起縮放 */
+  var w = cv.clientWidth, hh = cv.clientHeight; ER.q = Math.min(w * 0.75 / (bx1 - bx0 + 1), hh * 0.65 / (by1 - by0 + 1)); ER.ox = (w - (bx1 - bx0 + 1) * ER.q) / 2 - bx0 * ER.q; ER.oy = (hh - (by1 - by0 + 1) * ER.q) / 2 - by0 * ER.q;
+  phPaint();
   return true;
 }
-function phPen(P, s0, e0, out) {   // 一筆（排進 out，最後一起畫）：每一小段用自己的粗細、深淺；下筆 12px、提筆 18px 由細變粗（提筆收得比較長，像手寫的出鋒）
-  var n = P.length, len = [0], i;
-  if (n === 1) { if (s0 && e0) out.push([P[0][0], P[0][1], 0, 0, P[0][2], P[0][3], 1]); return; }   // 單獨一點：真的點才畫（岔路切剩的一格不畫，會變一顆珠子）
-  for (i = 1; i < n; i++) len[i] = len[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]);
-  var L = len[n - 1];
-  for (i = 1; i < n; i++) {
-    var m = (len[i] + len[i - 1]) / 2, tp = Math.min(1, s0 ? 0.7 + 0.3 * m / 10 : 1, e0 ? 0.5 + 0.5 * (L - m) / 18 : 1);   // 原子筆不會細成針：起筆最細七成、收筆五成
-    out.push([P[i - 1][0], P[i - 1][1], P[i][0], P[i][1], (P[i - 1][2] + P[i][2]) / 2 * tp, (P[i - 1][3] + P[i][3]) / 2]);
-  }
+var ER = null;   // 轉好的簽名（還沒按完成）：{ A 墨的濃度, L 每格屬於哪一塊, off 他點掉的塊, gaps 補的斷口, q/ox/oy 畫到簽名格的位置 }
+function phPaint() {   // 統一用深灰黑的墨色，濃淡照原稿（淡的地方就是淡，不是空白）
+  var t = document.createElement('canvas'), E = ER; t.width = E.W; t.height = E.H;
+  var tc = t.getContext('2d'), im = tc.createImageData(E.W, E.H), d = im.data;
+  for (var i = 0; i < E.A.length; i++) { d[i * 4] = 27; d[i * 4 + 1] = 28; d[i * 4 + 2] = 30; d[i * 4 + 3] = E.off[E.L[i]] ? 0 : Math.round(E.A[i] * 255); }
+  tc.putImageData(im, 0, 0);
+  tc.strokeStyle = 'rgba(27,28,30,0.8)'; tc.lineWidth = E.pw; tc.lineCap = 'round';
+  E.gaps.forEach(function (g) { if (E.off[g[4]] || E.off[g[5]]) return; tc.beginPath(); tc.moveTo(g[0], g[1]); tc.lineTo(g[2], g[3]); tc.stroke(); });
+  cx.clearRect(0, 0, cv.clientWidth, cv.clientHeight); cx.imageSmoothingQuality = 'high'; cx.drawImage(t, E.ox, E.oy, E.W * E.q, E.H * E.q);
 }
-function phSmooth(l) {   // 畫面座標：每 1.5px 重新取一點，位置用高斯（σ 2.5px）、粗細用高斯（σ 10px）平滑，頭尾不動（Sonnet 審：照點數平均會隨疏密變）
-  if (l.length < 3) return l;
-  var r = [l[0]], i;
-  for (i = 1; i < l.length; i++) {
-    var a = r[r.length - 1], b = l[i], d = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    for (var t = 1.5; t < d; t += 1.5) r.push(a.map(function (v, k) { return v + (b[k] - v) * t / d; }));
-    if (d >= 0.75 || i === l.length - 1) r.push(b);
-  }
-  function g(k, sig) {
-    var R = Math.ceil(sig * 2 / 1.5), out = [];
-    for (var i = 0; i < r.length; i++) {
-      var sw = 0, sv = 0;
-      for (var j = Math.max(0, i - R); j <= Math.min(r.length - 1, i + R); j++) { var x = (j - i) * 1.5, wt = Math.exp(-x * x / (2 * sig * sig)); sw += wt; sv += wt * r[j][k]; }
-      out.push(sv / sw);
-    }
-    return out;
-  }
-  var X = g(0, 2.5), Y = g(1, 2.5), X1 = g(0, 0.8), Y1 = g(1, 0.8), Z = g(2, 10), K = g(3, 6);   // K：深淺（σ 6px，筆斷水是慢慢淡掉的）
-  function turn(i) {   // 前後各 4 點（約 6px）的方向差：超過 70 度是「折」，那附近不要磨圓（Sonnet 審）
-    var a = r[Math.max(0, i - 4)], b = r[i], c = r[Math.min(r.length - 1, i + 4)];
-    var u = Math.atan2(b[1] - a[1], b[0] - a[0]), v = Math.atan2(c[1] - b[1], c[0] - b[0]), d = Math.abs(u - v);
-    return Math.min(d, 2 * Math.PI - d) > 1.22;
-  }
-  var sharp = r.map(function (p, i) { return i > 0 && i < r.length - 1 && turn(i); });
-  return r.map(function (p, i) {
-    if (i === 0 || i === r.length - 1) return [p[0], p[1], Z[i], K[i]];
-    var near = false; for (var j = Math.max(0, i - 3); j <= Math.min(r.length - 1, i + 3) && !near; j++) near = sharp[j];
-    return near ? [X1[i], Y1[i], Z[i], K[i]] : [X[i], Y[i], Z[i], K[i]];
-  });
+function phErase(p) {   // 點一下：刪掉手指附近（12px 內）那一塊痕跡
+  var E = ER, sc = E.W / E.lw, x = (p[0] - E.ox) / E.q / sc, y = (p[1] - E.oy) / E.q / sc, r = 12 / E.q / sc, best = 0, bd = r + 1;
+  for (var yy = Math.max(0, Math.floor(y - r)); yy <= Math.min(E.lab.length / E.lw - 1, Math.ceil(y + r)); yy++) for (var xx = Math.max(0, Math.floor(x - r)); xx <= Math.min(E.lw - 1, Math.ceil(x + r)); xx++) {
+    var l = E.lab[yy * E.lw + xx], dd = Math.hypot(xx - x, yy - y); if (l && !E.off[l] && dd < bd) { bd = dd; best = l; } }
+  if (best) { E.off[best] = 1; phPaint(); }
 }
 function phClose(B, W, H) {   // 先膨脹再侵蝕一格（3×3）：補起筆畫裡的小洞、細縫
   var A = new Uint8Array(W * H), x, y, dx, dy, i;
@@ -1567,28 +1561,6 @@ function phDT(B, W, H) {   // 距離轉換（3-4 chamfer）：墨水每一點到
   for (y = H - 1; y >= 0; y--) for (x = W - 1; x >= 0; x--) { i = y * W + x; if (D[i]) D[i] = Math.min(D[i], g(x + 1, y) + 3, g(x, y + 1) + 3, g(x + 1, y + 1) + 4, g(x - 1, y + 1) + 4); }
   for (i = 0; i < W * H; i++) D[i] /= 3;
   return D;
-}
-function phTrace(B, W, H, T) {   // 中心線串成一筆一筆（[x, y, 半寬]）：從斷頭開始走，遇到岔路挑最順的方向走（筆畫交叉時不會斷）
-  var used = new Uint8Array(W * H), out = [];
-  function nb(x, y) { var r = []; for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) { var a = x + dx, b = y + dy; if ((dx || dy) && a >= 0 && b >= 0 && a < W && b < H && B[b * W + a]) r.push([a, b]); } return r; }
-  function walk(x, y) {
-    var l = [[x, y, T[y * W + x]]], px = x, py = y, vx = 0, vy = 0;
-    used[y * W + x] = 1;
-    for (;;) {
-      var c = nb(px, py).filter(function (p) { return !used[p[1] * W + p[0]]; });
-      if (!c.length) break;
-      c.sort(function (a, b) { return ((b[0] - px) * vx + (b[1] - py) * vy) - ((a[0] - px) * vx + (a[1] - py) * vy); });
-      var nx = c[0][0], ny = c[0][1];
-      vx = vx * 0.6 + (nx - px); vy = vy * 0.6 + (ny - py); px = nx; py = ny;
-      used[py * W + px] = 1; l.push([px, py, T[py * W + px]]);
-    }
-    l.s = nb(x, y).length <= 1; l.e = nb(px, py).length <= 1;   // 真的斷頭（下筆／提筆）才收細；在岔路切開的不收，不然交叉處會變細變斷
-    return l;
-  }
-  var i, x, y;
-  for (i = 0; i < W * H; i++) if (B[i] && !used[i]) { x = i % W; y = (i - x) / W; if (nb(x, y).length === 1) out.push(walk(x, y)); }
-  for (i = 0; i < W * H; i++) if (B[i] && !used[i]) { x = i % W; y = (i - x) / W; out.push(walk(x, y)); }   // 繞一圈的（沒有斷頭）、岔出去的
-  return out;
 }
 function phBin(d, W, H) {   // 深色＝字跡：跟附近的紙比（光線不均、有陰影也分得出來）
   var n = W * H, L = new Float64Array(n), I = new Float64Array((W + 1) * (H + 1)), B = new Uint8Array(n), DK = new Float32Array(n), R = Math.max(8, Math.round(Math.max(W, H) / 16)), x, y, i;
@@ -1759,7 +1731,7 @@ $('b3').onclick = function () {
   var L = BQ[BI].L;
   if (PH) {   // 拍照模式：這一下是「轉成簽名」，轉完給他看，再按一次才是完成
     if (!phInk()) { alert('框得太小了，重框一次'); return; }
-    phEnd(); inked = true; $('bsay').textContent = '這樣可以就按完成；不行按「' + $('b2').textContent + '」重來';
+    phEnd(); inked = true; $('bsay').textContent = '邊邊有不要的痕跡：點它一下就刪掉。可以了按完成；不行按「' + $('b2').textContent + '」重來';
     return;
   }
   if (!inked) { alert(L ? L.needSign : RELAY ? '還沒簽。人不在就按「不在」。' : '還沒簽'); return; }
