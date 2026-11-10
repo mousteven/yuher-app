@@ -1241,7 +1241,7 @@ function fileSend(file) {
   if (file.size > 10485760) return say('「' + file.name + '」' + Math.round(file.size / 1048576) + 'MB，太大了（上限 10MB）');
   FUP.push(file.name); filesDraw();
   function done() { var i = FUP.indexOf(file.name); if (i >= 0) FUP.splice(i, 1); }
-  fileRead(file).then(function (d) {
+  return fileRead(file).then(function (d) {
     return api({ api: 'vup', svid: X.svid, site: fSite(), name: d.name, type: d.type, data: d.b64 });
   }).then(function (j) {
     done();
@@ -1253,7 +1253,7 @@ $('fAdd').onclick = function () { $('fIn').click(); };
 $('fIn').onchange = function () {
   var fs = [].slice.call(this.files || []);
   this.value = '';                                  // 同一個檔案再選一次也要有反應
-  fs.forEach(fileSend);
+  fs.reduce(function (p, f) { return p.then(function () { return fileSend(f); }); }, Promise.resolve());   // 一個傳完再傳下一個（同時傳會互相洗掉）
 };
 
 /* 伺服器的狀態 → 格子。true＝已在 IEI、held＝先簽好送出時一起補、dry＝試跑；本機的「上傳中／不在／失敗」不被蓋掉 */
