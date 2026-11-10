@@ -1452,34 +1452,45 @@ function phInk() {   // 框裡的照片 → 只留簽名、照原本的筆勢重
   if (sw < 4 || sh < 4) return false;
   var k = Math.min(1, 700 / Math.max(sw, sh)), W = Math.max(1, Math.round(sw * k)), H = Math.max(1, Math.round(sh * k)), o = document.createElement('canvas'); o.width = W; o.height = H;
   var oc = o.getContext('2d'); oc.drawImage(PH.img, (x0 - f[0]) * s, (y0 - f[1]) * s, sw, sh, 0, 0, W, H);
-  var B = phBin(oc.getImageData(0, 0, W, H).data, W, H);
+  var B = phBin(oc.getImageData(0, 0, W, H).data, W, H), DK = B.dk;
   phKeep(B, W, H, phLines(B, W, H));
   phClose(B, W, H);   // 粗的地方、交叉的地方先補實，細化才不會裂成兩三條平行線（Sonnet 審：中間那圈變成一團）
   var T = phDT(B, W, H);   // 每一點離紙多遠＝原本墨水的粗細（筆壓）
   phThin(B, W, H); phSpur(B, W, H, T); phSpur(B, W, H, T);   // 剪掉細化留下的小毛刺（尾巴多一個勾）
   var gaps = phBridge(B, W, H), lines = phTrace(B, W, H, T);
-  gaps.forEach(function (g) { lines.push([[g[0], g[1], 0], [g[2], g[3], 0]]); });   // 補的那段沒有墨水可量：用中間值（0＝中間值）
+  function dk(x, y) { var v = 0; for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) { var a = x + dx, b = y + dy; if (a >= 0 && b >= 0 && a < W && b < H && DK[b * W + a] > v) v = DK[b * W + a]; } return v; }
+  lines.forEach(function (l) { l.forEach(function (p) { p[3] = dk(p[0], p[1]); }); });
+  gaps.forEach(function (g) { lines.push([[g[0], g[1], 0, 0], [g[2], g[3], 0, 0]]); });   // 補的那段沒有墨水可量：用中間值（0＝中間值）
   var bx0 = W, by0 = H, bx1 = -1, by1 = -1, ws = [];
   lines.forEach(function (l) { l.forEach(function (p) { if (p[0] < bx0) bx0 = p[0]; if (p[0] > bx1) bx1 = p[0]; if (p[1] < by0) by0 = p[1]; if (p[1] > by1) by1 = p[1]; if (p[2]) ws.push(p[2]); }); });
   if (bx1 < 0) return false;
   ws.sort(function (a, b) { return a - b; });
-  var med = ws[ws.length >> 1] || 1;
+  var med = ws[ws.length >> 1] || 1, ds = [];
+  lines.forEach(function (l) { l.forEach(function (p) { if (p[3]) ds.push(p[3]); }); });
+  ds.sort(function (a, b) { return a - b; });
+  var dref = ds[Math.floor(ds.length * 0.7)] || 1;   // 七成的筆畫算「全黑」，比它淡的照比例畫淡（最淡 25%）
   /* 大小照一般人在格子裡簽的（寬最多 75%、高最多 65%）；筆寬中間值 3.2px（他 11/10 要比手簽 5px 細），粗細照原本墨水的起伏（0.55～1.5 倍） */
   var w = cv.clientWidth, h = cv.clientHeight, q = Math.min(w * 0.75 / (bx1 - bx0 + 1), h * 0.65 / (by1 - by0 + 1)), ox = (w - (bx1 - bx0 + 1) * q) / 2 - bx0 * q, oy = (h - (by1 - by0 + 1) * q) / 2 - by0 * q;
-  cx.clearRect(0, 0, w, h); cx.save(); cx.lineCap = cx.lineJoin = 'round'; cx.strokeStyle = cx.fillStyle = '#1B1C1E';
-  lines.forEach(function (l) { phPen(phSmooth(l.map(function (p) { return [ox + p[0] * q, oy + p[1] * q, 3.2 * Math.max(0.6, Math.min(1.45, 0.4 + 0.6 * (p[2] || med) / med))]; })), l.s, l.e); });
+  cx.clearRect(0, 0, w, h); cx.save(); cx.lineCap = cx.lineJoin = 'round';
+  var segs = [];
+  lines.forEach(function (l) { phPen(phSmooth(l.map(function (p) { return [ox + p[0] * q, oy + p[1] * q, 3.2 * Math.max(0.6, Math.min(1.45, 0.4 + 0.6 * (p[2] || med) / med)), Math.max(0.25, Math.min(1, (p[3] || dref) / dref))]; })), l.s, l.e, segs); });
+  /* 淡的先畫、深的後畫（交叉時深的蓋上去）；淡＝顏色往白混，不用半透明（半透明疊在接頭會一顆一顆） */
+  segs.sort(function (a, b) { return a[5] - b[5]; }).forEach(function (g) {
+    var v = function (c) { return Math.round(c + (236 - c) * (1 - g[5])); };
+    cx.strokeStyle = cx.fillStyle = 'rgb(' + v(27) + ',' + v(28) + ',' + v(30) + ')'; cx.lineWidth = g[4];
+    cx.beginPath(); if (g[6]) cx.arc(g[0], g[1], g[4] / 2, 0, 7), cx.fill(); else { cx.moveTo(g[0], g[1]); cx.lineTo(g[2], g[3]); cx.stroke(); }
+  });
   cx.restore();
   return true;
 }
-function phPen(P, s0, e0) {   // 一筆：每一小段用自己的粗細；下筆 12px、提筆 18px 由細變粗（提筆收得比較長，像手寫的出鋒）
+function phPen(P, s0, e0, out) {   // 一筆（排進 out，最後一起畫）：每一小段用自己的粗細、深淺；下筆 12px、提筆 18px 由細變粗（提筆收得比較長，像手寫的出鋒）
   var n = P.length, len = [0], i;
-  if (n === 1) { if (s0 && e0) { cx.beginPath(); cx.arc(P[0][0], P[0][1], P[0][2] / 2, 0, 7); cx.fill(); } return; }   // 單獨一點：真的點才畫（岔路切剩的一格不畫，會變一顆珠子）
+  if (n === 1) { if (s0 && e0) out.push([P[0][0], P[0][1], 0, 0, P[0][2], P[0][3], 1]); return; }   // 單獨一點：真的點才畫（岔路切剩的一格不畫，會變一顆珠子）
   for (i = 1; i < n; i++) len[i] = len[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]);
   var L = len[n - 1];
   for (i = 1; i < n; i++) {
     var m = (len[i] + len[i - 1]) / 2, tp = Math.min(1, s0 ? 0.4 + 0.6 * m / 12 : 1, e0 ? 0.3 + 0.7 * (L - m) / 18 : 1);
-    cx.lineWidth = (P[i - 1][2] + P[i][2]) / 2 * Math.max(0.3, tp);
-    cx.beginPath(); cx.moveTo(P[i - 1][0], P[i - 1][1]); cx.lineTo(P[i][0], P[i][1]); cx.stroke();
+    out.push([P[i - 1][0], P[i - 1][1], P[i][0], P[i][1], (P[i - 1][2] + P[i][2]) / 2 * Math.max(0.3, tp), (P[i - 1][3] + P[i][3]) / 2]);
   }
 }
 function phSmooth(l) {   // 畫面座標：每 1.5px 重新取一點，位置用高斯（σ 2.5px）、粗細用高斯（σ 10px）平滑，頭尾不動（Sonnet 審：照點數平均會隨疏密變）
@@ -1487,7 +1498,7 @@ function phSmooth(l) {   // 畫面座標：每 1.5px 重新取一點，位置用
   var r = [l[0]], i;
   for (i = 1; i < l.length; i++) {
     var a = r[r.length - 1], b = l[i], d = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    for (var t = 1.5; t < d; t += 1.5) r.push([a[0] + (b[0] - a[0]) * t / d, a[1] + (b[1] - a[1]) * t / d, a[2] + (b[2] - a[2]) * t / d]);
+    for (var t = 1.5; t < d; t += 1.5) r.push(a.map(function (v, k) { return v + (b[k] - v) * t / d; }));
     if (d >= 0.75 || i === l.length - 1) r.push(b);
   }
   function g(k, sig) {
@@ -1499,8 +1510,8 @@ function phSmooth(l) {   // 畫面座標：每 1.5px 重新取一點，位置用
     }
     return out;
   }
-  var X = g(0, 2.5), Y = g(1, 2.5), Z = g(2, 10);
-  return r.map(function (p, i) { return i === 0 || i === r.length - 1 ? [p[0], p[1], Z[i]] : [X[i], Y[i], Z[i]]; });
+  var X = g(0, 2.5), Y = g(1, 2.5), Z = g(2, 10), K = g(3, 6);   // K：深淺（σ 6px，筆斷水是慢慢淡掉的）
+  return r.map(function (p, i) { return i === 0 || i === r.length - 1 ? [p[0], p[1], Z[i], K[i]] : [X[i], Y[i], Z[i], K[i]]; });
 }
 function phClose(B, W, H) {   // 先膨脹再侵蝕一格（3×3）：補起筆畫裡的小洞、細縫
   var A = new Uint8Array(W * H), x, y, dx, dy, i;
@@ -1561,20 +1572,28 @@ function phTrace(B, W, H, T) {   // 中心線串成一筆一筆（[x, y, 半寬]
   return out;
 }
 function phBin(d, W, H) {   // 深色＝字跡：跟附近的紙比（光線不均、有陰影也分得出來）
-  var n = W * H, L = new Float64Array(n), I = new Float64Array((W + 1) * (H + 1)), B = new Uint8Array(n), R = Math.max(8, Math.round(Math.max(W, H) / 16)), x, y, i;
+  var n = W * H, L = new Float64Array(n), I = new Float64Array((W + 1) * (H + 1)), B = new Uint8Array(n), DK = new Float32Array(n), R = Math.max(8, Math.round(Math.max(W, H) / 16)), x, y, i;
   for (i = 0; i < n; i++) L[i] = Math.min(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);   // 最暗的那個顏色：藍筆、紅筆也會夠深（用亮度的話藍筆太淡、一半被當成紙）
   for (y = 0; y < H; y++) for (x = 0, sum = 0; x < W; x++) { var sum; sum += L[y * W + x]; I[(y + 1) * (W + 1) + x + 1] = I[y * (W + 1) + x + 1] + sum; }
   for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
     var a = Math.max(0, x - R), b = Math.max(0, y - R), c = Math.min(W, x + R + 1), e = Math.min(H, y + R + 1);
     var m = (I[e * (W + 1) + c] - I[b * (W + 1) + c] - I[e * (W + 1) + a] + I[b * (W + 1) + a]) / ((c - a) * (e - b));
-    B[y * W + x] = L[y * W + x] < m * 0.72 ? 1 : 0;
+    B[y * W + x] = L[y * W + x] < m * 0.72 ? 2 : L[y * W + x] < m * 0.9 ? 1 : 0;   // 2 確定是墨、1 淡淡的（原子筆斷水、輕輕帶過）
+    DK[y * W + x] = Math.max(0, (m - L[y * W + x]) / m);
   }
+  /* 淡的只留「跟確定的墨連在一起」的（他 11/10：「筆劃的深淺要模仿，而不是缺一個口」——淡的那段要畫淡，不是不見） */
+  var st = [];
+  for (i = 0; i < n; i++) if (B[i] === 2) { B[i] = 3; st.push(i); }
+  while (st.length) { var p = st.pop(), px = p % W, py = (p - px) / W;
+    for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) { var qx = px + dx, qy = py + dy, q = qy * W + qx; if (qx >= 0 && qy >= 0 && qx < W && qy < H && B[q] === 1) { B[q] = 3; st.push(q); } } }
+  for (i = 0; i < n; i++) B[i] = B[i] === 3 ? 1 : 0;
+  B.dk = DK;   // 每一點多深（比附近的紙暗幾成）：重畫時照這個調深淺
   return B;
 }
 function phLines(B, W, H) {   // 表格線＝「筆直」的長線：一欄一欄找很薄的一小段墨、左右接成小段；只留筆直的小段，同一直線上的併起來，總長超過 40% 才算表格線
   var Z = new Uint8Array(W * H), out = [];   // out：[{ h:橫線?, k:斜率, b:截距 }]，phKeep 用來分「線的這一邊／那一邊」
   function scan(horiz) {
-    var A = horiz ? W : H, C = horiz ? H : W, maxT = Math.max(6, Math.round(C * 0.02)), chains = [], live = [];
+    var A = horiz ? W : H, C = horiz ? H : W, maxT = Math.max(8, Math.round(C * 0.03)), chains = [], live = [];
     for (var a = 0; a < A; a++) {
       var runs = [], s = -1;
       for (var c = 0; c <= C; c++) {
