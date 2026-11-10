@@ -1562,7 +1562,7 @@ function phTrace(B, W, H, T) {   // 中心線串成一筆一筆（[x, y, 半寬]
 }
 function phBin(d, W, H) {   // 深色＝字跡：跟附近的紙比（光線不均、有陰影也分得出來）
   var n = W * H, L = new Float64Array(n), I = new Float64Array((W + 1) * (H + 1)), B = new Uint8Array(n), R = Math.max(8, Math.round(Math.max(W, H) / 16)), x, y, i;
-  for (i = 0; i < n; i++) L[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+  for (i = 0; i < n; i++) L[i] = Math.min(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);   // 最暗的那個顏色：藍筆、紅筆也會夠深（用亮度的話藍筆太淡、一半被當成紙）
   for (y = 0; y < H; y++) for (x = 0, sum = 0; x < W; x++) { var sum; sum += L[y * W + x]; I[(y + 1) * (W + 1) + x + 1] = I[y * (W + 1) + x + 1] + sum; }
   for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
     var a = Math.max(0, x - R), b = Math.max(0, y - R), c = Math.min(W, x + R + 1), e = Math.min(H, y + R + 1);
@@ -1571,53 +1571,94 @@ function phBin(d, W, H) {   // 深色＝字跡：跟附近的紙比（光線不�
   }
   return B;
 }
-function phLines(B, W, H) {   // 表格線：很長的一直線擦掉。照片裡的線會微斜，所以先上下（左右）各放寬 3px 再量長度；簽名「穿過」線的地方補回來
-  var M = new Uint8Array(W * H), x, y, i;
-  function mark(len, n, at, dim) {   // 一條掃描線：放寬後連續的長度超過 20% 就是表格線，原本是黑的那些點標起來
-    var s = -1;
-    for (var j = 0; j <= len; j++) {
-      var on = false;
-      if (j < len) for (var t = -3; t <= 3 && !on; t++) { var c = at + t; if (c >= 0 && c < n) on = !!B[dim ? c * W + j : j * W + c]; }
-      if (on) { if (s < 0) s = j; continue; }
-      if (s >= 0 && j - s >= len * 0.2) for (var k = s; k < j; k++) { var p = dim ? at * W + k : k * W + at; if (B[p]) M[p] = dim ? 1 : 2; }
-      s = -1;
+function phLines(B, W, H) {   // 表格線＝「筆直」的長線：一欄一欄找很薄的一小段墨、左右接成小段；只留筆直的小段，同一直線上的併起來，總長超過 40% 才算表格線
+  var Z = new Uint8Array(W * H), out = [];   // out：[{ h:橫線?, k:斜率, b:截距 }]，phKeep 用來分「線的這一邊／那一邊」
+  function scan(horiz) {
+    var A = horiz ? W : H, C = horiz ? H : W, maxT = Math.max(6, Math.round(C * 0.02)), chains = [], live = [];
+    for (var a = 0; a < A; a++) {
+      var runs = [], s = -1;
+      for (var c = 0; c <= C; c++) {
+        var on = c < C && B[horiz ? c * W + a : a * W + c];
+        if (on) { if (s < 0) s = c; continue; }
+        if (s >= 0 && c - s <= maxT) runs.push([s, c - 1]);
+        s = -1;
+      }
+      var next = [];
+      runs.forEach(function (r) {
+        var m = (r[0] + r[1]) / 2, best = null, bd = 2.5;
+        live.forEach(function (ch) { var d = Math.abs(ch.m - m); if (a - ch.a <= 4 && d < bd) { bd = d; best = ch; } });
+        if (!best) { best = { runs: [] }; chains.push(best); }
+        best.m = m; best.a = a; best.runs.push([a, r[0], r[1]]); next.push(best);
+      });
+      live = live.filter(function (ch) { return a - ch.a <= 4 && next.indexOf(ch) === -1; }).concat(next);
     }
+    var segs = [];
+    function fit(rs) { var n = rs.length, sx = 0, sy = 0, sxx = 0, sxy = 0; rs.forEach(function (r) { var y = (r[1] + r[2]) / 2; sx += r[0]; sy += y; sxx += r[0] * r[0]; sxy += r[0] * y; }); var k = (n * sxy - sx * sy) / Math.max(1e-9, n * sxx - sx * sx); return [k, (sy - k * sx) / n]; }
+    chains.forEach(function (ch) {   // 直線擬合兩次（第二次去掉離線超過 2px 的點：簽名壓過去的那幾格）；九成的點都貼著直線才算「直」
+      if (ch.runs.length < A * 0.03) return;
+      var f = fit(ch.runs), off = function (r, f) { return Math.abs((r[1] + r[2]) / 2 - (f[0] * r[0] + f[1])); };
+      var inl = ch.runs.filter(function (r) { return off(r, f) <= 2; });
+      if (inl.length < ch.runs.length * 0.9 || inl.length < A * 0.03) return;
+      f = fit(inl); inl = ch.runs.filter(function (r) { return off(r, f) <= 2; });
+      if (Math.abs(f[0]) > 0.15) return;
+      segs.push({ k: f[0], b: f[1], runs: inl, a0: inl[0][0], a1: inl[inl.length - 1][0], used: false });
+    });
+    segs.sort(function (p, q) { return (q.a1 - q.a0) - (p.a1 - p.a0); });
+    segs.forEach(function (sg) {
+      if (sg.used) return;
+      var grp = segs.filter(function (o) { return !o.used && Math.abs(o.k - sg.k) < 0.03 && Math.abs((o.k * (o.a0 + o.a1) / 2 + o.b) - (sg.k * (o.a0 + o.a1) / 2 + sg.b)) <= 6; });
+      var cover = 0; grp.forEach(function (o) { cover += o.a1 - o.a0 + 1; });
+      if (cover < A * 0.4) return;
+      grp.forEach(function (o) { o.used = true; o.runs.forEach(function (r) { for (var c = r[1]; c <= r[2]; c++) Z[horiz ? c * W + r[0] : r[0] * W + c] = 1; }); });
+      out.push({ h: horiz, k: sg.k, b: sg.b });
+    });
   }
-  for (y = 0; y < H; y++) mark(W, H, y, 1);   // 橫線
-  for (x = 0; x < W; x++) mark(H, W, x, 0);   // 直線
-  function ink(xx, yy) { return xx >= 0 && yy >= 0 && xx < W && yy < H && B[yy * W + xx] && !M[yy * W + xx]; }
-  var Z = new Uint8Array(W * H);
-  for (i = 0; i < W * H; i++) if (M[i]) {
-    x = i % W; y = (i - x) / W;
-    var a = false, b = false;
-    for (var t = 1; t <= 14; t++) for (var u = -4; u <= 4; u++) {   // 橫線上的點：上方和下方（斜的筆畫左右偏一點也算）都有筆畫＝筆畫穿過這裡，留著；直線同理看左右
-      if (M[i] === 1) { a = a || ink(x + u, y - t); b = b || ink(x + u, y + t); } else { a = a || ink(x - t, y + u); b = b || ink(x + t, y + u); }
-    }
-    if (!(a && b)) Z[i] = 1;
-  }
-  for (i = 0; i < W * H; i++) if (Z[i]) B[i] = 0;
-  return Z;   // 擦掉的線（phKeep 用：被線切斷的那一小截簽名要留）
+  scan(true); scan(false);
+  for (var i = 0; i < W * H; i++) if (Z[i]) B[i] = 0;
+  Z.lines = out;
+  return Z;   // 擦掉的線（phKeep 用）
 }
-function phKeep(B, W, H, Z) {   // 印的字、勾選框都是小塊：只留夠大的一筆一筆（簽名的筆畫）；貼著擦掉的表格線的小截＝被線切斷的簽名，也留
-  var lab = new Int32Array(W * H), n = 0, keep = [0], lim = Math.max(W, H) * 0.12, st = [];
-  function nearZ(x, y) { for (var dy = -2; dy <= 2; dy++) for (var dx = -2; dx <= 2; dx++) { var a = x + dx, b = y + dy; if (a >= 0 && b >= 0 && a < W && b < H && Z[b * W + a]) return true; } return false; }
+function phKeep(B, W, H, Z) {   // 簽名＝最大的那幾筆，加上離它們不遠的（分開寫的字母、點）；離很遠的小塊（印的字、勾選框）去掉；貼著表格線的扁平碎片也去掉
+  var lab = new Int32Array(W * H), n = 0, cs = [null], st = [], M = Math.max(W, H);
   for (var i = 0; i < W * H; i++) {
     if (!B[i] || lab[i]) continue;
     n++; lab[i] = n; st.push(i);
-    var mx = W, my = H, Mx = 0, My = 0, cut = false;
+    var c = { x0: W, y0: H, x1: 0, y1: 0, cut: false, keep: false };
     while (st.length) {
       var p = st.pop(), x = p % W, y = (p - x) / W;
-      if (x < mx) mx = x; if (x > Mx) Mx = x; if (y < my) my = y; if (y > My) My = y;
-      if (!cut && Z && nearZ(x, y)) cut = true;
-      for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+      if (x < c.x0) c.x0 = x; if (x > c.x1) c.x1 = x; if (y < c.y0) c.y0 = y; if (y > c.y1) c.y1 = y;
+      if (!c.cut && Z) for (var dy = -2; dy <= 2 && !c.cut; dy++) for (var dx = -2; dx <= 2; dx++) { var a = x + dx, b = y + dy; if (a >= 0 && b >= 0 && a < W && b < H && Z[b * W + a]) { c.cut = true; break; } }
+      for (dy = -1; dy <= 1; dy++) for (dx = -1; dx <= 1; dx++) {
         var nx = x + dx, ny = y + dy, q = ny * W + nx;
         if (nx >= 0 && ny >= 0 && nx < W && ny < H && B[q] && !lab[q]) { lab[q] = n; st.push(q); }
       }
     }
-    var big = Math.max(Mx - mx, My - my);
-    keep[n] = big >= lim || (cut && big >= lim / 5);
+    c.big = Math.max(c.x1 - c.x0, c.y1 - c.y0);
+    c.flat = (c.cut || c.y0 < H * 0.04 || c.y1 > H * 0.96) && ((c.y1 - c.y0 <= 4 && c.x1 - c.x0 > 8) || (c.x1 - c.x0 <= 4 && c.y1 - c.y0 > 8));   // 表格線沒擦乾淨的一小截（貼著線、或在框的最上下緣）
+    cs.push(c);
   }
-  for (i = 0; i < W * H; i++) if (B[i] && !keep[lab[i]]) B[i] = 0;
+  var top = null;   // 最大那一塊＝簽名的主體；跟它隔著一條表格線的（線外的印刷字、別人寫的字）一律不要，除非貼著線（被線切斷的簽名）
+  cs.forEach(function (c) { if (c && !c.flat && (!top || c.big > top.big)) top = c; });
+  if (!top) return;
+  function mid(c) { return [(c.x0 + c.x1) / 2, (c.y0 + c.y1) / 2]; }
+  var tm = mid(top), L = (Z && Z.lines) || [];
+  function side(c) {
+    var g = M * 0.05;
+    if (c.cut && c.x0 - g <= top.x1 && top.x0 - g <= c.x1 && c.y0 - g <= top.y1 && top.y0 - g <= c.y1) return true;   // 貼著線、又跟簽名主體疊在一起＝被線切斷的簽名；其他照「中心在線的哪一邊」判（上一格別人寫的字也會貼著線）
+    var m = mid(c);
+    return L.every(function (l) { return l.h ? (m[1] - (l.k * m[0] + l.b)) * (tm[1] - (l.k * tm[0] + l.b)) > 0 : (m[0] - (l.k * m[1] + l.b)) * (tm[0] - (l.k * tm[1] + l.b)) > 0; });
+  }
+  cs.forEach(function (c) { if (c && !c.flat && c.big >= M * 0.12 && side(c)) c.keep = true; });
+  top.keep = true;
+  for (var grow = true; grow;) {   // 一直往外長：離已經留的 9% 以內、最大邊 2.5% 以上、同一格裡的塊（分開寫的字母）
+    grow = false;
+    cs.forEach(function (c) {
+      if (!c || c.keep || c.flat || c.big < M * 0.025 || !side(c)) return;
+      var g = M * 0.09;
+      if (cs.some(function (o) { return o && o.keep && c.x0 - g <= o.x1 && o.x0 - g <= c.x1 && c.y0 - g <= o.y1 && o.y0 - g <= c.y1; })) { c.keep = true; grow = true; }
+    });
+  }
+  for (i = 0; i < W * H; i++) if (B[i] && !cs[lab[i]].keep) B[i] = 0;
 }
 /* 補斷筆：中心線的每個斷頭，順著它原本的方向（前後 60 度內）往前找，最大邊 7% 內有別段筆畫就連過去。
    ponytail: 只連「不同段」；同一段自己繞回來的缺口不補（少見，補錯會多出一條線） */
