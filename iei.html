@@ -172,6 +172,7 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .files li b{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .files li small{flex:none;color:var(--mute);font-size:13px}
 .files li.up{opacity:.55}
+.files li .fx{flex:none;width:44px;height:44px;margin:-8px -8px -8px 0;border:0;background:transparent;color:var(--mute);display:grid;place-items:center}
 .signs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .tile{font:inherit;border:1.5px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);min-height:88px;padding:10px 12px;display:flex;flex-direction:column;justify-content:space-between;gap:4px;text-align:left;min-width:0;transition:transform .1s,background-color .3s}
 .tile b{font-size:15px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
@@ -1180,7 +1181,7 @@ function agTile(p, s) {
    如果 IEI 那邊有刪除檔案，小禾這邊再讀取的時候發現檔案沒的話也一樣就沒有了」） ----------
    清單一律是 IEI 當下真的掛著的那一份：每次都跟 IEI 要，手機上不存——他在 IEI 刪掉，下次打開就跟著少一個。
    送簽核以後 IEI 那張鎖住，Save 進不去，所以只給看不給傳。 */
-var FILES = [], FUP = [], FSV = '';
+var FILES = [], FUP = [], FSV = '', FHELD = [], FHD = '';   // FHELD：還沒送出先放著的（他 11/10），送出拿到編號自動掛上 IEI
 function fSite() { return isNt(S.cu00) ? 'n' : 't'; }
 function filesDraw() {
   var ul = $('files');
@@ -1191,18 +1192,38 @@ function filesDraw() {
     li.appendChild(el('small', '在 IEI 上'));
     ul.appendChild(li);
   });
+  FHELD.forEach(function (f) {
+    var li = el('li');
+    li.appendChild(el('b', f.name));
+    li.appendChild(el('small', '送出後自動傳'));
+    var x = el('button', null, { type: 'button', class: 'fx', 'aria-label': '拿掉 ' + f.name });
+    x.innerHTML = '<svg class="ic"><use href="#i-x"/></svg>';
+    x.onclick = function () {
+      api({ api: 'fdrop', d: DRAFT, k: f.k }).then(function (j) { FHELD = j.held || []; filesDraw(); })
+        .catch(function (e) { say('拿不掉：' + e.message); });
+    };
+    li.appendChild(x);
+    ul.appendChild(li);
+  });
   FUP.forEach(function (n) {
     var li = el('li', null, { class: 'up' });
     li.appendChild(el('b', n));
     li.appendChild(el('small', '上傳中…'));
     ul.appendChild(li);
   });
-  $('filesH').textContent = '附件' + (FILES.length ? '　' + FILES.length : '');
-  $('fAdd').hidden = locked() || !(X && X.svid);
-  $('filesN').textContent = !(X && X.svid) ? '附件要掛在 IEI 的那張訪視單上，所以這張送出、拿到 IEI 編號之後才能傳。'
+  var fn = FILES.length + FHELD.length;
+  $('filesH').textContent = '附件' + (fn ? '　' + fn : '');
+  $('fAdd').hidden = locked();
+  $('filesN').textContent = !(X && X.svid) ? (FHELD.length ? '先放在小禾，按送出、拿到 IEI 編號後會自動掛到 IEI 這張訪視單上。'
+      : '切結書、自白書這類紙本，現在就可以先傳；按送出、拿到 IEI 編號後自動掛到 IEI 上。')
     : locked() ? '已送簽核，IEI 鎖住了，附件要直接在 IEI 上加。'
     : FILES.length ? '這些是 IEI 上現在掛著的。在 IEI 刪掉的，這裡也會跟著不見。'
     : '切結書、自白書這類紙本，拍照或選檔案傳上去，就掛在 IEI 這張訪視單上。';
+}
+function heldLoad() {   // 還沒送出：這張先放著哪些
+  if (!DRAFT || FHD === DRAFT) return;
+  FHD = DRAFT;
+  api({ api: 'fheld', d: DRAFT }).then(function (j) { FHELD = j.held || []; filesDraw(); }).catch(function () {});
 }
 function filesLoad() {
   if (!X || !X.svid) return;
@@ -1237,8 +1258,18 @@ function fileRead(file) {
     img.src = url;
   });
 }
+function fileHold(file) {   // 還沒有 IEI 編號：先存一份草稿（要草稿編號），檔案放小禾，送出時自動掛上去
+  FUP.push(file.name); filesDraw();
+  function done() { var i = FUP.indexOf(file.name); if (i >= 0) FUP.splice(i, 1); }
+  return ensureDraft().then(function () { return fileRead(file); }).then(function (d) {
+    return api({ api: 'fhold', d: DRAFT, name: d.name, type: d.type, data: d.b64 });
+  }).then(function (j) {
+    done(); FHD = DRAFT; FHELD = j.held || FHELD; filesDraw(); say('「' + file.name + '」先放好了，送出後自動傳到 IEI');
+  }).catch(function (e) { done(); filesDraw(); say('「' + file.name + '」沒放成：' + e.message); });
+}
 function fileSend(file) {
   if (file.size > 10485760) return say('「' + file.name + '」' + Math.round(file.size / 1048576) + 'MB，太大了（上限 10MB）');
+  if (!(X && X.svid)) return fileHold(file);
   FUP.push(file.name); filesDraw();
   function done() { var i = FUP.indexOf(file.name); if (i >= 0) FUP.splice(i, 1); }
   return fileRead(file).then(function (d) {
@@ -1280,7 +1311,7 @@ function apply(s, live) {   // live：輪詢來的，改變的格子閃一下
   }
   /* 附件區一直看得到（他 10/19：「我怎麼在訪視單裡面沒有看到你放在哪邊？」）——
      還沒送出的時候只是傳不了，上面會寫原因；看不見比傳不了更糟，他會以為沒做。 */
-  if (s.svid && FSV !== s.svid) { FSV = s.svid; filesLoad(); } else filesDraw();   // 編號沒變就不要每次輪詢都去打 IEI
+  if (s.svid && FSV !== s.svid) { FSV = s.svid; FHELD = []; filesLoad(); } else { if (!s.svid) heldLoad(); filesDraw(); }   // 編號沒變就不要每次輪詢都去打 IEI
   s.slots.forEach(function (x) {
     var v = x.signed === true ? 'ok' : x.signed === 'held' ? 'held' : x.signed === 'dry' ? 'dry' : '';
     if (v) { if (live && ST[x.k] !== v && ST[x.k] !== 'ok') FL[x.k] = 1; ST[x.k] = v; }
