@@ -1706,7 +1706,7 @@ function phBridge(B, W, H) {
   }
   return out;
 }
-function phThin(B, W, H) {   // 細化成中心線（Zhang-Suen），之後用同一支筆重畫，粗細才會跟手簽一樣
+function phThin(B, W, H) {   // 細化成中心線（Zhang-Suen）：找斷頭、補斷口用
   var ch = true, del = [];
   function v(x, y) { return x >= 0 && y >= 0 && x < W && y < H ? B[y * W + x] : 0; }
   while (ch) {
