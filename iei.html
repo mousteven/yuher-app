@@ -1419,7 +1419,7 @@ $('b1').onclick = function () { if (RELAY) { ST[BQ[BI].k] = 'absent'; next(); } 
 $('b2').onclick = function () { cx.clearRect(0, 0, cv.width, cv.height); inked = false; if (PH) phEnd(); };
 /* ---------- 拍紙本上的簽名 → 電子簽名（他 11/10：「拍實體服務表的簽名照，上傳到雇主簽名欄或移工簽名欄，幫我變成電子簽名」） ----------
    拍照或選照片 → 照片鋪在簽名格上，手指框出簽名那一塊（不框就用整張）→ 按「轉成簽名」：
-   框裡的字跡留下（深色）、紙的底色變透明（大津法自動找深淺分界），畫回簽名格 → 他看過可以再按完成，跟手簽走同一條路上傳。
+   框裡跟附近的紙比、深的當字跡；擦掉表格長線和印的小字（只留大筆畫）；細化成中心線，再用手簽同一支筆（5px）照手簽的大小重畫 → 他看過可以再按完成，跟手簽走同一條路上傳。
    ⚠ 框太大會把表格線、印的字一起收進來，要框緊一點。 */
 var PH = null;   // { img, fit: [x, y, w, h], r: [x0, y0, x1, y1] }
 function phEnd() { var L = BQ[BI].L || TL['中']; PH = null; $('bsay').textContent = L.hint; $('b3').firstChild.textContent = RELAY && BI < BQ.length - 1 ? L.next : L.done; }
@@ -1445,36 +1445,112 @@ $('bphIn').onchange = function () {
   img.onerror = function () { URL.revokeObjectURL(url); say('這張照片打不開，換一張試試'); };
   img.src = url;
 };
-function phInk() {   // 框裡的照片 → 透明底的深色字跡，畫回簽名格
+function phInk() {   // 框裡的照片 → 只留簽名、重畫成跟手簽一樣的筆（他 11/10：表格線、印的字要去掉；大小粗細要看不出來）
   var f = PH.fit, r = PH.r && Math.abs(PH.r[2] - PH.r[0]) > 12 && Math.abs(PH.r[3] - PH.r[1]) > 12 ? PH.r : [f[0], f[1], f[0] + f[2], f[1] + f[3]];
   var x0 = Math.max(f[0], Math.min(r[0], r[2])), y0 = Math.max(f[1], Math.min(r[1], r[3])), x1 = Math.min(f[0] + f[2], Math.max(r[0], r[2])), y1 = Math.min(f[1] + f[3], Math.max(r[1], r[3]));
-  var s = PH.img.width / f[2], sx = (x0 - f[0]) * s, sy = (y0 - f[1]) * s, sw = (x1 - x0) * s, sh = (y1 - y0) * s;
+  var s = PH.img.width / f[2], sw = (x1 - x0) * s, sh = (y1 - y0) * s;
   if (sw < 4 || sh < 4) return false;
-  var k = Math.min(1, 1200 / Math.max(sw, sh)), o = document.createElement('canvas'); o.width = Math.round(sw * k); o.height = Math.round(sh * k);
-  var oc = o.getContext('2d'); oc.drawImage(PH.img, sx, sy, sw, sh, 0, 0, o.width, o.height);
-  var id = oc.getImageData(0, 0, o.width, o.height), d = id.data, n = d.length / 4, hist = new Array(256).fill(0), L = new Uint8Array(n);
-  for (var i = 0; i < n; i++) { L[i] = Math.round(0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]); hist[L[i]]++; }
-  var t = otsu(hist, n);
-  for (i = 0; i < n; i++) {   // 比分界深的是字跡：越深越不透明；其他全透明
-    var a = L[i] < t ? Math.min(255, Math.round((t - L[i]) / Math.max(1, t) * 255 * 2.2)) : 0;
-    d[i * 4] = 27; d[i * 4 + 1] = 28; d[i * 4 + 2] = 30; d[i * 4 + 3] = a;
+  var k = Math.min(1, 700 / Math.max(sw, sh)), W = Math.max(1, Math.round(sw * k)), H = Math.max(1, Math.round(sh * k)), o = document.createElement('canvas'); o.width = W; o.height = H;
+  var oc = o.getContext('2d'); oc.drawImage(PH.img, (x0 - f[0]) * s, (y0 - f[1]) * s, sw, sh, 0, 0, W, H);
+  var B = phBin(oc.getImageData(0, 0, W, H).data, W, H);
+  phKeep(B, W, H, phLines(B, W, H)); phThin(B, W, H);
+  var bx0 = W, by0 = H, bx1 = -1, by1 = -1, i, x, y;
+  for (i = 0; i < W * H; i++) if (B[i]) { x = i % W; y = (i - x) / W; if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
+  if (bx1 < 0) return false;
+  /* 跟手簽同一支筆：5px 圓頭、#1B1C1E；大小照一般人在格子裡簽的（寬最多 75%、高最多 65%） */
+  var w = cv.clientWidth, h = cv.clientHeight, q = Math.min(w * 0.75 / (bx1 - bx0 + 1), h * 0.65 / (by1 - by0 + 1)), ox = (w - (bx1 - bx0 + 1) * q) / 2 - bx0 * q, oy = (h - (by1 - by0 + 1) * q) / 2 - by0 * q;
+  cx.clearRect(0, 0, w, h); cx.save(); cx.lineWidth = 5; cx.lineCap = cx.lineJoin = 'round'; cx.strokeStyle = '#1B1C1E'; cx.beginPath();
+  for (y = 0; y < H; y++) for (x = 0; x < W; x++) {   // 中心線上相鄰的點連成線（往右、往下的鄰居，不重複）
+    if (!B[y * W + x]) continue;
+    var px = ox + x * q, py = oy + y * q, any = false;
+    [[1, 0], [-1, 1], [0, 1], [1, 1]].forEach(function (d) {
+      var nx = x + d[0], ny = y + d[1];
+      if (nx >= 0 && nx < W && ny < H && B[ny * W + nx]) { cx.moveTo(px, py); cx.lineTo(ox + nx * q, oy + ny * q); any = true; }
+    });
+    if (!any) { cx.moveTo(px, py); cx.lineTo(px + 0.01, py); }
   }
-  oc.putImageData(id, 0, 0);
-  var w = cv.clientWidth, h = cv.clientHeight, q = Math.min(w * 0.9 / o.width, h * 0.8 / o.height);
-  cx.clearRect(0, 0, w, h); cx.drawImage(o, (w - o.width * q) / 2, (h - o.height * q) / 2, o.width * q, o.height * q);
+  cx.stroke(); cx.restore();
   return true;
 }
-function otsu(hist, n) {   // 大津法：把直方圖分成「紙」和「墨」兩群，回分界的亮度
-  var sum = 0, sb = 0, wb = 0, best = 0, t = 128;
-  for (var i = 0; i < 256; i++) sum += i * hist[i];
-  for (i = 0; i < 256; i++) {
-    wb += hist[i]; if (!wb) continue;
-    var wf = n - wb; if (!wf) break;
-    sb += i * hist[i];
-    var mb = sb / wb, mf = (sum - sb) / wf, v = wb * wf * (mb - mf) * (mb - mf);
-    if (v > best) { best = v; t = i; }
+function phBin(d, W, H) {   // 深色＝字跡：跟附近的紙比（光線不均、有陰影也分得出來）
+  var n = W * H, L = new Float64Array(n), I = new Float64Array((W + 1) * (H + 1)), B = new Uint8Array(n), R = Math.max(8, Math.round(Math.max(W, H) / 16)), x, y, i;
+  for (i = 0; i < n; i++) L[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+  for (y = 0; y < H; y++) for (x = 0, sum = 0; x < W; x++) { var sum; sum += L[y * W + x]; I[(y + 1) * (W + 1) + x + 1] = I[y * (W + 1) + x + 1] + sum; }
+  for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
+    var a = Math.max(0, x - R), b = Math.max(0, y - R), c = Math.min(W, x + R + 1), e = Math.min(H, y + R + 1);
+    var m = (I[e * (W + 1) + c] - I[b * (W + 1) + c] - I[e * (W + 1) + a] + I[b * (W + 1) + a]) / ((c - a) * (e - b));
+    B[y * W + x] = L[y * W + x] < m * 0.72 ? 1 : 0;
   }
-  return t;
+  return B;
+}
+function phLines(B, W, H) {   // 表格線：很長的一直線擦掉。照片裡的線會微斜，所以先上下（左右）各放寬 3px 再量長度；簽名「穿過」線的地方補回來
+  var M = new Uint8Array(W * H), x, y, i;
+  function mark(len, n, at, dim) {   // 一條掃描線：放寬後連續的長度超過 20% 就是表格線，原本是黑的那些點標起來
+    var s = -1;
+    for (var j = 0; j <= len; j++) {
+      var on = false;
+      if (j < len) for (var t = -3; t <= 3 && !on; t++) { var c = at + t; if (c >= 0 && c < n) on = !!B[dim ? c * W + j : j * W + c]; }
+      if (on) { if (s < 0) s = j; continue; }
+      if (s >= 0 && j - s >= len * 0.2) for (var k = s; k < j; k++) { var p = dim ? at * W + k : k * W + at; if (B[p]) M[p] = dim ? 1 : 2; }
+      s = -1;
+    }
+  }
+  for (y = 0; y < H; y++) mark(W, H, y, 1);   // 橫線
+  for (x = 0; x < W; x++) mark(H, W, x, 0);   // 直線
+  function ink(xx, yy) { return xx >= 0 && yy >= 0 && xx < W && yy < H && B[yy * W + xx] && !M[yy * W + xx]; }
+  var Z = new Uint8Array(W * H);
+  for (i = 0; i < W * H; i++) if (M[i]) {
+    x = i % W; y = (i - x) / W;
+    var a = false, b = false;
+    for (var t = 1; t <= 14; t++) for (var u = -4; u <= 4; u++) {   // 橫線上的點：上方和下方（斜的筆畫左右偏一點也算）都有筆畫＝筆畫穿過這裡，留著；直線同理看左右
+      if (M[i] === 1) { a = a || ink(x + u, y - t); b = b || ink(x + u, y + t); } else { a = a || ink(x - t, y + u); b = b || ink(x + t, y + u); }
+    }
+    if (!(a && b)) Z[i] = 1;
+  }
+  for (i = 0; i < W * H; i++) if (Z[i]) B[i] = 0;
+  return Z;   // 擦掉的線（phKeep 用：被線切斷的那一小截簽名要留）
+}
+function phKeep(B, W, H, Z) {   // 印的字、勾選框都是小塊：只留夠大的一筆一筆（簽名的筆畫）；貼著擦掉的表格線的小截＝被線切斷的簽名，也留
+  var lab = new Int32Array(W * H), n = 0, keep = [0], lim = Math.max(W, H) * 0.12, st = [];
+  function nearZ(x, y) { for (var dy = -2; dy <= 2; dy++) for (var dx = -2; dx <= 2; dx++) { var a = x + dx, b = y + dy; if (a >= 0 && b >= 0 && a < W && b < H && Z[b * W + a]) return true; } return false; }
+  for (var i = 0; i < W * H; i++) {
+    if (!B[i] || lab[i]) continue;
+    n++; lab[i] = n; st.push(i);
+    var mx = W, my = H, Mx = 0, My = 0, cut = false;
+    while (st.length) {
+      var p = st.pop(), x = p % W, y = (p - x) / W;
+      if (x < mx) mx = x; if (x > Mx) Mx = x; if (y < my) my = y; if (y > My) My = y;
+      if (!cut && Z && nearZ(x, y)) cut = true;
+      for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+        var nx = x + dx, ny = y + dy, q = ny * W + nx;
+        if (nx >= 0 && ny >= 0 && nx < W && ny < H && B[q] && !lab[q]) { lab[q] = n; st.push(q); }
+      }
+    }
+    var big = Math.max(Mx - mx, My - my);
+    keep[n] = big >= lim || (cut && big >= lim / 5);
+  }
+  for (i = 0; i < W * H; i++) if (B[i] && !keep[lab[i]]) B[i] = 0;
+}
+function phThin(B, W, H) {   // 細化成中心線（Zhang-Suen），之後用同一支筆重畫，粗細才會跟手簽一樣
+  var ch = true, del = [];
+  function v(x, y) { return x >= 0 && y >= 0 && x < W && y < H ? B[y * W + x] : 0; }
+  while (ch) {
+    ch = false;
+    for (var it = 0; it < 2; it++) {
+      del.length = 0;
+      for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+        if (!B[y * W + x]) continue;
+        var p = [v(x, y - 1), v(x + 1, y - 1), v(x + 1, y), v(x + 1, y + 1), v(x, y + 1), v(x - 1, y + 1), v(x - 1, y), v(x - 1, y - 1)];
+        var b = p[0] + p[1] + p[2] + p[3] + p[4] + p[5] + p[6] + p[7], a = 0;
+        if (b < 2 || b > 6) continue;
+        for (var j = 0; j < 8; j++) if (!p[j] && p[(j + 1) % 8]) a++;
+        if (a !== 1) continue;
+        if (it === 0 ? (p[0] * p[2] * p[4] || p[2] * p[4] * p[6]) : (p[0] * p[2] * p[6] || p[0] * p[4] * p[6])) continue;
+        del.push(y * W + x);
+      }
+      if (del.length) { ch = true; del.forEach(function (q) { B[q] = 0; }); }
+    }
+  }
 }
 $('b3').onclick = function () {
   var L = BQ[BI].L;
