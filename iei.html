@@ -1182,6 +1182,7 @@ function agTile(p, s) {
    如果 IEI 那邊有刪除檔案，小禾這邊再讀取的時候發現檔案沒的話也一樣就沒有了」） ----------
    清單一律是 IEI 當下真的掛著的那一份：每次都跟 IEI 要，手機上不存——他在 IEI 刪掉，下次打開就跟著少一個。
    送簽核以後 IEI 那張鎖住，Save 進不去，所以只給看不給傳。 */
+var DELASK = false;   // IEI 刪掉的那張：一次打開只問一次
 var FILES = [], FUP = [], FSV = '', FHELD = [], FHD = '';   // FHELD：還沒送出先放著的（他 11/10），送出拿到編號自動掛上 IEI
 function fSite() { return isNt(S.cu00) ? 'n' : 't'; }
 function filesDraw() {
@@ -1318,7 +1319,19 @@ function apply(s, live) {   // live：輪詢來的，改變的格子閃一下
     if (v) { if (live && ST[x.k] !== v && ST[x.k] !== 'ok') FL[x.k] = 1; ST[x.k] = v; }
     else if (/ok|held|dry/.test(ST[x.k] || '')) delete ST[x.k];
   });
-  if (s.deleted) say('這張在 IEI 被刪掉了（原編號 ' + s.deleted + '），可以改內容重送。');
+  if (s.deleted && !DELASK) {   // 他 11/10：「我在 IEI 先刪除了，但小禾仍還存在」→ 問一次：小禾也刪，還是改好重送
+    DELASK = true; say('這張在 IEI 被刪掉了（原編號 ' + s.deleted + '）');
+    $('vsT').textContent = '這張在 IEI 已經刪掉了';
+    $('vsN').textContent = '原 IEI 編號 ' + s.deleted + '。小禾這邊要一起刪掉，還是改內容重送一次？';
+    var db = $('vsB'); db.innerHTML = '';
+    db.appendChild(vBtn('小禾也刪掉', 'go', function () {
+      api({ api: 'ddel', ids: [DRAFT] }).then(function () {
+        $('vSheet').hidden = true; say('小禾這張也刪了'); try { liff.closeWindow(); } catch (e) { history.back(); }
+      }).catch(function (e) { say('刪不掉：' + e.message); });
+    }));
+    db.appendChild(vBtn('改內容重送', 'soft', function () { $('vSheet').hidden = true; }));
+    vOpen(true);
+  }
   $('edit').classList.toggle('locked', SENT && !REJ); $('edit').inert = SENT && !REJ;
   head(); drawSigns();
 }
