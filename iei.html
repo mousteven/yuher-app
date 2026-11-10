@@ -1640,8 +1640,14 @@ function vMenu(v) {
     b.lastChild.style.background = 'var(--red)';
     vOpen(true);
   }));
-  b.appendChild(v.d ? vBtn('打開小禾的這張', v.canSub ? 'soft' : 'go', function () { location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&d=' + v.d; })
-                    : vBtn(v.canSub ? '關閉' : '關閉（這張是在 IEI 網頁上開的）', 'soft', function () { $('vSheet').hidden = true; }));
+  var go = function (d) { location.href = location.pathname + '?liff=' + encodeURIComponent(LIFF_ID) + '&d=' + d; };
+  /* 在 IEI 網頁上開的（代理人替他開的、主管排的）：接手到小禾，之後跟小禾送的那張一樣能看、簽名、改好重送（他 11/10） */
+  b.appendChild(v.d ? vBtn('打開小禾的這張', v.canSub ? 'soft' : 'go', function () { go(v.d); })
+                    : vBtn('在小禾打開（看內容、簽名、改）', 'go', function () {
+                        var t = this; t.disabled = true; t.textContent = '從 IEI 讀這張…';
+                        api({ api: 'take', site: v.site, svid: v.svid, cu: v.cu }).then(function (j) { go(j.id); })
+                          .catch(function (e) { $('vsN').textContent = e.message; t.disabled = false; t.textContent = '在小禾打開（看內容、簽名、改）'; });
+                      }));
   vOpen(false);
 }
 /* 從總表直接送審核（他 10/19）。⛔ 送了 IEI 就鎖住，所以一定要確認一次：
