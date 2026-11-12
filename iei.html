@@ -434,6 +434,8 @@ footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
 
    <section class="svc">
    <div class="card dk"><div class="lab"><i class="nb">1</i>服務大項</div>
+    <label class="fld"><svg class="ic"><use href="#i-co"/></svg><input type="search" id="svcQ" placeholder="打關鍵字找服務項目（例：驗證、宿舍、稅）" aria-label="搜尋服務項目" autocomplete="off"></label>
+    <div class="chips" id="svcHit" role="group" aria-label="搜尋結果"></div>
     <div class="chips scroll" id="cats" role="group" aria-label="服務大項"></div></div>
    <div class="card att">
     <div class="f" id="subF" hidden><div class="lab"><i class="nb">2</i>細項</div><div class="chips" id="subs" role="group" aria-label="細項"></div><div class="f" id="xF" hidden></div></div>
@@ -795,6 +797,20 @@ function cats() {
   if (S.cat >= 0) META.cats[S.cat].s.forEach(function (x, i) { chip(sb, x[0], i === S.sub, function () { pickSub(S.cat, i, true); }); });
   phrases();
 }
+/* 搜尋服務項目（他 11/13：選錯要改時，打關鍵字就跳出該選哪個）：大項、細項、片語中文都找；空白隔開＝每個詞都要有 */
+function svcFind() {
+  var q = $('svcQ').value.trim().split(/\s+/).filter(String), box = $('svcHit'), n = 0;
+  box.innerHTML = '';
+  if (!q.length) return;
+  META.cats.forEach(function (c, ci) { c.s.forEach(function (x, si) {
+    var ph = META.ph[x[0]] || {}, hay = [c.b, x[0]].concat((ph.d || []).concat(ph.r || []).map(function (r) { return r[0]; })).join(' ');
+    if (n < 8 && q.every(function (w) { return hay.indexOf(w) !== -1; })) {
+      n++; chip(box, c.b + '／' + x[0], ci === S.cat && si === S.sub, function () { $('svcQ').value = ''; box.innerHTML = ''; pickSub(ci, si, true); });
+    }
+  }); });
+  if (!n) box.appendChild(el('div', '找不到，換個詞試試', { class: 'note' }));
+}
+$('svcQ').addEventListener('input', svcFind);
 /* 選細項：換掉上一個自動對的 IEI 項目（他手動加的留著）；手動點的細項，文字還沒改過就換成這個細項的第一句片語 */
 function pickSub(ci, si, byHand) {
   var same = S.cat === ci && S.sub === si;
@@ -930,13 +946,13 @@ function phCompose(ph, pk, sl, L, fp, fa, fam) {   // fam：雇主是個人 → 
 var PH_L = { '菲律賓': 1, '越南': 2, '印尼': 3, '泰國': 4 };
 /* 只有他自己打的那段（框框）要機器翻；片語的譯文已經在 META.ph */
 function recN() { return $('labor').dataset.v === '2' ? 0 : picked().length; }   // 後端 xhRecN_ 同一個算法（人數決定單複數，也是快取鍵）
-function trKey() { return JSON.stringify([S.nat, recN(), $('p').value.trim(), $('a').value.trim()]); }
+function trKey() { return JSON.stringify([S.nat, recN(), $('p').value.trim(), $('a').value.trim(), recN() ? picked().map(function (w) { return { la00: w.la00, zh: w.zh || w.en }; }) : []]); }
 /* 譯文進 TRC；預覽和移工的簽名板共用這一份。TRB＝哪家翻的（Google 的要標出來）。
    ⛔ 送去翻的一定是 k 裡的字，不是送出當下框框裡的字（11/12：停手 0.7 秒或伺服器慢的時候框框已經改了，
    新中文配到舊譯文——「帶工人去宿舍」的英文變成上一句「移工表示…都沒有問題」） */
 function translate(k, re) {
   var q = JSON.parse(k);
-  return api({ api: 'tr', nat: q[0], n: q[1], re: re ? 1 : 0, texts: [q[2], q[3]] }).then(function (j) { TRC[k] = j.out; TRB[k] = j.by || []; }).catch(function () { TRC[k] = ['', '']; TRB[k] = []; });
+  return api({ api: 'tr', nat: q[0], n: q[1], re: re ? 1 : 0, texts: [q[2], q[3]], wk: q[4] }).then(function (j) { TRC[k] = j.out; TRB[k] = j.by || []; }).catch(function () { TRC[k] = ['', '']; TRB[k] = []; });
 }
 /* L 語言的 [處理經過, 處理結果]＝片語組句＋自己打的（翻好的；翻譯失敗用中文，跟後端一樣）。自己打的還沒翻回來 → null */
 function texts(L) {
@@ -995,11 +1011,21 @@ function drawTodo() {
     box.appendChild(lab);
   });
 }
+/* 交代清單 → 已完成的句子：「收稅金3540」→「已收稅金3540。」（去掉開頭的請／記得，已經是「已…」的不重複加） */
+function tdDone(list) {
+  return (list || []).map(function (x) { return String(x.t || '').replace(/[★☆]|[(（]有附件[)）]/g, '').trim().replace(/^(請(安排|派)?(翻譯|人)?(先)?|記得|要)/, '').replace(/[。．.；;，,、\s]+$/, ''); })
+    .filter(String).map(function (t) { return (/^已/.test(t) ? t : '已' + t) + '。'; }).join('');
+}
 function useTrip(t) {
   S.trip = t; S.tripId = t.id; S.client = t.client; S.cu00 = ''; S.cuName = ''; S.items = t.items.slice(); S.auto = 0; S.vtEdited = false;
   $('addr').value = t.addr || ''; seg('method', t.method); drawTodo();
   var hit = findSub(t.big, t.sub);
   if (hit) pickSub(hit[0], hit[1], true); else { S.cat = -1; cats(); items(); }   // 照行程／交辦事項先選好細項，句子換成那個細項的第一句（他 10/15：草稿先填好）
+  var td = tdDone(t.todo);   // 交代清單先寫成「已完成」的句子（他 11/13）：沒做完的他自己改
+  if (td && (!$('p').value.trim() || $('p').value === S.autoP)) {
+    $('p').value = td; S.autoP = ''; preview();
+    api({ api: 'td', todo: t.todo }).then(function (j) { if (j.t && $('p').value === td && S.trip === t) { $('p').value = j.t; phrases(); preview(); } }).catch(function () {});
+  }
   head(); $('wk').innerHTML = ''; load('在 IEI 對客戶…');
   var ti = performance.now(); if (FT && !FT.sent) FT.t0 = 1;
   (TI[t.id] ? Promise.resolve(TI[t.id]) : api({ api: 'iei', client: t.client, workers: t.workers })).then(function (j) {
