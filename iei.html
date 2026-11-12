@@ -542,7 +542,7 @@ var Q = new URLSearchParams(location.search), Q2 = new URLSearchParams(decodeURI
 function qp(k) { return Q.get(k) || Q2.get(k) || ''; }
 var LIFF_ID = qp('liff'), DRAFT = qp('d') || qp('sign'), TRIP = qp('t'), DAY = qp('day');   // ?sign= 是舊的簽名頁連結；t／day：從行程卡點進來直接帶那一站
 var S = { items: [], auto: 0, autoP: '', autoA: '', pk: { d: {}, r: {} }, sl: {}, picks: {}, workers: [], vtEdited: false, trip: null, cu00: '', cuName: '', client: '', cat: -1, sub: -1, nat: '' };
-var META = null, X = null, ST = {}, FL = {}, SAVED = '', SENT = false, REJ = '', LANG = '中', TRC = {}, TRB = {}, POLL = false, BQ = [], BI = 0, RELAY = false, trTimer = 0;
+var META = null, X = null, ST = {}, FL = {}, SAVED = '', SENT = false, REJ = '', LANG = '中', TRC = {}, TRB = {}, POLL = false, BQ = [], BI = 0, RELAY = false, trTimer = 0, PVV = '';
 var LC = { '菲律賓': 'EN', '越南': 'VI', '印尼': 'ID', '泰國': 'TH' };
 var STX = { ok: '✓ 已簽', held: '✓ 簽好了', local: '✓ 存在手機', dry: '✓ 試跑', todo: '點這裡簽', absent: '不在', up: '上傳中…', fail: '沒傳上去，再簽', auto: '自動沿用', agno: '沒有數位簽章', wait: '讀取中…' };
 /* 移工簽名用他的語言（他 2026-10-14 批准）：固定寫好的字，不是機器翻。hint／clear／needSign／proc／res／signed 跟 qsign.html 的 T 一字不差（check.js 比對） */
@@ -878,6 +878,9 @@ function extras(x) {
   });
 }
 ['p', 'a'].forEach(function (id) { $(id).addEventListener('input', function () { phrases(); preview(); }); });
+/* iPhone 語音輸入（他都用講的）最後定稿的字常常不發 input 事件 → 預覽停在上一句的譯文（11/13「工人接受處份」配到「I took the worker to the dormitory」）。
+   每秒對一次框框裡的字，跟預覽上次用的不一樣就重畫 */
+setInterval(function () { if (META && $('p').value + '\n' + $('a').value !== PVV) { phrases(); preview(); } }, 1000);
 /* ---------- 預覽：中文＋移工語言（後端用羽禾 App 同一套 Google 翻譯；同一段字只翻一次） ---------- */
 function langs() {
   var box = $('langs'), all = ['中'].concat(LC[S.nat] ? [LC[S.nat]] : []); box.innerHTML = '';
@@ -943,6 +946,7 @@ function texts(L) {
   return [c.p, c.a];
 }
 function preview() {
+  PVV = $('p').value + '\n' + $('a').value;
   var box = $('pv'), L = LANG === '中' ? 0 : PH_L[S.nat] || 0, t = texts(L), k = trKey();
   box.innerHTML = '';
   function show(r, note) {
