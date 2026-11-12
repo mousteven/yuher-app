@@ -542,7 +542,7 @@ var Q = new URLSearchParams(location.search), Q2 = new URLSearchParams(decodeURI
 function qp(k) { return Q.get(k) || Q2.get(k) || ''; }
 var LIFF_ID = qp('liff'), DRAFT = qp('d') || qp('sign'), TRIP = qp('t'), DAY = qp('day');   // ?sign= 是舊的簽名頁連結；t／day：從行程卡點進來直接帶那一站
 var S = { items: [], auto: 0, autoP: '', autoA: '', pk: { d: {}, r: {} }, sl: {}, picks: {}, workers: [], vtEdited: false, trip: null, cu00: '', cuName: '', client: '', cat: -1, sub: -1, nat: '' };
-var META = null, X = null, ST = {}, FL = {}, SAVED = '', SENT = false, REJ = '', LANG = '中', TRC = {}, POLL = false, BQ = [], BI = 0, RELAY = false, trTimer = 0;
+var META = null, X = null, ST = {}, FL = {}, SAVED = '', SENT = false, REJ = '', LANG = '中', TRC = {}, TRB = {}, POLL = false, BQ = [], BI = 0, RELAY = false, trTimer = 0;
 var LC = { '菲律賓': 'EN', '越南': 'VI', '印尼': 'ID', '泰國': 'TH' };
 var STX = { ok: '✓ 已簽', held: '✓ 簽好了', local: '✓ 存在手機', dry: '✓ 試跑', todo: '點這裡簽', absent: '不在', up: '上傳中…', fail: '沒傳上去，再簽', auto: '自動沿用', agno: '沒有數位簽章', wait: '讀取中…' };
 /* 移工簽名用他的語言（他 2026-10-14 批准）：固定寫好的字，不是機器翻。hint／clear／needSign／proc／res／signed 跟 qsign.html 的 T 一字不差（check.js 比對） */
@@ -927,9 +927,13 @@ function phCompose(ph, pk, sl, L, fp, fa, fam) {   // fam：雇主是個人 → 
 var PH_L = { '菲律賓': 1, '越南': 2, '印尼': 3, '泰國': 4 };
 /* 只有他自己打的那段（框框）要機器翻；片語的譯文已經在 META.ph */
 function recN() { return $('labor').dataset.v === '2' ? 0 : picked().length; }   // 後端 xhRecN_ 同一個算法（人數決定單複數，也是快取鍵）
-function trKey() { return S.nat + '|' + recN() + '|' + $('p').value.trim() + '|' + $('a').value.trim(); }
-function translate(k) {   // 譯文進 TRC；預覽和移工的簽名板共用這一份
-  return api({ api: 'tr', nat: S.nat, n: recN(), texts: [$('p').value.trim(), $('a').value.trim()] }).then(function (j) { TRC[k] = j.out; }).catch(function () { TRC[k] = ['', '']; });
+function trKey() { return JSON.stringify([S.nat, recN(), $('p').value.trim(), $('a').value.trim()]); }
+/* 譯文進 TRC；預覽和移工的簽名板共用這一份。TRB＝哪家翻的（Google 的要標出來）。
+   ⛔ 送去翻的一定是 k 裡的字，不是送出當下框框裡的字（11/12：停手 0.7 秒或伺服器慢的時候框框已經改了，
+   新中文配到舊譯文——「帶工人去宿舍」的英文變成上一句「移工表示…都沒有問題」） */
+function translate(k, re) {
+  var q = JSON.parse(k);
+  return api({ api: 'tr', nat: q[0], n: q[1], re: re ? 1 : 0, texts: [q[2], q[3]] }).then(function (j) { TRC[k] = j.out; TRB[k] = j.by || []; }).catch(function () { TRC[k] = ['', '']; TRB[k] = []; });
 }
 /* L 語言的 [處理經過, 處理結果]＝片語組句＋自己打的（翻好的；翻譯失敗用中文，跟後端一樣）。自己打的還沒翻回來 → null */
 function texts(L) {
@@ -947,7 +951,13 @@ function preview() {
     $('pvNote').textContent = note;
   }
   if (!L) return show(t, '這就是存進 IEI 的內容（雇主看中文）');
-  if (t) return show(t, $('p').value.trim() || $('a').value.trim() ? '移工看到的＝存進 IEI 的譯文（片語是校對過的譯文；自己打的那段是機器翻譯）' : '移工看到的＝存進 IEI 的譯文（校對過的譯文）');
+  if (t && (TRB[k] || []).indexOf('Google') !== -1) {   // Gemini 沒接通、退回 Google：講出來＋可以重翻（他 11/12：Google 翻得不準）
+    show(t, '⚠ 你自己打的那段這次是 Google 翻的（Gemini 沒接通），可能不準。');
+    var rb = el('button', '用 Gemini 重翻', { type: 'button', class: 'all' });
+    rb.onclick = function () { rb.disabled = true; rb.textContent = '重翻中…'; translate(k, 1).then(preview); };
+    return $('pvNote').appendChild(rb);
+  }
+  if (t) return show(t, $('p').value.trim() || $('a').value.trim() ? '移工看到的＝存進 IEI 的譯文（片語是校對過的譯文；自己打的那段是 Gemini 翻的）' : '移工看到的＝存進 IEI 的譯文（校對過的譯文）');
   show(texts(0), '翻譯你自己打的那段…');
   clearTimeout(trTimer);
   trTimer = setTimeout(function () { translate(k).then(preview); }, 700);   // 停手 0.7 秒才翻，打字時不會一直燒翻譯額度
