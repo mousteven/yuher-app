@@ -813,7 +813,7 @@ function svcFind() {
       $('svcQ').value = ''; box.innerHTML = ''; pickSub(ci, si, true);
       if (!hit) return;
       if (hit[0] === 'd' && JSON.stringify(S.pk.d) === '{"0":0}' && !$('p').value.trim()) S.pk.d = {};   // 拿掉自動勾的第一句
-      S.pk[hit[0]][hit[1]] = 0; phrases(); preview(); check();
+      S.pk[hit[0]][hit[1]] = 0; if (hit[0] === 'r') S.rAuto = false; else autoR(); phrases(); preview(); check();
     });
   }); });
   if (!n) box.appendChild(el('div', '找不到，換個詞試試', { class: 'note' }));
@@ -830,7 +830,9 @@ function pickSub(ci, si, byHand) {
   if (!same) { S.pk = { d: {}, r: {} }; S.sl = {}; }   // 片語序號是跟著細項的
   if (byHand && !same) {   // 預設那句還沒改過 → 拿掉，改勾這個細項的第一句片語
     if ($('p').value === S.autoP) { $('p').value = S.autoP = ''; S.pk.d[0] = 0; }
-    if ($('a').value === S.autoA) { $('a').value = S.autoA = ''; S.pk.r[0] = 0; }
+    S.rAuto = false;
+    if ($('a').value === S.autoA) { $('a').value = S.autoA = ''; S.rAuto = true; }
+    autoR();
   }
   cats(); items(); preview(); check();
 }
@@ -852,6 +854,7 @@ function subChips(boxId, list, k) {
     var on = i in m, o = /\{([^}]*)\}/.exec(row[0]), opts = o ? o[1].split('|') : null;
     chip(box, row[0].replace(/\{[^}]*\}/, on ? '…' : opts ? opts.join('／') : '').replace(/\[(\w+)\|([^|\]]*)\|([^\]]*)\]/g, '$3'), on, function () {
       if (on) delete m[i]; else m[i] = 0;
+      if (k === 'r') S.rAuto = false; else autoR();
       phrases(); preview();
     });
     if (!on || !opts) return;
@@ -861,6 +864,12 @@ function subChips(boxId, list, k) {
   });
 }
 function curPh() { return S.cat >= 0 && S.sub >= 0 ? META.ph[META.cats[S.cat].s[S.sub][0]] || null : null; }
+/* 結果跟著經過走（他 11/13）：結果還是自動帶的（他沒點過結果）→ 照勾的最後一句經過換成對應的結果（Phrase.gs 的 dr） */
+function autoR() {
+  var x = curPh(), ks = Object.keys(S.pk.d).map(Number);
+  if (!S.rAuto || !x || !x.r) return;
+  S.pk.r = {}; S.pk.r[ks.length ? (x.dr || [])[Math.max.apply(null, ks)] || 0 : 0] = 0;
+}
 function phrases() {
   var x = curPh();
   subChips('pc', x && x.d, 'd'); subChips('ac', x && x.r, 'r');
