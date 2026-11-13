@@ -802,11 +802,19 @@ function svcFind() {
   var q = $('svcQ').value.trim().split(/\s+/).filter(String), box = $('svcHit'), n = 0;
   box.innerHTML = '';
   if (!q.length) return;
+  function has(t) { return q.every(function (w) { return t.indexOf(w) !== -1; }); }
   META.cats.forEach(function (c, ci) { c.s.forEach(function (x, si) {
-    var ph = META.ph[x[0]] || {}, hay = [c.b, x[0]].concat((ph.d || []).concat(ph.r || []).map(function (r) { return r[0]; })).join(' ');
-    if (n < 8 && q.every(function (w) { return hay.indexOf(w) !== -1; })) {
-      n++; chip(box, c.b + '／' + x[0], ci === S.cat && si === S.sub, function () { $('svcQ').value = ''; box.innerHTML = ''; pickSub(ci, si, true); });
-    }
+    /* 字在片語裡（例：筆記本）→ 顯示那句，點了順便勾那句（他 11/13：關鍵字不是大項也要找得到，看得到大項） */
+    var ph = META.ph[x[0]] || {}, hit = null;
+    if (!has(c.b + ' ' + x[0])) ['d', 'r'].forEach(function (k) { (ph[k] || []).forEach(function (r, i) { if (!hit && has(r[0])) hit = [k, i, r[0]]; }); });
+    if (n >= 8 || !(hit || has(c.b + ' ' + x[0]))) return;
+    n++;
+    chip(box, c.b + '／' + x[0] + (hit ? '：' + hit[2].replace(/\{([^}]*)\}/g, function (m, o) { o = o.split('|'); return o.filter(has)[0] || o[0]; }).replace(/\[\w+\|[^|\]]*\|([^\]]*)\]/g, '$1') : ''), ci === S.cat && si === S.sub, function () {
+      $('svcQ').value = ''; box.innerHTML = ''; pickSub(ci, si, true);
+      if (!hit) return;
+      if (hit[0] === 'd' && JSON.stringify(S.pk.d) === '{"0":0}' && !$('p').value.trim()) S.pk.d = {};   // 拿掉自動勾的第一句
+      S.pk[hit[0]][hit[1]] = 0; phrases(); preview(); check();
+    });
   }); });
   if (!n) box.appendChild(el('div', '找不到，換個詞試試', { class: 'note' }));
 }
