@@ -549,7 +549,7 @@ var Q = new URLSearchParams(location.search), Q2 = new URLSearchParams(decodeURI
 function qp(k) { return Q.get(k) || Q2.get(k) || ''; }
 var LIFF_ID = qp('liff'), DRAFT = qp('d') || qp('sign'), TRIP = qp('t'), DAY = qp('day');   // ?sign= 是舊的簽名頁連結；t／day：從行程卡點進來直接帶那一站
 var S = { items: [], auto: 0, autoP: '', autoA: '', pk: { d: {}, r: {} }, sl: {}, picks: {}, workers: [], vtEdited: false, trip: null, cu00: '', cuName: '', client: '', cat: -1, sub: -1, nat: '' };
-var META = null, X = null, ST = {}, FL = {}, SAVED = '', SENT = false, REJ = '', LANG = '中', TRC = {}, TRB = {}, POLL = false, BQ = [], BI = 0, RELAY = false, trTimer = 0, PVV = '';
+var META = null, X = null, ST = {}, FL = {}, SAVED = '', SENT = false, REJ = '', LANG = '中', TRC = {}, TRB = {}, TRT = {}, POLL = false, BQ = [], BI = 0, RELAY = false, trTimer = 0, PVV = '';
 var LC = { '菲律賓': 'EN', '越南': 'VI', '印尼': 'ID', '泰國': 'TH' };
 var STX = { ok: '✓ 已簽', held: '✓ 簽好了', local: '✓ 存在手機', dry: '✓ 試跑', todo: '點這裡簽', absent: '不在', up: '上傳中…', fail: '沒傳上去，再簽', auto: '自動沿用', agno: '沒有數位簽章', wait: '讀取中…' };
 /* 移工簽名用他的語言（他 2026-10-14 批准）：固定寫好的字，不是機器翻。hint／clear／needSign／proc／res／signed 跟 qsign.html 的 T 一字不差（check.js 比對） */
@@ -1000,7 +1000,19 @@ function preview() {
     return $('pvNote').appendChild(rb);
   }
   if (t) return show(t, $('p').value.trim() || $('a').value.trim() ? '移工看到的＝存進 IEI 的譯文（片語是校對過的譯文；自己打的那段是 Gemini 翻的）' : '移工看到的＝存進 IEI 的譯文（校對過的譯文）');
-  show(texts(0), '翻譯你自己打的那段…');
+  show(texts(0), '');
+  /* 翻譯進度條（他 11/17：「讓我知道他正在翻譯中」）：一趟伺服器、沒有真進度，照時間走到 90%＋實際秒數；換頁或翻好就自己停 */
+  TRT[k] = TRT[k] || Date.now();
+  var nb = el('div', null, { class: 'mbar', role: 'progressbar', 'aria-label': '翻譯進度' });
+  nb.innerHTML = '<div><i></i></div><small></small>';
+  $('pvNote').appendChild(nb);
+  (function tick() {
+    if (!nb.isConnected) return;
+    var s = (Date.now() - TRT[k]) / 1000;
+    nb.querySelector('i').style.width = Math.min(90, 90 * (1 - Math.exp(-s / 5))) + '%';
+    nb.querySelector('small').textContent = '翻譯你自己打的那段…' + Math.round(s) + ' 秒（通常 3～10 秒）';
+    setTimeout(tick, 500);
+  })();
   clearTimeout(trTimer);
   trTimer = setTimeout(function () { translate(k).then(preview); }, 700);   // 停手 0.7 秒才翻，打字時不會一直燒翻譯額度
 }
@@ -1346,6 +1358,7 @@ function fileSend(file) {
 }
 $('fAdd').onclick = function () { $('fIn').click(); };
 /* 拍照整理重點（他 11/17：會議紀錄、訪視中寫的筆記都算）：Gemini 讀照片 → 重點填進處理經過（他再改）；讀成了照片才當附件掛上 IEI，跟上傳文件同一條 */
+var MTGF = null;   // 讀好了、等選客戶才放進附件的那張照片
 $('mtg').onclick = function () { $('mtgIn').click(); };
 $('mtgIn').onchange = function () {
   var f = this.files && this.files[0], b = $('mtg');
@@ -1365,7 +1378,9 @@ $('mtgIn').onchange = function () {
     var p = $('p');
     if (p.value === S.autoP) p.value = S.autoP = '';   // 預設那句是自動帶的，換掉；自己打過的就接在後面
     p.value = p.value.trim() ? p.value.trim() + '\n' + j.t : j.t;   // 條列有換行，接在下一行
-    phrases(); preview(); st(100, '✓ 完成：重點已填進處理經過，照片放進附件，看過再送出'); fileSend(f);
+    phrases(); preview();
+    if (S.cu00) { st(100, '✓ 完成：重點已填進處理經過，照片放進附件，看過再送出'); fileSend(f); }
+    else { MTGF = f; st(100, '✓ 完成：重點已填進處理經過；選好客戶後照片自動放進附件'); }   // 他 11/17 截圖：先拍再選客戶 →「沒放成：先選 IEI 客戶」
     setTimeout(function () { bar.hidden = true; }, 6000);
   }).catch(function (e) { clearInterval(tm); st(100, '✕ 沒讀成：' + e.message, true); }).then(function () { b.disabled = false; });
 };
@@ -1976,6 +1991,7 @@ function goSet(t, badge, aria) { $('goT').textContent = t; $('goN').textContent 
 var BUSY = '';   // 送出／送簽核進行中（他 10/22 截圖：「送簽核中…」按鈕還能按——每 4 秒的簽名輪詢重畫按鈕時又打開了）
 function check() {
   $('wd').hidden = true;
+  if (MTGF && S.cu00 && !PEND) { var mf = MTGF; MTGF = null; fileSend(mf); }   // 拍照整理重點時還沒選客戶：選好了照片才放進附件
   if (BUSY) { $('only').hidden = true; $('keep').hidden = true; $('go').disabled = true; goSet(BUSY); return; }
   if (PEND) { $('only').hidden = true; $('keep').hidden = true; $('go').disabled = true; goSet('跟伺服器確認中…'); return; }   // 10/22 手機先畫：確認這站有沒有別張草稿、送出了沒，才能送
   $('only').hidden = !SENT; $('keep').hidden = SENT || !S.cu00;   // 他 10/15：草稿先存、微調完再送
