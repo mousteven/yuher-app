@@ -453,7 +453,7 @@ footer{background:linear-gradient(to top,var(--bg) 72%,rgba(255,255,255,0))}
     <div class="f"><div class="lab"><i class="nb">3</i>處理經過（點片語加入，再點拿掉）</div>
       <div class="chips ph" id="pc"></div>
       <label class="fld ta"><svg class="ic"><use href="#i-pen"/></svg><textarea id="p" aria-label="處理經過：自己補充" placeholder="自己補充（這段會機器翻譯）"></textarea></label>
-      <div class="sacts"><button type="button" class="pill" id="mtg"><svg class="ic"><use href="#i-cam"/></svg>拍會議紀錄，整理重點</button><input type="file" id="mtgIn" accept="image/*" hidden></div></div>
+      <div class="sacts"><button type="button" class="pill" id="mtg"><svg class="ic"><use href="#i-cam"/></svg>拍照整理重點</button><input type="file" id="mtgIn" accept="image/*" hidden></div></div>
     <div class="f"><div class="lab"><i class="nb">4</i>處理結果</div>
       <div class="chips ph" id="ac"></div>
       <label class="fld ta"><svg class="ic"><use href="#i-ok"/></svg><textarea id="a" aria-label="處理結果：自己補充" placeholder="自己補充（這段會機器翻譯）"></textarea></label></div>
@@ -1341,20 +1341,19 @@ function fileSend(file) {
   }).catch(function (e) { done(); filesDraw(); say('「' + file.name + '」沒傳成：' + e.message); });
 }
 $('fAdd').onclick = function () { $('fIn').click(); };
-/* 拍會議紀錄（他 11/17）：Gemini 讀照片 → 重點填進處理經過（他再改）；照片同時當附件掛上 IEI，跟上傳文件同一條 */
+/* 拍照整理重點（他 11/17：會議紀錄、訪視中寫的筆記都算）：Gemini 讀照片 → 重點填進處理經過（他再改）；讀成了照片才當附件掛上 IEI，跟上傳文件同一條 */
 $('mtg').onclick = function () { $('mtgIn').click(); };
 $('mtgIn').onchange = function () {
   var f = this.files && this.files[0], b = $('mtg');
   this.value = '';
   if (!f) return;
-  b.disabled = true; say('讀會議紀錄中，大約十幾秒…');
+  b.disabled = true; say('讀照片中，大約十幾秒…');
   fileRead(f).then(function (d) { return api({ api: 'mtg', type: d.type, data: d.b64 }); }).then(function (j) {
     var p = $('p');
     if (p.value === S.autoP) p.value = S.autoP = '';   // 預設那句是自動帶的，換掉；自己打過的就接在後面
     p.value = p.value.trim() ? p.value.trim() + '\n' + j.t : j.t;   // 條列有換行，接在下一行
-    phrases(); preview(); say('會議重點已填進處理經過，看過再送出');
-  }).catch(function (e) { say('會議紀錄沒讀成：' + e.message); }).then(function () { b.disabled = false; });
-  fileSend(f);
+    phrases(); preview(); say('重點已填進處理經過，照片也放進附件了，看過再送出'); fileSend(f);
+  }).catch(function (e) { say('照片沒讀成：' + e.message); }).then(function () { b.disabled = false; });
 };
 $('fIn').onchange = function () {
   var fs = [].slice.call(this.files || []);
