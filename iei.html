@@ -160,7 +160,7 @@ details[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
 .note:empty{display:none}
 .pv{background:var(--soft);border-radius:14px;padding:12px 16px;display:grid;gap:2px}
 .pv small{font-size:14px;color:var(--mute);font-weight:700}
-.pv p{margin:0 0 8px;font-size:16px;line-height:1.6}
+.pv p{margin:0 0 8px;font-size:16px;line-height:1.6;white-space:pre-line}
 .langs{display:flex;background:var(--soft);border-radius:14px;padding:3px;gap:3px}
 .langs button{min-height:44px;min-width:52px;border:0;border-radius:11px;background:transparent;color:var(--mute);font-weight:700;font-size:14px;line-height:1;font-family:inherit;padding:0 12px}
 .langs button[aria-pressed=true]{background:var(--card);color:var(--blue);box-shadow:var(--sh1)}
@@ -1351,7 +1351,7 @@ $('mtgIn').onchange = function () {
   fileRead(f).then(function (d) { return api({ api: 'mtg', type: d.type, data: d.b64 }); }).then(function (j) {
     var p = $('p');
     if (p.value === S.autoP) p.value = S.autoP = '';   // 預設那句是自動帶的，換掉；自己打過的就接在後面
-    p.value = p.value.trim() ? p.value.trim().replace(/[。.]?$/, '。') + j.t : j.t;
+    p.value = p.value.trim() ? p.value.trim() + '\n' + j.t : j.t;   // 條列有換行，接在下一行
     phrases(); preview(); say('會議重點已填進處理經過，看過再送出');
   }).catch(function (e) { say('會議紀錄沒讀成：' + e.message); }).then(function () { b.disabled = false; });
   fileSend(f);
