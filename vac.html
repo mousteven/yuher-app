@@ -447,6 +447,12 @@ function vacPrefill(who) {
   setActiveCat(who.cat === 'caretaker' ? 'caretaker' : 'factory');
   var sel = activeEmployerSelect();
   sel.value = who.employer;
+  /* 11/19：名冊（雇主清單的來源）幾乎沒有南投，小禾改從 IEI 找人。
+     雇主是邀請連結那一列寫的（伺服器端），不是工人自己打的，清單沒有就補一個再鎖。 */
+  if (sel.value !== who.employer) {
+    var op = document.createElement('option');
+    op.value = op.textContent = who.employer; sel.appendChild(op); sel.value = who.employer;
+  }
   /* ⛔ 對不到就不要鎖。名冊改了名字、或這家已經不在清單裡的時候，
      鎖起來等於讓他送出一個空的雇主——那筆案件會開在沒有人身上。 */
   if (sel.value !== who.employer) return;
