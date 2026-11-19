@@ -1590,6 +1590,18 @@ function phInk(keep) {   // keep：不自動去表格線（他 11/20：簽在格
     function on(a, t) { for (var e = a - 2; e <= a + 2; e++) if (e >= 0 && e < A && t >= 0 && t < Cn && M[l.h ? t * W + e : e * W + t]) return true; return false; }
     for (var a = 0; a < A; a++) { var m = Math.round(l.k * a + l.b);
       if (on(a, m - th - 1) && on(a, m + th + 1)) for (var t = m - th; t <= m + th; t++) if (t >= 0 && t < Cn) M[l.h ? t * W + a : a * W + t] = 1; } });
+  /* 11/20 他實機「還是有」白縫：粗的簽字筆，筆畫壓過表格線、或兩筆交叉的地方被當成「線」或「整片深色」挖掉了。
+     從簽名往被挖掉的地方長回去（只收原稿真的有墨的點）：表格線帶子最多長線寬兩倍＋2，整片深色最多長 RB。
+     線本身離簽名遠的那段長不到，照樣去掉。 */
+  var LB = 2, O = new Uint8Array(n); bands.forEach(function (bd) { var l = bd[0], th = bd[1], A0 = l.h ? W : H, Cn = l.h ? H : W; LB = Math.max(LB, Math.ceil(th) * 2 + 2);
+    for (var a = 0; a < A0; a++) { var m = l.k * a + l.b; for (var t = Math.ceil(m - th); t <= m + th; t++) if (t >= 0 && t < Cn) O[l.h ? t * W + a : a * W + t] = l.h ? 1 : 2; } });   // 線的方向：帶子裡只准跨過線長，不准順著線長（不然會長出一截線）
+  var d2 = new Uint16Array(n), Q2 = [];
+  for (i = 0; i < n; i++) if (M[i]) Q2.push(i);
+  for (h0 = 0; h0 < Q2.length; h0++) { p = Q2[h0]; px = p % W; py = (p - px) / W;
+    for (dy = -1; dy <= 1; dy++) for (dx = -1; dx <= 1; dx++) { x = px + dx; y = py + dy; q = y * W + x;
+      if (x < 0 || y < 0 || x >= W || y >= H || M[q] || !X[q] || !B0[q] || (O[q] === 1 && dx) || (O[q] === 2 && dy)) continue;
+      var lim = XB[q] ? LB : RB; if (d2[p] + 1 > lim) continue;
+      M[q] = 1; d2[q] = d2[p] + 1; Q2.push(q); } }
   var C = M.slice(); phClose(C, W, H); var T = phDT(C, W, H); phThin(C, W, H); phSpur(C, W, H, T); phSpur(C, W, H, T);
   var gaps = phBridge(C, W, H).filter(function (e) {   // 補斷口只補「中間有一點點墨」的（筆斷水）或穿過表格線的；中間是白紙的不補（兩個字之間會多一條線）
     var k = 0, s = 0, N = Math.max(2, Math.round(Math.hypot(e[2] - e[0], e[3] - e[1])));
