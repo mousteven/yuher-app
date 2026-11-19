@@ -1611,6 +1611,7 @@ function phInk(keep) {   // keep：不自動去表格線（他 11/20：簽在格
   for (y = 0; y < Hh; y++) for (x = 0; x < Wh; x++) { var j = y * Wh + x, l0 = lab[Math.min(H - 1, Math.floor(y / sc)) * W + Math.min(W - 1, Math.floor(x / sc))];
     if (!l0) continue; L[j] = l0; var t = Math.max(0, Math.min(1, ((DH[j] - 0.03) / (hi - 0.03) - 0.08) / 0.4)); A[j] = t * t * (3 - 2 * t); }   // S 曲線：筆畫裡是實的、只有邊緣是柔的（11/20：灰灰一條條像掃描）
   phFill(A, L, Wh, Hh, Math.max(1, Math.round(sc * (ws[ws.length >> 1] || 1) * 0.6)));   // 筆畫裡反光、原子筆沒吃到墨的白點補滿（只在筆畫範圍內，不會變粗）
+  phSolid(A, L, Wh, Hh, Math.max(2, Math.round(sc * (ws[ws.length >> 1] || 1))));   // 11/20 他：「不要反白，一律都是黑的」→ 有墨＝全黑，筆畫裡的白縫補滿，只有外緣柔一格
   ER = { W: Wh, H: Hh, A: A, L: L, cut: new Uint8Array(Wh * Hh), undo: [], keep: !!keep, nl: Z.lines.length, src: { img: PH.img, fit: PH.fit, r: PH.r }, gaps: gaps.map(function (e) { return [e[0] * sc, e[1] * sc, e[2] * sc, e[3] * sc, lab[e[1] * W + e[0]], lab[e[3] * W + e[2]]]; }), pw: Math.max(1.5, 2 * (ws[ws.length >> 1] || 1) * sc) };
   var bx0 = Wh, by0 = Hh, bx1 = -1, by1 = -1;
   for (y = 0; y < Hh; y++) for (x = 0; x < Wh; x++) if (A[y * Wh + x] > 0.15) { if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
@@ -1646,6 +1647,26 @@ function phFill(A, L, W, H, r) {   // 灰階閉運算（先取附近最深、再
     return U; }
   var C = pass(pass(A, true), false);
   for (var i = 0; i < W * H; i++) if (L[i] && C[i] > A[i]) A[i] = C[i];
+}
+function phSolid(A, L, W, H, r) {   // 全黑：A≥0.15 算墨 → 補筆畫裡的白縫（閉運算 r）與被墨圍住的小洞（< 2r² 的才補，字裡的小方格、o、a 的圈不補）→ 墨＝1，外緣 3×3 平均出柔邊
+  var n = W * H, M = new Uint8Array(n), i, x, y, k;
+  for (i = 0; i < n; i++) M[i] = L[i] && A[i] >= 0.15 ? 1 : 0;
+  function grow(S, on) { var T = new Uint8Array(n), U = new Uint8Array(n);   // on：1＝膨脹（附近有墨就算墨），0＝侵蝕
+    for (y = 0; y < H; y++) for (x = 0; x < W; x++) { var v = on ? 0 : 1; for (k = Math.max(0, x - r); k <= Math.min(W - 1, x + r); k++) if (S[y * W + k] === on) { v = on; break; } T[y * W + x] = v; }
+    for (x = 0; x < W; x++) for (y = 0; y < H; y++) { v = on ? 0 : 1; for (k = Math.max(0, y - r); k <= Math.min(H - 1, y + r); k++) if (T[k * W + x] === on) { v = on; break; } U[y * W + x] = v; }
+    return U; }
+  var R0 = r; r = Math.max(1, r >> 1); var C = grow(grow(M, 1), 0); r = R0;   // 白縫只補半個筆寬，字裡的小方格才不會被填滿
+  for (i = 0; i < n; i++) if (C[i] && L[i]) M[i] = 1;
+  var seen = new Uint8Array(n), st = [], lim = 2 * r * r;   // 被墨圍住的小白洞（白縫；字裡的小方格比它大，不補）
+  for (i = 0; i < n; i++) if (!M[i] && !seen[i]) {
+    var reg = [i], edge = false; seen[i] = 1; st.push(i);
+    while (st.length) { var q = st.pop(), qx = q % W, qy = (q - qx) / W; if (!qx || !qy || qx === W - 1 || qy === H - 1) edge = true;
+      [q - 1, q + 1, q - W, q + W].forEach(function (z, d) { if ((d === 0 && !qx) || (d === 1 && qx === W - 1) || z < 0 || z >= n || M[z] || seen[z]) return; seen[z] = 1; st.push(z); if (reg.length <= lim) reg.push(z); }); }
+    if (!edge && reg.length <= lim) reg.forEach(function (z) { M[z] = 1; });
+  }
+  for (y = 0; y < H; y++) for (x = 0; x < W; x++) { var s0 = 0, c0 = 0;
+    for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) { var a = x + dx, b = y + dy; if (a >= 0 && b >= 0 && a < W && b < H) { s0 += M[b * W + a]; c0++; } }
+    A[y * W + x] = M[y * W + x] ? 1 : s0 / c0 * 0.6; }
 }
 function phClose(B, W, H) {   // 先膨脹再侵蝕一格（3×3）：補起筆畫裡的小洞、細縫
   var A = new Uint8Array(W * H), x, y, dx, dy, i;
